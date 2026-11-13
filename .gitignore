@@ -1,0 +1,10 @@
+node_modules
+dist
+.wrangler
+.dev.vars
+SETUP.md
+private/
+android/app/build
+android/.gradle
+*.log
+.DS_Store

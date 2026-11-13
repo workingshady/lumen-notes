@@ -1,0 +1,125 @@
+// Shared between the app (src) and the Worker (worker).
+
+export type NoteType = "note" | "lesson" | "journal" | "flashcards" | "slides" | "post" | "canvas" | "whiteboard" | "roadmap" | "moc";
+export type Status = "todo" | "learning" | "review" | "mastered";
+export const STATUSES: Status[] = ["todo", "learning", "review", "mastered"];
+export const NOTE_TYPES: NoteType[] = ["note", "lesson", "journal", "flashcards", "slides", "post", "canvas", "whiteboard", "roadmap", "moc"];
+
+/** PARA-style space kinds. A space encapsulates its own folder tree, notes, roadmap and settings. */
+export type SpaceKind = "project" | "area" | "course" | "resource" | "archive";
+export const SPACE_KINDS: SpaceKind[] = ["project", "area", "course", "resource", "archive"];
+
+/** Every synced record carries these. `dirty` is local-only (1 = not pushed yet). */
+export interface Synced {
+  id: string;
+  updatedAt: number;
+  deleted: 0 | 1;
+  dirty?: 0 | 1;
+}
+
+export interface Note extends Synced {
+  title: string;
+  /** Markdown, or JSON Canvas text when type === "canvas". */
+  body: string;
+  spaceId: string;
+  folderId: string | null;
+  tags: string[];
+  type: NoteType;
+  status: Status | null;
+  pinned: 0 | 1;
+  favorite: 0 | 1;
+  published: 0 | 1;
+  slug: string;
+  props: Record<string, string>;
+  createdAt: number;
+}
+
+export interface Space extends Synced {
+  name: string;
+  kind: SpaceKind;
+  icon: string; // emoji
+  color: string | null;
+  description: string;
+  /** project: goal/deadline; course: provider/url/target date. Free-form key/values. */
+  props: Record<string, string>;
+  /** Note id of this space's roadmap (type "roadmap"), if any. */
+  roadmapId: string | null;
+  sort: number;
+  archived: 0 | 1;
+  createdAt: number;
+}
+
+export interface Folder extends Synced {
+  spaceId: string;
+  name: string;
+  parentId: string | null;
+  color: string | null;
+  sort: number;
+}
+
+export interface Version extends Synced {
+  noteId: string;
+  title: string;
+  body: string;
+  label: string;
+  createdAt: number;
+}
+
+/** Spaced-repetition state of one flashcard (id = noteId:hash(question)). */
+export interface Card extends Synced {
+  noteId: string;
+  ease: number;
+  interval: number; // days
+  due: number; // epoch ms
+  reps: number;
+  lapses: number;
+}
+
+/** Study timer session. */
+export interface Session extends Synced {
+  noteId: string | null;
+  minutes: number;
+  at: number;
+}
+
+/** Attachment metadata (bytes live in IndexedDB locally and in R2 remotely). */
+export interface AttachmentMeta extends Synced {
+  name: string;
+  mime: string;
+  size: number;
+}
+
+export type Kind = "space" | "note" | "folder" | "version" | "card" | "session" | "attachment";
+export const KINDS: Kind[] = ["space", "note", "folder", "version", "card", "session", "attachment"];
+
+export interface SyncItem {
+  kind: Kind;
+  id: string;
+  data: unknown;
+  updatedAt: number;
+  deleted: 0 | 1;
+}
+export interface SyncRequest { since: number; items: SyncItem[] }
+export interface SyncResponse { cursor: number; items: SyncItem[] }
+
+// ---------- JSON Canvas 1.0 (https://jsoncanvas.org/spec/1.0/) ----------
+export type CanvasColor = string; // "1".."6" or "#RRGGBB"
+export type Side = "top" | "right" | "bottom" | "left";
+interface NodeBase { id: string; x: number; y: number; width: number; height: number; color?: CanvasColor }
+export type CanvasNode =
+  | (NodeBase & { type: "text"; text: string })
+  | (NodeBase & { type: "file"; file: string; subpath?: string })
+  | (NodeBase & { type: "link"; url: string })
+  | (NodeBase & { type: "group"; label?: string; background?: string; backgroundStyle?: "cover" | "ratio" | "repeat" });
+export interface CanvasEdge {
+  id: string;
+  fromNode: string;
+  fromSide?: Side;
+  fromEnd?: "none" | "arrow";
+  toNode: string;
+  toSide?: Side;
+  toEnd?: "none" | "arrow";
+  color?: CanvasColor;
+  label?: string;
+}
+export interface JsonCanvas { nodes?: CanvasNode[]; edges?: CanvasEdge[] }

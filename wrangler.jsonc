@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lumen-notes",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/rss.xml"]
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "lumen-notes", "database_id": "ca71c018-7d95-45e7-85b7-fb8fd5dafffc", "migrations_dir": "migrations" }
+  ],
+  // R2 for attachments: enable R2 in the Cloudflare dashboard, run `npx wrangler r2 bucket create lumen-notes-files`,
+  // then uncomment. Until then attachments are stored in D1 (max ~1.9 MB each; the app compresses images).
+  // "r2_buckets": [{ "binding": "FILES", "bucket_name": "lumen-notes-files" }],
+  "ai": { "binding": "AI" },
+  "vars": { "BLOG_NAME": "Lumen" },
+  "observability": { "enabled": true }
+}

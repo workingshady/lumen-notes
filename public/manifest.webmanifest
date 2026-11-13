@@ -1,0 +1,14 @@
+{
+  "name": "Lumen",
+  "short_name": "Lumen",
+  "description": "Local-first study notes, canvases, flashcards and a personal blog.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F1115",
+  "theme_color": "#0F1115",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "share_target": { "action": "/", "method": "GET", "params": { "title": "share_title", "text": "share_text", "url": "share_url" } }
+}
