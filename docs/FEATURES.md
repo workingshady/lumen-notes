@@ -22,7 +22,7 @@ Research basis: Obsidian (plain Markdown files, `[[links]]`, backlinks, graph vi
 | Embedded canvas in a note (fenced `canvas` block with JSON Canvas) | ✅ | |
 | Formatting toolbar (bold, italic, heading, list, task, quote, code, math, mermaid, table, link) | ✅ | mobile: sticky above keyboard |
 | Slash commands `/` in editor | 🔜 | |
-| Images & files: paste, drag-drop, pick, or phone camera → stored on device (IndexedDB) and uploaded to **Cloudflare R2**; `![](att:id)` links work offline and online | ✅ | |
+| Images & files: paste, drag-drop, pick, or phone camera → stored on device (IndexedDB) and uploaded free to **Cloudflare D1 in 1.5 MB parts** (max 100 MB/file, Range streaming for video); `![](att:id)` links work offline and online | ✅ | |
 | Voice notes → text (Workers AI Whisper, Arabic + English) | ✅ | |
 | Properties panel (front-matter key/value: source, course, due, url…) | ✅ | |
 | Query blocks (Dataview-lite): ```` ```query tag:#ml type:lesson ```` ```` renders a live list/table | ✅ | |
@@ -35,7 +35,7 @@ Research basis: Obsidian (plain Markdown files, `[[links]]`, backlinks, graph vi
 | **Split** | ✅ | editor + live preview (desktop default) |
 | **Read** | ✅ | rendered note, typographic reading layout (mobile default) |
 | **Focus / Zen** | ✅ | chrome hidden, centered column, typewriter feel |
-| **Slides** | ✅ | `---` separates slides; keyboard / swipe; fullscreen; Mermaid + math render |
+| **Slides** | ✅ | `---` separates slides; images (uploaded or URL), YouTube/Vimeo and uploaded video, Mermaid, math, tables, code; media auto-fits the slide; keyboard / swipe; fullscreen |
 | **Review** | ✅ | flashcards from the note (`Question :: Answer` or `?` lines) |
 | Canvas | ✅ | infinite board of cards/notes/links/groups |
 | Graph | ✅ | force-directed note graph, global + local |
@@ -171,6 +171,16 @@ Chosen over tldraw because Excalidraw is MIT-licensed with no production license
 | Full JSON backup + restore | ✅ |
 | Obsidian vault compatible (Markdown + `[[links]]` + `.canvas`) | ✅ |
 
+## 8b. Sharing
+| Feature | Status |
+|---|---|
+| **Unlisted share link** for any note: Markdown, slides (visitors can present), flashcards (practice mode), canvas (board preview + .canvas download), whiteboard (view-only), roadmap | ✅ |
+| **Share a whole space/course**: public page with progress ring, roadmap, all notes, and a graph of their links; only safe properties (goal, dates, URL) are exposed | ✅ |
+| Revoke or regenerate a link anytime (old link stops working immediately) | ✅ |
+| Copy link · native share sheet (Android / mobile browsers) · open | ✅ |
+| Read-only viewer never writes to the visitor's device; works without an account | ✅ |
+| "Shared with link" overview in Settings, link expiry dates, password-protected links | 🔜 |
+
 ## 9. Blog (public)
 | Feature | Status |
 |---|---|
@@ -185,7 +195,7 @@ Chosen over tldraw because Excalidraw is MIT-licensed with no production license
 | Feature | Status |
 |---|---|
 | Local-first IndexedDB (Dexie). Works fully offline | ✅ |
-| Attachments in Cloudflare R2 (free tier 10 GB, zero egress) | ✅ |
+| Attachments in D1 (free, chunked) · optional R2 if a card is added later | ✅ |
 | Sync to Cloudflare D1 (last-write-wins per note by `updatedAt`, incremental `since` cursor) | ✅ |
 | Single-owner passcode auth (PBKDF2 hash + HMAC bearer tokens) | ✅ |
 | PWA (manifest, installable) | ✅ |

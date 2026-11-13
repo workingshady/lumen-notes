@@ -32,6 +32,8 @@ export interface Note extends Synced {
   slug: string;
   props: Record<string, string>;
   createdAt: number;
+  /** Unlisted share link token (/s/<token>); null/absent = not shared. */
+  shareId?: string | null;
 }
 
 export interface Space extends Synced {
@@ -47,6 +49,8 @@ export interface Space extends Synced {
   sort: number;
   archived: 0 | 1;
   createdAt: number;
+  /** Unlisted share link token for the whole space (course/project page). */
+  shareId?: string | null;
 }
 
 export interface Folder extends Synced {

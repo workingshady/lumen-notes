@@ -153,6 +153,12 @@ details.callout[open] > summary::after { transform: rotate(90deg); }
 .slide h1 { font-size: 3.2em; font-weight: 700; line-height: 1.1; margin: 0 0 .4em; }
 .slide h2 { font-size: 2.2em; font-weight: 650; margin: 0 0 .6em; border: 0; }
 .slide li { margin: .35em 0; }
+/* media fits the slide: images/videos/diagrams never push content off-screen */
+.slide img { display: block; max-height: 62vh; max-width: 100%; margin: .6em auto; object-fit: contain; border-radius: 12px; }
+.slide .embed { max-width: min(100%, 110vh); margin-inline: auto; }
+.slide .embed video { max-height: 62vh; }
+.slide .mermaid-block svg { max-height: 58vh; }
+.slide p:has(> img:only-child) { text-align: center; }
 
 /* React Flow theming */
 .react-flow { --xy-background-color: var(--bg); --xy-edge-stroke: var(--muted); --xy-minimap-background-color: var(--surface); --xy-controls-button-background-color: var(--surface); --xy-controls-button-color: var(--text); --xy-controls-button-border-color: var(--border); --xy-controls-button-background-color-hover: var(--surface-2); --xy-node-border-radius: 12px; }

@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, ExternalLink, Loader2, Pencil, Plus, Sparkles, Target, Trash2 } from "lucide-react";
+import { Share2, Archive, ArchiveRestore, ExternalLink, Loader2, Pencil, Plus, Sparkles, Target, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { SPACE_KINDS } from "../../shared/types";
 import { createNote, updateNote } from "../lib/actions";
@@ -10,6 +10,7 @@ import { go, openNote, setUI, toast, useUI, useVault } from "../lib/store";
 import { NoteRow } from "../components/NoteList";
 import { KIND_LABEL } from "../components/Sidebar";
 import { Button, cx, Empty, Field, inputCls, Sheet } from "../components/ui";
+import { ShareSheet } from "../components/ShareSheet";
 import { Ring, RoadmapView } from "./RoadmapView";
 
 export function SpaceView() {
@@ -18,6 +19,7 @@ export function SpaceView() {
   const sp = v.spaceMap.get(ui.spaceId);
   const [edit, setEdit] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [share, setShare] = useState(false);
   const notes = useMemo(() => v.notes.filter((n) => n.spaceId === ui.spaceId), [v.notes, ui.spaceId]);
   if (!sp) return <Empty icon={<Target size={30} />} title="Pick a space" hint="Use the space switcher at the top of the sidebar." />;
   const rm = sp.roadmapId ? v.byId.get(sp.roadmapId) : undefined;
@@ -62,6 +64,7 @@ export function SpaceView() {
               </div>
             </div>
             {p && <Ring pct={p.pct} size={60} />}
+            <Button size="sm" variant={sp.shareId ? "secondary" : "ghost"} onClick={() => setShare(true)} title="Share this space"><Share2 size={14} />{sp.shareId ? " Shared" : ""}</Button>
             <Button size="sm" variant="ghost" onClick={() => setEdit(true)}><Pencil size={14} /></Button>
           </div>
         </div>
@@ -105,6 +108,7 @@ export function SpaceView() {
         </div>
       </div>
       <EditSpace open={edit} onClose={() => setEdit(false)} />
+      <ShareSheet target={{ kind: "space", space: sp }} open={share} onClose={() => setShare(false)} />
     </div>
   );
 }

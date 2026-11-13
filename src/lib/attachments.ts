@@ -17,6 +17,7 @@ async function compress(file: File): Promise<Blob> {
 
 /** Store a file locally and queue its upload. Returns the Markdown to insert. */
 export async function addFile(file: File): Promise<string> {
+  if (file.size > MAX_FILE) throw new Error(`${file.name} is over 100 MB. Upload long videos to YouTube (unlisted) and paste the link.`);
   const id = uid();
   const blob = await compress(file);
   await db.blobs.put({ id, blob, uploaded: 0 });
@@ -26,10 +27,19 @@ export async function addFile(file: File): Promise<string> {
   return /^(image|video|audio)\/|^application\/pdf$/.test(blob.type) ? `![${name}](att:${id})` : `[📎 ${name}](att:${id})`;
 }
 
+const CHUNK = 1_500_000; // must match worker CHUNK
+export const MAX_FILE = 100 * 1024 * 1024;
+
+/** Upload queued files in 1.5 MB parts (free-tier D1 storage; idempotent, so a retry just re-sends). */
 export async function uploadPending() {
   if (!getToken()) return;
   for (const b of await db.blobs.where("uploaded").equals(0).toArray()) {
-    await api(`/att/${b.id}`, { method: "PUT", body: b.blob, headers: { "Content-Type": b.blob.type || "application/octet-stream" } });
+    const size = b.blob.size;
+    const parts = Math.max(1, Math.ceil(size / CHUNK));
+    const mime = b.blob.type || "application/octet-stream";
+    for (let i = 0; i < parts; i++) {
+      await api(`/att/${b.id}?part=${i}&parts=${parts}&size=${size}`, { method: "PUT", body: b.blob.slice(i * CHUNK, (i + 1) * CHUNK), headers: { "Content-Type": mime } });
+    }
     await db.blobs.update(b.id, { uploaded: 1 });
   }
 }

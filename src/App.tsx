@@ -10,11 +10,22 @@ import { ImportExportDialog, NewSpaceDialog } from "./components/Dialogs";
 import { useDueCards } from "./components/Review";
 import { cx, Empty, IconButton } from "./components/ui";
 import { Home } from "./views/Home";
-import { CalendarView, KanbanView, ReviewView, TableView, TasksView, TrashView } from "./views/Productivity";
-import { GraphView } from "./views/GraphView";
-import { SpaceView } from "./views/SpaceView";
-import { SettingsView } from "./views/Settings";
-import { Blog } from "./views/Blog";
+import { lazy, Suspense } from "react";
+
+// Heavy screens load on demand (faster start on phones / the APK).
+const Productivity = () => import("./views/Productivity");
+const TasksView = lazy(() => Productivity().then((m) => ({ default: m.TasksView })));
+const KanbanView = lazy(() => Productivity().then((m) => ({ default: m.KanbanView })));
+const CalendarView = lazy(() => Productivity().then((m) => ({ default: m.CalendarView })));
+const TableView = lazy(() => Productivity().then((m) => ({ default: m.TableView })));
+const ReviewView = lazy(() => Productivity().then((m) => ({ default: m.ReviewView })));
+const TrashView = lazy(() => Productivity().then((m) => ({ default: m.TrashView })));
+const GraphView = lazy(() => import("./views/GraphView").then((m) => ({ default: m.GraphView })));
+const SpaceView = lazy(() => import("./views/SpaceView").then((m) => ({ default: m.SpaceView })));
+const SettingsView = lazy(() => import("./views/Settings").then((m) => ({ default: m.SettingsView })));
+const Blog = lazy(() => import("./views/Blog").then((m) => ({ default: m.Blog })));
+const Shared = lazy(() => import("./views/Shared").then((m) => ({ default: m.Shared })));
+const Loading = () => <div className="flex h-full items-center justify-center text-[13px] text-muted">Loading…</div>;
 
 export default function App() {
   const [path, setPath] = useState(location.pathname);
@@ -23,7 +34,8 @@ export default function App() {
     addEventListener("popstate", f);
     return () => removeEventListener("popstate", f);
   }, []);
-  if (path === "/blog" || path.startsWith("/blog/")) return <Blog path={path} />;
+  if (path === "/blog" || path.startsWith("/blog/")) return <Suspense fallback={<Loading />}><Blog path={path} /></Suspense>;
+  if (path.startsWith("/s/")) return <Suspense fallback={<Loading />}><Shared path={path} /></Suspense>;
   return <Workspace />;
 }
 
@@ -93,7 +105,7 @@ function Workspace() {
           {(showNote || !notesView) && (
             <main className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
               {!wide && !notesView && <MobileTop />}
-              <div className="min-h-0 flex-1">{main}</div>
+              <div className="min-h-0 flex-1"><Suspense fallback={<Loading />}>{main}</Suspense></div>
               {wide && notesView && (
                 <IconButton label={ui.list ? "Hide note list" : "Show note list"} className="absolute bottom-3 right-3 z-20 border border-line bg-surface md:flex" onClick={() => setUI({ list: !ui.list })}><Menu size={16} /></IconButton>
               )}

@@ -7,6 +7,8 @@ Single-owner study notebook + blog. Local-first (Dexie/IndexedDB) with sync to C
 - `worker/index.ts`: Hono API: `/api/login`, `/api/sync`, notes/canvas/whiteboard REST, `/api/att/:id` (R2 or D1 `files` fallback), `/api/ai`, `/api/transcribe`, `/api/unfurl` (link previews), `/api/public/*` + `/rss.xml` (blog). D1 = one generic `items(kind,id,data,updated_at,deleted,rev)` table; `meta.rev` is the sync cursor.
 - `src/lib/`: `db.ts` (Dexie + `save/patch` mark records dirty → debounced push), `sync.ts`, `markdown.ts` (markdown-it pipeline: KaTeX, Mermaid, callouts, wikilinks, tags, embeds, link cards, `dir="auto"`), `parse.ts` (front-matter, tasks, flashcards, roadmap parser), `search.ts` (MiniSearch + Arabic normalization + query operators), `canvas.ts` (JSON Canvas validate/layout/script API), `whiteboard.ts` (Excalidraw skeleton helpers, canvas→whiteboard), `store.ts` (UI store + `useVault` derived indexes), `settings.ts` (themes/tokens), `io.ts` (import/export).
 - `src/components/`, `src/views/`: UI. Whiteboard is lazy-loaded (big chunk).
+- Sharing: `shareId` on a note or space = unlisted link `/s/<token>` (`src/views/Shared.tsx`, read-only, never writes local data). Space shares expose only goal/deadline/target/url props.
+- Android: Capacitor **6** (runs on JDK 17 at `C:/Program Files/Java/jdk-17`); config is `capacitor.config.json` (CLI 6 can't load .ts with this TypeScript). Icons rendered from `public/icon.svg` into `android/app/src/main/res`.
 - `docs/`: FEATURES.md (status table: keep it updated), design/ (Claude Design prompt + numbered follow-ups `CLAUDE_DESIGN_UPDATE_NN.md`; add a new numbered file for each design round).
 
 ## Rules

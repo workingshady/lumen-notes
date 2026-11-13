@@ -11,7 +11,7 @@ import { findOrCreateByTitle, updateNote } from "../lib/actions";
 import { colorOf, fromOutline, layout, parseCanvas, PRESETS, runScript, stringify, validate } from "../lib/canvas";
 import { download } from "../lib/io";
 import { excerpt } from "../lib/parse";
-import { openNote, toast, useVault } from "../lib/store";
+import { openNote, useVault } from "../lib/store";
 import { Preview } from "./Preview";
 import { Button, cx, IconButton } from "./ui";
 
@@ -339,11 +339,4 @@ function Inner({ note }: { note: Note }) {
       )}
     </div>
   );
-}
-
-/** Build a canvas note from a Markdown note's outline. */
-export async function canvasFromNote(n: Note, createNote: (p: Partial<Note>) => Promise<Note>) {
-  const c = fromOutline(n.body);
-  if (!c.nodes?.length) { toast("No headings or bullets to map"); return null; }
-  return createNote({ type: "canvas", title: `${n.title} (map)`, body: stringify(c), spaceId: n.spaceId, folderId: n.folderId });
 }

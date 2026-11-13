@@ -14,7 +14,7 @@
   },
   "type": "module",
   "dependencies": {
-    "@capacitor/core": "^8.6.2",
+    "@capacitor/core": "^6.2.3",
     "@codemirror/autocomplete": "^6.20.4",
     "@codemirror/lang-json": "^6.0.2",
     "@codemirror/lang-markdown": "^6.5.2",
@@ -44,8 +44,8 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@capacitor/android": "^8.6.2",
-    "@capacitor/cli": "^8.6.2",
+    "@capacitor/android": "^6.2.3",
+    "@capacitor/cli": "^6.2.3",
     "@cloudflare/vite-plugin": "^1.69.1",
     "@cloudflare/workers-types": "^5.20261113.1",
     "@tailwindcss/vite": "^4.3.5",

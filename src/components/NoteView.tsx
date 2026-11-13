@@ -1,26 +1,28 @@
-import { ArrowLeft, BookOpen, Columns2, Copy, Download, FileCode2, Globe, Info, Map as MapIcon, MoreHorizontal, Network, PanelRight, Pencil, Pin, Presentation, Printer, Star, Trash2, Brain, Maximize2 } from "lucide-react";
+import { Share2, ArrowLeft, BookOpen, Columns2, Copy, Download, FileCode2, Globe, Info, Map as MapIcon, MoreHorizontal, Network, PanelRight, Pencil, Pin, Presentation, Printer, Star, Trash2, Brain, Maximize2 } from "lucide-react";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { canvasToSkeleton } from "../lib/whiteboard";
 import { parseCanvas } from "../lib/canvas";
 import type { Note } from "../../shared/types";
 import { createNote, duplicateNote, snapshot, trashNote, updateNote } from "../lib/actions";
 import { exportNoteHtml, exportNoteMd, printNote } from "../lib/io";
-import { slugify } from "../lib/parse";
 import { back, openNote, setUI, toast, useUI, useVault, type Mode } from "../lib/store";
-import { API_BASE } from "../lib/api";
-import { CanvasEditor, canvasFromNote } from "./CanvasEditor";
+import { canvasFromNote } from "../lib/canvasFromNote";
+import { ShareSheet } from "./ShareSheet";
 import { Editor, scrollEditorToLine } from "./Editor";
 import { Preview } from "./Preview";
 import { ReviewSession } from "./Review";
 import { RightPanel } from "./RightPanel";
 import { Slides } from "./Slides";
 import { StudyTimer } from "./Timer";
-import { Button, IconButton, inputCls, Segmented, Sheet } from "./ui";
-import { GraphView } from "../views/GraphView";
+import { Button, IconButton, Segmented, Sheet } from "./ui";
+
 import { restoreNote } from "../lib/actions";
-import { RoadmapView } from "../views/RoadmapView";
+
 
 const Whiteboard = lazy(() => import("./Whiteboard"));
+const CanvasEditor = lazy(() => import("./CanvasEditor").then((m) => ({ default: m.CanvasEditor })));
+const RoadmapView = lazy(() => import("../views/RoadmapView").then((m) => ({ default: m.RoadmapView })));
+const GraphView = lazy(() => import("../views/GraphView").then((m) => ({ default: m.GraphView })));
 
 export function NoteView({ note }: { note: Note }) {
   const ui = useUI();
@@ -91,6 +93,7 @@ export function NoteView({ note }: { note: Note }) {
               <StudyTimer noteId={note.id} />
               {!isCanvas && !isRoadmap && wide && <Segmented value={mode} onChange={(m) => setUI({ mode: m })} options={modes} />}
               {isRoadmap && <Segmented value={rmEdit ? "edit" : "map"} onChange={(x) => setRmEdit(x === "edit")} options={[{ value: "map", label: <><MapIcon size={13} /> Roadmap</> }, { value: "edit", label: <><Pencil size={13} /> Edit</> }]} />}
+              <IconButton label="Share" active={!!note.shareId || !!note.published} onClick={() => setPublish(true)}><Share2 size={17} /></IconButton>
               <IconButton label="Side panel" active={!!ui.panel} onClick={() => setUI({ panel: ui.panel ? null : "outline" })}><PanelRight size={17} /></IconButton>
               <div className="relative">
                 <IconButton label="More" active={menu} onClick={() => setMenu((m) => !m)}><MoreHorizontal size={18} /></IconButton>
@@ -100,7 +103,7 @@ export function NoteView({ note }: { note: Note }) {
                     <div className="absolute right-0 top-full z-40 mt-1 w-60 rounded-[12px] border border-line bg-surface p-1.5 shadow-xl fade-in" onClick={() => setMenu(false)}>
                       <button className={item} onClick={() => updateNote(note.id, { pinned: note.pinned ? 0 : 1 })}><Pin size={15} /> {note.pinned ? "Unpin" : "Pin"}</button>
                       <button className={item} onClick={() => updateNote(note.id, { favorite: note.favorite ? 0 : 1 })}><Star size={15} /> {note.favorite ? "Remove favorite" : "Favorite"}</button>
-                      <button className={item} onClick={() => setPublish(true)}><Globe size={15} /> {note.published ? "Blog settings…" : "Publish to blog…"}</button>
+                      <button className={item} onClick={() => setPublish(true)}><Globe size={15} /> Share / publish…</button>
                       <button className={item} onClick={() => setUI({ panel: "properties" })}><Info size={15} /> Properties</button>
                       <button className={item} onClick={() => setLocalGraph(true)}><Network size={15} /> Local graph</button>
                       {!isCanvas && <button className={item} onClick={async () => { const c = await canvasFromNote(note, (p) => createNote(p)); if (c) openNote(c.id); }}><MapIcon size={15} /> Make canvas from outline</button>}
@@ -142,9 +145,9 @@ export function NoteView({ note }: { note: Note }) {
           {isBoard ? (
             <Suspense fallback={<div className="p-8 text-muted">Loading whiteboard…</div>}><Whiteboard key={note.id} note={note} /></Suspense>
           ) : isCanvas ? (
-            <CanvasEditor key={note.id} note={note} />
+            <Suspense fallback={null}><CanvasEditor key={note.id} note={note} /></Suspense>
           ) : isRoadmap && !rmEdit ? (
-            <RoadmapView note={note} />
+            <Suspense fallback={null}><RoadmapView note={note} /></Suspense>
           ) : isRoadmap ? (
             <Editor key={note.id} note={note} />
           ) : effMode === "edit" ? (
@@ -172,9 +175,9 @@ export function NoteView({ note }: { note: Note }) {
       </div>
       <RightPanel note={note} />
 
-      <PublishSheet note={note} open={publish} onClose={() => setPublish(false)} />
+      <ShareSheet target={{ kind: "note", note }} open={publish} onClose={() => setPublish(false)} />
       <Sheet open={localGraph} onClose={() => setLocalGraph(false)} title={`Local graph: ${note.title}`} wide>
-        <div className="h-[60vh]"><GraphView localTo={note.id} /></div>
+        <div className="h-[60vh]"><Suspense fallback={null}><GraphView localTo={note.id} /></Suspense></div>
       </Sheet>
     </div>
   );
@@ -193,25 +196,3 @@ function Backlinks({ note }: { note: Note }) {
     </div>
   );
 }
-
-function PublishSheet({ note, open, onClose }: { note: Note; open: boolean; onClose: () => void }) {
-  const [slug, setSlug] = useState(note.slug || slugify(note.title));
-  const [excerpt, setExcerpt] = useState(note.props.excerpt ?? "");
-  useEffect(() => { if (open) { setSlug(note.slug || slugify(note.title)); setExcerpt(note.props.excerpt ?? ""); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-  const url = `${API_BASE || location.origin}/blog/${slug}`;
-  return (
-    <Sheet open={open} onClose={onClose} title={note.published ? "Blog post settings" : "Publish to your blog"}>
-      <div className="space-y-3">
-        <label className="block text-[12px] text-muted">Slug<input className={inputCls} value={slug} onChange={(e) => setSlug(slugify(e.target.value))} /></label>
-        <label className="block text-[12px] text-muted">Excerpt (optional)<textarea className={inputCls + " h-20 py-2"} value={excerpt} onChange={(e) => setExcerpt(e.target.value)} /></label>
-        <div className="text-[12px] text-muted">Public URL: <span className="text-link">{url}</span>. Published posts are public to anyone with the link, appear on <code>/blog</code>, and are in the RSS feed. Images in the post are public too.</div>
-        <div className="flex gap-2">
-          <Button variant="primary" onClick={async () => { await updateNote(note.id, { published: 1, slug, props: { ...note.props, excerpt } }); toast("Published. Live after the next sync."); onClose(); }}>{note.published ? "Save" : "Publish"}</Button>
-          {note.published ? <Button variant="danger" onClick={async () => { await updateNote(note.id, { published: 0 }); toast("Unpublished"); onClose(); }}>Unpublish</Button> : null}
-          {note.published ? <Button variant="ghost" onClick={() => open && window.open(url, "_blank")}>Open</Button> : null}
-        </div>
-      </div>
-    </Sheet>
-  );
-}
-

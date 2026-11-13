@@ -79,6 +79,15 @@ export interface Vault {
   tags: [string, number][];
 }
 
+const linkCache = new Map<string, { v: number; links: string[] }>();
+function linksOf(n: Note): string[] {
+  const hit = linkCache.get(n.id);
+  if (hit && hit.v === n.updatedAt) return hit.links;
+  const links = n.type === "canvas" ? canvasFiles(n.body) : n.type === "whiteboard" ? [] : wikiLinks(n.body);
+  linkCache.set(n.id, { v: n.updatedAt, links });
+  return links;
+}
+
 export function useVault(): Vault {
   const notes = useLiveQuery(() => db.notes.toArray(), []);
   const folders = useLiveQuery(() => db.folders.toArray(), []);
@@ -92,7 +101,7 @@ export function useVault(): Vault {
     const backlinks = new Map<string, string[]>();
     const tagCount = new Map<string, number>();
     for (const n of live) {
-      const outs = (n.type === "canvas" ? canvasFiles(n.body) : wikiLinks(n.body)).map((t) => byTitle.get(t.toLowerCase())?.id).filter((x): x is string => !!x && x !== n.id);
+      const outs = linksOf(n).map((t) => byTitle.get(t.toLowerCase())?.id).filter((x): x is string => !!x && x !== n.id);
       outlinks.set(n.id, [...new Set(outs)]);
       for (const o of new Set(outs)) backlinks.set(o, [...(backlinks.get(o) ?? []), n.id]);
       for (const t of n.tags) tagCount.set(t, (tagCount.get(t) ?? 0) + 1);

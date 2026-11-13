@@ -92,7 +92,8 @@ export function GraphView({ localTo }: { localTo?: string }) {
   );
 }
 
-function Canvas2D({ nodes, links, focus }: { nodes: GNode[]; links: GLink[]; focus: string | null }) {
+export type { GNode, GLink };
+export function Canvas2D({ nodes, links, focus, onOpen }: { nodes: GNode[]; links: GLink[]; focus: string | null; onOpen?: (id: string) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [hover, setHover] = useState<GNode | null>(null);
   const st = useRef({ x: 0, y: 0, k: 1, sim: null as Simulation<GNode, GLink> | null, drag: null as GNode | null, pan: null as { x: number; y: number } | null, moved: false, hover: null as GNode | null });
@@ -194,7 +195,7 @@ function Canvas2D({ nodes, links, focus }: { nodes: GNode[]; links: GLink[]; foc
         onPointerUp={() => {
           const s = st.current;
           if (s.drag) {
-            if (!s.moved && s.drag.note) openNote(s.drag.note.id);
+            if (!s.moved && s.drag.note) (onOpen ?? openNote)(s.drag.note.id);
             s.drag.fx = null; s.drag.fy = null; s.sim?.alphaTarget(0); s.drag = null;
           }
           s.pan = null;

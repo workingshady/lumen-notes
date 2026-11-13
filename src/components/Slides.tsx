@@ -62,7 +62,7 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
         <div className="mx-2 hidden gap-1 overflow-x-auto md:flex">
           {slides.map((s, k) => (
             <button key={k} onClick={() => setI(k)} className={"h-7 max-w-36 truncate rounded-md px-2 text-[11px] " + (k === i ? "bg-surface-2 text-ink" : "hover:bg-surface-2")}>
-              {k + 1}. {(/^#+\s*(.+)$/m.exec(s)?.[1] ?? s.trim().split("\n")[0]).slice(0, 24)}
+              {k + 1}. {(/^#+\s*(.+)$/m.exec(s)?.[1] ?? s.trim().split("\n")[0].replace(/^!\[[^\]]*\]\([^)]*\).*/, "🖼 Image").replace(/^https?:\/\/\S+.*/, "▶ Media")).slice(0, 24)}
             </button>
           ))}
         </div>

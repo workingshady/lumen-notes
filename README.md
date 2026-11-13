@@ -4,7 +4,7 @@ Local-first study notebook + personal blog. You write lessons in Markdown (math,
 
 - **Live:** https://lumen-notes.workingshady.workers.dev (blog at `/blog`, RSS at `/rss.xml`)
 - **Stack:** Vite + React 19 + TypeScript + Tailwind v4 · Cloudflare Workers (Hono) + D1 (+ R2 when enabled) + Workers AI · Dexie (IndexedDB) · CodeMirror 6 · markdown-it + KaTeX + Mermaid · React Flow (canvas) · Excalidraw (whiteboard) · d3-force (graph) · Capacitor (Android)
-- **Docs:** [features](docs/FEATURES.md) · [design system](docs/design/DESIGN_SYSTEM.md) · [Claude Design prompt](docs/design/CLAUDE_DESIGN_PROMPT.md) · [design follow-up #1](docs/design/CLAUDE_DESIGN_UPDATE_01.md)
+- **Docs:** [features](docs/FEATURES.md) · [design docs for Claude Design (order + index)](docs/design/README.md)
 
 ## How data works
 Every write goes to IndexedDB first, so the app works offline. With sync unlocked (Settings → Sync, owner passphrase) changes are pushed to D1 within a few seconds and pulled on focus, reconnect, and every minute. Each record is last-write-wins by `updatedAt`, and the sync cursor is a server-side revision counter, so device clocks don't matter.
@@ -18,6 +18,7 @@ Every write goes to IndexedDB first, so the app works offline. With sync unlocke
 | Roadmap | Markdown: `## Module`, `- [ ] / [/] / [x] / [-] Topic (needs: X) 📅 date → [[Note]]` | same as notes |
 | Flashcards | `Question :: Answer` or `Question` / `?` / answer lines | same as notes |
 | Query block | ```` ```query tag:ml type:lesson sort:title view:table ```` | — |
+| Share link | `/s/<token>` (note) or `/s/<token>/<noteId>` (inside a shared space) | `GET /api/share/:token` · `GET /api/share/:token/note/:id` (public, read-only) |
 | Vault | `.zip` of `<Space>/<folders>/<note>.md` (Obsidian-compatible) | — |
 
 Get a token: `curl -X POST $HOST/api/login -d '{"passcode":"…"}' -H 'content-type: application/json'`.
@@ -35,9 +36,9 @@ npm run db:migrate:remote
 ## Android (APK)
 ```bash
 npm run android:sync    # static build with VITE_API_BASE from .env.app → android/
-cd android && gradlew assembleDebug   # needs JDK 21 (JAVA_HOME) + Android SDK
+cd android && gradlew assembleDebug   # Capacitor 6: JDK 17 (JAVA_HOME) + Android SDK
 # → android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-## Enable R2 (bigger files)
-Attachments live in D1 (≤ 1.9 MB each, images are compressed) until R2 is on: enable R2 in the Cloudflare dashboard, run `npx wrangler r2 bucket create lumen-notes-files`, uncomment `r2_buckets` in `wrangler.jsonc`, and deploy.
+## Files (free tier)
+Attachments are split into 1.5 MB parts and stored in D1 (`file_parts` + `file_meta`), streamed back with HTTP Range support, so videos can seek. Limits: 100 MB per file, 5 GB of D1 storage on the free plan (shared with notes). Big photos are compressed on the device first. For long videos, use an unlisted YouTube link (free, unlimited, embeds inline). R2 is optional and needs a card on the account.

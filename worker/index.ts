@@ -194,40 +194,84 @@ api.post("/whiteboard/:id/elements", auth, async (c) => {
   return c.json({ ok: true, pending: (s.lumenPending as unknown[]).length });
 });
 
-// ------------------------------------------------------------------ attachments (R2)
-const MAX_FILE = 25 * 1024 * 1024;
+// ------------------------------------------------------------------ attachments
+// Free tier, no R2 needed: each file is split by the app into 1.5 MB parts stored as D1 rows (`file_parts`),
+// served back as one stream with HTTP Range support (video seeking). R2 is used instead if a FILES binding exists.
+export const CHUNK = 1_500_000;
+const MAX_FILE = 100 * 1024 * 1024;
+const IMMUTABLE = "public, max-age=31536000, immutable";
+
+/** PUT /att/:id?part=i&parts=n&size=total  (body = that part's bytes; header content-type = file mime). */
 api.put("/att/:id", auth, async (c) => {
   const id = c.req.param("id")!;
   const mime = c.req.header("content-type") ?? "application/octet-stream";
+  const part = Number(c.req.query("part") ?? 0);
+  const parts = Number(c.req.query("parts") ?? 1);
   const buf = await c.req.arrayBuffer();
-  if (buf.byteLength > MAX_FILE) return c.json({ error: "File too large (max 25 MB)." }, 413);
-  if (c.env.FILES) {
-    await c.env.FILES.put(`att/${id}`, buf, { httpMetadata: { contentType: mime, cacheControl: "public, max-age=31536000, immutable" } });
+  const size = Number(c.req.query("size") ?? buf.byteLength);
+  if (!/^[\w-]{8,64}$/.test(id) || !Number.isInteger(part) || !Number.isInteger(parts) || part < 0 || part >= parts) return c.json({ error: "Bad part" }, 400);
+  if (size > MAX_FILE) return c.json({ error: "File too large (max 100 MB)." }, 413);
+  if (c.env.FILES && parts === 1) {
+    await c.env.FILES.put(`att/${id}`, buf, { httpMetadata: { contentType: mime, cacheControl: IMMUTABLE } });
     return c.json({ ok: true, store: "r2" });
   }
-  // Fallback: D1 (no R2 binding yet).
-  if (buf.byteLength > 1_900_000) return c.json({ error: "Files over 1.9 MB need R2 storage (enable R2 in Cloudflare)." }, 413);
-  await c.env.DB.prepare("INSERT OR REPLACE INTO files (id, mime, data, created_at) VALUES (?, ?, ?, ?)").bind(id, mime, buf, Date.now()).run();
-  return c.json({ ok: true, store: "d1" });
+  if (buf.byteLength > CHUNK || (part < parts - 1 && buf.byteLength !== CHUNK)) return c.json({ error: `Parts must be exactly ${CHUNK} bytes (last part ≤).` }, 400);
+  await c.env.DB.batch([
+    c.env.DB.prepare("INSERT OR REPLACE INTO file_parts (id, part, data) VALUES (?, ?, ?)").bind(id, part, buf),
+    c.env.DB.prepare("INSERT OR REPLACE INTO file_meta (id, mime, size, parts, created_at) VALUES (?, ?, ?, ?, ?)").bind(id, mime, size, parts, Date.now()),
+  ]);
+  return c.json({ ok: true, store: "d1", part, parts });
 });
-/** Public on purpose: ids are random UUIDs, and published posts embed their images. */
+
+const toBytes = (d: ArrayBuffer | number[]) => (d instanceof ArrayBuffer ? new Uint8Array(d) : new Uint8Array(d));
+
+/** Public on purpose: ids are random UUIDs, and published posts embed their images/videos. */
 api.get("/att/:id", async (c) => {
   const id = c.req.param("id")!;
-  const cache = "public, max-age=31536000, immutable";
   if (c.env.FILES) {
     const obj = await c.env.FILES.get(`att/${id}`);
     if (obj) {
       const h = new Headers();
       obj.writeHttpMetadata(h);
       h.set("etag", obj.httpEtag);
-      h.set("cache-control", cache);
+      h.set("cache-control", IMMUTABLE);
       return new Response(obj.body, { headers: h });
     }
   }
-  const row = await c.env.DB.prepare("SELECT mime, data FROM files WHERE id = ?").bind(id).first<{ mime: string; data: number[] | ArrayBuffer }>();
-  if (!row) return c.json({ error: "Not found" }, 404);
-  const bytes = row.data instanceof ArrayBuffer ? new Uint8Array(row.data) : new Uint8Array(row.data);
-  return new Response(bytes, { headers: { "content-type": row.mime, "cache-control": cache } });
+  const meta = await c.env.DB.prepare("SELECT mime, size, parts FROM file_meta WHERE id = ?").bind(id).first<{ mime: string; size: number; parts: number }>();
+  if (!meta) {
+    // Legacy single-row files (before chunking).
+    const row = await c.env.DB.prepare("SELECT mime, data FROM files WHERE id = ?").bind(id).first<{ mime: string; data: number[] | ArrayBuffer }>();
+    if (!row) return c.json({ error: "Not found" }, 404);
+    return new Response(toBytes(row.data), { headers: { "content-type": row.mime, "cache-control": IMMUTABLE } });
+  }
+  // Range support (video/audio seeking).
+  let start = 0, end = meta.size - 1, status = 200;
+  const range = /^bytes=(\d*)-(\d*)$/.exec(c.req.header("range") ?? "");
+  if (range) {
+    if (range[1]) { start = Number(range[1]); if (range[2]) end = Math.min(end, Number(range[2])); }
+    else if (range[2]) start = Math.max(0, meta.size - Number(range[2]));
+    if (start > end || start >= meta.size) return new Response(null, { status: 416, headers: { "content-range": `bytes */${meta.size}` } });
+    status = 206;
+  }
+  const first = Math.floor(start / CHUNK), last = Math.floor(end / CHUNK);
+  const db = c.env.DB;
+  let i = first;
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(ctrl) {
+      if (i > last) { ctrl.close(); return; }
+      const row = await db.prepare("SELECT data FROM file_parts WHERE id = ? AND part = ?").bind(id, i).first<{ data: ArrayBuffer | number[] }>();
+      if (!row) { ctrl.error(new Error("missing part")); return; }
+      const bytes = toBytes(row.data);
+      const from = i === first ? start - i * CHUNK : 0;
+      const to = i === last ? end - i * CHUNK + 1 : bytes.length;
+      ctrl.enqueue(bytes.subarray(from, to));
+      i++;
+    },
+  });
+  const h: Record<string, string> = { "content-type": meta.mime, "cache-control": IMMUTABLE, "accept-ranges": "bytes", "content-length": String(end - start + 1) };
+  if (status === 206) h["content-range"] = `bytes ${start}-${end}/${meta.size}`;
+  return new Response(stream, { status, headers: h });
 });
 
 // ------------------------------------------------------------------ AI (Workers AI)
@@ -280,7 +324,7 @@ async function posts(db: D1Database) {
   return results.map((r) => JSON.parse(r.data) as Note).sort((a, b) => (Number(b.props?.date ? Date.parse(b.props.date) : b.createdAt)) - Number(a.props?.date ? Date.parse(a.props.date) : a.createdAt));
 }
 const excerpt = (md: string) =>
-  md.replace(/^---[\s\S]*?---/, "").replace(/```[\s\S]*?```/g, "").replace(/\$\$[\s\S]*?\$\$/g, "").replace(/[#>*_`\[\]!]|\(.*?\)/g, "").replace(/\s+/g, " ").trim().slice(0, 220);
+  md.replace(/^---[\s\S]*?---/, "").replace(/```[\s\S]*?```/g, "").replace(/\$\$[\s\S]*?\$\$/g, "").replace(/\$[^$\n]+\$/g, "…").replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/[#>*_`\[\]!]|\(.*?\)/g, "").replace(/\s+/g, " ").trim().slice(0, 220);
 const toPost = (n: Note, full = false): Post => ({
   id: n.id, title: n.title, slug: n.slug || n.id, tags: n.tags, createdAt: n.createdAt, updatedAt: n.updatedAt, props: n.props ?? {},
   excerpt: n.props?.excerpt || excerpt(n.body), words: n.body.split(/\s+/).filter(Boolean).length, ...(full ? { body: n.body } : {}),
@@ -290,7 +334,7 @@ async function branding(env: Env["Bindings"]) {
   const p = r ? ((JSON.parse(r.data) as { props?: Record<string, string> }).props ?? {}) : {};
   return { name: p.blogName || env.BLOG_NAME || "Lumen", tagline: p.tagline ?? "", author: p.author ?? "", avatar: p.avatar ?? "🕯️" };
 }
-api.get("/public/posts", async (c) => c.json({ blog: await branding(c.env), posts: (await posts(c.env.DB)).map((n) => toPost(n)) }));
+api.get("/public/posts", async (c) => c.json({ blog: await branding(c.env), posts: (await posts(c.env.DB)).map((n) => toPost(n)) }, 200, { "cache-control": "public, max-age=60" }));
 api.get("/public/posts/:slug", async (c) => {
   const slug = c.req.param("slug")!;
   const all = await posts(c.env.DB);
@@ -349,6 +393,48 @@ api.get("/unfurl", async (c) => {
   const res = new Response(JSON.stringify(meta), { headers: { "content-type": "application/json", "cache-control": "public, max-age=86400", "access-control-allow-origin": "*" } });
   c.executionCtx.waitUntil(cache.put(key, res.clone()));
   return res;
+});
+
+// ------------------------------------------------------------------ unlisted share links
+// /api/share/:token → a shared note (any type) or a shared space (course/project page with its notes).
+// Anyone with the token can read; nothing is listed anywhere. Revoking = clearing shareId in the app.
+type Space = { id: string; name: string; kind: string; icon: string; color: string | null; description: string; props: Record<string, string>; roadmapId: string | null; shareId?: string | null; deleted?: number };
+const SAFE_SPACE_PROPS = ["goal", "deadline", "target", "url"];
+const shareHeaders = { "cache-control": "public, max-age=30" };
+const publicNote = (n: Note) => ({ id: n.id, title: n.title, body: n.body, type: n.type, tags: n.tags, status: n.status, createdAt: n.createdAt, updatedAt: n.updatedAt });
+
+async function sharedRoot(db: D1Database, token: string) {
+  if (!/^[\w-]{16,64}$/.test(token)) return null;
+  return db.prepare("SELECT kind, data FROM items WHERE json_extract(data, '$.shareId') = ? AND deleted = 0 AND kind IN ('note', 'space') LIMIT 1").bind(token).first<{ kind: string; data: string }>();
+}
+async function spaceNotes(db: D1Database, spaceId: string) {
+  const { results } = await db.prepare("SELECT data FROM items WHERE kind = 'note' AND deleted = 0 AND json_extract(data, '$.spaceId') = ?").bind(spaceId).all<{ data: string }>();
+  return results.map((r) => JSON.parse(r.data) as Note);
+}
+api.get("/share/:token", async (c) => {
+  const row = await sharedRoot(c.env.DB, c.req.param("token")!);
+  if (!row) return c.json({ error: "This link doesn't exist or was turned off." }, 404);
+  const blog = await branding(c.env);
+  if (row.kind === "note") return c.json({ kind: "note", blog, note: publicNote(JSON.parse(row.data) as Note) }, 200, shareHeaders);
+  const sp = JSON.parse(row.data) as Space;
+  const notes = await spaceNotes(c.env.DB, sp.id);
+  const roadmap = sp.roadmapId ? notes.find((n) => n.id === sp.roadmapId) : undefined;
+  return c.json({
+    kind: "space", blog,
+    space: { name: sp.name, kind: sp.kind, icon: sp.icon, color: sp.color, description: sp.description, props: Object.fromEntries(Object.entries(sp.props ?? {}).filter(([k]) => SAFE_SPACE_PROPS.includes(k))) },
+    roadmap: roadmap ? publicNote(roadmap) : null,
+    // list without bodies, except link targets for the graph (titles) and an excerpt
+    notes: notes.filter((n) => n.id !== sp.roadmapId).map((n) => ({ id: n.id, title: n.title, type: n.type, status: n.status, tags: n.tags, updatedAt: n.updatedAt, links: [...n.body.matchAll(/\[\[([^\]|#]+)/g)].map((m) => m[1].trim()).slice(0, 50), excerpt: excerpt(n.body).slice(0, 160) })),
+  }, 200, shareHeaders);
+});
+/** One note inside a shared space. */
+api.get("/share/:token/note/:id", async (c) => {
+  const row = await sharedRoot(c.env.DB, c.req.param("token")!);
+  if (!row || row.kind !== "space") return c.json({ error: "Not found" }, 404);
+  const sp = JSON.parse(row.data) as Space;
+  const n = await getNote(c.env.DB, c.req.param("id")!);
+  if (!n || n.spaceId !== sp.id) return c.json({ error: "Not found" }, 404);
+  return c.json({ note: publicNote(n) }, 200, shareHeaders);
 });
 
 api.get("/health", (c) => c.json({ ok: true, r2: !!c.env.FILES, ai: !!c.env.AI }));

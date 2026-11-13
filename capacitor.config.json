@@ -1,0 +1,6 @@
+{
+  "appId": "dev.workingshady.lumen",
+  "appName": "Lumen",
+  "webDir": "dist/client",
+  "android": { "allowMixedContent": false }
+}

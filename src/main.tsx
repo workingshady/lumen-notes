@@ -7,7 +7,7 @@ import { applyTheme } from "./lib/settings";
 import { startSync } from "./lib/sync";
 
 applyTheme();
-const isBlog = location.pathname === "/blog" || location.pathname.startsWith("/blog/");
+const isBlog = location.pathname === "/blog" || location.pathname.startsWith("/blog/") || location.pathname.startsWith("/s/");
 if (!isBlog) {
   void ensureDefaults().then(startSync);
   if ("serviceWorker" in navigator && location.protocol === "https:" && !import.meta.env.DEV) void navigator.serviceWorker.register("/sw.js").catch(() => {});

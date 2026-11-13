@@ -121,7 +121,8 @@ export function Editor({ note, focus }: { note: Note; focus?: boolean }) {
     const files = async (list: FileList | File[] | null, v: EditorView, pos?: number) => {
       if (!list?.length) return false;
       const parts: string[] = [];
-      for (const f of Array.from(list)) parts.push(await addFile(f));
+      for (const f of Array.from(list)) { try { parts.push(await addFile(f)); } catch (e) { toast((e as Error).message); } }
+      if (!parts.length) return true;
       const at = pos ?? v.state.selection.main.head;
       const ins = parts.join("\n") + "\n";
       v.dispatch({ changes: { from: at, insert: ins }, selection: { anchor: at + ins.length } });
@@ -234,7 +235,7 @@ export function Editor({ note, focus }: { note: Note; focus?: boolean }) {
               const fl = e.target.files;
               if (!fl) return;
               const md: string[] = [];
-              for (const f of Array.from(fl)) md.push(await addFile(f));
+              for (const f of Array.from(fl)) { try { md.push(await addFile(f)); } catch (err) { toast((err as Error).message); } }
               insertText(md.join("\n") + "\n");
               e.target.value = "";
             }}
