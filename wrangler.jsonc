@@ -14,6 +14,9 @@
   // Optional R2 (needs a card on the Cloudflare account): create bucket lumen-notes-files and uncomment.
   // "r2_buckets": [{ "binding": "FILES", "bucket_name": "lumen-notes-files" }],
   "ai": { "binding": "AI" },
+  // Phone-as-remote for slides: one SQLite-backed Durable Object per pairing code (free plan), WebSocket hibernation.
+  "durable_objects": { "bindings": [{ "name": "REMOTE", "class_name": "SlidesRemote" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SlidesRemote"] }],
   "vars": { "BLOG_NAME": "Lumen" },
   "observability": { "enabled": true }
 }

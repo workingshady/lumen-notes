@@ -22,7 +22,8 @@ export function parseQuery(q: string): Query {
 export function matcher(q: Query, folders: Map<string, Folder>, spaces: Map<string, Space>) {
   const folderPath = (id: string | null) => {
     const names: string[] = [];
-    for (let f = id ? folders.get(id) : undefined; f; f = f.parentId ? folders.get(f.parentId) : undefined) names.push(f.name.toLowerCase());
+    const seen = new Set<string>();
+    for (let f = id ? folders.get(id) : undefined; f && !seen.has(f.id); f = f.parentId ? folders.get(f.parentId) : undefined) { seen.add(f.id); names.push(f.name.toLowerCase()); }
     return names;
   };
   return (n: Note) =>
@@ -46,11 +47,16 @@ export function updateIndex(notes: Note[]) {
   index ??= new MiniSearch<Note>({
     fields: ["title", "body", "tagText"],
     storeFields: ["id"],
+    autoVacuum: false,
     extractField: (doc, f) => (f === "tagText" ? doc.tags.join(" ") : f === "body" && doc.type === "canvas" ? canvasText(doc.body) : f === "body" && doc.type === "whiteboard" ? sceneText(doc.body) : (doc as never)[f]),
     processTerm: (term) => normalize(term) || null,
     searchOptions: { boost: { title: 3, tagText: 2 }, prefix: true, fuzzy: 0.2, combineWith: "AND", processTerm: (term) => normalize(term) || null },
   });
   const live = new Map(notes.filter((n) => !n.deleted).map((n) => [n.id, n]));
+  // Mass removal (scenario switch, vault reset): rebuild from scratch instead of thousands of discards.
+  let gone = 0;
+  for (const [id] of indexed) if (!live.has(id)) gone++;
+  if (gone > 200 && gone > indexed.size / 3) { index.removeAll(); indexed = new Map(); }
   for (const [id] of indexed) if (!live.has(id)) { index.discard(id); indexed.delete(id); }
   for (const n of live.values()) {
     const v = indexed.get(n.id);

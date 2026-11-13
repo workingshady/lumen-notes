@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 64 64" style="display:block;flex-shrink:0">
+  <defs>
+    <linearGradient id="{{ coneId }}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" style="stop-color:{{ flame }};stop-opacity:{{ coneTop }}"></stop>
+      <stop offset="1" style="stop-color:{{ flame }};stop-opacity:0"></stop>
+    </linearGradient>
+    <radialGradient id="{{ glowId }}" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" style="stop-color:{{ flame }};stop-opacity:{{ glowOp }}"></stop>
+      <stop offset="1" style="stop-color:{{ flame }};stop-opacity:0"></stop>
+    </radialGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="63" height="63" rx="16" style="fill:{{ tile }};stroke:{{ border }};stroke-width:1"></rect>
+  <circle cx="32" cy="22" r="15" style="fill:url(#{{ glowId }})"></circle>
+  <path d="M27 27 L37 27 L51 45 L13 45 Z" style="fill:url(#{{ coneId }});display:{{ coneShow }}"></path>
+  <path d="M32 11.5 C35.6 15.6 38 18.9 38 22.4 A6 6 0 0 1 26 22.4 C26 18.9 28.4 15.6 32 11.5 Z" style="fill:{{ flame }};display:{{ flameShow }}"></path>
+  <circle cx="32" cy="22" r="6.5" style="fill:{{ flame }};display:{{ dotShow }}"></circle>
+  <rect x="12" y="44" width="40" height="3.5" rx="1.75" style="fill:{{ ink }}"></rect>
+</svg>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:200,&quot;height&quot;:200},&quot;size&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:64,&quot;tsType&quot;:&quot;number&quot;},&quot;tile&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;,&quot;accent&quot;,&quot;ink&quot;,&quot;mono&quot;,&quot;monoDark&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;glyph&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;flame&quot;,&quot;dot&quot;],&quot;default&quot;:&quot;flame&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;cone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;glow&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+let __lumenMarkSeq = 0;
+class Component extends DCLogic {
+  constructor(p) { super(p); this.uid = 'lm' + (++__lumenMarkSeq); }
+  renderVals() {
+    const v = this.props.tile ?? 'dark';
+    const T = {
+      dark:   { tile:'#161A21', border:'#2A303B', ink:'#E8E6E1', flame:'#F2A93B' },
+      light:  { tile:'#FFFFFF', border:'#E4DFD3', ink:'#1F1D1A', flame:'#D98A1E' },
+      accent: { tile:'#F2A93B', border:'#F2A93B', ink:'#1A1206', flame:'#1A1206' },
+      ink:    { tile:'#0F1115', border:'#0F1115', ink:'#E8E6E1', flame:'#F2A93B' },
+      glyph:  { tile:'transparent', border:'transparent', ink:'#E8E6E1', flame:'#F2A93B' },
+      mono:   { tile:'transparent', border:'transparent', ink:'#E8E6E1', flame:'#E8E6E1' },
+      monoDark:{ tile:'transparent', border:'transparent', ink:'#1F1D1A', flame:'#1F1D1A' }
+    }[v] || {};
+    const glyph = this.props.glyph ?? 'flame';
+    const plain = v === 'accent' || v === 'mono' || v === 'monoDark';
+    const cone = this.props.cone !== false && !plain;
+    return { ...T, size: this.props.size ?? 64, coneId: this.uid + 'c', glowId: this.uid + 'g',
+      coneTop: cone ? (v === 'light' ? .22 : .3) : 0, glowOp: plain || this.props.glow === false ? 0 : (v === 'light' ? .28 : .45),
+      coneShow: cone ? 'inline' : 'none', flameShow: glyph === 'flame' ? 'inline' : 'none', dotShow: glyph === 'dot' ? 'inline' : 'none' };
+  }
+}
+</script>
+</body>
+</html>

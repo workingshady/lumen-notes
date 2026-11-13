@@ -4,7 +4,14 @@ import type { AttachmentMeta, Card, Folder, Kind, Note, Session, Space, Version 
 export interface AttachmentBlob { id: string; blob: Blob; uploaded: 0 | 1 }
 export interface Meta { k: string; v: unknown }
 
-class LumenDB extends Dexie {
+/** Dev/demo mode: a separate local database seeded with the design's sample data; never syncs. */
+export const DEMO = (() => { try { return localStorage.getItem("lumen.demo") === "1"; } catch { return false; } })();
+export function setDemo(on: boolean) {
+  try { on ? localStorage.setItem("lumen.demo", "1") : localStorage.removeItem("lumen.demo"); } catch { /* ignore */ }
+  location.href = location.pathname;
+}
+
+export class LumenDB extends Dexie {
   spaces!: Table<Space, string>;
   notes!: Table<Note, string>;
   folders!: Table<Folder, string>;
@@ -15,7 +22,7 @@ class LumenDB extends Dexie {
   blobs!: Table<AttachmentBlob, string>;
   meta!: Table<Meta, string>;
   constructor() {
-    super("lumen");
+    super(DEMO ? "lumen-demo" : "lumen");
     this.version(1).stores({
       spaces: "id, kind, sort, dirty, deleted",
       notes: "id, spaceId, folderId, type, status, updatedAt, createdAt, pinned, published, slug, dirty, deleted, *tags",

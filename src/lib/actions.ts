@@ -1,27 +1,49 @@
 import type { Folder, Note, Space, Version } from "../../shared/types";
 import { db, newFolder, newNote, newSpace, now, patch, save, uid } from "./db";
-import { inlineTags, slugify } from "./parse";
+import { NOTE_TYPES, STATUSES, type NoteType, type Status } from "../../shared/types";
+import { firstH1, fmList, inlineTags, setFrontMatter, slugify, splitFrontMatter } from "./parse";
 import { TEMPLATES, type Template } from "./templates";
 
 export async function createNote(p: Partial<Note> & { template?: string } = {}) {
   const { template, ...rest } = p;
   const t: Template | undefined = TEMPLATES.find((x) => x.id === (template ?? "blank"));
-  const n = newNote({ type: t?.type ?? "note", status: t?.status ?? null, title: t?.title ?? "Untitled", body: t?.body ?? "", ...rest });
+  const base = newNote({ type: t?.type ?? "note", status: t?.status ?? null, title: t?.title ?? "Untitled", body: t?.body ?? "", ...rest });
+  // Markdown notes carry their title as `# H1` and type/status/tags in front-matter (design: ScreenWorkspace).
+  const md = !["canvas", "whiteboard", "roadmap"].includes(base.type);
+  const n = md && rest.body === undefined ? { ...base, body: withMeta(`# ${base.title}\n\n${base.body}`, base) } : base;
   await save("note", n);
   return n;
 }
 
 /** Update a note's body/title; derives tags from #inline tags + front-matter + manual tags. */
-export async function updateNote(id: string, changes: Partial<Note>) {
+/** Write type/status/tags into the body's front-matter (only keys the note uses). */
+function withMeta(body: string, n: Pick<Note, "type" | "status" | "tags">) {
+  return setFrontMatter(body, { type: n.type === "note" ? null : n.type, status: n.status ?? null, tags: n.tags.filter((t) => !inlineTags(splitFrontMatter(body).body).includes(t)) });
+}
+const isMarkdown = (t: NoteType) => !["canvas", "whiteboard"].includes(t);
+
+/** opts.keepTime: an automatic conversion (not a user edit) keeps the note's "updated" time. */
+export async function updateNote(id: string, changes: Partial<Note>, opts: { keepTime?: boolean } = {}) {
   const old = await db.notes.get(id);
   if (!old) return;
   const next = { ...old, ...changes };
-  if (changes.body !== undefined && next.type !== "canvas") {
-    const manual = old.tags.filter((t) => !inlineTags(old.body).includes(t));
-    next.tags = [...new Set([...manual, ...inlineTags(next.body)])];
+  if (changes.body !== undefined && isMarkdown(next.type)) {
+    // body → record: front-matter keys and the first H1 win
+    const fm = splitFrontMatter(next.body).data;
+    if (fm.type && (NOTE_TYPES as string[]).includes(fm.type)) next.type = fm.type as NoteType;
+    if ("status" in fm) next.status = (STATUSES as string[]).includes(fm.status) ? (fm.status as Status) : null;
+    const h1 = firstH1(next.body);
+    if (h1) next.title = h1;
+    next.tags = [...new Set([...fmList(fm.tags), ...inlineTags(splitFrontMatter(next.body).body)])];
+  } else if (isMarkdown(next.type) && (changes.type !== undefined || changes.status !== undefined || changes.tags !== undefined || changes.title !== undefined)) {
+    // record → body: keep the front-matter and H1 in sync when changed from the UI
+    let body = splitFrontMatter(old.body).data && Object.keys(splitFrontMatter(old.body).data).length || changes.type !== undefined || changes.status !== undefined || changes.tags !== undefined ? withMeta(old.body, next) : old.body;
+    if (changes.title !== undefined && firstH1(old.body)) body = body.replace(/^#\s+.+$/m, `# ${next.title}`);
+    next.body = body;
   }
   if (next.published && !next.slug) next.slug = slugify(next.title);
   await save("note", next);
+  if (opts.keepTime) await db.notes.update(id, { updatedAt: old.updatedAt });
   maybeSnapshot(next);
 }
 
@@ -104,7 +126,8 @@ export async function moveFolder(f: Folder, spaceId: string, parentId: string | 
   if (parentId === f.id) return;
   const all = await db.folders.toArray();
   // refuse moving into own descendant
-  for (let p = parentId ? all.find((x) => x.id === parentId) : undefined; p; p = p.parentId ? all.find((x) => x.id === p!.parentId) : undefined) if (p.id === f.id) return;
+  const seen = new Set<string>();
+  for (let p = parentId ? all.find((x) => x.id === parentId) : undefined; p && !seen.has(p.id); p = p.parentId ? all.find((x) => x.id === p!.parentId) : undefined) { if (p.id === f.id) return; seen.add(p.id); }
   const stack = [f.id];
   while (stack.length) {
     const id = stack.pop()!;

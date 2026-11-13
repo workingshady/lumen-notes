@@ -2,8 +2,14 @@ import { Hono, type Context, type Next } from "hono";
 import { cors } from "hono/cors";
 import type { JsonCanvas, Kind, Note, SyncItem, SyncRequest, SyncResponse } from "../shared/types";
 import { KINDS } from "../shared/types";
+import extHome from "./ext/home";
+import extSpaces from "./ext/spaces";
+import extNavigate from "./ext/navigate";
+import extStudy from "./ext/study";
+import extSettings from "./ext/settings";
+import extWorkspace from "./ext/workspace";
 
-type Env = {
+export type Env = {
   Bindings: {
     DB: D1Database;
     FILES?: R2Bucket;
@@ -53,10 +59,32 @@ api.post("/login", async (c) => {
   return c.json({ token: await ownerToken(c.env) });
 });
 
+/** Owner token (from /login) or a named API token (`lmn_…`, Settings › Developer; only its SHA-256 is stored). */
 async function auth(c: Context<Env>, next: Next) {
   const h = c.req.header("authorization") ?? "";
   const tok = h.startsWith("Bearer ") ? h.slice(7) : "";
-  if (!tok || !safeEqual(tok, await ownerToken(c.env))) return c.json({ error: "Unauthorized" }, 401);
+  let ok = !!tok && safeEqual(tok, await ownerToken(c.env));
+  if (!ok && /^lmn_[A-Za-z0-9]{20,64}$/.test(tok)) {
+    const hash = hex(await crypto.subtle.digest("SHA-256", enc.encode(tok)));
+    const row = await c.env.DB.prepare("SELECT id, last_used_at FROM api_tokens WHERE hash = ?").bind(hash).first<{ id: string; last_used_at: number | null }>().catch(() => null);
+    if (row) {
+      ok = true;
+      const now = Date.now();
+      if (!row.last_used_at || now - row.last_used_at > 60_000) {
+        const ip = c.req.header("cf-connecting-ip") ?? "";
+        const write = c.env.DB.prepare("UPDATE api_tokens SET last_used_at = ?, last_ip = ? WHERE id = ?").bind(now, ip, row.id).run().catch(() => {});
+        try { c.executionCtx.waitUntil(write); } catch { await write; }
+      }
+    }
+  }
+  if (!ok) return c.json({ error: "Unauthorized" }, 401);
+  // AI off-switch (Settings › AI): the owner can turn Workers AI actions off; stored on the Inbox space props.
+  if (c.req.path === "/api/ai" || c.req.path === "/api/transcribe") {
+    const r = await c.env.DB.prepare("SELECT data FROM items WHERE kind = 'space' AND id = 'inbox'").first<{ data: string }>().catch(() => null);
+    const off = String((r ? (JSON.parse(r.data) as { props?: Record<string, string> }).props?.aiOff : "") ?? "").split(",").filter(Boolean);
+    const action = c.req.path === "/api/transcribe" ? "voice" : ((await c.req.json<{ action?: string }>().catch(() => ({}))) as { action?: string }).action ?? "";
+    if (off.includes("all") || off.includes(action)) return c.json({ error: "This AI action is turned off in Settings › AI." }, 403);
+  }
   await next();
 }
 
@@ -399,7 +427,7 @@ api.get("/unfurl", async (c) => {
 // /api/share/:token → a shared note (any type) or a shared space (course/project page with its notes).
 // Anyone with the token can read; nothing is listed anywhere. Revoking = clearing shareId in the app.
 type Space = { id: string; name: string; kind: string; icon: string; color: string | null; description: string; props: Record<string, string>; roadmapId: string | null; shareId?: string | null; deleted?: number };
-const SAFE_SPACE_PROPS = ["goal", "deadline", "target", "url"];
+const SAFE_SPACE_PROPS = ["goal", "deadline", "target", "url", "provider"];
 const shareHeaders = { "cache-control": "public, max-age=30" };
 const publicNote = (n: Note) => ({ id: n.id, title: n.title, body: n.body, type: n.type, tags: n.tags, status: n.status, createdAt: n.createdAt, updatedAt: n.updatedAt });
 
@@ -439,7 +467,13 @@ api.get("/share/:token/note/:id", async (c) => {
 
 api.get("/health", (c) => c.json({ ok: true, r2: !!c.env.FILES, ai: !!c.env.AI }));
 
+// Area extensions (one file per area so parallel work never collides). Each gets the API router + shared helpers.
+const helpers = { auth, getNote, putNote, upserts, hmac, safeEqual };
+export type Helpers = typeof helpers;
+for (const ext of [extHome, extSpaces, extNavigate, extStudy, extSettings, extWorkspace]) ext(api, helpers);
+
 app.route("/api", api);
 app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
 export default app;
+export { SlidesRemote } from "./study-remote";

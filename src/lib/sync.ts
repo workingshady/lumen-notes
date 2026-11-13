@@ -2,8 +2,10 @@ import { useSyncExternalStore } from "react";
 import type { Kind, SyncItem, SyncResponse } from "../../shared/types";
 import { KINDS } from "../../shared/types";
 import { api, getToken } from "./api";
+import { DEMO } from "./db";
 import { db, getMeta, onDirty, setMeta, TABLE } from "./db";
 import { uploadPending } from "./attachments";
+import { onFaults, simSync } from "./sim/faults";
 
 export type SyncState = { status: "local" | "idle" | "syncing" | "offline" | "error"; last: number; pending: number; error?: string };
 let state: SyncState = { status: getToken() ? "idle" : "local", last: 0, pending: 0 };
@@ -19,6 +21,8 @@ async function countDirty() {
 
 let running: Promise<void> | null = null;
 export function syncNow() {
+  // Demo mode never syncs; the Dev simulator (sim/faults.ts) walks the status machine of the chosen network mode.
+  if (DEMO) return (running ??= simSync(set, countDirty).finally(() => (running = null)));
   if (!getToken()) { countDirty().then((pending) => set({ status: "local", pending })); return Promise.resolve(); }
   if (!navigator.onLine) { set({ status: "offline" }); return Promise.resolve(); }
   return (running ??= run().finally(() => (running = null)));
@@ -78,6 +82,7 @@ async function apply(items: SyncItem[]) {
 }
 
 export function startSync() {
+  if (DEMO) onFaults(() => { running = null; void syncNow(); });
   onDirty(() => void syncNow());
   window.addEventListener("online", () => void syncNow());
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") void syncNow(); });

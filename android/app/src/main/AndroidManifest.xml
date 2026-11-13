@@ -24,6 +24,28 @@
 
         </activity>
 
+        <!-- Share to Lumen: text, links, images, PDFs, audio and video from other apps -->
+        <activity
+            android:name=".ShareActivity"
+            android:label="@string/app_name"
+            android:exported="true"
+            android:theme="@style/AppTheme.Share"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:excludeFromRecents="true"
+            android:taskAffinity="dev.workingshady.lumen.share"
+            android:launchMode="standard">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="text/markdown" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="application/pdf" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+        </activity>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -38,4 +60,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Fingerprint / face unlock (@capgo/capacitor-native-biometric) -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 </manifest>

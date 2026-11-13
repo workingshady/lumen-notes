@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&family=Noto+Naskh+Arabic:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:120px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227">
+  <div style="display:flex;align-items:center;gap:16px">
+    <div style="width:40px;height:40px;border-radius:11px;background:#161A21;border:1px solid #2A303B;position:relative"><div style="position:absolute;left:14px;top:9px;width:11px;height:11px;border-radius:50%;background:#F2A93B;box-shadow:0 0 14px rgba(242,169,59,.7)"></div><div style="position:absolute;left:9px;right:9px;bottom:11px;height:2px;background:#E8E6E1;border-radius:1px"></div></div>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 05 Review &amp; Slides</span></div><div style="font-size:14px;color:#9A9890">Screens 12 (flashcard review) and 13 (slides / presenter).</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 12</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Flashcard review</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">One card, nothing else. Flip, grade, next. Violet (learn) marks flashcard context; grades use semantic tints.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">12A</span><span>Front · Desktop</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--le:#B48EF0;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:13px">
+          <div style="height:56px;padding:0 24px;display:flex;align-items:center;gap:16px">
+            <span style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-x" style="font-size:18px"></i></span>
+            <span style="color:var(--mu)">🧠 ML Foundations · 4 decks</span><span style="flex:1"></span>
+            <span style="font-weight:600;font-variant-numeric:tabular-nums">7 <span style="color:var(--mu);font-weight:400">/ 23</span></span>
+          </div>
+          <div style="height:3px;background:var(--sf2)"><div style="width:30%;height:100%;background:var(--le)"></div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px">
+            <div style="width:680px;height:400px;box-sizing:border-box;border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:28px 36px;display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;gap:8px;color:var(--mu);font-size:12px"><i class="icon-layers" style="font-size:13px;color:var(--le)"></i>Gradient descent<span style="opacity:.5">·</span>02 Optimization<span style="flex:1"></span><span>New</span></div>
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-family:'Source Serif 4',Georgia,serif;font-size:30px;line-height:42px;font-weight:600;letter-spacing:-.01em;padding:0 20px">What does the learning rate <i>η</i> control in gradient descent?</div>
+              <div style="text-align:center;color:var(--mu);font-size:12.5px"><span style="font:500 11px 'JetBrains Mono',monospace;padding:2px 8px;border:1px solid var(--bd);border-radius:4px;margin-right:6px">Space</span>to show answer</div>
+            </div>
+            <div style="height:48px;padding:0 28px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd);display:flex;align-items:center;font-weight:600;font-size:14px">Show answer</div>
+          </div>
+          <div style="height:44px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;color:var(--mu);font-size:12px"><span>11 left in this deck · about 8 min</span><span style="display:flex;gap:14px"><span>E edit card</span><span>S suspend</span><span>U undo</span></span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">12B</span><span>Back + grades · Desktop</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:13px">
+          <div style="height:56px;padding:0 24px;display:flex;align-items:center;gap:16px"><span style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-x" style="font-size:18px"></i></span><span style="color:var(--mu)">🧠 ML Foundations · 4 decks</span><span style="flex:1"></span><span style="font-weight:600">7 <span style="color:var(--mu);font-weight:400">/ 23</span></span></div>
+          <div style="height:3px;background:var(--sf2)"><div style="width:30%;height:100%;background:var(--le)"></div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px">
+            <div style="width:680px;height:400px;box-sizing:border-box;border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:28px 36px;display:flex;flex-direction:column;gap:18px">
+              <div style="display:flex;align-items:center;gap:8px;color:var(--mu);font-size:12px"><i class="icon-layers" style="font-size:13px;color:var(--le)"></i>Gradient descent<span style="opacity:.5">·</span>02 Optimization<span style="flex:1"></span><span style="display:flex;align-items:center;gap:4px"><i class="icon-arrow-up-right" style="font-size:12px"></i>Open note</span></div>
+              <div style="text-align:center;font-family:'Source Serif 4',Georgia,serif;font-size:20px;line-height:30px;color:var(--mu);padding-top:10px">What does the learning rate <i>η</i> control in gradient descent?</div>
+              <div style="height:1px;background:var(--bd);margin:0 40px"></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;font-family:'Source Serif 4',Georgia,serif">
+                <span style="font-size:28px;line-height:38px;font-weight:600">The step size.</span>
+                <span style="font-size:19px;line-height:30px;color:var(--tx);opacity:.85"><i>θ</i> ← <i>θ</i> − <i>η</i>∇<i>J</i>(<i>θ</i>) — too large diverges, too small crawls.</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,150px);gap:10px">
+              <sc-for list="{{ grades }}" as="g" hint-placeholder-count="4">
+                <div style="height:64px;border-radius:10px;background:{{ g.bg }};border:1px solid {{ g.bd }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative">
+                  <span style="font-weight:600;font-size:14px;color:{{ g.c }}">{{ g.n }}</span><span style="font-size:12px;color:var(--mu)">{{ g.i }}</span>
+                  <span style="position:absolute;top:6px;left:8px;font:500 10px 'JetBrains Mono',monospace;color:var(--mu)">{{ g.k }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="height:44px"></div>
+          <div style="position:absolute;left:1042px;top:668px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">1</div>
+        </div>
+        <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>Keys 1–4 grade; intervals come from SM-2 and are shown before choosing. The card flips with a 180 ms cross-fade (no 3D spin). Tap/click the card also flips. Editing a card (E) edits the source line in the note.</span></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">12C</span><span>Session summary · Desktop</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;align-items:center;justify-content:center;font-size:13px">
+          <div style="width:520px;display:flex;flex-direction:column;gap:24px">
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center">
+              <span style="width:52px;height:52px;border-radius:50%;background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok);display:flex;align-items:center;justify-content:center"><i class="icon-check" style="font-size:26px"></i></span>
+              <span style="font-size:26px;font-weight:650;letter-spacing:-.02em;margin-top:8px">Session complete</span>
+              <span style="color:var(--mu);font-size:14px">23 cards in 11 min · streak now 13 days</span>
+            </div>
+            <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:20px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px"><span style="width:13%;background:var(--da)"></span><span style="width:17%;background:var(--wa)"></span><span style="width:52%;background:var(--ok)"></span><span style="width:18%;background:var(--in)"></span></div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:12.5px">
+                <span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:18px;font-weight:650">3</b><span style="color:var(--da)">Again</span></span><span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:18px;font-weight:650">4</b><span style="color:var(--wa)">Hard</span></span><span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:18px;font-weight:650">12</b><span style="color:var(--ok)">Good</span></span><span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:18px;font-weight:650">4</b><span style="color:var(--in)">Easy</span></span>
+              </div>
+              <div style="border-top:1px solid var(--bd);padding-top:12px;display:flex;flex-direction:column;gap:8px;color:var(--mu)">
+                <span style="display:flex;justify-content:space-between"><span>Hardest card</span><span style="color:var(--tx)">Arabic: when does idafa drop tanwīn?</span></span>
+                <span style="display:flex;justify-content:space-between"><span>Next review</span><span style="color:var(--tx)">Tomorrow · 14 cards</span></span>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px"><span style="flex:1;height:44px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px">Back to Home</span><span style="height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;font-size:14px">Redo 3 “Again” cards</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">12D</span><span>Review · Phone · answer shown</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 8px;display:flex;align-items:center;gap:8px"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><i class="icon-x" style="font-size:20px"></i></span><span style="flex:1;height:4px;border-radius:2px;background:var(--sf2);overflow:hidden"><span style="display:block;width:30%;height:100%;background:var(--le)"></span></span><span style="padding:0 12px;font-weight:600">7 / 23</span></div>
+          <div style="flex:1;padding:8px 16px 16px;display:flex">
+            <div style="flex:1;border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:20px;display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px"><i class="icon-layers" style="font-size:13px;color:var(--le)"></i>Arabic Grammar · Nahw</div>
+              <div style="text-align:center;font-size:17px;line-height:26px;color:var(--mu);padding-top:20px">In an idafa, what happens to the first noun (mudāf)?</div>
+              <div style="height:1px;background:var(--bd);margin:0 24px"></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center">
+                <span style="font-size:22px;line-height:32px;font-weight:600">It loses “al-” and its tanwīn.</span>
+                <span dir="rtl" style="font-size:30px;line-height:44px;font-family:'Noto Naskh Arabic','Source Serif 4',serif">كِتَابُ الطَّالِبِ</span>
+                <span style="color:var(--mu);font-size:14px">“the student’s book”</span>
+              </div>
+            </div>
+          </div>
+          <div style="padding:0 16px 12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+            <sc-for list="{{ grades }}" as="g" hint-placeholder-count="4"><div style="height:68px;border-radius:12px;background:{{ g.bg }};border:1px solid {{ g.bd }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px"><span style="font-weight:600;color:{{ g.c }}">{{ g.n }}</span><span style="font-size:12px;color:var(--mu)">{{ g.i }}</span></div></sc-for>
+          </div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+        </div>
+        <div style="max-width:412px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Grades sit in the thumb zone. Swipe left = Again, right = Good as a shortcut (with haptic tick). Before flipping, the four buttons are replaced by one full-width “Show answer”.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 13</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Slides / presenter</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Any note becomes a deck: <code>---</code> separates slides. Mermaid and math render as in Read mode.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">13A</span><span>Presenter view · Desktop</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ok:#6BCB8B;--in:#7AA2F7;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:#0A0C0F;color:var(--tx);display:flex;flex-direction:column;font-size:13px">
+          <div style="flex:1;display:flex;gap:24px;padding:24px 24px 0;min-height:0">
+            <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+              <div style="width:1056px;height:594px;border-radius:10px;background:var(--bg);border:1px solid var(--bd);padding:56px 72px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;position:relative">
+                <span style="font-size:13px;color:var(--mu);letter-spacing:.06em;text-transform:uppercase">02 · Optimization</span>
+                <span style="font-size:48px;font-weight:700;letter-spacing:-.025em;line-height:1">Gradient descent loop</span>
+                <div style="display:flex;gap:48px;flex:1;align-items:center">
+                  <div style="display:flex;flex-direction:column;gap:18px;font-size:24px;line-height:32px;width:420px">
+                    <span style="display:flex;gap:14px"><span style="color:var(--mu)">•</span>Start from a random <i style="font-family:'Source Serif 4',serif">θ</i></span>
+                    <span style="display:flex;gap:14px"><span style="color:var(--mu)">•</span>Step against the gradient</span>
+                    <span style="display:flex;gap:14px"><span style="color:var(--mu)">•</span>Stop when the loss plateaus</span>
+                  </div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;font-size:15px">
+                    <span style="padding:10px 18px;border-radius:8px;border:1px solid var(--bd);background:var(--sf)">init θ</span><i class="icon-arrow-down" style="color:var(--mu);font-size:16px"></i>
+                    <span style="padding:10px 18px;border-radius:8px;border:1px solid var(--bd);background:var(--sf)">compute ∇J(θ)</span><i class="icon-arrow-down" style="color:var(--mu);font-size:16px"></i>
+                    <span style="padding:10px 18px;border-radius:8px;border:1px solid var(--bd);background:var(--sf);font-family:'Source Serif 4',serif">θ ← θ − η∇J</span><i class="icon-arrow-down" style="color:var(--mu);font-size:16px"></i>
+                    <span style="padding:10px 18px;border-radius:999px;border:1.5px solid var(--ok)">converged?</span>
+                  </div>
+                </div>
+                <span style="position:absolute;right:28px;bottom:20px;color:var(--mu);font-size:14px">4 / 12</span>
+                <div style="position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--sf2);border-radius:0 0 10px 10px;overflow:hidden"><div style="width:33%;height:100%;background:var(--ac)"></div></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:16px;color:var(--mu);font-size:12px"><span>← → / Space to move</span><span>F full screen</span><span>B blank</span><span>Esc exit</span><span style="flex:1"></span><span>Synced to phone remote</span></div>
+            </div>
+            <div style="width:312px;display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font:500 36px 'JetBrains Mono',monospace;letter-spacing:-.02em">08:24</span><span style="color:var(--mu)">elapsed · 21:52</span></div>
+              <div style="display:flex;flex-direction:column;gap:8px"><span style="color:var(--mu);font-size:12px">Next</span><div style="height:170px;border-radius:8px;background:var(--bg);border:1px solid var(--bd);padding:18px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px"><span style="font-size:17px;font-weight:700">Choosing η</span><span style="height:5px;width:80%;border-radius:3px;background:var(--mu);opacity:.4"></span><span style="height:5px;width:64%;border-radius:3px;background:var(--mu);opacity:.4"></span><span style="height:5px;width:70%;border-radius:3px;background:var(--mu);opacity:.4"></span></div></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:8px"><span style="color:var(--mu);font-size:12px">Speaker notes</span><div style="flex:1;border-radius:10px;background:var(--sf);border:1px solid var(--bd);padding:14px;font-size:15px;line-height:24px">Draw the bowl on the whiteboard first. Ask: what happens if η is 10× bigger? Then show the divergence plot on the next slide.</div></div>
+            </div>
+          </div>
+          <div style="height:120px;padding:16px 24px;display:flex;gap:10px;align-items:center">
+            <sc-for list="{{ thumbs }}" as="t" hint-placeholder-count="12">
+              <div style="width:142px;height:80px;flex-shrink:0;border-radius:6px;background:var(--bg);border:{{ t.b }};padding:10px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;position:relative;opacity:{{ t.o }}"><span style="font-size:10.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.t }}</span><span style="height:3px;width:80%;border-radius:2px;background:var(--mu);opacity:.4"></span><span style="height:3px;width:60%;border-radius:2px;background:var(--mu);opacity:.4"></span><span style="position:absolute;right:6px;bottom:4px;font-size:10px;color:var(--mu)">{{ t.n }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Presenter view opens the slide on the second screen (or a new window). The thumbnail strip is click-to-jump; it hides when the window is narrower than 1200 px. Speaker notes come from <code>Note:</code> lines.</span></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">13B</span><span>Slides · Phone</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ok:#6BCB8B;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:#0A0C0F;color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500;opacity:.6"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 8px;display:flex;align-items:center;gap:8px;color:var(--mu)"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><i class="icon-x" style="font-size:20px"></i></span><span style="flex:1">Gradient descent</span><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><i class="icon-rotate-cw" style="font-size:18px"></i></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 12px">
+            <div style="aspect-ratio:16/9;border-radius:8px;background:var(--bg);border:1px solid var(--bd);padding:18px 20px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px">
+              <span style="font-size:9px;color:var(--mu);letter-spacing:.06em;text-transform:uppercase">02 · Optimization</span>
+              <span style="font-size:19px;font-weight:700;letter-spacing:-.02em">Gradient descent loop</span>
+              <div style="display:flex;gap:14px;align-items:center;flex:1">
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:11px;flex:1"><span>• Start from a random θ</span><span>• Step against the gradient</span><span>• Stop when loss plateaus</span></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px"><span style="padding:3px 8px;border-radius:4px;border:1px solid var(--bd)">init θ</span><span style="padding:3px 8px;border-radius:4px;border:1px solid var(--bd)">∇J(θ)</span><span style="padding:3px 8px;border-radius:4px;border:1px solid var(--bd)">θ ← θ − η∇J</span><span style="padding:3px 8px;border-radius:999px;border:1px solid var(--ok)">converged?</span></div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:12px">
+            <div style="height:3px;border-radius:2px;background:var(--sf2)"><div style="width:33%;height:100%;background:var(--ac)"></div></div>
+            <div style="display:flex;justify-content:space-between;color:var(--mu);font-size:13px"><span>Swipe or tap edges</span><span>4 / 12</span></div>
+            <div style="display:flex;gap:10px"><span style="flex:1;height:52px;border-radius:12px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><i class="icon-chevron-left" style="font-size:20px"></i></span><span style="flex:1;height:52px;border-radius:12px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><i class="icon-chevron-right" style="font-size:20px"></i></span></div>
+          </div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+        </div>
+        <div style="max-width:412px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Rotate for full-bleed landscape. The phone can also act as a remote for the desktop presenter (same account).</span></div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const grades = [['Again','1m','var(--da)','1'],['Hard','6m','var(--wa)','2'],['Good','1d','var(--ok)','3'],['Easy','4d','var(--in)','4']]
+      .map(([n,i,c,k]) => ({ n, i, c, k, bg:`color-mix(in srgb, ${c} 10%, var(--sf))`, bd:`color-mix(in srgb, ${c} 30%, transparent)` }));
+    const thumbs = ['Gradient descent','Why minimize a loss?','The gradient','Gradient descent loop','Choosing η','Divergence','Momentum','Mini-batches','Adam','Convexity','Summary','Questions']
+      .map((t,i) => ({ t, n:i+1, b:i===3?'2px solid var(--ac)':'1px solid var(--bd)', o:i<3?.6:1 }));
+    return { grades, thumbs };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:120px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227">
+  <div style="display:flex;align-items:center;gap:16px">
+    <div style="width:40px;height:40px;border-radius:11px;background:#161A21;border:1px solid #2A303B;position:relative"><div style="position:absolute;left:14px;top:9px;width:11px;height:11px;border-radius:50%;background:#F2A93B;box-shadow:0 0 14px rgba(242,169,59,.7)"></div><div style="position:absolute;left:9px;right:9px;bottom:11px;height:2px;background:#E8E6E1;border-radius:1px"></div></div>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 08 Arabic + English · Embeds</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 2</span></div><div style="font-size:14px;color:#9A9890">Bidirectional notes, an RTL interface concept, and media / link embeds inside notes and posts.</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R2 · 3</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Mixed Arabic / English note · Read mode</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Every block picks its own direction from its first strong letter. Fonts: Source Serif 4 + Noto Naskh Arabic for reading, Inter + IBM Plex Sans Arabic for UI and callouts. Code is always LTR. Pink gutter tags (annotation layer) show the resolved direction.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-3A</span><span>Mixed note · Desktop · Lamplight · full scroll</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:1120px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,1120px" style="height:100%"></dc-import>
+          <div style="flex:1;display:flex;flex-direction:column">
+            <div style="height:48px;padding:0 12px 0 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><span style="color:var(--mu)">🕌 Arabic Grammar</span><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="font-weight:500;font-family:'IBM Plex Sans Arabic',Inter,sans-serif">الإضافة في اللغة العربية</span><span style="flex:1"></span>
+              <div style="display:flex;gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="height:26px;padding:0 10px;display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12.5px"><i class="icon-pen-line" style="font-size:13px"></i>Edit</span><span style="height:26px;padding:0 10px;display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12.5px"><i class="icon-columns-2" style="font-size:13px"></i>Split</span><span style="height:26px;padding:0 10px;border-radius:7px;background:var(--sf2);display:flex;align-items:center;gap:6px;font-weight:600;font-size:12.5px"><i class="icon-book-open" style="font-size:13px"></i>Read</span></div>
+              <span style="flex:1"></span><span style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span>Saved · Synced 2m ago</span><span style="height:28px;padding:0 8px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu)"><i class="icon-pilcrow" style="font-size:13px"></i>Auto ⇄</span><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-ellipsis" style="font-size:16px"></i></span>
+            </div>
+            <div style="width:680px;margin:0 auto;padding:56px 0"><dc-import name="NoteBidi" gutter="{{ true }}" hint-size="680px,900px"></dc-import></div>
+          </div>
+          <div style="position:absolute;left:1240px;top:13px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">1</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3">
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>Direction is per block (<code>dir="auto"</code>), not per note. The ¶ menu can force a block LTR/RTL; the forced state shows as a tiny ⇄ in the gutter on hover.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>RTL blocks mirror their furniture: list bullets and callout icons move to the right edge; the callout title reads right-to-left. Text alignment is <code>start</code>, never hard left.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Code blocks are isolated and forced LTR even when they contain Arabic strings or comments. Arabic sizes are optically matched (+12–20%) so x-heights feel even.</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-3B</span><span>Mixed note · Desktop · Paper</span></div>
+        <div style="--bg:#FAF8F3;--sf:#FFFFFF;--sf2:#F2EFE7;--bd:#E4DFD3;--tx:#1F1D1A;--mu:#6A655C;--ac:#B45F0E;--af:#FFFFFF;--ln:#0F7C78;--ok:#1F8A4C;--wa:#A86A00;--da:#C42B2B;--in:#2F5BD3;--le:#7A4BD1;--sh:0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .06);width:1440px;height:1120px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,1120px" style="height:100%"></dc-import>
+          <div style="flex:1;display:flex;flex-direction:column">
+            <div style="height:48px;padding:0 12px 0 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd);background:var(--sf)"><span style="color:var(--mu)">🕌 Arabic Grammar</span><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="font-weight:500;font-family:'IBM Plex Sans Arabic',Inter,sans-serif">الإضافة في اللغة العربية</span><span style="flex:1"></span><span style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span>Saved · Synced 2m ago</span><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-ellipsis" style="font-size:16px"></i></span></div>
+            <div style="width:680px;margin:0 auto;padding:56px 0"><dc-import name="NoteBidi" hint-size="680px,900px"></dc-import></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-3C</span><span>Mixed note · Phone · Lamplight</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ok:#6BCB8B;--in:#7AA2F7;--le:#B48EF0;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500;flex-shrink:0"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 4px;display:flex;align-items:center;gap:2px;border-bottom:1px solid var(--bd);flex-shrink:0"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-arrow-left" style="font-size:20px"></i></span><div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-weight:600;font-family:'IBM Plex Sans Arabic',Inter,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">الإضافة في اللغة العربية</span><span style="font-size:11.5px;color:var(--mu);display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:var(--ok)"></span>Saved · Synced</span></div><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-pen-line" style="font-size:20px"></i></span><span style="width:44px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-ellipsis-vertical" style="font-size:20px"></i></span></div>
+          <div style="flex:1;overflow:hidden;padding:20px"><dc-import name="NoteBidi" phone="{{ true }}" hint-size="372px,900px"></dc-import></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-3D</span><span>Mixed note · Phone · Paper</span></div>
+        <div style="--bg:#FAF8F3;--sf:#FFFFFF;--sf2:#F2EFE7;--bd:#E4DFD3;--tx:#1F1D1A;--mu:#6A655C;--ac:#B45F0E;--ok:#1F8A4C;--in:#2F5BD3;--le:#7A4BD1;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500;flex-shrink:0"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 4px;display:flex;align-items:center;gap:2px;border-bottom:1px solid var(--bd);background:var(--sf);flex-shrink:0"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-arrow-left" style="font-size:20px"></i></span><div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-weight:600;font-family:'IBM Plex Sans Arabic',Inter,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">الإضافة في اللغة العربية</span><span style="font-size:11.5px;color:var(--mu);display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:var(--ok)"></span>Saved · Synced</span></div><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-pen-line" style="font-size:20px"></i></span><span style="width:44px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-ellipsis-vertical" style="font-size:20px"></i></span></div>
+          <div style="flex:1;overflow:hidden;padding:20px"><dc-import name="NoteBidi" phone="{{ true }}" hint-size="372px,900px"></dc-import></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-3E</span><span>Concept · Arabic UI (RTL shell) · future</span></div>
+        <div dir="rtl" style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-family:'IBM Plex Sans Arabic',Inter,sans-serif;font-size:14px">
+          <div style="width:240px;flex-shrink:0;background:var(--sf);border-left:1px solid var(--bd);display:flex;flex-direction:column;padding:10px 8px;gap:2px">
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 8px;margin-bottom:6px"><div style="width:28px;height:28px;border-radius:7px;background:rgba(57,197,207,.2);border:1px solid rgba(57,197,207,.5);display:flex;align-items:center;justify-content:center">🕌</div><div style="flex:1;display:flex;flex-direction:column"><span style="font-weight:600">النحو العربي</span><span style="font-size:11.5px;color:var(--mu)">مقرّر · ٣٤٪</span></div><i class="icon-chevrons-up-down" style="font-size:14px;color:var(--mu)"></i></div>
+            <div style="height:34px;margin:0 2px 6px;border-radius:6px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--mu)"><i class="icon-search" style="font-size:14px"></i><span style="flex:1">بحث</span><span dir="ltr" style="font:500 11px 'JetBrains Mono',monospace;padding:1px 5px;border:1px solid var(--bd);border-radius:4px">⌘K</span></div>
+            <sc-for list="{{ arNav }}" as="n" hint-placeholder-count="9"><div style="height:32px;padding:0 8px;border-radius:6px;display:flex;align-items:center;gap:10px;background:{{ n.bg }};color:{{ n.c }};font-weight:{{ n.fw }}"><i class="{{ n.i }}" style="font-size:16px;color:{{ n.ic }}"></i><span style="flex:1">{{ n.l }}</span><span style="font-size:11.5px;color:var(--le)">{{ n.k }}</span></div></sc-for>
+            <div style="padding:14px 8px 4px;font-size:11.5px;font-weight:600;color:var(--mu)">المجلدات</div>
+            <sc-for list="{{ arTree }}" as="r" hint-placeholder-count="4"><div style="height:30px;padding:0 8px;display:flex;align-items:center;gap:8px;border-radius:6px;background:{{ r.bg }}"><i class="icon-chevron-left" style="font-size:12px;color:var(--mu)"></i><span style="width:8px;height:8px;border-radius:3px;background:{{ r.c }}"></span><span style="flex:1">{{ r.n }}</span><span style="font-size:11.5px;color:var(--mu)">{{ r.k }}</span></div></sc-for>
+            <div style="flex:1"></div>
+            <div style="border-top:1px solid var(--bd);padding:10px 6px 0;display:flex;align-items:center;gap:10px"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></span><span style="flex:1;font-size:12px;color:var(--mu)">تمت المزامنة قبل دقيقتين</span><i class="icon-settings" style="font-size:16px;color:var(--mu)"></i><span style="width:26px;height:26px;border-radius:50%;background:var(--sf2);display:flex;align-items:center;justify-content:center">🦉</span></div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column">
+            <div style="height:48px;padding:0 20px 0 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)">
+              <span style="color:var(--mu)">النحو العربي</span><i class="icon-chevron-left" style="font-size:12px;color:var(--mu)"></i><span style="color:var(--mu)">٠٢ التراكيب</span><i class="icon-chevron-left" style="font-size:12px;color:var(--mu)"></i><span style="font-weight:600">الإضافة</span><span style="flex:1"></span>
+              <div style="display:flex;gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="height:28px;padding:0 10px;display:flex;align-items:center;color:var(--mu);font-size:13px">تحرير</span><span style="height:28px;padding:0 10px;display:flex;align-items:center;color:var(--mu);font-size:13px">مقسوم</span><span style="height:28px;padding:0 10px;border-radius:7px;background:var(--sf2);display:flex;align-items:center;font-weight:600;font-size:13px">قراءة</span><span style="height:28px;padding:0 10px;display:flex;align-items:center;color:var(--mu);font-size:13px">تركيز</span><span style="height:28px;padding:0 10px;display:flex;align-items:center;color:var(--mu);font-size:13px">شرائح</span><span style="height:28px;padding:0 10px;display:flex;align-items:center;color:var(--mu);font-size:13px">مراجعة</span></div>
+              <span style="flex:1"></span><span style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12.5px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span>محفوظ</span><span style="height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-weight:500"><i class="icon-globe" style="font-size:13px;color:var(--mu)"></i>نشر</span><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-ellipsis" style="font-size:16px"></i></span><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-panel-left" style="font-size:16px"></i></span>
+            </div>
+            <div style="width:680px;margin:0 auto;padding:56px 0"><dc-import name="NoteBidi" hint-size="680px,900px"></dc-import></div>
+          </div>
+          <div style="position:absolute;right:250px;top:13px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">2</div>
+        </div>
+        <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">2</b><span>Whole shell mirrors with <code>dir="rtl"</code>: sidebar moves right, breadcrumbs read right-to-left with left-pointing chevrons, the right panel toggle becomes a left panel. Icons with direction (arrows, chevrons, back) flip; icons without (search, settings, globe) don't. Shortcuts and code stay LTR. Note content keeps its own per-block direction.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R2 · 2</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Embeds &amp; link previews</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Same renderer in notes and public posts. Media sits in surface cards with 12 px radius; nothing autoplays.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-2A</span><span>Note with embeds · Desktop · full scroll</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:1440px;height:2150px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,2150px" style="height:100%"></dc-import>
+          <div style="flex:1;display:flex;flex-direction:column">
+            <div style="height:48px;padding:0 12px 0 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><span style="color:var(--mu)">🚀 Thesis: Sparse attention</span><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="font-weight:500">Attention, explained</span><span style="flex:1"></span><span style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span>Saved · Synced 2m ago</span><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-ellipsis" style="font-size:16px"></i></span></div>
+            <article style="width:680px;margin:0 auto;padding:56px 0;font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:30px;display:flex;flex-direction:column;gap:22px">
+              <h1 style="margin:0;font-size:40px;line-height:46px;font-weight:700;letter-spacing:-.015em">Attention, explained</h1>
+              <p style="margin:0">Start with the visual intuition, then read the paper. The video is the best 26 minutes on the topic I've found.</p>
+              <div style="font-family:Inter,system-ui,sans-serif;display:flex;flex-direction:column;gap:8px">
+                <div style="position:relative;width:680px;height:382px;border-radius:12px;overflow:hidden;background:repeating-linear-gradient(135deg,#161A21 0 12px,#1B1F27 12px 24px);border:1px solid var(--bd)">
+                  <span style="position:absolute;left:16px;top:14px;font:500 11.5px 'JetBrains Mono',monospace;color:var(--mu);background:var(--bg);padding:3px 8px;border-radius:4px">video thumbnail</span>
+                  <span style="position:absolute;left:50%;top:50%;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;background:rgba(10,12,15,.72);display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.18)"><i class="icon-play" style="font-size:26px;margin-left:3px"></i></span>
+                  <div style="position:absolute;left:0;right:0;bottom:0;padding:14px 16px;background:linear-gradient(transparent,rgba(5,6,8,.85));display:flex;align-items:flex-end;gap:10px;color:#fff"><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:15px">Attention in transformers, visually explained</span><span style="font-size:12px;opacity:.75">youtube.com · 3Blue1Brown</span></div><span style="font:500 12px 'JetBrains Mono',monospace;background:rgba(0,0,0,.6);padding:2px 6px;border-radius:4px">26:10</span></div>
+                </div>
+                <span style="font-size:12px;color:var(--mu);display:flex;gap:12px"><span>Plays inline · no autoplay</span><span style="color:var(--ln)">Open on YouTube ↗</span></span>
+              </div>
+              <p style="margin:0">Jay Alammar's walkthrough is still the clearest written version:</p>
+              <div style="font-family:Inter,system-ui,sans-serif;display:flex;border-radius:12px;border:1px solid var(--bd);background:var(--sf);overflow:hidden;height:112px">
+                <div style="flex:1;min-width:0;padding:14px 16px;display:flex;flex-direction:column;gap:5px"><span style="font-weight:600;font-size:15px;line-height:20px">The Illustrated Transformer</span><span style="font-size:13px;line-height:19px;color:var(--mu);height:38px;overflow:hidden">Visualizing machine learning one concept at a time — attention, self-attention and multi-head attention, step by step with diagrams.</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu);margin-top:auto"><span style="width:14px;height:14px;border-radius:3px;background:#E8893A"></span>jalammar.github.io</span></div>
+                <div style="width:132px;flex-shrink:0;background:repeating-linear-gradient(135deg,var(--sf2) 0 8px,var(--bg) 8px 16px);display:flex;align-items:center;justify-content:center"><span style="font:500 10px 'JetBrains Mono',monospace;color:var(--mu)">og:image</span></div>
+              </div>
+              <p style="margin:0">Lecture 7 recording (uploaded from my phone):</p>
+              <div style="font-family:Inter,system-ui,sans-serif;height:56px;border-radius:12px;border:1px solid var(--bd);background:var(--sf);display:flex;align-items:center;gap:12px;padding:0 14px">
+                <span style="width:34px;height:34px;border-radius:50%;background:var(--sf2);display:flex;align-items:center;justify-content:center"><i class="icon-play" style="font-size:14px;margin-left:2px"></i></span>
+                <span style="font:500 12px 'JetBrains Mono',monospace;color:var(--mu)">03:12</span>
+                <span style="flex:1;height:4px;border-radius:2px;background:var(--sf2);position:relative"><span style="position:absolute;left:0;top:0;width:7%;height:100%;border-radius:2px;background:var(--tx);opacity:.75"></span><span style="position:absolute;left:7%;top:-4px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--tx)"></span></span>
+                <span style="font:500 12px 'JetBrains Mono',monospace;color:var(--mu)">48:30</span>
+                <span style="font-size:12px;padding:2px 6px;border-radius:5px;border:1px solid var(--bd)">1×</span>
+                <i class="icon-volume-2" style="font-size:16px;color:var(--mu)"></i>
+                <span style="width:1px;height:20px;background:var(--bd)"></span>
+                <span style="font-size:12px;color:var(--mu);display:flex;align-items:center;gap:6px"><i class="icon-file-audio" style="font-size:14px"></i>lecture-07-attention.m4a</span>
+              </div>
+              <p style="margin:0">My screen recording of the attention-entropy plot:</p>
+              <div style="font-family:Inter,system-ui,sans-serif;border-radius:12px;border:1px solid var(--bd);background:var(--sf);overflow:hidden">
+                <div style="height:340px;background:repeating-linear-gradient(135deg,var(--sf2) 0 12px,var(--bg) 12px 24px);position:relative"><span style="position:absolute;left:16px;top:14px;font:500 11.5px 'JetBrains Mono',monospace;color:var(--mu);background:var(--bg);padding:3px 8px;border-radius:4px">entropy-per-layer.mp4</span></div>
+                <div style="height:44px;display:flex;align-items:center;gap:12px;padding:0 14px;border-top:1px solid var(--bd)"><i class="icon-play" style="font-size:15px"></i><span style="font:500 12px 'JetBrains Mono',monospace;color:var(--mu)">0:00 / 1:42</span><span style="flex:1;height:4px;border-radius:2px;background:var(--sf2)"></span><i class="icon-volume-2" style="font-size:15px;color:var(--mu)"></i><i class="icon-maximize-2" style="font-size:15px;color:var(--mu)"></i></div>
+              </div>
+              <p style="margin:0">And the paper itself, annotated:</p>
+              <div style="font-family:Inter,system-ui,sans-serif;border-radius:12px;border:1px solid var(--bd);background:var(--sf);overflow:hidden;display:flex;flex-direction:column;height:620px">
+                <div style="height:44px;display:flex;align-items:center;gap:10px;padding:0 8px 0 14px;border-bottom:1px solid var(--bd)"><i class="icon-file-text" style="font-size:15px;color:var(--da)"></i><span style="font-weight:600">vaswani-2017-attention.pdf</span><span style="color:var(--mu);font-size:12px">15 pages · 2.1 MB</span><span style="flex:1"></span><span style="font:500 12px 'JetBrains Mono',monospace;color:var(--mu)">3 / 15</span><span style="width:1px;height:20px;background:var(--bd);margin:0 4px"></span><i class="icon-zoom-out" style="font-size:15px;color:var(--mu)"></i><i class="icon-zoom-in" style="font-size:15px;color:var(--mu)"></i><span style="height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;margin-left:6px"><i class="icon-maximize-2" style="font-size:13px"></i>Open full screen</span></div>
+                <div style="flex:1;background:var(--bg);display:flex;justify-content:center;padding:20px;overflow:hidden">
+                  <div style="width:420px;background:#FBFAF7;border-radius:2px;padding:36px 40px;display:flex;flex-direction:column;gap:9px;box-shadow:0 4px 20px rgba(0,0,0,.4)">
+                    <span style="height:10px;width:60%;background:#2A2A2A;border-radius:2px;align-self:center"></span><span style="height:6px;width:40%;background:#9A9A9A;border-radius:2px;align-self:center;margin-bottom:14px"></span>
+                    <span style="height:5px;width:100%;background:#C8C6C0;border-radius:2px"></span><span style="height:5px;width:96%;background:#C8C6C0;border-radius:2px"></span><span style="height:5px;width:100%;background:#E3B341;opacity:.8;border-radius:2px"></span><span style="height:5px;width:88%;background:#E3B341;opacity:.8;border-radius:2px"></span><span style="height:5px;width:100%;background:#C8C6C0;border-radius:2px"></span><span style="height:5px;width:92%;background:#C8C6C0;border-radius:2px"></span>
+                    <span style="height:80px;width:100%;background:#EDEBE5;border-radius:2px;margin:8px 0"></span>
+                    <span style="height:5px;width:100%;background:#C8C6C0;border-radius:2px"></span><span style="height:5px;width:97%;background:#C8C6C0;border-radius:2px"></span><span style="height:5px;width:70%;background:#C8C6C0;border-radius:2px"></span>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+          <div style="position:absolute;left:300px;top:270px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">1</div>
+          <div style="position:absolute;left:300px;top:840px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">2</div>
+          <div style="position:absolute;left:300px;top:1460px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">3</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3">
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>YouTube / Vimeo: 16:9, 12 px radius, a static thumbnail until clicked (privacy: no third-party load before play). Then the player loads inline via the no-cookie domain.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">2</b><span>Link preview: title max 2 lines, description 2 lines muted, favicon + domain, OG image 132 px on the right. The whole card is the link; ⋯ on hover offers “Convert to plain link”.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">3</b><span>PDF viewer card is 70 vh, scrolls internally, keeps your page. Highlights made here become quotes in the note. Audio is a slim native-control bar, no waveform.</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-2B</span><span>Embeds · Phone · full-bleed video</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ln:#5CC8C2;--ok:#6BCB8B;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500;flex-shrink:0"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 4px;display:flex;align-items:center;gap:2px;border-bottom:1px solid var(--bd);flex-shrink:0"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-arrow-left" style="font-size:20px"></i></span><span style="flex:1;font-weight:600">Attention, explained</span><span style="width:44px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-ellipsis-vertical" style="font-size:20px"></i></span></div>
+          <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:16px;padding:20px 0;font-family:'Source Serif 4',serif;font-size:16px;line-height:28px">
+            <span style="padding:0 20px;font-size:28px;line-height:34px;font-weight:700">Attention, explained</span>
+            <p style="margin:0;padding:0 20px">Start with the visual intuition, then read the paper.</p>
+            <div style="font-family:Inter,sans-serif;display:flex;flex-direction:column;gap:6px">
+              <div style="position:relative;width:412px;height:232px;background:repeating-linear-gradient(135deg,#161A21 0 12px,#1B1F27 12px 24px)"><span style="position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(10,12,15,.72);display:flex;align-items:center;justify-content:center;color:#fff"><i class="icon-play" style="font-size:22px;margin-left:3px"></i></span><span style="position:absolute;right:10px;bottom:10px;font:500 11px 'JetBrains Mono',monospace;color:#fff;background:rgba(0,0,0,.6);padding:2px 6px;border-radius:4px">26:10</span></div>
+              <span style="padding:0 20px;font-size:12.5px;color:var(--mu)">Attention in transformers, visually explained · youtube.com</span>
+            </div>
+            <div style="margin:0 16px;font-family:Inter,sans-serif;display:flex;border-radius:12px;border:1px solid var(--bd);background:var(--sf);overflow:hidden;height:96px">
+              <div style="flex:1;min-width:0;padding:10px 12px;display:flex;flex-direction:column;gap:4px"><span style="font-weight:600;font-size:14px;line-height:19px;height:38px;overflow:hidden">The Illustrated Transformer</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu);margin-top:auto"><span style="width:12px;height:12px;border-radius:3px;background:#E8893A"></span>jalammar.github.io</span></div>
+              <div style="width:88px;flex-shrink:0;background:repeating-linear-gradient(135deg,var(--sf2) 0 8px,var(--bg) 8px 16px)"></div>
+            </div>
+            <div style="margin:0 16px;font-family:Inter,sans-serif;height:56px;border-radius:12px;border:1px solid var(--bd);background:var(--sf);display:flex;align-items:center;gap:10px;padding:0 12px"><span style="width:40px;height:40px;border-radius:50%;background:var(--sf2);display:flex;align-items:center;justify-content:center"><i class="icon-play" style="font-size:15px;margin-left:2px"></i></span><span style="flex:1;height:4px;border-radius:2px;background:var(--sf2);position:relative"><span style="position:absolute;left:0;top:0;width:7%;height:100%;background:var(--tx);opacity:.75;border-radius:2px"></span></span><span style="font:500 11.5px 'JetBrains Mono',monospace;color:var(--mu)">03:12 / 48:30</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--da:#EF6B6B;display:flex;flex-direction:column;gap:14px;color:var(--tx);font-size:13px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-2C</span><span>Link preview · 4 states · desktop 680 / phone 380</span></div>
+        <div style="display:grid;grid-template-columns:680px 380px;gap:20px 40px;align-items:start;padding:28px;border-radius:12px;background:var(--bg)">
+          <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Desktop · OG 132 px</span><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Phone · OG 88 px</span>
+          <div style="display:flex;border-radius:12px;border:1px solid var(--bd);background:var(--sf);overflow:hidden;height:112px"><div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:10px"><span style="height:12px;width:70%;border-radius:4px;background:var(--sf2)"></span><span style="height:8px;width:92%;border-radius:4px;background:var(--sf2);opacity:.7"></span><span style="height:8px;width:64%;border-radius:4px;background:var(--sf2);opacity:.7"></span><span style="height:8px;width:30%;border-radius:4px;background:var(--sf2);margin-top:auto"></span></div><div style="width:132px;background:var(--sf2)"></div></div>
+          <div style="display:flex;border-radius:12px;border:1px solid var(--bd);background:var(--sf);overflow:hidden;height:96px"><div style="flex:1;padding:12px;display:flex;flex-direction:column;gap:8px"><span style="height:11px;width:80%;border-radius:4px;background:var(--sf2)"></span><span style="height:11px;width:50%;border-radius:4px;background:var(--sf2)"></span><span style="height:8px;width:40%;border-radius:4px;background:var(--sf2);margin-top:auto"></span></div><div style="width:88px;background:var(--sf2)"></div></div>
+          <div style="display:flex;border-radius:12px;border:1px solid var(--bd);background:var(--sf);overflow:hidden;height:112px"><div style="flex:1;min-width:0;padding:14px 16px;display:flex;flex-direction:column;gap:5px"><span style="font-weight:600;font-size:15px;line-height:20px">How TCP's three-way handshake works — and why the ISN is random</span><span style="font-size:13px;line-height:19px;color:var(--mu);height:19px;overflow:hidden">A packet-level walk-through with Wireshark captures.</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu);margin-top:auto"><span style="width:14px;height:14px;border-radius:3px;background:#39C5CF"></span>blog.cloudflare.com</span></div><div style="width:132px;flex-shrink:0;background:repeating-linear-gradient(135deg,var(--sf2) 0 8px,var(--bg) 8px 16px)"></div></div>
+          <div style="display:flex;border-radius:12px;border:1px solid var(--bd);background:var(--sf);overflow:hidden;height:96px"><div style="flex:1;min-width:0;padding:10px 12px;display:flex;flex-direction:column;gap:4px"><span style="font-weight:600;font-size:14px;line-height:19px;height:38px;overflow:hidden">How TCP's three-way handshake works — and why the ISN is random</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu);margin-top:auto"><span style="width:12px;height:12px;border-radius:3px;background:#39C5CF"></span>blog.cloudflare.com</span></div><div style="width:88px;flex-shrink:0;background:repeating-linear-gradient(135deg,var(--sf2) 0 8px,var(--bg) 8px 16px)"></div></div>
+          <div style="display:flex;border-radius:12px;border:1px solid var(--bd);background:var(--sf);overflow:hidden"><div style="flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:5px"><span style="font-weight:600;font-size:15px;line-height:20px">Arabic grammar: the construct state (idafa)</span><span style="font-size:13px;line-height:19px;color:var(--mu)">Rules, exceptions and 40 examples from Qur'anic and modern Arabic.</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu);margin-top:4px"><span style="width:14px;height:14px;border-radius:3px;background:#57AB5A"></span>arabicgrammar.example.org</span></div></div>
+          <div style="display:flex;border-radius:12px;border:1px solid var(--bd);background:var(--sf);overflow:hidden"><div style="flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:4px"><span style="font-weight:600;font-size:14px;line-height:19px">Arabic grammar: the construct state (idafa)</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu)"><span style="width:12px;height:12px;border-radius:3px;background:#57AB5A"></span>arabicgrammar.example.org</span></div></div>
+          <div style="display:flex;align-items:center;gap:10px;border-radius:12px;border:1px dashed var(--bd);padding:12px 14px"><i class="icon-link-2" style="font-size:16px;color:var(--mu)"></i><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-weight:500">course.fast.ai</span><span style="font:400 12px 'JetBrains Mono',monospace;color:var(--ln);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">https://course.fast.ai/Lessons/lesson8.html</span></div><span style="font-size:12px;color:var(--mu);display:flex;align-items:center;gap:6px"><i class="icon-refresh-cw" style="font-size:13px"></i>Retry</span></div>
+          <div style="display:flex;align-items:center;gap:10px;border-radius:12px;border:1px dashed var(--bd);padding:10px 12px"><i class="icon-link-2" style="font-size:16px;color:var(--mu)"></i><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-weight:500">course.fast.ai</span><span style="font:400 12px 'JetBrains Mono',monospace;color:var(--ln);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">https://course.fast.ai/Lessons/lesson8.html</span></div></div>
+          <span style="grid-column:span 2;font-size:12.5px;color:var(--mu);line-height:19px">Rows: loading skeleton (≤ 2 s, then fall through) · loaded · no image (card shrinks to text) · failed (domain + URL only, dashed — still a working link). Previews are fetched server-side and cached with the note so they work offline.</span>
+        </div>
+      </div>
+
+      <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;display:flex;flex-direction:column;gap:14px;color:var(--tx);font-size:13px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-2D</span><span>Paste a URL · editor affordance · desktop + phone</span></div>
+        <div style="display:flex;gap:32px;align-items:flex-start">
+          <div style="width:640px;height:300px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);padding:24px 0;font:400 13px/24px 'JetBrains Mono',monospace;position:relative;box-sizing:border-box">
+            <div style="display:flex"><span style="width:44px;text-align:right;padding-right:14px;color:var(--mu);opacity:.5;font-size:11px">14</span><span>Jay Alammar's walkthrough is still the clearest:</span></div>
+            <div style="display:flex"><span style="width:44px;text-align:right;padding-right:14px;color:var(--mu);opacity:.5;font-size:11px">15</span><span></span></div>
+            <div style="display:flex;background:var(--sf2)"><span style="width:44px;text-align:right;padding-right:14px;color:var(--mu);opacity:.5;font-size:11px">16</span><span style="color:var(--ln)">https://jalammar.github.io/illustrated-transformer/<span style="display:inline-block;width:2px;height:16px;background:var(--ac);vertical-align:-3px"></span></span></div>
+            <div style="position:absolute;left:58px;top:110px;display:flex;align-items:center;gap:2px;padding:4px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 12px 32px rgba(0,0,0,.45);font-family:Inter,system-ui,sans-serif">
+              <span style="height:30px;padding:0 10px;border-radius:7px;background:color-mix(in srgb,var(--ac) 16%,transparent);color:var(--tx);box-shadow:inset 0 0 0 1px var(--ac);display:flex;align-items:center;gap:6px;font-weight:600"><i class="icon-panel-top" style="font-size:14px;color:var(--ac)"></i>Preview card</span>
+              <span style="height:30px;padding:0 10px;border-radius:7px;display:flex;align-items:center;gap:6px"><i class="icon-square-play" style="font-size:14px;color:var(--mu)"></i>Embed</span>
+              <span style="height:30px;padding:0 10px;border-radius:7px;display:flex;align-items:center;gap:6px"><i class="icon-link-2" style="font-size:14px;color:var(--mu)"></i>Plain link</span>
+              <span style="font-size:11.5px;color:var(--mu);padding:0 8px">↵ choose · Esc keep link</span>
+            </div>
+          </div>
+          <div style="width:412px;height:300px;border-radius:20px;background:var(--bg);border:1px solid var(--bd);overflow:hidden;display:flex;flex-direction:column;font-size:15px">
+            <div style="flex:1;padding:16px 20px;display:flex;flex-direction:column;gap:6px;line-height:26px"><span>Jay Alammar's walkthrough:</span><span style="color:var(--ln);word-break:break-all">https://jalammar.github.io/illustrated-transformer/<span style="display:inline-block;width:2px;height:18px;background:var(--ac);vertical-align:-3px"></span></span></div>
+            <div style="padding:8px 12px;display:flex;gap:8px;background:var(--sf2);border-top:1px solid var(--bd)"><span style="height:40px;padding:0 14px;border-radius:999px;background:color-mix(in srgb,var(--ac) 16%,transparent);box-shadow:inset 0 0 0 1px var(--ac);display:flex;align-items:center;font-weight:600;font-size:13.5px">Preview card</span><span style="height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;font-size:13.5px">Embed</span><span style="height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;font-size:13.5px">Plain link</span></div>
+            <div style="height:48px;background:var(--sf);border-top:1px solid var(--bd);display:flex;align-items:center;justify-content:space-around;color:var(--tx)"><i class="icon-bold" style="font-size:18px"></i><i class="icon-italic" style="font-size:18px"></i><i class="icon-heading" style="font-size:18px"></i><i class="icon-list" style="font-size:18px"></i><i class="icon-list-todo" style="font-size:18px"></i><i class="icon-braces" style="font-size:18px"></i><i class="icon-sigma" style="font-size:18px"></i><i class="icon-image" style="font-size:18px"></i><i class="icon-ellipsis" style="font-size:18px"></i></div>
+          </div>
+        </div>
+        <span style="max-width:1100px;font-size:12.5px;color:#CFCBC3;line-height:19px">Chip appears only when a bare URL is pasted on its own line, for 6 s or until you type. Embed is offered only for known providers (YouTube, Vimeo, PDF, audio/video files). Choice is remembered per domain. On phone the chips replace the suggestion strip above the formatting toolbar.</span>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const arNav = [['house','الرئيسية'],['inbox','الوارد'],['notebook-pen','الملاحظة اليومية'],['list-checks','المهام'],['calendar-days','التقويم'],['layers','المراجعة','١٢'],['waypoints','الخريطة'],['layout-dashboard','اللوحات'],['rss','المدونة']]
+      .map(([i,l,k]) => ({ i:'icon-'+i, l, k:k||'', bg:'transparent', c:'var(--mu)', ic:'var(--mu)', fw:450 }));
+    const arTree = [['٠١ الأسماء','#39C5CF','٩'],['٠٢ التراكيب','#E8893A','١٢',1],['٠٣ الأفعال','#A371F7','١٤'],['٠٤ المفردات','#57AB5A','٦']].map(([n,c,k,a]) => ({ n, c, k, bg:a?'var(--sf2)':'transparent' }));
+    return { arNav, arTree };
+  }
+}
+</script>
+</body>
+</html>

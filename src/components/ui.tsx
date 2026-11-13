@@ -5,38 +5,41 @@ import type { Status } from "../../shared/types";
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 export { cx };
 
-type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger"; size?: "sm" | "md" };
+type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger"; size?: "sm" | "md" | "lg" };
+/** Buttons (design: Lumen Components · Buttons): Small 28 / Medium 36 / Touch 48+. */
 export function Button({ variant = "secondary", size = "md", className, ...p }: BtnProps) {
   return (
     <button
       {...p}
       className={cx(
-        "inline-flex items-center justify-center gap-1.5 rounded-[10px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap",
-        size === "sm" ? "h-8 px-2.5 text-[13px]" : "h-10 px-3.5",
-        variant === "primary" && "bg-accent text-accent-fg hover:brightness-110",
-        variant === "secondary" && "bg-surface-2 text-ink border border-line hover:bg-surface",
-        variant === "ghost" && "text-muted hover:text-ink hover:bg-surface-2",
-        variant === "danger" && "bg-bad/15 text-bad hover:bg-bad/25",
+        "inline-flex items-center justify-center gap-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap",
+        size === "sm" ? "h-7 rounded-[8px] px-2.5 text-[12px]" : size === "lg" ? "h-12 rounded-[12px] px-[18px] text-[15px]" : "h-9 rounded-[10px] px-3.5 text-[13px]",
+        variant === "primary" && "bg-accent font-semibold text-accent-fg hover:brightness-110",
+        variant === "secondary" && "border border-line font-medium text-ink hover:bg-surface-2",
+        variant === "ghost" && "text-muted hover:bg-surface-2 hover:text-ink",
+        variant === "danger" && "border border-[color-mix(in_srgb,var(--danger)_40%,transparent)] font-medium text-bad hover:bg-bad/10",
         className,
       )}
     />
   );
 }
 
-export function IconButton({ label, active, className, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string; active?: boolean }) {
+/** Icon button 32 (design: Components · "+" bordered / "⋯" ghost). */
+export function IconButton({ label, active, bordered, className, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string; active?: boolean; bordered?: boolean }) {
   return (
     <button
       aria-label={label}
       title={label}
       {...p}
-      className={cx("inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] transition-colors", active ? "bg-surface-2 text-accent" : "text-muted hover:text-ink hover:bg-surface-2", className)}
+      className={cx("inline-flex size-8 shrink-0 items-center justify-center rounded-[8px] transition-colors", bordered && "border border-line", active ? "bg-surface-2 text-accent" : bordered ? "text-ink hover:bg-surface-2" : "text-muted hover:text-ink hover:bg-surface-2", className)}
     />
   );
 }
 
+/** Segmented control (design: Components · Edit/Split/Read/Focus). */
 export function Segmented<T extends string>({ value, options, onChange, className }: { value: T; options: { value: T; label: ReactNode; title?: string }[]; onChange: (v: T) => void; className?: string }) {
   return (
-    <div role="tablist" className={cx("inline-flex rounded-[10px] bg-surface-2 p-0.5 border border-line", className)}>
+    <div role="tablist" className={cx("inline-flex gap-0.5 rounded-[10px] border border-line bg-surface p-[3px]", className)}>
       {options.map((o) => (
         <button
           key={o.value}
@@ -44,7 +47,7 @@ export function Segmented<T extends string>({ value, options, onChange, classNam
           aria-selected={value === o.value}
           title={o.title}
           onClick={() => onChange(o.value)}
-          className={cx("h-7 rounded-[8px] px-2.5 text-[12.5px] font-medium transition-colors flex items-center gap-1", value === o.value ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink")}
+          className={cx("flex h-7 items-center gap-1.5 rounded-[7px] px-3 text-[13px] transition-colors", value === o.value ? "bg-surface-2 font-semibold text-ink" : "text-muted hover:text-ink")}
         >
           {o.label}
         </button>
@@ -60,22 +63,25 @@ export function StatusDot({ status, className }: { status: Status | null; classN
 }
 export function StatusPill({ status }: { status: Status }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-medium capitalize" style={{ color: STATUS_COLOR[status], background: `color-mix(in oklab, ${STATUS_COLOR[status]} 14%, transparent)` }}>
+    <span className="inline-flex items-center gap-1.5 rounded-full px-[9px] text-[12px] font-medium capitalize leading-[22px]" style={{ color: STATUS_COLOR[status], background: `color-mix(in srgb, ${STATUS_COLOR[status]} 14%, transparent)` }}>
       <span className="size-1.5 rounded-full" style={{ background: STATUS_COLOR[status] }} />
       {status}
     </span>
   );
 }
 
-export function Chip({ children, onClick, active }: { children: ReactNode; onClick?: () => void; active?: boolean }) {
+/** Chip (design: Components · Chips): neutral #tag, link-tinted #tag, removable filter chip. */
+export function Chip({ children, onClick, active, tone, onRemove }: { children: ReactNode; onClick?: () => void; active?: boolean; tone?: "link" | "info"; onRemove?: () => void }) {
+  const c = tone === "link" ? "var(--link)" : tone === "info" ? "var(--info)" : null;
   return (
-    <button onClick={onClick} className={cx("inline-flex h-6 items-center rounded-full px-2 text-[12px] transition-colors", active ? "bg-accent text-accent-fg" : "bg-surface-2 text-muted hover:text-ink")}>
+    <button onClick={onClick} className={cx("inline-flex items-center gap-1 rounded-[6px] py-0.5 text-[12px] leading-[18px] transition-colors", onRemove ? "pl-2 pr-1.5" : "px-2", active ? "bg-accent text-accent-fg" : c ? "" : "bg-surface-2 text-muted hover:text-ink")} style={!active && c ? { color: c, background: `color-mix(in srgb, ${c} 14%, transparent)` } : undefined}>
       {children}
+      {onRemove && <X size={11} onClick={(e) => { e.stopPropagation(); onRemove(); }} />}
     </button>
   );
 }
 
-/** Dialog on desktop, bottom sheet on phones. */
+/** Dialog on desktop (radius 14), bottom sheet with a drag handle on phones (design: Components · Bottom sheet). */
 export function Sheet({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title?: ReactNode; children: ReactNode; wide?: boolean }) {
   useEffect(() => {
     if (!open) return;
@@ -85,27 +91,30 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 md:items-center fade-in" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={cx("sheet-in safe-b max-h-[90dvh] w-full overflow-hidden rounded-t-[14px] border border-line bg-surface shadow-2xl md:rounded-[14px] flex flex-col", wide ? "md:max-w-3xl" : "md:max-w-lg")}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(5,6,8,.6)] md:items-center fade-in" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className={cx("sheet-in safe-b flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-t-[14px] border border-b-0 border-line bg-surface shadow-2xl md:rounded-[14px] md:border-b", wide ? "md:max-w-3xl" : "md:max-w-[520px]")}>
+        {title && <div className="flex justify-center pt-2.5 md:hidden"><span className="h-1 w-9 rounded-[2px] bg-line" /></div>}
         {title && (
-          <div className="flex items-center justify-between border-b border-line px-4 py-3">
-            <div className="font-semibold">{title}</div>
-            <IconButton label="Close" onClick={onClose}><X size={18} /></IconButton>
+          <div className="flex items-center justify-between px-4 pb-1 pt-2.5 md:px-[22px] md:pt-[18px]">
+            <div className="text-[15px] font-[650] md:text-[17px]">{title}</div>
+            <button aria-label="Close" onClick={onClose} className="text-muted hover:text-ink"><X size={17} /></button>
           </div>
         )}
-        <div className="overflow-y-auto p-4">{children}</div>
+        <div className={cx("overflow-y-auto", title ? "px-4 pb-4 pt-3 md:px-[22px]" : "p-4")}>{children}</div>
       </div>
     </div>
   );
 }
 
-export function Empty({ icon, title, hint, action }: { icon: ReactNode; title: string; hint?: string; action?: ReactNode }) {
+/** Empty state (design: 06b · 22A–C): title, one line of help, exactly one action. */
+/** `icon` is accepted for compatibility but not drawn: empty states are illustration-free. */
+export function Empty({ title, hint, action, foot }: { icon?: ReactNode; title: string; hint?: ReactNode; action?: ReactNode; foot?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
-      <div className="mb-1 text-muted">{icon}</div>
-      <div className="font-semibold">{title}</div>
-      {hint && <div className="max-w-xs text-[13px] text-muted">{hint}</div>}
-      {action && <div className="mt-3">{action}</div>}
+    <div className="flex flex-col items-center justify-center gap-2.5 px-10 py-16 text-center">
+      <div className="text-[16px] font-semibold">{title}</div>
+      {hint && <div className="max-w-[340px] text-[13px] leading-5 text-muted">{hint}</div>}
+      {action && <div className="mt-2">{action}</div>}
+      {foot && <div className="text-[12px] text-muted">{foot}</div>}
     </div>
   );
 }
@@ -128,4 +137,5 @@ export function Field({ label, children, hint }: { label: string; children: Reac
     </label>
   );
 }
-export const inputCls = "h-10 w-full rounded-[8px] border border-line bg-bg px-3 text-ink placeholder:text-muted/70 focus:border-accent focus:outline-none";
+/** Input (design: Components · Inputs): 36 high, radius 6, focus = accent border + 3 px 20% ring; add `aria-invalid` for the error state. */
+export const inputCls = "h-9 w-full rounded-[6px] border border-line bg-bg px-2.5 text-ink placeholder:text-muted focus:border-accent focus:outline-none focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_20%,transparent)] aria-[invalid=true]:border-bad";

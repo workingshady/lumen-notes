@@ -43,7 +43,7 @@ export const sk = {
   ellipse: (x: number, y: number, w = 160, h = 100, label?: string, o: Record<string, unknown> = {}): Skeleton => ({ type: "ellipse", x, y, width: w, height: h, ...(label ? { label: { text: label } } : {}), ...o }),
   diamond: (x: number, y: number, w = 160, h = 120, label?: string, o: Record<string, unknown> = {}): Skeleton => ({ type: "diamond", x, y, width: w, height: h, ...(label ? { label: { text: label } } : {}), ...o }),
   text: (x: number, y: number, text: string, o: Record<string, unknown> = {}): Skeleton => ({ type: "text", x, y, text, fontSize: 20, ...o }),
-  sticky: (x: number, y: number, text: string, color = 0): Skeleton => ({ type: "rectangle", x, y, width: 200, height: 160, backgroundColor: STICKY[color % STICKY.length], fillStyle: "solid", strokeColor: "transparent", roundness: { type: 3 }, label: { text, fontSize: 18, strokeColor: "#1e1e1e" } }),
+  sticky: (x: number, y: number, text: string, color = 0): Skeleton => ({ type: "rectangle", x, y, width: 200, height: 160, backgroundColor: STICKY[color % STICKY.length], fillStyle: "solid", strokeColor: "transparent", roundness: { type: 3 }, label: { text, fontSize: 18, strokeColor: "#000000" } }),
   arrow: (x: number, y: number, dx: number, dy: number, o: Record<string, unknown> = {}): Skeleton => ({ type: "arrow", x, y, width: dx, height: dy, points: [[0, 0], [dx, dy]], ...o }),
   /** Arrow bound between two element ids (ids you gave to skeletons). */
   connect: (fromId: string, toId: string, label?: string): Skeleton => ({ type: "arrow", x: 0, y: 0, start: { id: fromId }, end: { id: toId }, ...(label ? { label: { text: label } } : {}) }),
@@ -66,4 +66,31 @@ export function canvasToSkeleton(c: JsonCanvas): Skeleton[] {
     if (kids.length) out.push({ type: "frame", children: kids, name: (g as { label?: string }).label ?? "Group" });
   }
   return out;
+}
+
+type Box = { id?: unknown; x?: unknown; y?: unknown; width?: unknown; height?: unknown; isDeleted?: unknown };
+/**
+ * Arrows given only as `start: {id}` / `end: {id}` (scripts, REST, canvas→whiteboard) need a starting position near
+ * their boxes, or Excalidraw leaves them at 0,0. This draws each one edge-to-edge between the two boxes' centers.
+ */
+export function placeBoundArrows(skel: Skeleton[], existing: readonly Box[] = []): Skeleton[] {
+  const boxes = new Map<string, { x: number; y: number; w: number; h: number }>();
+  for (const e of [...existing, ...skel] as Box[]) {
+    if (typeof e.id === "string" && !e.isDeleted && typeof e.x === "number" && typeof e.y === "number")
+      boxes.set(e.id, { x: e.x, y: e.y, w: Number(e.width) || 0, h: Number(e.height) || 0 });
+  }
+  return skel.map((k) => {
+    if (k.type !== "arrow") return k;
+    const s = boxes.get(String((k.start as { id?: unknown } | undefined)?.id ?? ""));
+    const t = boxes.get(String((k.end as { id?: unknown } | undefined)?.id ?? ""));
+    if (!s || !t) return k;
+    const sc = { x: s.x + s.w / 2, y: s.y + s.h / 2 }, tc = { x: t.x + t.w / 2, y: t.y + t.h / 2 };
+    const dx = tc.x - sc.x, dy = tc.y - sc.y;
+    // exit/enter at the box edge along the center line
+    const edge = (b: { w: number; h: number }, ux: number, uy: number) => Math.min(Math.abs(ux) > 1e-6 ? b.w / 2 / Math.abs(ux) : Infinity, Math.abs(uy) > 1e-6 ? b.h / 2 / Math.abs(uy) : Infinity);
+    const len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
+    const a = edge(s, ux, uy) + 6, z = edge(t, ux, uy) + 6;
+    const x0 = sc.x + ux * a, y0 = sc.y + uy * a, x1 = tc.x - ux * z, y1 = tc.y - uy * z;
+    return { ...k, x: x0, y: y0, width: x1 - x0, height: y1 - y0, points: [[0, 0], [x1 - x0, y1 - y0]] };
+  });
 }

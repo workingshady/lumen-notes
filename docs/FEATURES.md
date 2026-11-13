@@ -181,6 +181,25 @@ Chosen over tldraw because Excalidraw is MIT-licensed with no production license
 | Read-only viewer never writes to the visitor's device; works without an account | ✅ |
 | "Shared with link" overview in Settings, link expiry dates, password-protected links | 🔜 |
 
+## 8c. Round 2 (Claude Design handoff, 100% pass)
+| Feature | Status |
+|---|---|
+| Whole UI rebuilt to the Claude Design handoff (rounds 1–3), verified screen by screen against the designs | ✅ |
+| Unlock screen with attempts left + lockout timer; fingerprint / Windows Hello / Android biometric app lock | ✅ |
+| Home: customize sections, voice quick capture, global study timer, heatmap → calendar day | ✅ |
+| Course: skill tree with prerequisite path highlight + drag-to-link; timeline drag to reschedule; unlock animation | ✅ |
+| Project board Todo / Doing (`[/]`) / Done | ✅ |
+| Import with real progress, duplicate handling, tag mapping; export with size estimate, folder picker, attachment retry | ✅ |
+| Palette operator chips, scope, AI + local-graph commands; canvas JSON ↔ selection sync; whiteboard sticky bar + phone dock; full-width side-by-side diffs | ✅ |
+| Review: edit / suspend / undo, redo "Again", streak; slides presenter view, audience window, **phone as remote** (Durable Object) | ✅ |
+| Database inline editing, secondary sort, draggable columns, filter chips; Tasks X / D shortcuts | ✅ |
+| Settings: Blog (license, RSS), AI switches (enforced server-side), API tokens (create / regenerate / revoke, last used), real Cloudflare usage | ✅ |
+| Interface direction Auto / LTR / RTL (mirrored app chrome) | ✅ |
+| Embeds: privacy-first YouTube/Vimeo thumbnails, custom video/audio players, pdf.js viewer with quote-to-note, link-card states | ✅ |
+| Share-to-Lumen (PWA share target + Android share sheet) | ✅ |
+| Sync conflict detection with "View other" version; offline banner; undo toasts | ✅ |
+| Dev mode: design demo data + 11 scenarios + network / AI / upload / clock / conflict simulation | ✅ |
+
 ## 9. Blog (public)
 | Feature | Status |
 |---|---|

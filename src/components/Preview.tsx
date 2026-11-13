@@ -5,7 +5,7 @@ import { parseCanvas, previewSvg } from "../lib/canvas";
 import { handleCopyClick, hydrate, render } from "../lib/markdown";
 import { tasks, toggleTask } from "../lib/parse";
 import { matcher, parseQuery } from "../lib/search";
-import { go, openNote, useVault, type Vault } from "../lib/store";
+import { go, openNote, toast, useVault, type Vault } from "../lib/store";
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
@@ -25,6 +25,9 @@ export function renderQuery(el: HTMLElement, q: string, v: Vault) {
     : `<div class="muted" style="font-size:12px;margin-bottom:4px">${rows.length} notes · <code>${esc(q)}</code></div><ul style="margin:0">${rows.map((n) => `<li><a class="wikilink" href="#" data-note="${esc(n.title)}">${esc(n.title)}</a></li>`).join("")}</ul>`;
 }
 
+/** Source line of the last block the reader clicked (for the ¶ direction menu in Read mode). */
+export const lastBlock = { noteId: "", line: -1 };
+
 export function Preview({ note, className, onLine }: { note: Pick<Note, "id" | "body" | "spaceId">; className?: string; onLine?: (line: number) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const vault = useVault();
@@ -38,6 +41,23 @@ export function Preview({ note, className, onLine }: { note: Pick<Note, "id" | "
     hydrate(el, {
       query: (q, src) => renderQuery(q, src, vault),
       canvas: (c, json) => { const { canvas, error } = parseCanvas(json); c.innerHTML = error ? `<div class="render-error">${esc(error)}</div>` : previewSvg(canvas); },
+      // PDF highlight → quote at the end of the note (design 08: "Highlights made here become quotes in the note").
+      quote: async (text, page, name) => {
+        const cur = vault.byId.get(note.id)?.body ?? note.body;
+        await updateNote(note.id, { body: `${cur.replace(/\s*$/, "")}\n\n> ${text.replace(/\n/g, "\n> ")}\n> — ${name}, p. ${page}\n` });
+        toast("Quote added to the note");
+      },
+      // Link card ⋯ → "Convert to plain link"
+      convert: async (href) => {
+        const cur = vault.byId.get(note.id)?.body ?? note.body;
+        let host = href;
+        try { const u = new URL(href); host = (u.hostname.replace(/^www\./, "") + u.pathname).replace(/\/$/, ""); } catch { /* keep */ }
+        const lines = cur.split("\n");
+        const i = lines.findIndex((l) => { const t = l.trim(); return t === href || t === `<${href}>`; });
+        if (i < 0) return;
+        lines[i] = `[${host}](${href})`;
+        await updateNote(note.id, { body: lines.join("\n") });
+      },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [html, vault.notes.length]);
@@ -45,6 +65,8 @@ export function Preview({ note, className, onLine }: { note: Pick<Note, "id" | "
   async function onClick(e: React.MouseEvent) {
     if (handleCopyClick(e)) return;
     const t = e.target as HTMLElement;
+    const blk = t.closest<HTMLElement>("[data-line]");
+    if (blk) Object.assign(lastBlock, { noteId: note.id, line: Number(blk.dataset.line) });
     const wl = t.closest<HTMLAnchorElement>("a.wikilink");
     if (wl) {
       e.preventDefault();

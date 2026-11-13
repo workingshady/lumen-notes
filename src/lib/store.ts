@@ -16,6 +16,8 @@ export interface UI {
   spaceId: string;
   folderId: string | null;
   tag: string | null;
+  /** Sidebar quick filters: "visual" = canvases + whiteboards, "published" = blog posts. */
+  filter: "visual" | "published" | null;
   mode: Mode;
   panel: Panel;
   sidebar: boolean;
@@ -28,11 +30,13 @@ export interface UI {
 
 const KEY = "lumen.ui";
 const wide = () => typeof innerWidth === "number" && innerWidth >= 900;
+/** Docked full sidebar only from 1200 px; tablets (900–1199) keep the rail and open the sidebar as a drawer. */
+const docked = () => typeof innerWidth === "number" && innerWidth >= 1200;
 let ui: UI = (() => {
-  const base: UI = { view: "home", noteId: null, spaceId: DEFAULT_SPACE, folderId: null, tag: null, mode: wide() ? "split" : "read", panel: null, sidebar: wide(), list: true, palette: false, newSpace: false, io: false, history: [] };
+  const base: UI = { view: "home", noteId: null, spaceId: DEFAULT_SPACE, folderId: null, tag: null, filter: null, mode: wide() ? "split" : "read", panel: null, sidebar: docked(), list: true, palette: false, newSpace: false, io: false, history: [] };
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? "{}") as Partial<UI>;
-    return { ...base, ...saved, palette: false, newSpace: false, io: false, sidebar: wide() ? saved.sidebar ?? true : false, history: [] };
+    return { ...base, ...saved, palette: false, newSpace: false, io: false, sidebar: docked() ? saved.sidebar ?? true : false, history: [] };
   } catch { return base; }
 })();
 const subs = new Set<() => void>();
@@ -51,10 +55,10 @@ export function openNote(id: string, mode?: Mode) {
   setUI((u) => ({
     view: "notes", noteId: id, ...(mode ? { mode } : {}),
     history: u.noteId && u.noteId !== id ? [...u.history.slice(-30), u.noteId] : u.history,
-    sidebar: wide() ? u.sidebar : false,
+    sidebar: docked() ? u.sidebar : false,
   }));
 }
-export const go = (view: View, extra: Partial<UI> = {}) => setUI((u) => ({ view, sidebar: wide() ? u.sidebar : false, ...extra }));
+export const go = (view: View, extra: Partial<UI> = {}) => setUI((u) => ({ view, sidebar: docked() ? u.sidebar : false, ...extra }));
 export function back() {
   setUI((u) => {
     const prev = u.history[u.history.length - 1];
@@ -124,18 +128,50 @@ function canvasFiles(body: string): string[] {
 }
 
 /** Notes visible in the current scope (space / folder / tag). */
-export function scoped(v: Vault, u: Pick<UI, "spaceId" | "folderId" | "tag">) {
-  return v.notes.filter((n) => (u.spaceId === "all" || n.spaceId === u.spaceId) && (!u.folderId || n.folderId === u.folderId) && (!u.tag || n.tags.includes(u.tag)));
+export function scoped(v: Vault, u: Pick<UI, "spaceId" | "folderId" | "tag"> & { filter?: UI["filter"] }) {
+  return v.notes.filter((n) => (u.spaceId === "all" || n.spaceId === u.spaceId) && (!u.folderId || n.folderId === u.folderId) && (!u.tag || n.tags.includes(u.tag))
+    && (!u.filter || (u.filter === "visual" ? n.type === "canvas" || n.type === "whiteboard" : !!n.published)));
 }
 
 // ------------------------------------------------------------------ toasts
-export interface Toast { id: number; text: string; action?: { label: string; run: () => void } }
+/** Toast icon (design: 06b states + component sheet). Inferred from the text when not given. */
+export type ToastIcon = "trash" | "merge" | "globe" | "link" | "history" | "check" | "error" | "offline" | "info" | "copy" | "none";
+export interface Toast {
+  id: number; text: string; action?: { label: string; run: () => void };
+  /** Muted second line (e.g. conflict: "From Pixel 8 at 21:39 · the other is in history"). */
+  sub?: string; icon?: ToastIcon; ms: number; at: number;
+  /** Action button style: "link" (teal text, conflict "View other") or "button" (bordered, Undo ⌘Z). */
+  actionStyle?: "link" | "button";
+}
+export interface ToastOpts { sub?: string; icon?: ToastIcon; ms?: number; actionStyle?: "link" | "button" }
 let toasts: Toast[] = [];
 const tsubs = new Set<() => void>();
 export const useToasts = () => useSyncExternalStore((f) => (tsubs.add(f), () => tsubs.delete(f)), () => toasts);
-export function toast(text: string, action?: Toast["action"]) {
-  const t = { id: Date.now() + Math.random(), text, action };
-  toasts = [...toasts, t];
+function inferIcon(text: string, action?: Toast["action"]): ToastIcon {
+  if (/trash|deleted/i.test(text)) return "trash";
+  if (/unpublish|published|blog/i.test(text)) return "globe";
+  if (/link/i.test(text)) return "link";
+  if (/version|restored/i.test(text)) return "history";
+  if (/cop(y|ied)/i.test(text)) return "copy";
+  if (/fail|error|couldn|not available|can't|cannot/i.test(text)) return "error";
+  if (/offline/i.test(text)) return "offline";
+  return action ? "info" : "check";
+}
+export function dismissToast(id: number) { toasts = toasts.filter((x) => x.id !== id); tsubs.forEach((f) => f()); }
+export function toast(text: string, action?: Toast["action"], opts: ToastOpts = {}) {
+  const undo = action && /undo/i.test(action.label);
+  const ms = opts.ms ?? (undo ? 8000 : action ? 6000 : 3000);
+  const t: Toast = { id: Date.now() + Math.random(), text, action, sub: opts.sub, icon: opts.icon ?? inferIcon(text, action), ms, at: Date.now(), actionStyle: opts.actionStyle ?? (undo ? "button" : "link") };
+  toasts = [...toasts.slice(-2), t];
   tsubs.forEach((f) => f());
-  setTimeout(() => { toasts = toasts.filter((x) => x.id !== t.id); tsubs.forEach((f) => f()); }, action ? 6000 : 3000);
+  setTimeout(() => dismissToast(t.id), ms);
+  return t.id;
+}
+/** Ctrl/⌘ Z outside editors runs the newest Undo toast. */
+export function runLatestUndo() {
+  const t = [...toasts].reverse().find((x) => x.action && /undo/i.test(x.action.label));
+  if (!t) return false;
+  t.action!.run();
+  dismissToast(t.id);
+  return true;
 }

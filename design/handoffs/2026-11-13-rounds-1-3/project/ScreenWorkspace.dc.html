@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+</helmet>
+<div style="position:absolute;inset:0;display:flex;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:13px">
+  <dc-import name="LumenSidebar" active="note" hint-size="240px,100%" style="height:100%"></dc-import>
+  <div style="width:320px;flex-shrink:0;height:100%;border-right:1px solid var(--bd);display:flex;flex-direction:column;background:var(--bg)">
+    <div style="height:48px;padding:0 12px 0 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd)">
+      <span style="width:8px;height:8px;border-radius:3px;background:#E8893A"></span><span style="font-weight:600;font-size:14px">02 Optimization</span><span style="color:var(--mu)">12</span><span style="flex:1"></span>
+      <span style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-arrow-down-wide-narrow" style="font-size:15px"></i></span>
+      <span style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-square-pen" style="font-size:15px"></i></span>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:6px;display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ notes }}" as="n" hint-placeholder-count="7">
+        <div style="padding:10px 12px;border-radius:10px;background:{{ n.bg }};display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:{{ n.st }};flex-shrink:0"></span><span style="flex:1;font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.t }}</span><i class="{{ n.pin }}" style="font-size:12px;color:var(--mu)"></i></div>
+          <div style="color:var(--mu);font-size:12.5px;line-height:18px;height:36px;overflow:hidden">{{ n.ex }}</div>
+          <div style="display:flex;align-items:center;gap:4px"><sc-for list="{{ n.tags }}" as="g" hint-placeholder-count="1"><span style="padding:0 6px;line-height:18px;border-radius:6px;background:var(--sf2);color:var(--mu);font-size:11px">{{ g }}</span></sc-for><span style="flex:1"></span><span style="color:var(--mu);font-size:11px">{{ n.time }}</span></div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg)">
+    <div style="height:44px;padding:0 12px 0 20px;display:flex;align-items:center;gap:10px">
+      <div style="display:flex;align-items:center;gap:6px;color:var(--mu);white-space:nowrap"><span>🧠 ML Foundations</span><i class="icon-chevron-right" style="font-size:12px"></i><span>02 Optimization</span><i class="icon-chevron-right" style="font-size:12px"></i><span style="color:var(--tx);font-weight:500">Gradient descent</span></div>
+      <span style="flex:1"></span>
+      <span style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px;white-space:nowrap"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span>Saved · Synced 2m ago</span>
+      <span style="display:flex;align-items:center;gap:6px;height:28px;padding:0 4px 0 10px;border-radius:999px;border:1px solid var(--bd)"><i class="icon-timer" style="font-size:13px;color:var(--mu)"></i><span style="font:500 12px 'JetBrains Mono',monospace">25:00</span><span style="width:20px;height:20px;border-radius:50%;background:var(--sf2);display:flex;align-items:center;justify-content:center"><i class="icon-play" style="font-size:10px"></i></span></span>
+      <span style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-ellipsis" style="font-size:16px"></i></span>
+      <span style="height:28px;padding:0 10px;border-radius:8px;border:1px solid {{ shBd }};background:{{ shBg }};color:{{ shC }};display:flex;align-items:center;gap:6px;font-weight:{{ shW }}"><i class="{{ shI }}" style="font-size:13px"></i>{{ shT }}</span>
+      <span style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-panel-right" style="font-size:16px"></i></span>
+    </div>
+    <div style="height:44px;padding:0 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--bd)">
+      <div style="display:flex;gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)">
+        <sc-for list="{{ modes }}" as="m" hint-placeholder-count="6"><span style="height:26px;padding:0 10px;border-radius:7px;display:flex;align-items:center;gap:6px;background:{{ m.bg }};color:{{ m.fg }};font-weight:{{ m.fw }};font-size:12.5px"><i class="{{ m.icon }}" style="font-size:13px"></i>{{ m.l }}</span></sc-for>
+      </div>
+      <span style="flex:1"></span>
+      <span style="color:var(--mu);font-size:12px">1,284 words · 6 min</span>
+    </div>
+    <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr">
+      <div style="border-right:1px solid var(--bd);padding:20px 0;font:400 13px/22px 'JetBrains Mono',monospace;color:var(--tx);overflow:hidden;background:var(--sf)">
+        <sc-for list="{{ src }}" as="l" hint-placeholder-count="24">
+          <div style="display:flex;background:{{ l.bg }};padding-right:16px"><span style="width:44px;flex-shrink:0;text-align:right;padding-right:14px;color:var(--mu);opacity:.5;font-size:11px">{{ l.n }}</span><span style="white-space:pre;color:{{ l.c }};font-weight:{{ l.w }}">{{ l.t }}<span style="display:{{ l.cur }};width:2px;height:16px;background:var(--ac);vertical-align:-3px"></span></span></div>
+        </sc-for>
+      </div>
+      <div style="padding:28px 36px;overflow:hidden;display:flex;flex-direction:column;gap:14px;font-family:'Source Serif 4',Georgia,serif;font-size:16px;line-height:27px">
+        <div style="font-family:Inter,system-ui,sans-serif;font-size:12px;color:var(--mu);display:flex;gap:8px;align-items:center"><span style="padding:0 6px;border-radius:6px;background:var(--sf2);line-height:20px">Lesson</span><span style="display:flex;align-items:center;gap:5px;padding:0 8px;border-radius:999px;background:color-mix(in srgb,var(--in) 14%,transparent);color:var(--in);line-height:20px;font-weight:500"><span style="width:6px;height:6px;border-radius:50%;background:var(--in)"></span>Learning</span></div>
+        <div style="font-size:30px;line-height:36px;font-weight:700;letter-spacing:-.01em">Gradient descent</div>
+        <p style="margin:0">Minimize a loss <i>J</i>(<i>θ</i>) by stepping against its gradient.</p>
+        <div style="text-align:center;font-size:18px;padding:6px 0"><i>θ</i><sub>t+1</sub> = <i>θ</i><sub>t</sub> − <i>η</i> ∇<i>J</i>(<i>θ</i><sub>t</sub>)</div>
+        <div style="font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:22px;border-radius:10px;background:color-mix(in srgb,var(--ok) 10%,transparent);border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style="display:flex;align-items:center;gap:8px;font-weight:600;color:var(--ok)"><i class="icon-lightbulb" style="font-size:15px"></i>Choosing η</span><span>Too large diverges, too small crawls. Start at <code style="font:12.5px 'JetBrains Mono',monospace;background:var(--sf2);padding:1px 5px;border-radius:4px">1e-3</code>, then sweep.</span></div>
+        <div style="font-size:21px;font-weight:650;margin-top:6px">Variants</div>
+        <div style="display:flex;flex-direction:column;gap:4px;font-family:Inter,system-ui,sans-serif;font-size:14.5px">
+          <span style="display:flex;gap:10px;align-items:center;color:var(--mu);text-decoration:line-through"><span style="width:16px;height:16px;border-radius:4px;background:var(--ok);display:flex;align-items:center;justify-content:center;color:var(--bg)"><i class="icon-check" style="font-size:12px"></i></span>Batch GD</span>
+          <span style="display:flex;gap:10px;align-items:center;color:var(--mu);text-decoration:line-through"><span style="width:16px;height:16px;border-radius:4px;background:var(--ok);display:flex;align-items:center;justify-content:center;color:var(--bg)"><i class="icon-check" style="font-size:12px"></i></span>Stochastic GD</span>
+          <span style="display:flex;gap:10px;align-items:center"><span style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--mu);box-sizing:border-box"></span>Mini-batch + momentum</span>
+        </div>
+        <p style="margin:0">See <span style="color:var(--ln);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:4px">Learning rate schedules</span> <span style="font-family:Inter,system-ui,sans-serif;font-size:13px;color:var(--ln);background:color-mix(in srgb,var(--ln) 12%,transparent);padding:1px 6px;border-radius:6px">#optimization</span></p>
+        <div style="font-family:Inter,system-ui,sans-serif;font-size:13px;border-radius:10px;border:1px solid color-mix(in srgb,var(--le) 35%,transparent);display:flex;overflow:hidden"><span style="padding:8px 12px;color:var(--le);background:color-mix(in srgb,var(--le) 10%,transparent);display:flex;align-items:center;gap:6px"><i class="icon-layers" style="font-size:13px"></i>Card</span><span style="padding:8px 12px;flex:1">What does η control?</span><span style="padding:8px 12px;color:var(--mu)">The step size.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Edit&quot;,&quot;Split&quot;,&quot;Read&quot;,&quot;Focus&quot;,&quot;Slides&quot;,&quot;Review&quot;],&quot;default&quot;:&quot;Split&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const S = { todo:'var(--mu)', learning:'var(--in)', review:'var(--wa)', mastered:'var(--ok)' };
+    const notes = [
+      ['Gradient descent','learning',1,'Minimize J(θ) by stepping against the gradient. The learning rate η controls step size — too large diverges, too small crawls.',['#optimization','#ml'],'12m'],
+      ['Learning rate schedules','todo',0,'Step decay, cosine annealing and warmup. Why warmup stabilises Adam during the first few hundred steps.',['#optimization'],'1h'],
+      ['Convexity & minima','review',0,'A function is convex if the segment between any two points lies above its graph. Every local minimum is global.',['#math'],'Yesterday'],
+      ['Momentum & Nesterov','learning',0,'Accumulate a velocity v ← βv + ∇J. Nesterov evaluates the gradient at the look-ahead point instead.',['#optimization'],'Mon'],
+      ['Adam optimizer','mastered',1,'Adaptive moment estimation: per-parameter step sizes from running averages of the gradient and its square.',['#optimization','#exam'],'3 Nov'],
+      ['Newton\u2019s method','todo',0,'Second-order: uses the Hessian. Converges quadratically near the optimum, but each step costs O(n³).',['#math'],'28 Oct'],
+      ['Problem set 3','learning',0,'Q1 show the logistic loss is convex. Q2 implement mini-batch SGD and plot loss vs. epoch for three batch sizes.',['#exam'],'24 Oct']
+    ].map(([t,s,p,ex,tags,time],i) => ({ t, ex, tags, time, st:S[s], pin:p?'icon-pin':'', bg:i===0?'var(--sf2)':'transparent' }));
+    const mode = this.props.mode ?? 'Split';
+    const modes = [['Edit','pen-line'],['Split','columns-2'],['Read','book-open'],['Focus','maximize-2'],['Slides','presentation'],['Review','layers']]
+      .map(([l,i]) => ({ l, icon:'icon-'+i, bg:l===mode?'var(--sf2)':'transparent', fg:l===mode?'var(--tx)':'var(--mu)', fw:l===mode?600:450 }));
+    const M='var(--mu)', T='var(--tx)', L='var(--ln)', E='var(--le)';
+    const src = [
+      ['',M],['---',M],['type: lesson',M],['status: learning',M],['tags: [ml, optimization]',M],['---',M],['# Gradient descent',T,700],['',T],
+      ['Minimize a loss $J(\\theta)$ by stepping',T],['against its gradient.',T],['',T],
+      ['$$\\theta_{t+1} = \\theta_t - \\eta \\nabla J(\\theta_t)$$',T],['',T],
+      ['> [!tip] Choosing η',M],['> Too large diverges, too small crawls.',T],['> Start at `1e-3`, then sweep.',T],['',T],
+      ['## Variants',T,700],['- [x] Batch GD',M],['- [x] Stochastic GD',M],['- [ ] Mini-batch + momentum',T,400,1],['',T],
+      ['See [[Learning rate schedules]] #optimization',L],['',T],['What does η control? :: The step size.',E]
+    ].map(([t,c,w,cur]) => ({ t, c, w:w||400, cur:cur?'inline-block':'none', bg:cur?'var(--sf2)':'transparent' }));
+    const sh = this.props.share ?? 'private';
+    const SH = { private:['var(--bd)','transparent','var(--tx)',500,'icon-share','Share'], shared:['color-mix(in srgb,var(--in) 40%,transparent)','color-mix(in srgb,var(--in) 14%,transparent)','var(--in)',600,'icon-link-2','Shared'], published:['color-mix(in srgb,var(--ok) 40%,transparent)','color-mix(in srgb,var(--ok) 14%,transparent)','var(--ok)',600,'icon-globe','Published'] }[sh];
+    return { shBd:SH[0], shBg:SH[1], shC:SH[2], shW:SH[3], shI:SH[4], shT:SH[5], notes, modes, src: src.slice(1).map((l, i) => ({ ...l, n: i + 1 })) };
+  }
+}
+</script>
+</body>
+</html>

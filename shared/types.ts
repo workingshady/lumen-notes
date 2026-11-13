@@ -77,6 +77,8 @@ export interface Card extends Synced {
   due: number; // epoch ms
   reps: number;
   lapses: number;
+  /** 1 = suspended (S in review): never shows up as due until unsuspended. */
+  suspended?: 0 | 1;
 }
 
 /** Study timer session. */

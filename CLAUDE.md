@@ -11,6 +11,14 @@ Single-owner study notebook + blog. Local-first (Dexie/IndexedDB) with sync to C
 - Android: Capacitor **6** (runs on JDK 17 at `C:/Program Files/Java/jdk-17`); config is `capacitor.config.json` (CLI 6 can't load .ts with this TypeScript). Icons rendered from `public/icon.svg` into `android/app/src/main/res`.
 - `docs/`: FEATURES.md (status table: keep it updated), design/ (Claude Design prompt + numbered follow-ups `CLAUDE_DESIGN_UPDATE_NN.md`; add a new numbered file for each design round).
 
+## Design & dev mode
+- Design source of truth: `design/handoffs/<date>/` (Claude Design handoffs; index `design/README.md`). New design rounds: prompt in `docs/design/CLAUDE_DESIGN_UPDATE_NN.md`, save the handoff as a new dated folder, implement to 100% identical, verify with `design/tools/shot.mjs`.
+- Demo / dev mode: `?demo=1` → separate Dexie DB `lumen-demo`, clock pinned (`src/lib/demo-clock.ts`), never syncs. Dev panel: Ctrl+Shift+D or `?dev=panel` (scenarios + network/AI/upload/clock/conflict simulation, `src/lib/sim/`, docs `docs/DEV_SIMULATOR.md`). `?dev=reset` reseeds the design data. Design seed: `src/lib/demo.ts` (`docs/DEMO_DATA.md`).
+- Backend is split per area: `worker/ext/{home,spaces,navigate,study,settings,workspace}.ts` registered in `worker/index.ts`. Phone-as-remote = Durable Object `SlidesRemote` (`worker/study-remote.ts`, binding REMOTE).
+- Notes: title = first `# H1`; type/status/tags live in front-matter and sync both ways with the record (`src/lib/actions.ts` updateNote). Tasks support `[/]` doing (`tasks(md, { doing: true })`).
+- Passcodes/secrets: `SETUP.md` (git-ignored); public guide `docs/PASSCODES.md`. Unlock = `/api/unlock` with D1 attempt limits; API tokens (`lmn_…`, hashed in D1) accepted by `auth`.
+- Android: extra Capacitor plugins send-intent (share-to-Lumen, `ShareActivity`) and @capgo/capacitor-native-biometric (fingerprint lock via `src/lib/native-biometric.ts`). Build with `-Dorg.gradle.jvmargs=-Xmx1536m` on this PC.
+
 ## Rules
 - All writes go through `save()/patch()` in `src/lib/db.ts` (sets `dirty`, `updatedAt`). Never write Dexie tables directly for synced kinds.
 - Never delete synced records: set `deleted: 1` (tombstones sync to other devices).

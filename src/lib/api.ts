@@ -1,3 +1,5 @@
+import { simApi } from "./sim/faults";
+
 // API client. Web build: same origin. Android build: VITE_API_BASE (the deployed Worker).
 export const API_BASE: string = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
 const TOKEN_KEY = "lumen.token";
@@ -8,6 +10,12 @@ export const setToken = (t: string | null) => { try { t ? localStorage.setItem(T
 export class ApiError extends Error { constructor(msg: string, public status: number) { super(msg); } }
 
 export async function api<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
+  const sim = await simApi(path, init.method ?? "GET"); // Dev simulator fault injection (no-op outside demo mode)
+  if (sim && "mock" in sim) return sim.mock as T;
+  if (sim) {
+    if (sim.status === 401) setToken(null);
+    throw new ApiError(sim.error, sim.status);
+  }
   const headers = new Headers(init.headers);
   const tok = getToken();
   if (tok) headers.set("Authorization", `Bearer ${tok}`);
@@ -39,6 +47,7 @@ export function unfurl(url: string): Promise<Unfurl | null> {
       const key = "lumen.unfurl." + url;
       try { const c = localStorage.getItem(key); if (c) return JSON.parse(c) as Unfurl; } catch { /* ignore */ }
       try {
+        if (await simApi("/unfurl")) return null; // Dev simulator: offline / signed out
         const r = await fetch(`${API_BASE}/api/unfurl?url=${encodeURIComponent(url)}`);
         if (!r.ok) return null;
         const d = (await r.json()) as Unfurl;

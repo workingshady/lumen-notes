@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+</helmet>
+<sc-if value="{{ full }}" hint-placeholder-val="{{ true }}">
+<div style="width:240px;height:100%;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;font-family:Inter,system-ui,sans-serif;font-size:13px;color:var(--tx);box-sizing:border-box;flex-shrink:0">
+  <div style="padding:10px 10px 8px;display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:10px;background:{{ swBg }};border:1px solid {{ swBd }}">
+      <div style="width:28px;height:28px;border-radius:7px;background:color-mix(in srgb,#A371F7 20%,transparent);border:1px solid color-mix(in srgb,#A371F7 50%,transparent);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🧠</div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+        <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">ML Foundations</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mu)"><span style="padding:0 5px;border-radius:4px;border:1px solid var(--bd);line-height:15px">Course</span><span>62% done</span></div>
+      </div>
+      <i class="icon-chevrons-up-down" style="color:var(--mu);font-size:14px"></i>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border-radius:6px;background:var(--bg);border:1px solid var(--bd);color:var(--mu)">
+      <i class="icon-search" style="font-size:14px"></i><span style="flex:1">Search</span><span style="font:500 11px 'JetBrains Mono',monospace;padding:1px 5px;border:1px solid var(--bd);border-radius:4px">⌘K</span>
+    </div>
+  </div>
+  <div style="padding:2px 8px;display:flex;flex-direction:column;gap:1px">
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="9">
+      <div style="display:flex;align-items:center;gap:10px;height:30px;padding:0 8px;border-radius:6px;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.fw }}">
+        <i class="{{ n.icon }}" style="font-size:16px;width:16px;color:{{ n.ic }}"></i><span style="flex:1">{{ n.label }}</span><span style="font-size:11px;font-weight:600;color:{{ n.cc }};font-variant-numeric:tabular-nums">{{ n.count }}</span>
+      </div>
+    </sc-for>
+  </div>
+  <div style="padding:14px 8px 2px;display:flex;flex-direction:column;gap:1px">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 8px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)"><span>Folders</span><i class="icon-plus" style="font-size:14px"></i></div>
+    <sc-for list="{{ tree }}" as="r" hint-placeholder-count="7">
+      <div style="display:flex;align-items:center;gap:7px;height:28px;padding-left:{{ r.pl }};padding-right:8px;border-radius:6px;background:{{ r.bg }};color:{{ r.fg }};font-weight:{{ r.fw }}">
+        <sc-if value="{{ r.isF }}"><i class="{{ r.chev }}" style="font-size:12px;color:var(--mu);width:12px"></i><span style="width:8px;height:8px;border-radius:3px;background:{{ r.color }};flex-shrink:0"></span></sc-if>
+        <sc-if value="{{ r.isN }}"><i class="icon-file-text" style="font-size:14px;color:{{ r.ic }};width:14px"></i></sc-if>
+        <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span><span style="font-size:11px;color:var(--mu)">{{ r.count }}</span>
+      </div>
+    </sc-for>
+  </div>
+  <div style="padding:14px 8px 2px;display:flex;flex-direction:column;gap:1px">
+    <div style="padding:0 8px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Tags</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;padding:0 6px">
+      <span style="padding:2px 7px;border-radius:6px;background:var(--sf2);color:var(--mu);font-size:12px">#ml <b style="font-weight:500;opacity:.7">34</b></span>
+      <span style="padding:2px 7px;border-radius:6px;background:var(--sf2);color:var(--mu);font-size:12px">#math <b style="font-weight:500;opacity:.7">21</b></span>
+      <span style="padding:2px 7px;border-radius:6px;background:var(--sf2);color:var(--mu);font-size:12px">#exam <b style="font-weight:500;opacity:.7">7</b></span>
+      <span style="padding:2px 7px;border-radius:6px;background:var(--sf2);color:var(--mu);font-size:12px">#optimization <b style="font-weight:500;opacity:.7">9</b></span>
+    </div>
+  </div>
+  <div style="padding:10px 8px 0">
+    <div style="display:flex;align-items:center;gap:10px;height:30px;padding:0 8px;color:var(--mu)"><i class="icon-trash-2" style="font-size:16px"></i><span>Trash</span></div>
+  </div>
+  <div style="flex:1"></div>
+  <div style="border-top:1px solid var(--bd);padding:10px 12px;display:flex;align-items:center;gap:10px">
+    <span style="width:8px;height:8px;border-radius:50%;background:{{ syncC }};flex-shrink:0"></span>
+    <span style="flex:1;font-size:12px;color:var(--mu);white-space:nowrap">{{ syncT }}</span>
+    <i class="icon-settings" style="font-size:16px;color:var(--mu)"></i>
+    <div style="width:26px;height:26px;border-radius:50%;background:var(--sf2);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:14px">🦉</div>
+  </div>
+</div>
+</sc-if>
+<sc-if value="{{ rail }}">
+<div style="width:56px;height:100%;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:4px;box-sizing:border-box;flex-shrink:0;font-family:Inter,system-ui,sans-serif">
+  <div style="width:32px;height:32px;border-radius:8px;background:color-mix(in srgb,#A371F7 20%,transparent);border:1px solid color-mix(in srgb,#A371F7 50%,transparent);display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:6px">🧠</div>
+  <div style="width:36px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-search" style="font-size:16px"></i></div>
+  <sc-for list="{{ nav }}" as="n" hint-placeholder-count="9">
+    <div style="position:relative;width:36px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:{{ n.bg }};color:{{ n.ic }}"><i class="{{ n.icon }}" style="font-size:16px"></i><span style="position:absolute;top:4px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--le);display:{{ n.dot }}"></span></div>
+  </sc-for>
+  <div style="width:24px;height:1px;background:var(--bd);margin:6px 0"></div>
+  <div style="width:36px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-folder-tree" style="font-size:16px"></i></div>
+  <div style="flex:1"></div>
+  <span style="width:8px;height:8px;border-radius:50%;background:{{ syncC }};margin-bottom:8px"></span>
+  <div style="width:36px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-settings" style="font-size:16px"></i></div>
+  <div style="width:28px;height:28px;border-radius:50%;background:var(--sf2);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:14px">🦉</div>
+</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:240,&quot;height&quot;:900},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;inbox&quot;,&quot;daily&quot;,&quot;tasks&quot;,&quot;calendar&quot;,&quot;review&quot;,&quot;graph&quot;,&quot;canvas&quot;,&quot;blog&quot;,&quot;note&quot;,&quot;none&quot;],&quot;default&quot;:&quot;note&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;collapsed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;sync&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;synced&quot;,&quot;offline&quot;],&quot;default&quot;:&quot;synced&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;switcherOpen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const a = this.props.active ?? 'note';
+    const on = k => k === a;
+    const nav = [['house','Home','home',''],['inbox','Inbox','inbox','3'],['notebook-pen','Daily note','daily',''],['list-checks','Tasks','tasks','5'],['calendar-days','Calendar','calendar',''],['layers','Review','review','23'],['waypoints','Graph','graph',''],['layout-dashboard','Canvases','canvas',''],['rss','Blog','blog','']]
+      .map(([i,l,k,c]) => ({ icon:'icon-'+i, label:l, count:c, bg:on(k)?'var(--sf2)':'transparent', fg:on(k)?'var(--tx)':'var(--mu)', ic:on(k)?'var(--ac)':'var(--mu)', cc:k==='review'?'var(--le)':'var(--mu)', fw:on(k)?600:450, dot:k==='review'?'block':'none' }));
+    const tree = [
+      {d:0,t:'f',name:'01 Linear algebra',color:'#39C5CF',count:'8'},
+      {d:0,t:'f',open:1,name:'02 Optimization',color:'#E8893A',count:'12'},
+      {d:1,t:'n',name:'Gradient descent',k:'note'},
+      {d:1,t:'n',name:'Learning rate schedules'},
+      {d:1,t:'n',name:'Convexity & minima'},
+      {d:0,t:'f',name:'03 Neural networks',color:'#A371F7',count:'9'},
+      {d:0,t:'f',name:'04 Probability',color:'#57AB5A',count:'6'}
+    ].map(r => { const act = r.k && on(r.k); return {...r, count:r.count||'', pl:(8 + r.d*20)+'px', isF:r.t==='f', isN:r.t==='n', chev:r.open?'icon-chevron-down':'icon-chevron-right', bg:act?'var(--sf2)':'transparent', fg:act?'var(--tx)':(r.t==='n'?'var(--mu)':'var(--tx)'), ic:act?'var(--ac)':'var(--mu)', fw:act?600:450 }; });
+    const off = this.props.sync === 'offline';
+    const sw = !!this.props.switcherOpen;
+    return { full: !this.props.collapsed, rail: !!this.props.collapsed, nav, tree,
+      syncC: off ? 'var(--wa)' : 'var(--ok)', syncT: off ? 'Offline · 3 queued' : 'Synced 2m ago',
+      swBg: sw ? 'var(--sf2)' : 'transparent', swBd: sw ? 'var(--ac)' : 'transparent' };
+  }
+}
+</script>
+</body>
+</html>

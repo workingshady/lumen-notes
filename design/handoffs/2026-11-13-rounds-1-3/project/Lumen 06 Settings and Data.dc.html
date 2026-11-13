@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:120px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227">
+  <div style="display:flex;align-items:center;gap:16px">
+    <div style="width:40px;height:40px;border-radius:11px;background:#161A21;border:1px solid #2A303B;position:relative"><div style="position:absolute;left:14px;top:9px;width:11px;height:11px;border-radius:50%;background:#F2A93B;box-shadow:0 0 14px rgba(242,169,59,.7)"></div><div style="position:absolute;left:9px;right:9px;bottom:11px;height:2px;background:#E8E6E1;border-radius:1px"></div></div>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 06 Settings &amp; data</span></div><div style="font-size:14px;color:#9A9890">Screens 20 (settings › appearance, Paper variant) and 19 (import / export).</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 20</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Settings › Appearance</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Six controls and a live preview of your own note. Everything else waits inside Advanced.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">20A</span><span>Appearance · Desktop · Lamplight</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg)">
+          <dc-import name="ScreenSettings" theme="dark" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+          <div style="position:absolute;left:330px;top:140px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">1</div>
+          <div style="position:absolute;left:330px;top:820px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">2</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3">
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>Sections: Appearance · Branding (blog name, tagline, author, avatar) · Sync (status, last sync, passcode, Sync now) · Blog (published posts, base URL, RSS) · AI · Developer · Data (storage, backup, clear) · About. Searchable via ⌘K “settings: …”.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">2</b><span>Advanced is collapsed by default in every section. Destructive items (Clear local data) live only inside Data › Advanced and require typing the space name.</span></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">20B</span><span>Appearance · Desktop · Paper</span></div>
+        <div style="--bg:#FAF8F3;--sf:#FFFFFF;--sf2:#F2EFE7;--bd:#E4DFD3;--tx:#1F1D1A;--mu:#6A655C;--ac:#B45F0E;--af:#FFFFFF;--ln:#0F7C78;--ok:#1F8A4C;--wa:#A86A00;--da:#C42B2B;--in:#2F5BD3;--le:#7A4BD1;--sh:0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .06);width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg)">
+          <dc-import name="ScreenSettings" theme="light" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">20C</span><span>Settings · Phone · root</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ok:#6BCB8B;--wa:#E8B34A;--in:#7AA2F7;--le:#B48EF0;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="padding:16px 20px 12px;font-size:26px;font-weight:650;letter-spacing:-.02em">More</div>
+          <div style="margin:0 16px;border-radius:14px;background:var(--sf);padding:14px;display:flex;align-items:center;gap:12px"><span style="width:44px;height:44px;border-radius:50%;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:22px">🦉</span><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">Night Shift Notes</span><span style="font-size:12.5px;color:var(--mu);display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:var(--ok)"></span>Synced 2m ago · 3 devices</span></div><i class="icon-chevron-right" style="font-size:16px;color:var(--mu)"></i></div>
+          <div style="padding:16px 16px 0;display:flex;flex-direction:column;gap:12px">
+            <div style="border-radius:14px;background:var(--sf);overflow:hidden">
+              <sc-for list="{{ phoneNav1 }}" as="n" hint-placeholder-count="5"><div style="height:52px;padding:0 14px;display:flex;align-items:center;gap:14px;border-top:{{ n.bt }}"><i class="{{ n.i }}" style="font-size:19px;color:var(--mu)"></i><span style="flex:1">{{ n.l }}</span><span style="color:var(--mu);font-size:13px">{{ n.v }}</span><i class="icon-chevron-right" style="font-size:15px;color:var(--mu)"></i></div></sc-for>
+            </div>
+            <div style="border-radius:14px;background:var(--sf);overflow:hidden">
+              <sc-for list="{{ phoneNav2 }}" as="n" hint-placeholder-count="5"><div style="height:52px;padding:0 14px;display:flex;align-items:center;gap:14px;border-top:{{ n.bt }}"><i class="{{ n.i }}" style="font-size:19px;color:var(--mu)"></i><span style="flex:1">{{ n.l }}</span><span style="color:var(--mu);font-size:13px">{{ n.v }}</span><i class="icon-chevron-right" style="font-size:15px;color:var(--mu)"></i></div></sc-for>
+            </div>
+          </div>
+          <div style="flex:1"></div>
+          <dc-import name="LumenTabBar" active="more" hint-size="412px,88px"></dc-import>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">20D</span><span>Appearance · Phone · live preview on top</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 4px;display:flex;align-items:center;gap:4px"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-arrow-left" style="font-size:20px"></i></span><span style="font-weight:650;font-size:17px">Appearance</span></div>
+          <div style="margin:0 16px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:16px 18px;display:flex;flex-direction:column;gap:8px;font-family:'Source Serif 4',serif">
+            <span style="font-size:20px;font-weight:700">Gradient descent</span>
+            <span style="font-size:16px;line-height:28px">Step against the gradient, scaled by a <span style="color:var(--ln);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:4px">learning rate</span>.<span style="display:inline-block;width:2px;height:18px;background:var(--ac);vertical-align:-3px;margin-left:2px"></span></span>
+            <span style="align-self:flex-start;height:32px;padding:0 12px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;font:600 13px Inter">Start review</span>
+          </div>
+          <div style="flex:1;padding:20px 16px 0;display:flex;flex-direction:column;gap:20px">
+            <div style="display:flex;flex-direction:column;gap:10px"><span style="font-weight:600">Theme</span><div style="display:flex;gap:10px">
+              <span style="width:52px;height:52px;border-radius:12px;background:#0F1115;border:1px solid #2A303B;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ac);display:flex;align-items:flex-end;justify-content:flex-end;padding:6px;box-sizing:border-box"><span style="width:10px;height:10px;border-radius:50%;background:#F2A93B"></span></span>
+              <span style="width:52px;height:52px;border-radius:12px;background:#FAF8F3;display:flex;align-items:flex-end;justify-content:flex-end;padding:6px;box-sizing:border-box"><span style="width:10px;height:10px;border-radius:50%;background:#B45F0E"></span></span>
+              <span style="width:52px;height:52px;border-radius:12px;background:#0B1020;border:1px solid #263156;display:flex;align-items:flex-end;justify-content:flex-end;padding:6px;box-sizing:border-box"><span style="width:10px;height:10px;border-radius:50%;background:#8EA8FF"></span></span>
+              <span style="width:52px;height:52px;border-radius:12px;background:#F4ECD8;display:flex;align-items:flex-end;justify-content:flex-end;padding:6px;box-sizing:border-box"><span style="width:10px;height:10px;border-radius:50%;background:#9C4A1A"></span></span>
+              <span style="width:52px;height:52px;border-radius:12px;background:#0E1512;border:1px solid #29372F;display:flex;align-items:flex-end;justify-content:flex-end;padding:6px;box-sizing:border-box"><span style="width:10px;height:10px;border-radius:50%;background:#7FD49B"></span></span>
+              <span style="width:52px;height:52px;border-radius:12px;background:#000;border:1px solid #6A6A6A;display:flex;align-items:flex-end;justify-content:flex-end;padding:6px;box-sizing:border-box"><span style="width:10px;height:10px;border-radius:50%;background:#FFD400"></span></span>
+            </div></div>
+            <div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;justify-content:space-between"><span style="font-weight:600">Accent hue</span><span style="color:var(--mu);font-family:'JetBrains Mono',monospace">72°</span></div><div style="position:relative;height:28px;border-radius:14px;background:linear-gradient(90deg,oklch(.79 .15 0),oklch(.79 .15 60),oklch(.79 .15 120),oklch(.79 .15 180),oklch(.79 .15 240),oklch(.79 .15 300),oklch(.79 .15 360))"><span style="position:absolute;left:20%;top:-4px;width:36px;height:36px;margin-left:-18px;border-radius:50%;background:var(--ac);border:3px solid var(--tx);box-sizing:border-box"></span></div></div>
+            <div style="display:flex;flex-direction:column;gap:10px"><span style="font-weight:600">Reading font</span><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="height:40px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Sans</span><span style="height:40px;border-radius:8px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:600;font-family:'Source Serif 4',serif">Serif</span><span style="height:40px;display:flex;align-items:center;justify-content:center;color:var(--mu);font-family:'JetBrains Mono',monospace">Mono</span></div></div>
+            <div style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;justify-content:space-between"><span style="font-weight:600">Text size</span><span style="color:var(--mu)">16 px</span></div><div style="position:relative;height:4px;border-radius:2px;background:var(--sf2)"><span style="position:absolute;left:0;top:0;width:35%;height:100%;border-radius:2px;background:var(--tx);opacity:.7"></span><span style="position:absolute;left:35%;top:-10px;width:24px;height:24px;margin-left:-12px;border-radius:50%;background:var(--tx)"></span></div></div>
+            <div style="height:52px;border-radius:12px;background:var(--sf);display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--mu)"><i class="icon-chevron-right" style="font-size:15px"></i><span style="color:var(--tx);flex:1">Advanced</span><span style="font-size:12.5px">width · density · motion</span></div>
+          </div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 19</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Import / Export</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">One dialog, two tabs. Progress is honest (files, not a spinner); the result says exactly what happened.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">19A</span><span>Import · in progress · Desktop</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);font-size:13px">
+          <dc-import name="ScreenWorkspace" mode="Split" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+          <div style="position:absolute;inset:0;background:rgba(5,6,8,.62)"></div>
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:600px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column">
+            <div style="padding:18px 22px 0;display:flex;align-items:center"><span style="flex:1;font-size:18px;font-weight:650">Import &amp; export</span><i class="icon-x" style="font-size:18px;color:var(--mu)"></i></div>
+            <div style="padding:14px 22px 0;display:flex;gap:20px;border-bottom:1px solid var(--bd)"><span style="padding-bottom:10px;border-bottom:2px solid var(--ac);font-weight:600">Import</span><span style="padding-bottom:10px;color:var(--mu)">Export</span></div>
+            <div style="padding:20px 22px;display:flex;flex-direction:column;gap:16px">
+              <div style="height:120px;border-radius:12px;border:1.5px dashed var(--bd);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--mu)"><i class="icon-upload" style="font-size:22px"></i><span style="color:var(--tx);font-weight:500">Drop files or <span style="color:var(--ln)">browse</span></span><span style="font-size:12px">.md · .zip vault · .canvas · JSON backup</span></div>
+              <div style="border-radius:10px;background:var(--sf2);padding:14px;display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;gap:10px"><i class="icon-file-archive" style="font-size:18px;color:var(--mu)"></i><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">obsidian-vault.zip</span><span style="font-size:12px;color:var(--mu)">Into 🧠 ML Foundations · folders preserved</span></div><span style="font:500 12px 'JetBrains Mono',monospace">812 / 1,284</span></div>
+                <div style="height:6px;border-radius:3px;background:var(--bd);overflow:hidden"><div style="width:63%;height:100%;background:var(--ac)"></div></div>
+                <span style="font-size:12px;color:var(--mu);font-family:'JetBrains Mono',monospace">03 Neural networks/Attention.md</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;color:var(--mu);font-size:12px"><i class="icon-chevron-right" style="font-size:13px"></i>Advanced · duplicate handling (skip / rename / overwrite as new version), tag mapping</div>
+            </div>
+            <div style="padding:14px 22px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px"><span style="height:36px;padding:0 14px;border-radius:10px;display:flex;align-items:center;color:var(--mu)">Run in background</span><span style="height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center">Cancel</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">19B</span><span>Export · result summary · Desktop</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);font-size:13px">
+          <dc-import name="ScreenWorkspace" mode="Split" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+          <div style="position:absolute;inset:0;background:rgba(5,6,8,.62)"></div>
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:600px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column">
+            <div style="padding:18px 22px 0;display:flex;align-items:center"><span style="flex:1;font-size:18px;font-weight:650">Import &amp; export</span><i class="icon-x" style="font-size:18px;color:var(--mu)"></i></div>
+            <div style="padding:14px 22px 0;display:flex;gap:20px;border-bottom:1px solid var(--bd)"><span style="padding-bottom:10px;color:var(--mu)">Import</span><span style="padding-bottom:10px;border-bottom:2px solid var(--ac);font-weight:600">Export</span></div>
+            <div style="padding:20px 22px;display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;font-weight:500;color:var(--mu)">This note · Gradient descent</span><div style="display:flex;gap:8px"><span style="height:34px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px"><i class="icon-file-text" style="font-size:14px;color:var(--mu)"></i>.md</span><span style="height:34px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px"><i class="icon-file-code" style="font-size:14px;color:var(--mu)"></i>.html</span><span style="height:34px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px"><i class="icon-printer" style="font-size:14px;color:var(--mu)"></i>PDF</span></div></div>
+              <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;font-weight:500;color:var(--mu)">Whole vault · 4 spaces</span><div style="display:flex;gap:8px"><span style="height:34px;padding:0 12px;border-radius:10px;border:1.5px solid var(--ac);background:color-mix(in srgb,var(--ac) 8%,transparent);display:flex;align-items:center;gap:6px;font-weight:600"><i class="icon-file-archive" style="font-size:14px"></i>.zip (Obsidian-compatible)</span><span style="height:34px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px"><i class="icon-braces" style="font-size:14px;color:var(--mu)"></i>JSON backup</span></div></div>
+              <div style="border-radius:10px;background:color-mix(in srgb,var(--ok) 9%,transparent);border:1px solid color-mix(in srgb,var(--ok) 28%,transparent);padding:14px;display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;gap:10px"><i class="icon-circle-check" style="font-size:18px;color:var(--ok)"></i><span style="flex:1;font-weight:600">Exported lumen-vault-2026-11-13.zip</span><span style="color:var(--mu)">23.4 MB</span></div>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:12px;color:var(--mu)"><span><b style="display:block;color:var(--tx);font-size:16px;font-weight:650">1,284</b>notes</span><span><b style="display:block;color:var(--tx);font-size:16px;font-weight:650">6</b>canvases</span><span><b style="display:block;color:var(--tx);font-size:16px;font-weight:650">312</b>attachments</span><span><b style="display:block;color:var(--wa);font-size:16px;font-weight:650">2</b>skipped</span></div>
+                <span style="font-size:12px;color:var(--mu)">Skipped 2 attachments still downloading from Cloudflare D1 — <span style="color:var(--ln)">fetch &amp; retry</span></span>
+              </div>
+            </div>
+            <div style="padding:14px 22px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px"><span style="height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center">Show in folder</span><span style="height:36px;padding:0 16px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">Done</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">19C</span><span>Import · Phone sheet</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="position:absolute;inset:0;background:rgba(5,6,8,.55)"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;height:600px;background:var(--sf);border-radius:14px 14px 0 0;display:flex;flex-direction:column">
+            <div style="display:flex;justify-content:center;padding:10px 0 4px"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+            <div style="padding:8px 20px 0;font-size:18px;font-weight:650">Import &amp; export</div>
+            <div style="margin:14px 20px 0;display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:3px;border-radius:10px;background:var(--bg);border:1px solid var(--bd)"><span style="height:40px;border-radius:8px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:600">Import</span><span style="height:40px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Export</span></div>
+            <div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ importSrc }}" as="s" hint-placeholder-count="4"><div style="height:60px;border-radius:12px;border:1px solid var(--bd);padding:0 14px;display:flex;align-items:center;gap:12px"><i class="{{ s.i }}" style="font-size:20px;color:var(--mu)"></i><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-weight:500">{{ s.n }}</span><span style="font-size:12px;color:var(--mu)">{{ s.d }}</span></div><i class="icon-chevron-right" style="font-size:16px;color:var(--mu)"></i></div></sc-for>
+            </div>
+            <div style="flex:1"></div>
+            <div style="padding:0 20px 12px;font-size:12.5px;color:var(--mu);text-align:center">Tip: share a .md file to Lumen from any app.</div>
+            <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const mk = arr => arr.map(([i,l,v],ix) => ({ i:'icon-'+i, l, v:v||'', bt:ix?'1px solid var(--bd)':'none' }));
+    return {
+      phoneNav1: mk([['notebook-pen','Daily note'],['list-checks','Tasks','5'],['calendar-days','Calendar'],['waypoints','Graph'],['layout-dashboard','Canvases','6']]),
+      phoneNav2: mk([['palette','Appearance','Lamplight'],['refresh-cw','Sync','On'],['rss','Blog','12 posts'],['database','Data','182 MB'],['info','About','v0.1.4']]),
+      importSrc: [['file-text','Markdown files','.md, front-matter aware'],['file-archive','Vault .zip','Obsidian folders preserved'],['layout-dashboard','Canvas','.canvas (JSON Canvas 1.0)'],['braces','JSON backup','Full restore from Lumen']].map(([i,n,d]) => ({ i:'icon-'+i, n, d }))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,106 +1,181 @@
-import { ArrowLeft, Moon, Rss, Sun } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { api } from "../lib/api";
+import { ArrowLeft, List, Moon, Rss, Sun } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { publicApi } from "./settings-public-demo";
 import { handleCopyClick, hydrate, render } from "../lib/markdown";
 import { outline, readingMinutes } from "../lib/parse";
 import { activeTheme, setSettings } from "../lib/settings";
+import { cx, Sheet } from "../components/ui";
 
 interface Brand { name: string; tagline: string; author: string; avatar: string }
 interface Post { id: string; title: string; slug: string; tags: string[]; createdAt: number; updatedAt: number; excerpt: string; words: number; body?: string; props: Record<string, string> }
 
+const SERIF = "'Source Serif 4', Georgia, serif";
 const nav = (path: string) => { history.pushState(null, "", path); dispatchEvent(new PopStateEvent("popstate")); };
-const date = (p: Post) => new Date(p.props.date ? Date.parse(p.props.date) : p.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+const date = (p: Post) => new Date(p.props.date ? Date.parse(p.props.date) : p.createdAt).toLocaleDateString("en-GB", { year: "numeric", month: "short", day: "numeric" });
+/** License line + RSS link setting (Settings › Blog, stored on the Inbox space props). */
+type BlogMeta = { license: string; rss: boolean };
+let metaP: Promise<BlogMeta> | null = null;
+function useBlogMeta() {
+  const [m, setM] = useState<BlogMeta>({ license: "", rss: true });
+  useEffect(() => { (metaP ??= publicApi<BlogMeta>("/public/blog-meta").catch(() => ({ license: "", rss: true }))).then(setM); }, []);
+  return m;
+}
+function Footer({ author }: { author?: string }) {
+  const m = useBlogMeta();
+  const lic = !m.license || m.license === "none" ? "" : m.license === "All rights reserved" ? `© ${new Date().getFullYear()}${author ? " " + author : ""}` : m.license;
+  return (
+    <>
+      <span>Written in Lumen{lic ? ` · ${lic}` : ""}</span>
+      {m.rss && <a href="/rss.xml" className="text-link">Subscribe via RSS</a>}
+    </>
+  );
+}
+/** The post page shows the title above the body: drop a leading "# Title" that repeats it. */
+function withoutTitle(body: string, title: string) {
+  const fm = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(body)?.[0] ?? "";
+  const rest = body.slice(fm.length);
+  const m = /^\s*#\s+(.+?)\s*(\r?\n|$)/.exec(rest);
+  return m && m[1].trim().toLowerCase() === title.trim().toLowerCase() ? fm + rest.slice(m[0].length) : body;
+}
+const Link = ({ to, className, children }: { to: string; className?: string; children: React.ReactNode }) => (
+  <a href={to} className={className} onClick={(e) => { e.preventDefault(); nav(to); }}>{children}</a>
+);
 
 export function Blog({ path }: { path: string }) {
   const slug = decodeURIComponent(path.replace(/^\/blog\/?/, "").replace(/\/$/, ""));
   const [dark, setDark] = useState(activeTheme().dark);
+  const [brand, setBrand] = useState<Brand | null>(null);
+  const [tocOpen, setTocOpen] = useState(false);
+  const meta = useBlogMeta();
   const toggle = () => { setSettings({ theme: dark ? "paper" : "lamplight" }); setDark(!dark); };
   return (
-    <div className="min-h-full bg-bg">
-      <div className="mx-auto max-w-3xl px-5 py-8 md:py-14">
-        {slug ? <PostPage slug={slug} /> : <Index />}
-        <footer className="mt-16 flex items-center gap-3 border-t border-line pt-6 text-[12.5px] text-muted">
-          <span>Written with Lumen</span>
-          <a href="/rss.xml" className="flex items-center gap-1 hover:text-ink"><Rss size={13} /> RSS</a>
-          <button onClick={toggle} className="ml-auto flex items-center gap-1 hover:text-ink">{dark ? <Sun size={14} /> : <Moon size={14} />} {dark ? "Light" : "Dark"}</button>
-        </footer>
-      </div>
+    <div className="min-h-full bg-bg text-[14px] text-ink">
+      <header className="safe-t sticky top-0 z-10 flex h-14 items-center gap-6 border-b border-line bg-bg pl-5 pr-2 md:h-16 md:px-14">
+        <Link to="/blog" className="flex-1 truncate text-[17px] font-bold md:text-[18px]"><span style={{ fontFamily: SERIF }}>{brand ? `${brand.avatar} ${brand.name}` : ""}</span></Link>
+        <Link to="/blog" className={cx("hidden md:inline", slug ? "text-muted hover:text-ink" : "font-semibold")}>Posts</Link>
+        <a href="/blog#tags" onClick={(e) => { e.preventDefault(); if (slug) nav("/blog"); setTimeout(() => document.getElementById("tags")?.scrollIntoView({ behavior: "smooth" }), 50); }} className="hidden text-muted hover:text-ink md:inline">Tags</a>
+        {meta.rss && <a href="/rss.xml" className="hidden items-center gap-1.5 text-muted hover:text-ink md:flex"><Rss size={14} />RSS</a>}
+        <div className="flex items-center">
+          <button aria-label={dark ? "Light theme" : "Dark theme"} onClick={toggle} className="flex size-11 items-center justify-center md:size-8 md:rounded-[8px] md:border md:border-line">{dark ? <Sun size={15} /> : <Moon size={15} />}</button>
+          {slug && <button aria-label="Contents" onClick={() => setTocOpen(true)} className="flex size-11 items-center justify-center md:hidden"><List size={20} /></button>}
+        </div>
+      </header>
+      {slug ? <PostPage slug={slug} onBrand={setBrand} tocOpen={tocOpen} setTocOpen={setTocOpen} /> : <Index onBrand={setBrand} />}
     </div>
   );
 }
 
-function Index() {
+function Index({ onBrand }: { onBrand: (b: Brand) => void }) {
   const [data, setData] = useState<{ blog: Brand; posts: Post[] } | null>(null);
   const [err, setErr] = useState("");
   const [tag, setTag] = useState<string | null>(null);
-  useEffect(() => { api<{ blog: Brand; posts: Post[] }>("/public/posts").then((d) => { setData(d); document.title = d.blog.name; }).catch((e) => setErr(e.message)); }, []);
-  if (err) return <p className="text-muted">Couldn't load posts: {err}</p>;
-  if (!data) return <div className="h-40 animate-pulse rounded-[14px] bg-surface" />;
-  const tags = [...new Set(data.posts.flatMap((p) => p.tags))];
+  useEffect(() => { publicApi<{ blog: Brand; posts: Post[] }>("/public/posts").then((d) => { setData(d); onBrand(d.blog); document.title = d.blog.name; }).catch((e) => setErr(e.message)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const tags = useMemo(() => { const m = new Map<string, number>(); data?.posts.forEach((p) => p.tags.forEach((t) => m.set(t, (m.get(t) ?? 0) + 1))); return [...m].sort((a, b) => b[1] - a[1]); }, [data]);
+  const wrap = "mx-auto w-full max-w-[720px] px-5 pt-6 md:px-0 md:pt-14";
+  if (err) return <p className={cx(wrap, "text-muted")}>Couldn't load posts: {err}</p>;
+  if (!data) return <div className={wrap}><div className="h-40 animate-pulse rounded-[14px] bg-surface" /></div>;
   const posts = tag ? data.posts.filter((p) => p.tags.includes(tag)) : data.posts;
+  const chip = (active: boolean) => cx("flex h-9 shrink-0 items-center rounded-full px-3.5 text-[13px] md:h-8 md:px-3", active ? "bg-ink font-semibold text-bg" : "border border-line text-muted hover:text-ink");
   return (
-    <>
-      <header className="mb-10">
-        <div className="text-4xl">{data.blog.avatar}</div>
-        <h1 className="mt-3 text-[34px] font-bold tracking-tight">{data.blog.name}</h1>
-        {data.blog.tagline && <p className="mt-1 text-[17px] text-muted">{data.blog.tagline}</p>}
-        {data.blog.author && <p className="mt-1 text-[13px] text-muted">by {data.blog.author}</p>}
-      </header>
+    <div className={cx(wrap, "flex flex-col gap-3.5 pb-10 md:gap-7")}>
+      <div className="flex flex-col gap-2.5">
+        <h1 className="text-[30px] font-bold leading-9 tracking-[-.02em] md:text-[44px] md:leading-[50px]" style={{ fontFamily: SERIF }}>{data.blog.name}</h1>
+        {(data.blog.tagline || data.blog.author) && <p dir="auto" className="leading-[22px] text-muted md:text-[17px] md:leading-5">{data.blog.tagline}{data.blog.author ? `${data.blog.tagline ? " " : ""}by ${data.blog.author}.` : ""}</p>}
+      </div>
       {tags.length > 0 && (
-        <div className="mb-6 flex flex-wrap gap-1.5">
-          {tags.map((t) => <button key={t} onClick={() => setTag(tag === t ? null : t)} className={"rounded-full px-2.5 py-0.5 text-[12.5px] " + (tag === t ? "bg-accent text-accent-fg" : "bg-surface-2 text-muted hover:text-ink")}>#{t}</button>)}
+        <div id="tags" className="-mx-5 flex gap-2 overflow-x-auto px-5 md:mx-0 md:flex-wrap md:px-0">
+          <button onClick={() => setTag(null)} className={chip(!tag)}>All<span className="hidden md:inline">&nbsp;· {data.posts.length}</span></button>
+          {tags.map(([t, n]) => <button key={t} onClick={() => setTag(tag === t ? null : t)} className={chip(tag === t)}>#{t}<span className="hidden md:inline">&nbsp;{n}</span></button>)}
         </div>
       )}
-      <div className="space-y-2">
+      <div className="flex flex-col pt-2 md:pt-0">
         {posts.map((p) => (
-          <a key={p.id} href={`/blog/${p.slug}`} onClick={(e) => { e.preventDefault(); nav(`/blog/${p.slug}`); }} className="block rounded-[14px] p-4 -mx-4 hover:bg-surface">
-            <div className="text-[12.5px] text-muted">{date(p)} · {Math.max(1, Math.round(p.words / 220))} min read</div>
-            <h2 className="mt-1 text-[21px] font-semibold tracking-tight">{p.title}</h2>
-            <p className="mt-1 line-clamp-2 text-[15px] text-muted">{p.excerpt}</p>
-            {p.tags.length > 0 && <div className="mt-2 flex gap-1.5 text-[12px] text-muted">{p.tags.map((t) => <span key={t}>#{t}</span>)}</div>}
-          </a>
+          <Link key={p.id} to={`/blog/${p.slug}`} className="group flex flex-col gap-1.5 border-t border-line py-4 md:gap-2 md:py-[22px]">
+            <div className="flex flex-wrap gap-x-2.5 text-[12px] text-muted md:text-[13px]">
+              <span>{date(p)}</span><span>·</span><span>{Math.max(1, Math.round(p.words / 220))} min read</span>
+              <span className="ml-auto hidden gap-2.5 md:flex">{p.tags.map((t) => <span key={t} className="text-link">#{t}</span>)}</span>
+            </div>
+            <span dir="auto" className="text-[19px] font-[650] leading-[25px] tracking-[-.01em] group-hover:text-link md:text-[24px] md:leading-[30px]" style={{ fontFamily: SERIF }}>{p.title}</span>
+            {p.excerpt && <span dir="auto" className="line-clamp-2 text-[15px] leading-[23px] text-muted md:text-[16.5px] md:leading-[27px]" style={{ fontFamily: SERIF }}>{p.excerpt}</span>}
+          </Link>
         ))}
-        {!posts.length && <p className="text-muted">No posts yet.</p>}
+        {!posts.length && <p className="border-t border-line py-6 text-muted">No posts yet.</p>}
       </div>
-    </>
+      <div className="flex justify-between border-t border-line py-6 text-[12.5px] text-muted"><Footer author={data.blog.author} /></div>
+    </div>
   );
 }
 
-function PostPage({ slug }: { slug: string }) {
+function PostPage({ slug, onBrand, tocOpen, setTocOpen }: { slug: string; onBrand: (b: Brand) => void; tocOpen: boolean; setTocOpen: (v: boolean) => void }) {
   const [data, setData] = useState<{ blog: Brand; post: Post; prev: Post | null; next: Post | null } | null>(null);
   const [err, setErr] = useState("");
+  const [active, setActive] = useState<number | null>(null);
+  const [read, setRead] = useState(0);
+  const bodyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     setData(null);
-    api<{ blog: Brand; post: Post; prev: Post | null; next: Post | null }>(`/public/posts/${encodeURIComponent(slug)}`).then((d) => { setData(d); document.title = `${d.post.title} · ${d.blog.name}`; scrollTo(0, 0); }).catch((e) => setErr(e.message));
-  }, [slug]);
-  const html = useMemo(() => (data?.post.body ? render(data.post.body) : ""), [data]);
-  const toc = useMemo(() => (data?.post.body ? outline(data.post.body).filter((h) => h.level <= 3) : []), [data]);
-  useEffect(() => { const el = document.getElementById("post-body"); if (el && html) { el.innerHTML = html; hydrate(el); } }, [html]);
-  if (err) return <div><Back /><p className="mt-6 text-muted">{err === "Not found" ? "This post doesn't exist or was unpublished." : err}</p></div>;
-  if (!data) return <div className="h-60 animate-pulse rounded-[14px] bg-surface" />;
+    publicApi<{ blog: Brand; post: Post; prev: Post | null; next: Post | null }>(`/public/posts/${encodeURIComponent(slug)}`).then((d) => { setData(d); onBrand(d.blog); document.title = `${d.post.title} · ${d.blog.name}`; scrollTo(0, 0); }).catch((e) => setErr(e.message));
+  }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
+  const html = useMemo(() => (data?.post.body ? render(withoutTitle(data.post.body, data.post.title)) : ""), [data]);
+  const toc = useMemo(() => (data?.post.body ? outline(data.post.body).filter((h) => h.level >= 2 && h.level <= 3) : []), [data]);
+  useEffect(() => { const el = bodyRef.current; if (el && html) { el.innerHTML = html; hydrate(el); } }, [html]);
+  useEffect(() => {
+    const on = () => {
+      const se = document.scrollingElement ?? document.documentElement;
+      setRead(Math.min(1, se.scrollTop / Math.max(1, se.scrollHeight - se.clientHeight)));
+      let cur: number | null = toc[0]?.line ?? null;
+      for (const h of toc) { const el = bodyRef.current?.querySelector(`[data-line="${h.line}"]`); if (el && el.getBoundingClientRect().top < 140) cur = h.line; }
+      setActive(cur);
+    };
+    on();
+    addEventListener("scroll", on, { passive: true, capture: true });
+    return () => removeEventListener("scroll", on, { capture: true });
+  }, [toc]);
+  const jump = (line: number) => { setTocOpen(false); bodyRef.current?.querySelector(`[data-line="${line}"]`)?.scrollIntoView({ behavior: "smooth" }); };
+
+  if (err) return <div className="mx-auto max-w-[680px] px-5 pt-10"><Link to="/blog" className="inline-flex items-center gap-1.5 text-muted hover:text-ink"><ArrowLeft size={15} /> All posts</Link><p className="mt-6 text-muted">{err === "Not found" ? "This post doesn't exist or was unpublished." : err}</p></div>;
+  if (!data) return <div className="mx-auto max-w-[680px] px-5 pt-16"><div className="h-60 animate-pulse rounded-[14px] bg-surface" /></div>;
   const p = data.post;
+  const tocList = (
+    <>
+      {toc.map((h) => (
+        <button key={h.line} dir="auto" onClick={() => jump(h.line)} className={cx("flex items-center gap-2 text-left", h.level === 3 && "pl-3", active === h.line ? "font-semibold text-ink" : "text-muted hover:text-ink")}>
+          {active === h.line && <span className="-ml-2.5 h-4 w-0.5 shrink-0 bg-accent" />}{h.text}
+        </button>
+      ))}
+    </>
+  );
+  const card = "flex flex-col gap-1 rounded-[10px] border border-line p-4 hover:border-accent";
   return (
-    <article>
-      <Back name={data.blog.name} />
-      <header className="mb-8 mt-6">
-        <h1 className="text-[34px] font-bold leading-tight tracking-tight">{p.title}</h1>
-        <div className="mt-2 text-[13.5px] text-muted">{date(p)} · {readingMinutes(p.body ?? "")} min read{data.blog.author ? ` · ${data.blog.author}` : ""}</div>
-      </header>
-      {toc.length > 2 && (
-        <details className="mb-8 rounded-[12px] border border-line bg-surface px-4 py-2 text-[14px]">
-          <summary className="cursor-pointer font-medium">Contents</summary>
-          <ul className="mt-2 space-y-1 pb-2">{toc.map((h) => <li key={h.line} style={{ paddingLeft: (h.level - 1) * 14 }}><a className="text-muted hover:text-ink" href="#" onClick={(e) => { e.preventDefault(); document.querySelector(`#post-body [data-line="${h.line}"]`)?.scrollIntoView({ behavior: "smooth" }); }}>{h.text}</a></li>)}</ul>
-        </details>
-      )}
-      <div id="post-body" className="prose" onClick={(e) => { handleCopyClick(e); const a = (e.target as HTMLElement).closest("a.wikilink,a.tag"); if (a) e.preventDefault(); }} />
-      <nav className="mt-14 grid gap-3 border-t border-line pt-6 sm:grid-cols-2">
-        {data.next ? <a href={`/blog/${data.next.slug}`} onClick={(e) => { e.preventDefault(); nav(`/blog/${data.next!.slug}`); }} className="rounded-[12px] border border-line p-3 hover:border-accent"><div className="text-[12px] text-muted">← Newer</div><div className="font-medium">{data.next.title}</div></a> : <span />}
-        {data.prev ? <a href={`/blog/${data.prev.slug}`} onClick={(e) => { e.preventDefault(); nav(`/blog/${data.prev!.slug}`); }} className="rounded-[12px] border border-line p-3 text-right hover:border-accent"><div className="text-[12px] text-muted">Older →</div><div className="font-medium">{data.prev.title}</div></a> : null}
-      </nav>
-    </article>
+    <div className="flex justify-center gap-16 px-5 pt-6 md:px-14 md:pt-16">
+      <aside className="sticky top-[100px] hidden w-[220px] shrink-0 flex-col gap-2.5 self-start pt-[150px] text-[13px] xl:flex">
+        {toc.length > 1 && <><span className="text-[11px] font-semibold uppercase tracking-[.08em] text-muted">On this page</span>{tocList}</>}
+      </aside>
+      <article className="flex w-full max-w-[680px] min-w-0 flex-col gap-4 md:gap-5" style={{ fontFamily: SERIF }}>
+        <div className="flex flex-wrap gap-x-2.5 font-sans text-[12.5px] text-muted md:text-[13px]">
+          <span>{date(p)}</span><span>·</span><span>{readingMinutes(p.body ?? "")} min read</span>
+          {p.tags.length > 0 && <span className="hidden md:inline">·</span>}
+          {p.tags.map((t) => <span key={t} className="hidden text-link md:inline">#{t}</span>)}
+        </div>
+        <h1 dir="auto" className="text-[30px] font-bold leading-9 tracking-[-.01em] md:text-[44px] md:leading-[50px] md:tracking-[-.02em]">{p.title}</h1>
+        {data.blog.author && (
+          <div className="hidden items-center gap-2.5 font-sans text-[13.5px] md:flex">
+            <span className="flex size-8 items-center justify-center rounded-full bg-surface-2">{data.blog.avatar}</span><span>{data.blog.author}</span>
+          </div>
+        )}
+        <div id="post-body" ref={bodyRef} className="prose !max-w-none" style={{ "--read-font": SERIF, "--read-size": "17px", lineHeight: "30px" } as React.CSSProperties}
+          onClick={(e) => { handleCopyClick(e); const a = (e.target as HTMLElement).closest("a.wikilink,a.tag"); if (a) e.preventDefault(); }} />
+        <nav className="mt-10 grid gap-4 border-t border-line pt-6 font-sans sm:grid-cols-2">
+          {data.prev ? <Link to={`/blog/${data.prev.slug}`} className={card}><span className="text-[12px] text-muted">← Previous</span><span dir="auto" className="text-[17px] font-[650]" style={{ fontFamily: SERIF }}>{data.prev.title}</span></Link> : <span />}
+          {data.next ? <Link to={`/blog/${data.next.slug}`} className={cx(card, "text-right")}><span className="text-[12px] text-muted">Next →</span><span dir="auto" className="text-[17px] font-[650]" style={{ fontFamily: SERIF }}>{data.next.title}</span></Link> : null}
+        </nav>
+        <div className="flex justify-between py-6 font-sans text-[12.5px] text-muted"><Footer author={data.blog.author} /></div>
+      </article>
+      <div className="hidden w-[220px] shrink-0 xl:block" />
+      <div className="fixed inset-x-0 bottom-0 z-10 h-[3px] bg-surface-2 md:hidden"><div className="h-full bg-muted" style={{ width: `${read * 100}%` }} /></div>
+      <Sheet open={tocOpen} onClose={() => setTocOpen(false)} title="On this page">
+        <div className="flex flex-col gap-3 pl-2.5 text-[15px]">{toc.length ? tocList : <span className="text-muted">No sections in this post.</span>}</div>
+      </Sheet>
+    </div>
   );
 }
-
-const Back = ({ name }: { name?: string }) => (
-  <a href="/blog" onClick={(e) => { e.preventDefault(); nav("/blog"); }} className="inline-flex items-center gap-1.5 text-[13.5px] text-muted hover:text-ink"><ArrowLeft size={15} /> {name ?? "All posts"}</a>
-);

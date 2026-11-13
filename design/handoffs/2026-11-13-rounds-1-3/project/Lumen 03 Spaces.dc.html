@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:120px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227">
+  <div style="display:flex;align-items:center;gap:16px">
+    <div style="width:40px;height:40px;border-radius:11px;background:#161A21;border:1px solid #2A303B;position:relative"><div style="position:absolute;left:14px;top:9px;width:11px;height:11px;border-radius:50%;background:#F2A93B;box-shadow:0 0 14px rgba(242,169,59,.7)"></div><div style="position:absolute;left:9px;right:9px;bottom:11px;height:2px;background:#E8E6E1;border-radius:1px"></div></div>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 03 Spaces</span></div><div style="font-size:14px;color:#9A9890">Screen 1: Space → Folders → Notes. Switcher, new space, course roadmap (3 views), project overview, folder tree.</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 01 A · C</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Course space overview</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">One primary action: <b style="color:#E8E6E1">Continue</b> the current topic. The roadmap is plain Markdown underneath — three views of the same file.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">1A</span><span>Course · Outline view · space switcher open</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg)">
+          <dc-import name="ScreenCourse" view="outline" switcher="{{ true }}" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+          <div style="position:absolute;left:334px;top:70px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">1</div>
+          <div style="position:absolute;left:1352px;top:36px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">2</div>
+          <div style="position:absolute;left:1180px;top:380px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">3</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3">
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>Switcher: <code>⌘O</code> or click the space header. Grouped by PARA kind, type-to-filter, <code>⌘1–9</code> jump. “All spaces” widens search, graph and tasks; Archived stays searchable.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">2</b><span>⋯ holds roadmap power tools: Edit as Markdown, Import outline, Apply template, Space settings, Archive space.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">3</b><span>Topic rows: click opens the side sheet (1B); the note link opens/creates the lesson from the Lesson template. Locked rows explain why (“needs Eigenvectors”). Overdue dates turn danger red.</span></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">1B</span><span>Course · Skill tree · topic side sheet</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg)">
+          <dc-import name="ScreenCourse" view="tree" sheet="{{ true }}" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+          <div style="position:absolute;left:540px;top:300px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">4</div>
+          <div style="position:absolute;left:1028px;top:200px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">5</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3">
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">4</b><span>Auto-laid-out left → right by prerequisite depth. Done = filled success; learning = info edge; locked = 45% + lock. Hovering a node highlights its prerequisite path. Drag from a node's edge to add a prerequisite.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">5</b><span>Side sheet (Esc closes): status selector writes back to the Markdown (<code>- [/] Eigenvectors</code>). Marking Done animates newly unlocked topics (180 ms fade-up).</span></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">1C</span><span>Course · Timeline view</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg)">
+          <dc-import name="ScreenCourse" view="timeline" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+        </div>
+        <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Drag a topic horizontally to change its target date; the amber line is “today” (the current thing). Dashed line = course target date.</span></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">1D</span><span>Space switcher · Phone sheet</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="padding:12px 16px;display:flex;flex-direction:column;gap:14px;opacity:.5"><div style="height:40px;width:190px;border-radius:10px;background:var(--sf)"></div><div style="height:120px;border-radius:14px;background:var(--sf)"></div><div style="height:120px;border-radius:14px;background:var(--sf)"></div></div>
+          <div style="position:absolute;inset:0;background:rgba(5,6,8,.6)"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;height:700px;background:var(--sf);border-radius:14px 14px 0 0;display:flex;flex-direction:column">
+            <div style="display:flex;justify-content:center;padding:10px 0 4px"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+            <div style="padding:8px 20px 12px;display:flex;align-items:center"><span style="font-size:18px;font-weight:650;flex:1">Spaces</span><i class="icon-search" style="font-size:20px;color:var(--mu)"></i></div>
+            <sc-for list="{{ phoneSpaces }}" as="s" hint-placeholder-count="9">
+              <div style="display:{{ s.hdr }};padding:12px 20px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">{{ s.g }}</div>
+              <div style="display:{{ s.row }};height:56px;margin:0 8px;padding:0 12px;border-radius:12px;align-items:center;gap:12px;background:{{ s.bg }}">
+                <span style="width:36px;height:36px;border-radius:9px;background:{{ s.tint }};display:flex;align-items:center;justify-content:center;font-size:18px">{{ s.e }}</span>
+                <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-weight:{{ s.fw }}">{{ s.n }}</span><span style="font-size:12px;color:var(--mu)">{{ s.m }}</span></div><i class="{{ s.check }}" style="color:var(--ac);font-size:18px"></i>
+              </div>
+            </sc-for>
+            <div style="flex:1"></div>
+            <div style="display:flex;gap:10px;padding:12px 16px"><span style="flex:1;height:48px;border-radius:12px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;gap:8px"><i class="icon-globe" style="font-size:16px"></i>All spaces</span><span style="flex:1;height:48px;border-radius:12px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;gap:8px"><i class="icon-plus" style="font-size:16px"></i>New space</span></div>
+            <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">1E</span><span>Course roadmap · Phone · Outline</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="padding:12px 16px;display:flex;align-items:center;gap:12px">
+            <span style="width:48px;height:48px;border-radius:12px;background:rgba(163,113,247,.2);border:1px solid rgba(163,113,247,.5);display:flex;align-items:center;justify-content:center;font-size:24px">🧠</span>
+            <div style="flex:1;display:flex;flex-direction:column;gap:3px"><span style="font-size:19px;font-weight:650">ML Foundations</span><span style="font-size:12px;color:var(--mu)">Course · Target 20 Dec · 37 days</span></div>
+            <div style="width:48px;height:48px;border-radius:50%;background:conic-gradient(var(--ok) 0 62%, var(--sf2) 62% 100%);display:flex;align-items:center;justify-content:center"><div style="width:38px;height:38px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:650;font-size:12px">62%</div></div>
+          </div>
+          <div style="padding:4px 16px 12px"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="height:36px;border-radius:7px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:600">Outline</span><span style="height:36px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Skill tree</span><span style="height:36px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Timeline</span></div></div>
+          <div style="flex:1;overflow:hidden;padding:0 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd)">
+              <div style="height:56px;padding:0 14px;display:flex;align-items:center;gap:10px"><i class="icon-chevron-down" style="font-size:16px;color:var(--mu)"></i><span style="flex:1;font-weight:600">01 Linear algebra</span><span style="font-size:12px;color:var(--mu)">4/6</span><span style="width:48px;height:5px;border-radius:3px;background:var(--sf2);overflow:hidden"><span style="display:block;width:67%;height:100%;background:var(--ok)"></span></span></div>
+              <sc-for list="{{ phoneTopics }}" as="t" hint-placeholder-count="5">
+                <div style="min-height:52px;padding:0 14px 0 40px;display:flex;align-items:center;gap:12px;border-top:1px solid var(--bd);opacity:{{ t.op }};background:{{ t.rbg }}">
+                  <span style="width:16px;height:16px;border-radius:50%;box-sizing:border-box;border:{{ t.bd }};background:{{ t.bg }};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="{{ t.ic }}" style="font-size:{{ t.is }};color:{{ t.icc }}"></i></span>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-weight:500">{{ t.n }}</span><span style="font-size:12px;color:var(--mu)">{{ t.s }}</span></div><i class="{{ t.r }}" style="font-size:15px;color:var(--mu)"></i>
+                </div>
+              </sc-for>
+            </div>
+            <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);height:56px;padding:0 14px;display:flex;align-items:center;gap:10px"><i class="icon-chevron-right" style="font-size:16px;color:var(--mu)"></i><span style="flex:1;font-weight:600">02 Optimization</span><span style="font-size:12px;color:var(--mu)">3/6</span><span style="width:48px;height:5px;border-radius:3px;background:var(--sf2);overflow:hidden"><span style="display:block;width:50%;height:100%;background:var(--ok)"></span></span></div>
+            <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);height:56px;padding:0 14px;display:flex;align-items:center;gap:10px"><i class="icon-chevron-right" style="font-size:16px;color:var(--mu)"></i><span style="flex:1;font-weight:600">03 Neural networks</span><span style="font-size:12px;color:var(--mu)">1/6</span><span style="width:48px;height:5px;border-radius:3px;background:var(--sf2);overflow:hidden"><span style="display:block;width:17%;height:100%;background:var(--ok)"></span></span></div>
+          </div>
+          <div style="padding:12px 16px"><div style="height:52px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:15px"><i class="icon-play" style="font-size:14px"></i>Continue: Eigenvectors</div></div>
+          <dc-import name="LumenTabBar" active="none" hint-size="412px,88px"></dc-import>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">1E′</span><span>Skill tree · Phone · topic sheet peek <b style="color:#F2A93B;font-weight:500">R2</b></span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="padding:10px 16px;display:flex;align-items:center;gap:12px">
+            <span style="width:40px;height:40px;border-radius:10px;background:rgba(163,113,247,.2);border:1px solid rgba(163,113,247,.5);display:flex;align-items:center;justify-content:center;font-size:20px">🧠</span>
+            <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:650">ML Foundations</span><span style="font-size:12px;color:var(--mu)">37 days to 20 Dec</span></div>
+            <div style="width:44px;height:44px;border-radius:50%;background:conic-gradient(var(--ok) 0 62%, var(--sf2) 62% 100%);display:flex;align-items:center;justify-content:center"><div style="width:35px;height:35px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:650;font-size:11px">62%</div></div>
+          </div>
+          <div style="padding:0 16px 10px"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="height:36px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Outline</span><span style="height:36px;border-radius:7px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:600">Skill tree</span><span style="height:36px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Timeline</span></div></div>
+          <div style="flex:1;position:relative;overflow:hidden;background-image:radial-gradient(var(--bd) 1px, transparent 1px);background-size:20px 20px">
+            <sc-for list="{{ phoneEdges }}" as="e" hint-placeholder-count="7"><div style="position:absolute;left:{{ e.x }};top:{{ e.y }};width:{{ e.w }};height:1.5px;background:{{ e.c }};opacity:{{ e.o }};transform:rotate({{ e.a }});transform-origin:0 50%"></div></sc-for>
+            <sc-for list="{{ phoneTree }}" as="n" hint-placeholder-count="8">
+              <div style="position:absolute;left:{{ n.x }};top:{{ n.y }};width:150px;height:44px;box-sizing:border-box;border-radius:10px;background:{{ n.fill }};border:{{ n.border }};opacity:{{ n.op }};display:flex;align-items:center;gap:8px;padding:0 10px;font-size:13px">
+                <span style="width:14px;height:14px;border-radius:50%;box-sizing:border-box;border:{{ n.bd }};background:{{ n.bg }};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="{{ n.ic }}" style="font-size:{{ n.is }};color:{{ n.icc }}"></i></span><span style="flex:1;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.n }}</span><i class="{{ n.lock }}" style="font-size:12px;color:var(--mu)"></i>
+              </div>
+            </sc-for>
+            <span style="position:absolute;right:12px;top:12px;height:28px;padding:0 10px;border-radius:999px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu)"><i class="icon-move-horizontal" style="font-size:13px"></i>swipe</span>
+          </div>
+          <div style="background:var(--sf2);border-radius:14px 14px 0 0;border-top:1px solid var(--bd);padding:10px 16px 0;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:center"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+            <div style="display:flex;align-items:center"><span style="flex:1;font-size:17px;font-weight:650">Eigenvectors</span><span style="font-size:12.5px;color:var(--wa)">Due Tue 18 Nov</span></div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:3px;border-radius:10px;background:var(--bg);border:1px solid var(--bd);font-size:13px"><span style="height:38px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Todo</span><span style="height:38px;border-radius:7px;background:var(--sf);display:flex;align-items:center;justify-content:center;gap:6px;font-weight:600"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--in);box-sizing:border-box"></span>Learning</span><span style="height:38px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Done</span><span style="height:38px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Skipped</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center"><span style="font-size:12px;color:var(--mu);margin-right:2px">Needs</span><span style="height:30px;padding:0 10px;border-radius:6px;background:color-mix(in srgb,var(--ok) 12%,var(--sf));border:1px solid color-mix(in srgb,var(--ok) 40%,transparent);display:flex;align-items:center;gap:6px;font-size:13px"><i class="icon-check" style="font-size:12px;color:var(--ok)"></i>Matrix mult.</span><span style="height:30px;padding:0 10px;border-radius:6px;background:color-mix(in srgb,var(--ok) 12%,var(--sf));border:1px solid color-mix(in srgb,var(--ok) 40%,transparent);display:flex;align-items:center;gap:6px;font-size:13px"><i class="icon-check" style="font-size:12px;color:var(--ok)"></i>Determinants</span></div>
+            <div style="display:flex;gap:10px;padding-bottom:4px"><span style="flex:1;height:48px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600"><i class="icon-file-text" style="font-size:15px"></i>Open lesson note</span></div>
+            <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+          </div>
+        </div>
+        <div style="max-width:412px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Same left→right tree, panned horizontally on phone. Tapping a node raises the topic sheet (peek); drag up for prerequisites editing, unlocks and notes.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 01 B · D</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">New space · Project overview</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Kind first, because it decides what the overview shows. Kind-specific fields hide under “More details”.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">1F</span><span>New space dialog · Desktop</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="home" hint-size="240px,900px" style="height:100%"></dc-import>
+          <div style="flex:1"></div>
+          <div style="position:absolute;inset:0;background:rgba(5,6,8,.62)"></div>
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:720px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column">
+            <div style="padding:20px 24px 4px;display:flex;align-items:center"><span style="flex:1;font-size:18px;font-weight:650">New space</span><i class="icon-x" style="font-size:18px;color:var(--mu)"></i></div>
+            <div style="padding:0 24px 16px;color:var(--mu)">A self-contained container with its own folders, icon and colour. Links and search still work across spaces.</div>
+            <div style="padding:0 24px;display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
+              <sc-for list="{{ kinds }}" as="k" hint-placeholder-count="5">
+                <div style="border-radius:10px;border:{{ k.b }};background:{{ k.bg }};box-shadow:{{ k.ring }};padding:14px 12px;display:flex;flex-direction:column;gap:8px;min-height:118px;box-sizing:border-box">
+                  <i class="{{ k.i }}" style="font-size:18px;color:{{ k.ic }}"></i><span style="font-weight:600;font-size:13.5px">{{ k.n }}</span><span style="color:var(--mu);font-size:12px;line-height:17px">{{ k.d }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="padding:20px 24px 0;display:grid;grid-template-columns:auto 1fr;gap:16px 20px;align-items:center">
+              <span style="color:var(--mu);font-weight:500">Name</span>
+              <div style="display:flex;gap:8px"><span style="width:40px;height:40px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px">🕌</span><div style="flex:1;height:40px;box-sizing:border-box;border-radius:6px;background:var(--bg);border:1px solid var(--ac);box-shadow:0 0 0 3px rgba(242,169,59,.2);display:flex;align-items:center;padding:0 12px;font-size:14px">Arabic Grammar<span style="width:1.5px;height:18px;background:var(--ac);margin-left:1px"></span></div></div>
+              <span style="color:var(--mu);font-weight:500">Colour</span>
+              <div style="display:flex;gap:10px"><span style="width:24px;height:24px;border-radius:50%;background:#E5534B"></span><span style="width:24px;height:24px;border-radius:50%;background:#E8893A"></span><span style="width:24px;height:24px;border-radius:50%;background:#E3B341"></span><span style="width:24px;height:24px;border-radius:50%;background:#57AB5A"></span><span style="width:24px;height:24px;border-radius:50%;background:#39C5CF;box-shadow:0 0 0 2px var(--sf),0 0 0 4px var(--tx)"></span><span style="width:24px;height:24px;border-radius:50%;background:#A371F7"></span></div>
+              <span style="color:var(--mu);font-weight:500">Template</span>
+              <div style="height:40px;box-sizing:border-box;border-radius:6px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;padding:0 12px;gap:8px"><i class="icon-map" style="font-size:14px;color:var(--mu)"></i><span style="flex:1">Learn a language — roadmap with 6 modules</span><span style="color:var(--mu);font-size:12px">optional</span><i class="icon-chevron-down" style="font-size:14px;color:var(--mu)"></i></div>
+            </div>
+            <div style="margin:16px 24px 0;padding-top:14px;border-top:1px solid var(--bd);display:flex;align-items:center;gap:8px;color:var(--mu)"><i class="icon-chevron-right" style="font-size:14px"></i><span style="font-weight:500">More details</span><span style="font-size:12px">provider, URL, target date, description</span></div>
+            <div style="padding:20px 24px;display:flex;justify-content:flex-end;gap:8px"><span style="height:36px;padding:0 14px;border-radius:10px;display:flex;align-items:center;color:var(--mu)">Cancel</span><span style="height:36px;padding:0 16px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;gap:8px;font-weight:600">Create space <span style="font:500 11px 'JetBrains Mono',monospace;opacity:.65">⌘↵</span></span></div>
+          </div>
+        </div>
+        <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Arrow keys move between kind cards. Picking Course swaps the template list to roadmaps and pre-opens nothing — “More details” stays folded until asked. Phone: same content as a full-height sheet with the cards in a 2-column grid.</span></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">1G</span><span>Project space overview · Desktop</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="none" hint-size="240px,900px" style="height:100%"></dc-import>
+          <div style="flex:1;min-width:0;padding:28px 48px;display:flex;flex-direction:column;gap:22px">
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="width:56px;height:56px;border-radius:14px;background:rgba(232,137,58,.18);border:1px solid rgba(232,137,58,.5);display:flex;align-items:center;justify-content:center;font-size:28px">🚀</div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;align-items:center;gap:10px"><span style="font-size:24px;font-weight:650;letter-spacing:-.02em">Thesis: Sparse attention</span><span style="padding:0 7px;border-radius:6px;border:1px solid var(--bd);line-height:20px;font-size:12px;color:var(--mu)">Project</span></div>
+                <div style="color:var(--mu);display:flex;align-items:center;gap:6px"><i class="icon-target" style="font-size:14px"></i>Goal: submit a 40-page MSc thesis on sparse attention for long documents</div>
+              </div>
+              <span style="height:36px;padding:0 14px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;gap:8px;font-weight:600"><i class="icon-plus" style="font-size:14px"></i>New note</span>
+              <span style="width:36px;height:36px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-ellipsis" style="font-size:16px"></i></span>
+            </div>
+            <div style="display:grid;grid-template-columns:260px 1fr;gap:20px">
+              <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:18px 20px;display:flex;flex-direction:column;gap:6px">
+                <span style="color:var(--mu)">Deadline</span>
+                <span style="font-size:44px;font-weight:650;letter-spacing:-.03em;line-height:52px">91 <span style="font-size:18px;font-weight:500;color:var(--mu);letter-spacing:0">days</span></span>
+                <span style="color:var(--mu)">Fri 12 Feb 2027 · 13 weeks</span>
+                <span style="margin-top:6px;height:6px;border-radius:3px;background:var(--sf2);overflow:hidden"><span style="display:block;width:41%;height:100%;background:var(--tx);opacity:.7"></span></span>
+                <span style="color:var(--mu);font-size:12px">41% of time used · 48% of tasks done</span>
+              </div>
+              <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:18px 24px;display:flex;flex-direction:column;gap:16px">
+                <span style="font-weight:600;font-size:14px">Milestones</span>
+                <div style="display:flex;align-items:flex-start">
+                  <sc-for list="{{ milestones }}" as="m" hint-placeholder-count="5">
+                    <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+                      <div style="display:flex;align-items:center"><span style="width:22px;height:22px;border-radius:50%;box-sizing:border-box;border:{{ m.bd }};background:{{ m.bg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:{{ m.ring }}"><i class="{{ m.ic }}" style="font-size:12px;color:var(--bg)"></i></span><span style="flex:1;height:2px;background:{{ m.line }};margin:0 6px"></span></div>
+                      <span style="font-weight:{{ m.fw }}">{{ m.n }}</span><span style="color:{{ m.dc }};font-size:12px">{{ m.d }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;flex:1;min-height:0">
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;gap:10px"><span style="font-weight:600;font-size:14px">Tasks</span><span style="color:var(--mu);font-size:12px">from 9 notes in this space</span><span style="flex:1"></span><span style="color:var(--mu);font-size:12px;display:flex;align-items:center;gap:6px"><i class="icon-list" style="font-size:13px"></i>List</span></div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+                  <sc-for list="{{ board }}" as="c" hint-placeholder-count="3">
+                    <div style="border-radius:14px;background:var(--sf);padding:10px;display:flex;flex-direction:column;gap:8px">
+                      <div style="display:flex;align-items:center;gap:8px;padding:2px 4px 4px;color:var(--mu);font-weight:500"><span style="width:8px;height:8px;border-radius:50%;background:{{ c.c }}"></span>{{ c.n }}<span style="font-size:12px">{{ c.k }}</span></div>
+                      <sc-for list="{{ c.items }}" as="t" hint-placeholder-count="3">
+                        <div style="border-radius:10px;background:var(--sf2);padding:10px 12px;display:flex;flex-direction:column;gap:6px">
+                          <span style="font-weight:500;line-height:18px;text-decoration:{{ t.dec }};color:{{ t.tc }}">{{ t.t }}</span>
+                          <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mu)"><i class="icon-file-text" style="font-size:12px"></i><span style="flex:1">{{ t.src }}</span><span style="color:{{ t.dueC }}">{{ t.due }}</span></div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:14px 8px;display:flex;flex-direction:column;align-self:start">
+                <span style="padding:0 12px 8px;font-weight:600;font-size:14px">Recent notes</span>
+                <sc-for list="{{ projRecent }}" as="r" hint-placeholder-count="6">
+                  <div style="padding:8px 12px;display:flex;flex-direction:column;gap:2px;border-radius:8px"><span style="font-weight:500">{{ r.t }}</span><span style="font-size:12px;color:var(--mu)">{{ r.s }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Tasks are read from <code>- [ ]</code> lines in the space's notes; dragging a card between columns edits the source line. Milestones come from the space properties. Click the deadline to change it.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 01 E</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Folder tree interactions</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Four states of the same tree, cropped at 1:1.</p></div>
+    <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--da:#EF6B6B;display:flex;gap:32px;align-items:flex-start;font-size:13px;color:var(--tx)">
+
+      <div style="display:flex;flex-direction:column;gap:12px;width:280px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">1H</span> Drag &amp; drop</div>
+        <div style="background:var(--sf);border-radius:12px;border:1px solid var(--bd);padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:relative;height:340px;box-sizing:border-box">
+          <div style="height:28px;padding:0 8px;display:flex;align-items:center;gap:7px"><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="width:8px;height:8px;border-radius:3px;background:#39C5CF"></span><span style="flex:1">01 Linear algebra</span><span style="color:var(--mu);font-size:11px">8</span></div>
+          <div style="height:28px;padding:0 8px;display:flex;align-items:center;gap:7px;border-radius:6px;background:color-mix(in srgb,var(--ac) 15%,transparent);box-shadow:inset 0 0 0 1.5px var(--ac)"><i class="icon-chevron-down" style="font-size:12px;color:var(--mu)"></i><span style="width:8px;height:8px;border-radius:3px;background:#E8893A"></span><span style="flex:1">02 Optimization</span><span style="color:var(--mu);font-size:11px">12</span></div>
+          <div style="height:28px;padding:0 8px 0 28px;display:flex;align-items:center;gap:7px;color:var(--mu)"><i class="icon-file-text" style="font-size:14px"></i>Gradient descent</div>
+          <div style="height:2px;margin:0 8px 0 28px;background:var(--ac);border-radius:1px;position:relative"><span style="position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;border:2px solid var(--ac);box-sizing:border-box;background:var(--sf)"></span></div>
+          <div style="height:28px;padding:0 8px 0 28px;display:flex;align-items:center;gap:7px;color:var(--mu)"><i class="icon-file-text" style="font-size:14px"></i>Convexity &amp; minima</div>
+          <div style="height:28px;padding:0 8px;display:flex;align-items:center;gap:7px;opacity:.4"><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="width:8px;height:8px;border-radius:3px;background:#A371F7"></span><span style="flex:1">03 Neural networks</span></div>
+          <div style="height:28px;padding:0 8px;display:flex;align-items:center;gap:7px"><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="width:8px;height:8px;border-radius:3px;background:#57AB5A"></span><span style="flex:1">04 Probability</span></div>
+          <div style="position:absolute;left:70px;top:112px;padding:6px 10px;border-radius:8px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 8px 24px rgba(0,0,0,.4);display:flex;align-items:center;gap:8px;transform:rotate(-2deg)"><span style="width:8px;height:8px;border-radius:3px;background:#A371F7"></span>Momentum &amp; Nesterov<span style="padding:0 5px;border-radius:4px;background:var(--ac);color:var(--af);font-size:10px;font-weight:700">+1</span></div>
+        </div>
+        <span style="font-size:13px;line-height:20px;color:#CFCBC3">Line = insert between; amber outline = drop into folder. Hovering a collapsed folder 600 ms expands it. <code>Esc</code> cancels.</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;width:280px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">1I</span> Inline rename</div>
+        <div style="background:var(--sf);border-radius:12px;border:1px solid var(--bd);padding:10px 8px;display:flex;flex-direction:column;gap:1px;height:340px;box-sizing:border-box">
+          <div style="height:28px;padding:0 8px;display:flex;align-items:center;gap:7px"><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="width:8px;height:8px;border-radius:3px;background:#39C5CF"></span><span style="flex:1">01 Linear algebra</span></div>
+          <div style="height:28px;padding:0 8px;display:flex;align-items:center;gap:7px"><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="width:8px;height:8px;border-radius:3px;background:#E8893A"></span><span style="flex:1">02 Optimization</span></div>
+          <div style="height:28px;padding:0 4px 0 8px;display:flex;align-items:center;gap:7px"><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="width:8px;height:8px;border-radius:3px;background:#A371F7"></span><span style="flex:1;height:24px;box-sizing:border-box;border-radius:6px;background:var(--bg);border:1px solid var(--ac);display:flex;align-items:center;padding:0 6px"><span style="background:color-mix(in srgb,var(--ac) 30%,transparent)">03 Deep learning</span><span style="width:1.5px;height:15px;background:var(--ac)"></span></span></div>
+          <div style="height:28px;padding:0 8px;display:flex;align-items:center;gap:7px"><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="width:8px;height:8px;border-radius:3px;background:#57AB5A"></span><span style="flex:1">04 Probability</span></div>
+          <div style="margin:10px 8px 0;font-size:12px;color:var(--mu);display:flex;gap:10px"><span><b style="font:500 11px 'JetBrains Mono',monospace;color:var(--tx)">↵</b> save</span><span><b style="font:500 11px 'JetBrains Mono',monospace;color:var(--tx)">Esc</b> cancel</span></div>
+        </div>
+        <span style="font-size:13px;line-height:20px;color:#CFCBC3"><code>F2</code> or double-click. Name is pre-selected. Links to notes inside update automatically.</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;width:280px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">1J</span> Context menu</div>
+        <div style="background:var(--sf);border-radius:12px;border:1px solid var(--bd);padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:relative;height:340px;box-sizing:border-box">
+          <div style="height:28px;padding:0 8px;display:flex;align-items:center;gap:7px;border-radius:6px;background:var(--sf2)"><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="width:8px;height:8px;border-radius:3px;background:#E8893A"></span><span style="flex:1">02 Optimization</span></div>
+          <div style="position:absolute;left:60px;top:40px;width:210px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 12px 32px rgba(0,0,0,.4);padding:4px;display:flex;flex-direction:column;gap:1px">
+            <sc-for list="{{ ctx }}" as="c" hint-placeholder-count="7">
+              <div style="display:{{ c.sep }};height:1px;background:var(--bd);margin:4px"></div>
+              <div style="display:{{ c.row }};height:30px;padding:0 8px;border-radius:6px;align-items:center;gap:10px;background:{{ c.bg }};color:{{ c.c }}"><i class="{{ c.i }}" style="font-size:14px"></i><span style="flex:1">{{ c.l }}</span><span style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu)">{{ c.k }}</span></div>
+            </sc-for>
+            <div style="display:flex;gap:6px;padding:6px 8px 4px"><span style="width:16px;height:16px;border-radius:50%;background:#E5534B"></span><span style="width:16px;height:16px;border-radius:50%;background:#E8893A;box-shadow:0 0 0 2px var(--sf2),0 0 0 3.5px var(--tx)"></span><span style="width:16px;height:16px;border-radius:50%;background:#E3B341"></span><span style="width:16px;height:16px;border-radius:50%;background:#57AB5A"></span><span style="width:16px;height:16px;border-radius:50%;background:#39C5CF"></span><span style="width:16px;height:16px;border-radius:50%;background:#A371F7"></span></div>
+          </div>
+        </div>
+        <span style="font-size:13px;line-height:20px;color:#CFCBC3">Right-click / long-press. Colour swatches inline (one tap). Delete moves to Trash with an Undo toast.</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;width:440px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">1K</span> Move to… dialog</div>
+        <div style="background:var(--sf);border-radius:14px;border:1px solid var(--bd);display:flex;flex-direction:column;height:340px;box-sizing:border-box;overflow:hidden">
+          <div style="padding:14px 16px 10px;display:flex;flex-direction:column;gap:10px">
+            <span style="font-weight:600;font-size:14px">Move “Momentum &amp; Nesterov” to…</span>
+            <div style="height:36px;border-radius:6px;background:var(--bg);border:1px solid var(--ac);display:flex;align-items:center;gap:8px;padding:0 10px"><i class="icon-search" style="font-size:14px;color:var(--mu)"></i>opt<span style="width:1.5px;height:16px;background:var(--ac)"></span></div>
+          </div>
+          <div style="flex:1;padding:0 8px;display:flex;flex-direction:column;gap:1px">
+            <div style="padding:4px 8px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">🧠 ML Foundations</div>
+            <div style="height:34px;padding:0 10px;border-radius:8px;background:var(--sf2);display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:3px;background:#E8893A"></span><span style="flex:1"><b style="font-weight:600;color:var(--ac)">Opt</b>imization</span><span style="font-size:12px;color:var(--mu)">current</span></div>
+            <div style="height:34px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:3px;background:#E8893A"></span><span style="flex:1;color:var(--mu)">Optimization /</span><span style="flex:4"><b style="font-weight:600;color:var(--ac)">Opt</b>imizers zoo</span></div>
+            <div style="padding:8px 8px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">🚀 Thesis: Sparse attention</div>
+            <div style="height:34px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:3px;background:#E5534B"></span><span style="flex:1">Experiments / <b style="font-weight:600;color:var(--ac)">Opt</b>imizer ablations</span></div>
+          </div>
+          <div style="padding:12px 16px;border-top:1px solid var(--bd);display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mu)"><span style="flex:1">↑↓ choose · ↵ move · searches all spaces</span><span style="height:32px;padding:0 14px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600;font-size:13px">Move</span></div>
+        </div>
+        <span style="font-size:13px;line-height:20px;color:#CFCBC3">Fuzzy search across every space and folder; cross-space moves keep links intact.</span>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const kinds = [
+      ['briefcase','Project','A goal with a deadline and milestones.'],['compass','Area','An ongoing responsibility. No end date.'],
+      ['graduation-cap','Course','Learn something, with a roadmap.',1],['library','Resource','Reference material on a topic.'],['archive','Archive','Finished. Hidden, still searchable.']
+    ].map(([i,n,d,s]) => ({ i:'icon-'+i, n, d, b:s?'1.5px solid var(--ac)':'1px solid var(--bd)', bg:s?'color-mix(in srgb,var(--ac) 8%,var(--sf))':'var(--bg)', ic:s?'var(--ac)':'var(--mu)', ring:s?'0 0 0 3px color-mix(in srgb,var(--ac) 16%,transparent)':'none' }));
+    const milestones = [['Proposal','done','2 Sep'],['Literature review','done','14 Oct'],['Experiments','cur','12 Dec'],['First draft','todo','20 Jan'],['Submission','todo','12 Feb']]
+      .map(([n,s,d],i,a) => ({ n, d, bd:s==='todo'?'1.5px solid var(--mu)':s==='cur'?'2px solid var(--ac)':'none', bg:s==='done'?'var(--ok)':'transparent', ic:s==='done'?'icon-check':'', ring:s==='cur'?'0 0 0 4px color-mix(in srgb,var(--ac) 18%,transparent)':'none', line:i===a.length-1?'transparent':(s==='done'?'var(--ok)':'var(--bd)'), fw:s==='cur'?600:450, dc:s==='cur'?'var(--ac)':'var(--mu)' }));
+    const tk = (t,src,due,o={}) => ({ t, src, due, dueC:o.over?'var(--da)':'var(--mu)', dec:o.done?'line-through':'none', tc:o.done?'var(--mu)':'var(--tx)' });
+    const board = [
+      { n:'Todo', k:'5', c:'var(--mu)', items:[tk('Run Longformer baseline on arXiv-long','Experiments plan','Mon 17'),tk('Write related-work §2.3','Lit review notes','Fri 21'),tk('Ask Dr. Lim about compute quota','Meeting 6 Nov','Overdue',{over:1})] },
+      { n:'Doing', k:'2', c:'var(--in)', items:[tk('Implement block-sparse kernel','Experiments plan','Wed 19'),tk('Plot attention entropy per layer','Results log','Thu 20')] },
+      { n:'Done', k:'14', c:'var(--ok)', items:[tk('Reproduce BigBird numbers','Results log','',{done:1}),tk('Submit proposal','Proposal v3','',{done:1})] }
+    ];
+    const projRecent = [['Results log','Edited 1 h ago'],['Experiments plan','Yesterday'],['Block-sparse kernel notes','Tue'],['Meeting 6 Nov — Dr. Lim','6 Nov'],['Lit review: efficient transformers','2 Nov'],['Thesis outline','28 Oct']].map(([t,s]) => ({ t, s }));
+    const ctx = [['file-plus','New note','N'],['folder-plus','New subfolder','⇧N'],['pen-line','Rename','F2',0,1],['folder-input','Move to…','M'],['sep'],['trash-2','Delete','⌫',1]]
+      .map(([i,l,k,danger,hov]) => i==='sep' ? { sep:'block', row:'none', l:'', k:'' } : { sep:'none', row:'flex', i:'icon-'+i, l, k, c:danger?'var(--da)':'var(--tx)', bg:hov?'var(--bg)':'transparent' });
+    const PS = (g,e,n,m,tint,cur) => { const out=[]; if (g) out.push({ hdr:'block', row:'none', g, e:'', n:'', m:'' }); out.push({ hdr:'none', row:'flex', g:'', e, n, m, tint, bg:cur?'var(--sf2)':'transparent', fw:cur?600:500, check:cur?'icon-check':'' }); return out; };
+    const phoneSpaces = [ ...PS('Courses','🧠','ML Foundations','62% · 94 notes','rgba(163,113,247,.2)',1), ...PS('','🕌','Arabic Grammar','34% · 41 notes','rgba(57,197,207,.2)'), ...PS('Projects','🚀','Thesis: Sparse attention','91 days left','rgba(232,137,58,.2)'), ...PS('Areas','🌐','Networking','28 notes','rgba(87,171,90,.2)'), ...PS('Resources','📚','Math reference','63 notes','rgba(227,179,65,.2)') ];
+    const st = s => s==='done'?{bd:'none',bg:'var(--ok)',ic:'icon-check',is:'11px',icc:'var(--bg)'}:s==='learning'?{bd:'1.5px solid var(--in)',bg:'linear-gradient(90deg,var(--in) 50%,transparent 50%)',ic:'',is:'0',icc:''}:{bd:'1.5px solid var(--mu)',bg:'transparent',ic:'',is:'0',icc:''};
+    const phoneTopics = [['Matrix multiplication','done','Done 6 Nov'],['Determinants','done','Done 8 Nov'],['Eigenvectors','learning','Due Tue 18 Nov · 3 notes',0,1],['SVD','todo','Locked · needs Eigenvectors',1]]
+      .map(([n,s,sub,lock,cur]) => ({ n, s:sub, ...st(s), op:lock?.5:1, r:lock?'icon-lock':'icon-chevron-right', rbg:cur?'var(--sf2)':'transparent' }));
+    const PN = { mat:[16,40,'Matrix mult.','done'], det:[16,120,'Determinants','done'], vec:[16,200,'Vectors','done'], eig:[186,80,'Eigenvectors','learning',0,1], gd:[186,220,'Gradient descent','learning'], svd:[356,30,'SVD','todo',1], pca:[356,110,'PCA','todo',1], mom:[356,240,'Momentum','learning'] };
+    const phoneTree = Object.values(PN).map(([x,y,n,s,lock,sel]) => ({ n, x:x+'px', y:y+'px', ...st(s), op:lock?.45:1, lock:lock?'icon-lock':'', fill:s==='done'?'color-mix(in srgb,var(--ok) 16%,var(--sf))':'var(--sf)', border:sel?'2px solid var(--ac)':s==='done'?'1px solid color-mix(in srgb,var(--ok) 55%,transparent)':s==='learning'?'1.5px solid var(--in)':'1px solid var(--bd)' }));
+    const phoneEdges = [['mat','eig'],['det','eig'],['vec','gd'],['mat','gd'],['eig','svd'],['eig','pca'],['gd','mom']].map(([a,b]) => { const sx=PN[a][0]+150, sy=PN[a][1]+22, ex=PN[b][0], ey=PN[b][1]+22; return { x:sx+'px', y:sy+'px', w:Math.hypot(ex-sx,ey-sy)+'px', a:Math.atan2(ey-sy,ex-sx)+'rad', c:PN[b][4]?'var(--mu)':'var(--in)', o:PN[b][4]?.35:.8 }; });
+    return { kinds, milestones, board, projRecent, ctx, phoneSpaces, phoneTopics, phoneTree, phoneEdges };
+  }
+}
+</script>
+</body>
+</html>

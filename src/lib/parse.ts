@@ -11,6 +11,30 @@ export function splitFrontMatter(md: string): { data: Record<string, string>; bo
   return { data, body: md.slice(m[0].length) };
 }
 
+/** Set/remove front-matter keys in a Markdown body (creates the block if needed). Values: string | string[] | null (remove). */
+export function setFrontMatter(md: string, keys: Record<string, string | string[] | null | undefined>): string {
+  const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(md);
+  const lines = m ? m[1].split(/\r?\n/) : [];
+  const fmt = (v: string | string[]) => (Array.isArray(v) ? `[${v.join(", ")}]` : v);
+  for (const [k, v] of Object.entries(keys)) {
+    if (v === undefined) continue;
+    const i = lines.findIndex((l) => l.slice(0, l.indexOf(":")).trim() === k);
+    const empty = v === null || (Array.isArray(v) && !v.length) || v === "";
+    if (empty) { if (i >= 0) lines.splice(i, 1); continue; }
+    if (i >= 0) lines[i] = `${k}: ${fmt(v!)}`; else lines.push(`${k}: ${fmt(v!)}`);
+  }
+  const rest = m ? md.slice(m[0].length) : md.replace(/^\n+/, "");
+  return lines.length ? `---\n${lines.join("\n")}\n---\n${rest}` : rest;
+}
+
+/** Text of the first `# H1` after the front-matter, or null. */
+export function firstH1(md: string): string | null {
+  const line = splitFrontMatter(md).body.split("\n").find((l) => l.trim());
+  const m = line ? /^#\s+(.+?)\s*#*\s*$/.exec(line) : null;
+  return m ? m[1].trim() : null;
+}
+export const fmList = (v: string | undefined) => (v ?? "").replace(/^\[|\]$/g, "").split(",").map((t) => t.trim().replace(/^#/, "").toLowerCase()).filter(Boolean);
+
 export function toFrontMatter(data: Record<string, string | string[] | number | undefined>) {
   const lines = Object.entries(data)
     .filter(([, v]) => v !== undefined && v !== "" && !(Array.isArray(v) && !v.length))
@@ -54,24 +78,44 @@ export function excerpt(md: string, n = 160) {
 }
 
 // ------------------------------------------------------------------ tasks
-export interface Task { line: number; text: string; done: boolean; due: string | null }
+export type TaskStatus = "todo" | "doing" | "done";
+export interface Task { line: number; text: string; done: boolean; due: string | null; status: TaskStatus }
 const TASK_RE = /^(\s*[-*+]\s+)\[( |x|X)\]\s+(.*)$/;
-export function tasks(md: string): Task[] {
+const TASK_RE_DOING = /^(\s*[-*+]\s+)\[( |x|X|\/)\]\s+(.*)$/;
+const TASK_MARK: Record<TaskStatus, string> = { todo: " ", doing: "/", done: "x" };
+/**
+ * `- [ ] task` / `- [x] done` (📅 2026-12-01 or @due(2026-12-01) sets the due date).
+ * With `{ doing: true }`, `- [/] task` is also read as a task in progress (project boards). Without it,
+ * `[/]` lines are ignored so callers that map rendered checkboxes by index keep working.
+ */
+export function tasks(md: string, opts: { doing?: boolean } = {}): Task[] {
   const out: Task[] = [];
+  const re = opts.doing ? TASK_RE_DOING : TASK_RE;
   stripCode(md).split("\n").forEach((l, line) => {
-    const m = TASK_RE.exec(l);
+    const m = re.exec(l);
     if (m) {
       const due = /📅\s*(\d{4}-\d{2}-\d{2})|@due\((\d{4}-\d{2}-\d{2})\)/.exec(m[3]);
-      out.push({ line, text: m[3].replace(/📅\s*\d{4}-\d{2}-\d{2}|@due\(\d{4}-\d{2}-\d{2}\)/, "").trim(), done: m[2] !== " ", due: due ? due[1] || due[2] : null });
+      const status: TaskStatus = m[2] === " " ? "todo" : m[2] === "/" ? "doing" : "done";
+      out.push({ line, text: m[3].replace(/📅\s*\d{4}-\d{2}-\d{2}|@due\(\d{4}-\d{2}-\d{2}\)/, "").trim(), done: status === "done", due: due ? due[1] || due[2] : null, status });
     }
   });
   return out;
 }
+/** Checkbox toggle: `[ ]` ↔ `[x]`; an in-progress `[/]` completes to `[x]`. */
 export function toggleTask(md: string, line: number): string {
   const lines = md.split("\n");
-  lines[line] = lines[line].replace(/\[( |x|X)\]/, (_, c) => (c === " " ? "[x]" : "[ ]"));
+  lines[line] = lines[line].replace(/\[( |x|X|\/)\]/, (_, c) => (c === " " || c === "/" ? "[x]" : "[ ]"));
   return lines.join("\n");
 }
+/** Rewrite one task line's marker (`[ ]` todo, `[/]` doing, `[x]` done). */
+export function setTaskStatus(md: string, line: number, s: TaskStatus): string {
+  const lines = md.split("\n");
+  lines[line] = lines[line].replace(/\[( |x|X|\/)\]/, `[${TASK_MARK[s]}]`);
+  return lines.join("\n");
+}
+/** Board cycle used by project spaces: todo → doing → done → todo. */
+export const NEXT_TASK: Record<TaskStatus, TaskStatus> = { todo: "doing", doing: "done", done: "todo" };
+export const cycleTask = (md: string, t: Task) => setTaskStatus(md, t.line, NEXT_TASK[t.status]);
 
 // ------------------------------------------------------------------ flashcards
 export interface Flashcard { q: string; a: string; key: string }

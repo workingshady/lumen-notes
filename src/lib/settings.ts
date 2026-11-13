@@ -32,7 +32,7 @@ export interface Settings {
   dailyTemplate: string;
 }
 const DEFAULTS: Settings = {
-  theme: "auto", accentHue: null, readingFont: "sans", fontSize: 17, measure: 68, density: "comfortable",
+  theme: "auto", accentHue: null, readingFont: "serif", fontSize: 16, measure: 68, density: "comfortable",
   blogName: "Lumen", tagline: "Notes from what I'm learning", author: "", avatar: "🕯️", johnnyDecimal: false, spellcheck: true, dailyTemplate: "journal",
 };
 

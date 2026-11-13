@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:120px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227">
+  <div style="display:flex;align-items:center;gap:16px">
+    <div style="width:40px;height:40px;border-radius:11px;background:#161A21;border:1px solid #2A303B;position:relative"><div style="position:absolute;left:14px;top:9px;width:11px;height:11px;border-radius:50%;background:#F2A93B;box-shadow:0 0 14px rgba(242,169,59,.7)"></div><div style="position:absolute;left:9px;right:9px;bottom:11px;height:2px;background:#E8E6E1;border-radius:1px"></div></div>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 07 Visual workspaces</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 2</span></div><div style="font-size:14px;color:#9A9890">Canvas vs Whiteboard vs Graph: the chooser, the refined canvas, and the new whiteboard.</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R2 · 1A</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">“New…” chooser</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Three surfaces that look alike at a glance. Each card shows its shape, when to use it, what file it makes and how it can be edited.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-1A</span><span>New… chooser · Desktop</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);font-size:13px">
+          <dc-import name="ScreenWorkspace" mode="Split" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+          <div style="position:absolute;inset:0;background:rgba(5,6,8,.62)"></div>
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:960px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column">
+            <div style="padding:20px 24px 6px;display:flex;align-items:center"><span style="flex:1;font-size:18px;font-weight:650">New visual workspace</span><span style="font-size:12px;color:var(--mu);margin-right:14px">in 🧠 ML Foundations / 03 Neural networks</span><i class="icon-x" style="font-size:18px;color:var(--mu)"></i></div>
+            <div style="padding:0 24px 18px;color:var(--mu)">Pick by what you want to do with your hands.</div>
+            <div style="padding:0 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+              <sc-for list="{{ kinds }}" as="k" hint-placeholder-count="3">
+                <div style="border-radius:14px;border:{{ k.b }};background:{{ k.bg }};box-shadow:{{ k.ring }};overflow:hidden;display:flex;flex-direction:column">
+                  <div style="height:150px;position:relative;background:var(--bg);border-bottom:1px solid var(--bd);overflow:hidden">
+                    <sc-for list="{{ k.shapes }}" as="s" hint-placeholder-count="6"><div style="position:absolute;left:{{ s.x }};top:{{ s.y }};width:{{ s.w }};height:{{ s.h }};background:{{ s.f }};border:{{ s.b }};border-radius:{{ s.r }};transform:{{ s.t }};transform-origin:{{ s.o }}"></div></sc-for>
+                  </div>
+                  <div style="padding:16px 16px 18px;display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">{{ k.e }}</span><i class="{{ k.ic }}" style="font-size:18px;color:var(--mu)"></i><span style="font-weight:650;font-size:15px">{{ k.n }}</span><span style="flex:1"></span><i class="{{ k.check }}" style="color:var(--ac);font-size:17px"></i></div>
+                    <span style="line-height:19px"><span style="color:var(--mu)">Use it when</span> {{ k.u }}</span>
+                    <div style="display:flex;flex-direction:column;gap:4px;padding-top:8px;border-top:1px solid var(--bd);font-size:12px;color:var(--mu)"><span style="font-family:'JetBrains Mono',monospace;color:var(--tx)">{{ k.f }}</span><span>{{ k.ed }}</span></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="padding:18px 24px;display:flex;align-items:center;gap:8px"><i class="icon-info" style="font-size:14px;color:var(--mu)"></i><span style="flex:1;color:var(--mu);font-size:12.5px">You can convert later: note outline → canvas, canvas → whiteboard, Mermaid → whiteboard.</span><span style="height:36px;padding:0 14px;border-radius:10px;display:flex;align-items:center;color:var(--mu)">Cancel</span><span style="height:36px;padding:0 16px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;gap:8px;font-weight:600">Create canvas <span style="font:500 11px 'JetBrains Mono',monospace;opacity:.65">↵</span></span></div>
+          </div>
+          <div style="position:absolute;left:226px;top:262px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">1</div>
+        </div>
+        <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>Arrow keys move, Enter creates. Previews are drawn from primitives (cards + lines / stickies + scribble / dots + edges), so each workspace is recognisable by silhouette alone. Graph doesn't create a file — it opens the local graph of the current note; the button label changes to “Open graph”.</span></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-1B</span><span>New… chooser · Phone sheet</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--le:#B48EF0;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="position:absolute;inset:0;background:rgba(5,6,8,.6)"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--sf);border-radius:14px 14px 0 0;display:flex;flex-direction:column">
+            <div style="display:flex;justify-content:center;padding:10px 0 4px"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+            <div style="padding:8px 20px 14px;display:flex;flex-direction:column;gap:2px"><span style="font-size:18px;font-weight:650">New…</span><span style="font-size:12.5px;color:var(--mu)">in 03 Neural networks</span></div>
+            <div style="padding:0 16px;display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ kindsPhone }}" as="k" hint-placeholder-count="3">
+                <div style="border-radius:14px;border:{{ k.b }};background:{{ k.bg }};padding:12px;display:flex;gap:14px;align-items:center">
+                  <div style="width:96px;height:80px;flex-shrink:0;border-radius:10px;background:var(--bg);border:1px solid var(--bd);position:relative;overflow:hidden">
+                    <sc-for list="{{ k.shapes }}" as="s" hint-placeholder-count="6"><div style="position:absolute;left:{{ s.x }};top:{{ s.y }};width:{{ s.w }};height:{{ s.h }};background:{{ s.f }};border:{{ s.b }};border-radius:{{ s.r }};transform:{{ s.t }};transform-origin:{{ s.o }}"></div></sc-for>
+                  </div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:4px"><span style="font-weight:650">{{ k.e }} {{ k.n }}</span><span style="font-size:13px;line-height:18px;color:var(--mu)">{{ k.u }}</span><span style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu)">{{ k.f }}</span></div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="padding:16px 16px 12px"><div style="height:52px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px">Create canvas</div></div>
+            <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R2 · 1B</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Canvas, refined</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Toolbar grouped Add | Arrange | Style | Code. Selected card: resize handles + four amber connection dots. Conversions live in ⋯.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-1C</span><span>Canvas v2 · Desktop · ⋯ open</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="canvas" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+          <div style="flex:1;position:relative;display:flex;flex-direction:column">
+            <div style="height:48px;padding:0 12px 0 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd);background:var(--bg);position:relative;z-index:2"><span style="font-size:15px">🧩</span><span style="color:var(--mu)">Canvases</span><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="font-weight:600">Backprop study board</span><span style="padding:0 6px;border-radius:5px;border:1px solid var(--bd);font:500 11px 'JetBrains Mono',monospace;color:var(--mu);line-height:18px">.canvas</span><span style="flex:1"></span><span style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span>Saved · Synced just now</span><span style="width:30px;height:30px;border-radius:8px;background:var(--sf2);display:flex;align-items:center;justify-content:center"><i class="icon-ellipsis" style="font-size:16px"></i></span></div>
+            <div style="flex:1;position:relative">
+              <dc-import name="CanvasBoard" ox="{{ 60 }}" oy="{{ 100 }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+              <div style="position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;align-items:center;gap:2px;padding:4px 6px;border-radius:12px;background:var(--sf);border:1px solid var(--bd)">
+                <span style="font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);padding:0 6px 0 4px">Add</span>
+                <span style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center"><i class="icon-type" style="font-size:15px"></i></span><span style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center"><i class="icon-file-plus" style="font-size:15px"></i></span><span style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center"><i class="icon-link-2" style="font-size:15px"></i></span><span style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center"><i class="icon-group" style="font-size:15px"></i></span>
+                <span style="width:1px;height:22px;background:var(--bd);margin:0 6px"></span>
+                <span style="font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);padding:0 6px 0 2px">Arrange</span>
+                <span style="height:32px;padding:0 8px;border-radius:8px;display:flex;align-items:center;gap:5px;font-size:12px"><i class="icon-network" style="font-size:15px"></i>Tree</span><span style="height:32px;padding:0 8px;border-radius:8px;display:flex;align-items:center;gap:5px;font-size:12px"><i class="icon-layout-grid" style="font-size:15px"></i>Grid</span><span style="height:32px;padding:0 8px;border-radius:8px;display:flex;align-items:center;gap:5px;font-size:12px"><i class="icon-orbit" style="font-size:15px"></i>Force</span>
+                <span style="width:1px;height:22px;background:var(--bd);margin:0 6px"></span>
+                <span style="font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);padding:0 6px 0 2px">Style</span>
+                <span style="display:flex;gap:5px;padding:0 4px"><span style="width:16px;height:16px;border-radius:50%;background:#E5534B"></span><span style="width:16px;height:16px;border-radius:50%;background:#E8893A"></span><span style="width:16px;height:16px;border-radius:50%;background:#E3B341"></span><span style="width:16px;height:16px;border-radius:50%;background:#57AB5A"></span><span style="width:16px;height:16px;border-radius:50%;background:#39C5CF"></span><span style="width:16px;height:16px;border-radius:50%;background:#A371F7;box-shadow:0 0 0 2px var(--sf),0 0 0 3.5px var(--tx)"></span></span>
+                <span style="width:1px;height:22px;background:var(--bd);margin:0 6px"></span>
+                <span style="font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);padding:0 6px 0 2px">Code</span>
+                <span style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center"><i class="icon-code" style="font-size:15px"></i></span><span style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center"><i class="icon-square-terminal" style="font-size:15px"></i></span><span style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center"><i class="icon-download" style="font-size:15px"></i></span>
+              </div>
+              <div style="position:absolute;right:12px;top:-6px;width:360px;white-space:nowrap;border-radius:12px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 16px 40px rgba(0,0,0,.45);padding:6px;display:flex;flex-direction:column;gap:1px;z-index:3">
+                <span style="padding:8px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Convert</span>
+                <sc-for list="{{ conversions }}" as="c" hint-placeholder-count="3">
+                  <div style="height:40px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:10px;background:{{ c.bg }}">
+                    <span style="display:flex;align-items:center;gap:3px;padding:3px 6px;border-radius:6px;background:var(--bg);border:1px solid var(--bd);color:var(--mu)"><i class="{{ c.a }}" style="font-size:13px"></i><i class="icon-arrow-right" style="font-size:10px"></i><i class="{{ c.b }}" style="font-size:13px;color:var(--tx)"></i></span>
+                    <span style="flex:1">{{ c.l }}</span><span style="font-size:11.5px;color:var(--mu)">{{ c.n }}</span>
+                  </div>
+                </sc-for>
+                <div style="height:1px;background:var(--bd);margin:4px"></div>
+                <div style="height:34px;padding:0 10px;display:flex;align-items:center;gap:10px"><i class="icon-download" style="font-size:14px;color:var(--mu)"></i>Export .canvas</div>
+                <div style="height:34px;padding:0 10px;display:flex;align-items:center;gap:10px"><i class="icon-copy" style="font-size:14px;color:var(--mu)"></i>Duplicate</div>
+                <div style="height:34px;padding:0 10px;display:flex;align-items:center;gap:10px;color:var(--da)"><i class="icon-trash-2" style="font-size:14px"></i>Delete canvas</div>
+              </div>
+              <div style="position:absolute;left:660px;top:250px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">2</div>
+              <div style="position:absolute;left:196px;top:58px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">3</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3">
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">2</b><span>Selected card: 4 square resize handles at corners + 4 round amber connection dots on edge midpoints. Drag a dot to another card → edge; release on empty space → “New card here” menu.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">3</b><span>Group captions are visible ≥1280 px, icon-only below. Style swatches apply to the selection; with nothing selected they set the default for new cards. Code: <code>&lt;/&gt;</code> JSON panel · <code>&gt;_</code> script · download .canvas.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">⋯</b><span>Conversions are always copies — the source stays put and the new file opens beside it. Each row shows from → to glyphs and what it will contain.</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-1D</span><span>Canvas v2 · Phone</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--in:#7AA2F7;--le:#B48EF0;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 4px;display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--bd)"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-arrow-left" style="font-size:20px"></i></span><span style="flex:1;font-weight:600">🧩 Backprop study board</span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-ellipsis-vertical" style="font-size:20px"></i></span></div>
+          <div style="flex:1;position:relative"><dc-import name="CanvasBoard" ox="{{ -250 }}" oy="{{ 40 }}" scale="{{ 0.78 }}" minimap="{{ false }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></div>
+          <div style="position:absolute;left:12px;right:12px;bottom:36px;border-radius:16px;background:var(--sf2);border:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden">
+            <div style="height:36px;display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--bd);font-size:12px;font-weight:600;color:var(--mu)"><span style="display:flex;align-items:center;justify-content:center;color:var(--tx);box-shadow:inset 0 -2px 0 var(--ac)">Add</span><span style="display:flex;align-items:center;justify-content:center">Arrange</span><span style="display:flex;align-items:center;justify-content:center">Style</span><span style="display:flex;align-items:center;justify-content:center">Code</span></div>
+            <div style="height:60px;display:grid;grid-template-columns:repeat(4,1fr);align-items:center">
+              <span style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px"><i class="icon-type" style="font-size:20px"></i>Text</span><span style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px"><i class="icon-file-plus" style="font-size:20px"></i>Note</span><span style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px"><i class="icon-link-2" style="font-size:20px"></i>Link</span><span style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px"><i class="icon-group" style="font-size:20px"></i>Group</span>
+            </div>
+          </div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+        </div>
+        <div style="max-width:412px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Phone groups become tabs on one bottom tool card, so each group is a single tap away with 44 px targets.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R2 · 1C</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Whiteboard</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Excalidraw underneath, Lumen on top: tool bar restyled to our tokens (surface, border, amber active tool), plus a Lumen cluster for code, script, Mermaid and export. Paper-on-grid instead of the canvas dots.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-1E</span><span>Whiteboard · Desktop · Lamplight · sticky selected</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="canvas" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+          <div style="flex:1;display:flex;flex-direction:column">
+            <div style="height:48px;padding:0 12px 0 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><span style="font-size:15px">🖍️</span><span style="color:var(--mu)">Whiteboards</span><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="font-weight:600;white-space:nowrap">Study plan — November</span><span style="padding:0 6px;border-radius:5px;border:1px solid var(--bd);font:500 11px 'JetBrains Mono',monospace;color:var(--mu);line-height:18px">.excalidraw</span><span style="flex:1"></span><span style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span>Saved · Synced 1m ago</span><span style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-ellipsis" style="font-size:16px"></i></span></div>
+            <div style="flex:1;position:relative"><dc-import name="WhiteboardBoard" ox="{{ 60 }}" oy="{{ 110 }}" selected="{{ true }}" tool="select" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+              <div style="position:absolute;left:300px;top:24px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">1</div>
+              <div style="position:absolute;right:250px;top:24px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">2</div>
+              <div style="position:absolute;left:660px;top:120px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">3</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3">
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>Excalidraw tools in Lumen tokens: surface #161A21, border #2A303B, active tool = amber tint + amber icon. Number keys still work. Sticky (S) and Frame (F) are Lumen additions.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">2</b><span>Lumen cluster, top-right: <code>&lt;/&gt;</code> code panel · <code>&gt;_</code> script console · Mermaid → shapes · export (.excalidraw / PNG / SVG).</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">3</b><span>Selecting a sticky shows a compact style bar: 6 paper colours (#fff3bf · #d3f9d8 · #d0ebff · #ffd8a8 · #eebefa · #ffc9c9), duplicate, delete. Ink stays dark on every colour, in both themes.</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-1F</span><span>Whiteboard · Desktop · Paper · pen tool</span></div>
+        <div style="--bg:#FAF8F3;--sf:#FFFFFF;--sf2:#F2EFE7;--bd:#E4DFD3;--tx:#1F1D1A;--mu:#6A655C;--ac:#B45F0E;--af:#FFFFFF;--ln:#0F7C78;--ok:#1F8A4C;--wa:#A86A00;--da:#C42B2B;--in:#2F5BD3;--le:#7A4BD1;--sh:0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .06);width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="canvas" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+          <div style="flex:1;display:flex;flex-direction:column">
+            <div style="height:48px;padding:0 12px 0 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd);background:var(--sf)"><span style="font-size:15px">🖍️</span><span style="color:var(--mu)">Whiteboards</span><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="font-weight:600;white-space:nowrap">Study plan — November</span><span style="padding:0 6px;border-radius:5px;border:1px solid var(--bd);font:500 11px 'JetBrains Mono',monospace;color:var(--mu);line-height:18px">.excalidraw</span><span style="flex:1"></span><span style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span>Saved · Synced 1m ago</span><span style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-ellipsis" style="font-size:16px"></i></span></div>
+            <div style="flex:1;position:relative"><dc-import name="WhiteboardBoard" ox="{{ 60 }}" oy="{{ 110 }}" tool="pen" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-1G</span><span>Whiteboard · Phone</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ok:#6BCB8B;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 4px;display:flex;align-items:center;gap:2px;border-bottom:1px solid var(--bd)"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-arrow-left" style="font-size:20px"></i></span><span style="flex:1;font-weight:600">🖍️ Study plan</span><span style="width:44px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-undo-2" style="font-size:19px"></i></span><span style="width:44px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-code" style="font-size:19px"></i></span><span style="width:44px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-ellipsis-vertical" style="font-size:19px"></i></span></div>
+          <div style="flex:1;position:relative"><dc-import name="WhiteboardBoard" ox="{{ -10 }}" oy="{{ 30 }}" scale="{{ 0.62 }}" chrome="{{ false }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></div>
+          <div style="position:absolute;left:12px;right:12px;bottom:36px;height:64px;border-radius:16px;background:var(--sf);border:1px solid var(--bd);display:grid;grid-template-columns:repeat(7,1fr);align-items:center;padding:0 4px">
+            <span style="display:flex;align-items:center;justify-content:center;height:48px"><i class="icon-hand" style="font-size:20px"></i></span>
+            <span style="display:flex;align-items:center;justify-content:center;height:48px;border-radius:12px;background:color-mix(in srgb,var(--ac) 18%,transparent);color:var(--ac)"><i class="icon-pencil" style="font-size:20px"></i></span>
+            <span style="display:flex;align-items:center;justify-content:center;height:48px"><i class="icon-square" style="font-size:20px"></i></span>
+            <span style="display:flex;align-items:center;justify-content:center;height:48px"><i class="icon-move-up-right" style="font-size:20px"></i></span>
+            <span style="display:flex;align-items:center;justify-content:center;height:48px"><i class="icon-sticky-note" style="font-size:20px"></i></span>
+            <span style="display:flex;align-items:center;justify-content:center;height:48px"><i class="icon-type" style="font-size:20px"></i></span>
+            <span style="display:flex;align-items:center;justify-content:center;height:48px"><i class="icon-ellipsis" style="font-size:20px"></i></span>
+          </div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+        </div>
+        <div style="max-width:412px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Bottom tool dock (thumb reach). Pen draws with finger or stylus; two fingers always pan. ⋯ holds eraser, frame, image, diamond, ellipse, line. Palm rejection when a stylus is detected.</span></div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  shapes(kind, W, H) {
+    const sx = W / 280, sy = H / 150; const px = v => v + 'px';
+    const R = (x,y,w,h,o={}) => ({ x:px(x*sx), y:px(y*sy), w:px(w*sx), h:px(h*sy), f:o.f||'var(--sf)', b:o.b||'1px solid var(--bd)', r:o.r||'6px', t:o.t||'none', o:'0 50%' });
+    const L = (x1,y1,x2,y2,c) => { const X1=x1*sx,Y1=y1*sy,X2=x2*sx,Y2=y2*sy; return { x:px(X1), y:px(Y1), w:px(Math.hypot(X2-X1,Y2-Y1)), h:'1.5px', f:c||'var(--mu)', b:'none', r:'1px', t:`rotate(${Math.atan2(Y2-Y1,X2-X1)}rad)`, o:'0 50%' }; };
+    if (kind === 'canvas') return [ L(110,48,160,48), L(205,70,205,98), R(30,26,80,46), R(160,24,90,46,{ b:'1.5px solid #A371F7', f:'color-mix(in srgb,#A371F7 14%,var(--sf))' }), R(150,98,110,34), R(30,92,90,40,{ b:'1.5px solid #39C5CF', f:'color-mix(in srgb,#39C5CF 14%,var(--sf))' }) ];
+    if (kind === 'whiteboard') return [ R(30,30,64,58,{ f:'#fff3bf', b:'none', r:'2px', t:'rotate(-4deg)' }), R(104,36,64,58,{ f:'#d0ebff', b:'none', r:'2px', t:'rotate(3deg)' }), R(60,92,64,46,{ f:'#ffc9c9', b:'none', r:'2px', t:'rotate(-2deg)' }), R(190,30,62,62,{ f:'transparent', b:'2px solid var(--tx)', r:'50%' }), L(160,112,200,104,'var(--tx)'), L(200,104,240,118,'var(--tx)') ];
+    const N = [[60,40],[120,70],[200,40],[230,100],[150,120],[70,110],[180,80]];
+    const E = [[0,1],[1,2],[1,4],[2,3],[4,5],[1,6],[6,3]];
+    return [ ...E.map(([a,b]) => L(N[a][0],N[a][1],N[b][0],N[b][1])), ...N.map(([x,y],i) => { const d = i===1?16:i===6?11:8; return { x:px(x*sx-d/2), y:px(y*sy-d/2), w:px(d), h:px(d), f:['#39C5CF','#E8E6E1','#E8893A','#E8893A','#A371F7','#A371F7','#57AB5A'][i], b:'none', r:'50%', t:'none', o:'50% 50%' }; }) ];
+  }
+  renderVals() {
+    const base = [
+      ['canvas','🧩','icon-layout-dashboard','Canvas','you want cards — notes, text, links — arranged and connected by arrows.','.canvas · JSON Canvas 1.0','Drag & drop · JSON · script · REST API',1],
+      ['whiteboard','🖍️','icon-pencil','Whiteboard','you want to sketch freely — pen, shapes, stickies, frames, images.','.excalidraw','Draw · JSON · script · Mermaid → shapes · REST',0],
+      ['graph','','icon-network','Graph from note','you want to see how a note connects to everything else.','Generated · not stored','Filters only',0]
+    ];
+    const mk = (W,H) => base.map(([k,e,ic,n,u,f,ed,sel]) => ({ e, ic:e?'':ic, n, u, f, ed, shapes:this.shapes(k,W,H), check:sel?'icon-circle-check':'', b:sel?'1.5px solid var(--ac)':'1px solid var(--bd)', bg:sel?'color-mix(in srgb,var(--ac) 6%,var(--sf))':'var(--sf)', ring:sel?'0 0 0 3px color-mix(in srgb,var(--ac) 16%,transparent)':'none' }));
+    const conversions = [['icon-list-tree','icon-layout-dashboard','Note outline → Canvas','headings → cards'],['icon-layout-dashboard','icon-pencil','Canvas → Whiteboard','cards → shapes',1],['icon-workflow','icon-pencil','Mermaid block → Whiteboard','editable shapes']]
+      .map(([a,b,l,n,h]) => ({ a, b, l, n, bg:h?'var(--bg)':'transparent' }));
+    return { kinds: mk(296,150), kindsPhone: mk(96,80), conversions };
+  }
+}
+</script>
+</body>
+</html>
