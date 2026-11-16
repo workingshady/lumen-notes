@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronDown, ChevronRight, ChevronsUpDown, FileText, FolderTree as FolderTreeIcon, House, Inbox, LayoutDashboard, Layers, ListChecks, NotebookPen, Plus, Rss, Search, Settings, Trash2, Waypoints } from "lucide-react";
+import { Route, CalendarDays, ChevronDown, ChevronRight, ChevronsUpDown, FileText, FolderTree as FolderTreeIcon, House, Inbox, LayoutDashboard, Layers, ListChecks, NotebookPen, Plus, Rss, Search, Settings, Trash2, Waypoints } from "lucide-react";
 import { useMemo, useState } from "react";
 import { SPACE_KINDS, type Folder, type Space } from "../../shared/types";
 import { createFolder, createNote, dailyNote, deleteFolder, moveFolder, moveNote } from "../lib/actions";
@@ -15,12 +15,12 @@ import { cx } from "./ui";
 export const KIND_LABEL: Record<Space["kind"], string> = { project: "Project", area: "Area", course: "Course", resource: "Resource", archive: "Archive" };
 const colorOf = (c: string | null | undefined) => (c ? PRESETS[c] ?? c : null);
 
-type NavKey = "home" | "inbox" | "daily" | "tasks" | "calendar" | "review" | "graph" | "canvas" | "blog";
+type NavKey = "home" | "inbox" | "daily" | "tasks" | "calendar" | "review" | "graph" | "canvas" | "paths" | "blog";
 interface NavItem { key: NavKey; icon: React.ReactNode; label: string; count?: number; learn?: boolean }
 
 /** Which nav item is active for the current UI state. */
 function activeKey(ui: UI): NavKey | null {
-  if (ui.view === "notes") return ui.filter === "visual" ? "canvas" : ui.filter === "published" ? "blog" : ui.spaceId === "inbox" && !ui.folderId && !ui.tag && !ui.noteId ? "inbox" : null;
+  if (ui.view === "notes") return ui.filter === "visual" ? "canvas" : ui.filter === "paths" ? "paths" : ui.filter === "published" ? "blog" : ui.spaceId === "inbox" && !ui.folderId && !ui.tag && !ui.noteId ? "inbox" : null;
   return ({ home: "home", tasks: "tasks", kanban: "tasks", calendar: "calendar", review: "review", graph: "graph" } as Partial<Record<View, NavKey>>)[ui.view] ?? null;
 }
 
@@ -38,6 +38,7 @@ function useNav(): NavItem[] {
     { key: "review", icon: <Layers size={16} />, label: "Review", count: due, learn: true },
     { key: "graph", icon: <Waypoints size={16} />, label: "Graph" },
     { key: "canvas", icon: <LayoutDashboard size={16} />, label: "Canvases" },
+    { key: "paths", icon: <Route size={16} />, label: "Learning paths" },
     { key: "blog", icon: <Rss size={16} />, label: "Blog" },
   ];
 }
@@ -48,6 +49,7 @@ async function runNav(k: NavKey, spaceId: string) {
   else if (k === "inbox") go("notes", { spaceId: "inbox", folderId: null, tag: null, filter: null, noteId: null });
   else if (k === "daily") openNote((await dailyNote(sp)).id, "edit");
   else if (k === "canvas") go("notes", { spaceId: "all", folderId: null, tag: null, filter: "visual" });
+  else if (k === "paths") go("notes", { spaceId: "all", folderId: null, tag: null, filter: "paths" });
   else if (k === "blog") go("notes", { spaceId: "all", folderId: null, tag: null, filter: "published" });
   else go(k as View);
 }

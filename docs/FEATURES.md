@@ -181,6 +181,24 @@ Chosen over tldraw because Excalidraw is MIT-licensed with no production license
 | Read-only viewer never writes to the visitor's device; works without an account | ✅ |
 | "Shared with link" overview in Settings, link expiry dates, password-protected links | 🔜 |
 
+## 3b. Learning paths (multi-course roadmaps)
+One concept-first roadmap on top of several overlapping courses. Each course keeps its own independent roadmap.
+| Feature | Status |
+|---|---|
+| Path = note type `path`, plain Markdown: `## Stage`, `- Concept = Topic A \| Topic B`, `resource:` / `note:` / `review:` lines | ✅ |
+| Combine any course spaces / roadmap notes; same-named topics merge into one concept automatically | ✅ |
+| **Overlap suggestions** across courses (similar names, e.g. "Backprop by hand" ≈ "Backpropagation") with one-click Merge / "Different" | ✅ |
+| Prerequisites merged across all courses; locked/unlocked concepts | ✅ |
+| **Stages** board (drag concepts between stages, rename/reorder stages, "Not placed yet" lane) | ✅ |
+| **Matrix**: concepts × courses with per-course status and overlap count (2×, 3×) | ✅ |
+| **Graph**: left→right by prerequisite depth, course color bars, stage badge | ✅ |
+| **Timeline**: one lane per course + revision lane, packed pills, today line | ✅ |
+| **Revise**: spaced revision of finished concepts (1→3→7→14→30→60→120 days, "Again" resets) | ✅ |
+| Concept sheet: status in every course (edits that course's roadmap), resources, lesson notes, merge, rename | ✅ |
+| Resources per concept: YouTube/Vimeo/course videos play inline; articles/books/courses as links; links in course lesson notes collected automatically | ✅ |
+| Auto-organize (stages from prerequisite depth) and AI organize (Workers AI groups + merges) | ✅ |
+| Dev simulator scenario "Learning paths" (ML Foundations + CS231n + fast.ai) | ✅ |
+
 ## 8c. Round 2 (Claude Design handoff, 100% pass)
 | Feature | Status |
 |---|---|

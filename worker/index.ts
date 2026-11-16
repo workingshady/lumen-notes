@@ -310,6 +310,7 @@ const PROMPTS: Record<string, string> = {
   explain: "Explain the following to a motivated learner, simply and correctly, in short Markdown with one example.",
   tags: "Suggest 3-6 short lowercase tags (single words or kebab-case) for this note. Output ONLY the tags separated by spaces, each starting with #.",
   quiz: "Write 5 short quiz questions (mix of recall and understanding) about this note, then an 'Answers' section. Markdown.",
+  path: "You organize a multi-course learning path. Group the concepts into 3-6 stages from foundations to advanced, respecting prerequisites. Merge concepts that are the same idea under different names by writing `- Main name = Other name | Another`. Output ONLY Markdown: `## Stage N · Short title` headings, then `- Concept` lines. Use the given concept names exactly. No other text.",
   roadmap: "Create a learning roadmap for the topic below as Markdown: `## Module` headings, and under each 3-8 topics as `- [ ] Topic` lines. Add `(needs: Other Topic)` only where a real prerequisite exists. No other text.",
 };
 api.post("/ai", auth, async (c) => {

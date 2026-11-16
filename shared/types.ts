@@ -1,9 +1,9 @@
 // Shared between the app (src) and the Worker (worker).
 
-export type NoteType = "note" | "lesson" | "journal" | "flashcards" | "slides" | "post" | "canvas" | "whiteboard" | "roadmap" | "moc";
+export type NoteType = "note" | "lesson" | "journal" | "flashcards" | "slides" | "post" | "canvas" | "whiteboard" | "roadmap" | "moc" | "path";
 export type Status = "todo" | "learning" | "review" | "mastered";
 export const STATUSES: Status[] = ["todo", "learning", "review", "mastered"];
-export const NOTE_TYPES: NoteType[] = ["note", "lesson", "journal", "flashcards", "slides", "post", "canvas", "whiteboard", "roadmap", "moc"];
+export const NOTE_TYPES: NoteType[] = ["note", "lesson", "journal", "flashcards", "slides", "post", "canvas", "whiteboard", "roadmap", "moc", "path"];
 
 /** PARA-style space kinds. A space encapsulates its own folder tree, notes, roadmap and settings. */
 export type SpaceKind = "project" | "area" | "course" | "resource" | "archive";

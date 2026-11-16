@@ -17,7 +17,7 @@ export interface UI {
   folderId: string | null;
   tag: string | null;
   /** Sidebar quick filters: "visual" = canvases + whiteboards, "published" = blog posts. */
-  filter: "visual" | "published" | null;
+  filter: "visual" | "published" | "paths" | null;
   mode: Mode;
   panel: Panel;
   sidebar: boolean;
@@ -130,7 +130,7 @@ function canvasFiles(body: string): string[] {
 /** Notes visible in the current scope (space / folder / tag). */
 export function scoped(v: Vault, u: Pick<UI, "spaceId" | "folderId" | "tag"> & { filter?: UI["filter"] }) {
   return v.notes.filter((n) => (u.spaceId === "all" || n.spaceId === u.spaceId) && (!u.folderId || n.folderId === u.folderId) && (!u.tag || n.tags.includes(u.tag))
-    && (!u.filter || (u.filter === "visual" ? n.type === "canvas" || n.type === "whiteboard" : !!n.published)));
+    && (!u.filter || (u.filter === "visual" ? n.type === "canvas" || n.type === "whiteboard" : u.filter === "paths" ? n.type === "path" : !!n.published)));
 }
 
 // ------------------------------------------------------------------ toasts

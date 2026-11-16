@@ -1,4 +1,4 @@
-import { ArrowLeft, CornerDownLeft, FileText, Hash, LayoutDashboard, Search, Sparkles, Waypoints, X, Zap } from "lucide-react";
+import { Route, ArrowLeft, CornerDownLeft, FileText, Hash, LayoutDashboard, Search, Sparkles, Waypoints, X, Zap } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Note } from "../../shared/types";
 import { createNote, dailyNote } from "../lib/actions";
@@ -7,6 +7,7 @@ import { activeTheme, getSettings, setSettings } from "../lib/settings";
 import { go, openNote, setUI, useUI, useVault, type Mode } from "../lib/store";
 import { syncNow } from "../lib/sync";
 import { plainText } from "./nav-text";
+import { NewPathDialog } from "./NewPathDialog";
 import { NewVisualChooser } from "./NewVisualChooser";
 import { cx } from "./ui";
 
@@ -50,6 +51,7 @@ export function Palette() {
   const [sel, setSel] = useState(0);
   const [wide, setWide] = useState(false);
   const [chooser, setChooser] = useState(false);
+  const [pathDlg, setPathDlg] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const spaceId = ui.spaceId === "all" ? "inbox" : ui.spaceId;
@@ -86,6 +88,8 @@ export function Palette() {
     return [
       c("new", "New note", async () => openNote((await createNote({ spaceId, folderId: ui.folderId })).id, "edit"), { hint: `${MOD}Alt N` }),
       c("new-visual", "New visual…", () => setChooser(true), { hint: "canvas · whiteboard · graph", icon: <LayoutDashboard size={16} /> }),
+      c("new-path", "New learning path…", () => setPathDlg(true), { hint: "combine several courses into one roadmap", icon: <Route size={16} /> }),
+      c("paths", "Go to Learning paths", () => go("notes", { spaceId: "all", folderId: null, tag: null, filter: "paths" }), { icon: <Route size={16} /> }),
       c("new-lesson", "New lesson", async () => openNote((await createNote({ template: "lesson", spaceId })).id, "edit")),
       c("new-canvas", "New canvas", async () => openNote((await createNote({ template: "canvas", spaceId })).id)),
       c("new-whiteboard", "New whiteboard", async () => openNote((await createNote({ template: "whiteboard", spaceId })).id)),
@@ -179,6 +183,7 @@ export function Palette() {
   return (
     <>
       <NewVisualChooser open={chooser} onClose={() => setChooser(false)} />
+      <NewPathDialog open={pathDlg} onClose={() => setPathDlg(false)} />
       {ui.palette && (
         <div className="fixed inset-0 z-50 flex items-start justify-center md:bg-[rgba(5,6,8,.6)] md:pt-[110px] fade-in" onMouseDown={(e) => e.target === e.currentTarget && close()}>
           <div className="safe-t flex h-full w-full flex-col overflow-hidden bg-bg text-[14px] md:h-auto md:max-w-[660px] md:rounded-[14px] md:border md:border-line md:bg-surface-2 md:text-[13px] md:shadow-[0_24px_64px_rgba(0,0,0,.5)]">

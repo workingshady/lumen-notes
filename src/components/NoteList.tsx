@@ -1,4 +1,5 @@
 import { NewVisualChooser } from "./NewVisualChooser";
+import { NewPathDialog } from "./NewPathDialog";
 import { ArrowDownWideNarrow, Globe, Link2, Pin, Plus, SquarePen, Star, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Note } from "../../shared/types";
@@ -14,7 +15,7 @@ import { PhoneChips, PhoneListHeader, SwipeRow, type PhoneFilter } from "./ws-ph
 import { num, tr, useRtl } from "./ws-dir";
 
 type Sort = "updated" | "created" | "title";
-const TYPE_ICON: Record<Note["type"], string> = { note: "", lesson: "📘", journal: "📓", flashcards: "🧠", slides: "📽️", post: "✍️", canvas: "🧩", whiteboard: "🖍️", roadmap: "🗺️", moc: "🧭" };
+const TYPE_ICON: Record<Note["type"], string> = { note: "", lesson: "📘", journal: "📓", flashcards: "🧠", slides: "📽️", post: "✍️", canvas: "🧩", whiteboard: "🖍️", roadmap: "🗺️", moc: "🧭", path: "🛤️" };
 const useWide = () => { const [w, setW] = useState(() => innerWidth >= 900); useEffect(() => { const f = () => setW(innerWidth >= 900); addEventListener("resize", f); return () => removeEventListener("resize", f); }, []); return w; };
 
 /** Body without front-matter and the title H1 (the title is shown above the excerpt). */
@@ -57,12 +58,13 @@ export function NoteList() {
   }, [v, ui, sort, filter, wide]);
   const folder = ui.folderId ? v.folderMap.get(ui.folderId) : null;
   const space = v.spaceMap.get(ui.spaceId);
-  const title = ui.filter === "visual" ? "Canvases & whiteboards" : ui.filter === "published" ? "Blog posts" : ui.tag ? `#${ui.tag}` : folder ? folder.name : ui.spaceId === "all" ? tr("All notes", rtl) : space?.name ?? tr("Notes", rtl);
+  const title = ui.filter === "visual" ? "Canvases & whiteboards" : ui.filter === "paths" ? "Learning paths" : ui.filter === "published" ? "Blog posts" : ui.tag ? `#${ui.tag}` : folder ? folder.name : ui.spaceId === "all" ? tr("All notes", rtl) : space?.name ?? tr("Notes", rtl);
   const spaceId = ui.spaceId === "all" ? "inbox" : ui.spaceId;
 
   const nextSort: Record<Sort, Sort> = { updated: "created", created: "title", title: "updated" };
   const cycleSort = () => { const s = nextSort[sort]; setSort(s); toast(`Sorted by ${s === "updated" ? "last edited" : s === "created" ? "date created" : "title"}`, undefined, { icon: "check" }); try { localStorage.setItem("lumen.sort", s); } catch { /* ignore */ } };
   const [chooser, setChooser] = useState(false);
+  const [pathDlg, setPathDlg] = useState(false);
   const newNote = async (template?: string) => openNote((await createNote({ spaceId, folderId: ui.folderId, tags: ui.tag ? [ui.tag] : [], ...(template ? { template } : ui.filter === "published" ? { template: "post" } : {}) })).id, "edit");
   // Drop .md / .zip files onto the list to import them here (empty state: "or drop .md files here").
   const onDrop = async (e: React.DragEvent) => {
@@ -118,7 +120,7 @@ export function NoteList() {
         <span className="flex-1" />
         {ui.filter === "published" && <a href="/blog" target="_blank" rel="noreferrer" className="text-[12px] text-link">View blog ↗</a>}
         <button title={`Sort: ${sort}`} aria-label="Sort" className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={cycleSort}><ArrowDownWideNarrow size={15} /></button>
-        <button title={ui.filter === "visual" ? "New canvas or whiteboard" : "New note (right-click: from template)"} aria-label="New note" className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={() => (ui.filter === "visual" ? setChooser(true) : newNote())} onContextMenu={(e) => { e.preventDefault(); setTpl(true); }}><SquarePen size={15} /></button>
+        <button title={ui.filter === "visual" ? "New canvas or whiteboard" : ui.filter === "paths" ? "New learning path" : "New note (right-click: from template)"} aria-label="New note" className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={() => (ui.filter === "visual" ? setChooser(true) : ui.filter === "paths" ? setPathDlg(true) : newNote())} onContextMenu={(e) => { e.preventDefault(); setTpl(true); }}><SquarePen size={15} /></button>
       </div>
       <div className={cx("flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-1.5", over && "bg-accent/5 ring-1 ring-inset ring-accent/40")}>
         {notes.map((n) => <NoteRow key={n.id} n={n} active={n.id === ui.noteId} />)}
@@ -126,6 +128,7 @@ export function NoteList() {
       </div>
       <TemplatePicker open={tpl} onClose={() => setTpl(false)} spaceId={spaceId} folderId={ui.folderId} />
       <NewVisualChooser open={chooser} onClose={() => setChooser(false)} />
+      <NewPathDialog open={pathDlg} onClose={() => setPathDlg(false)} />
     </div>
   );
 }

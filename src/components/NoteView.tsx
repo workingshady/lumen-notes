@@ -23,6 +23,7 @@ import { tr, useRtl } from "./ws-dir";
 
 const Whiteboard = lazy(() => import("./Whiteboard"));
 const CanvasEditor = lazy(() => import("./CanvasEditor").then((m) => ({ default: m.CanvasEditor })));
+const PathView = lazy(() => import("../views/PathView").then((m) => ({ default: m.PathView })));
 const RoadmapView = lazy(() => import("../views/RoadmapView").then((m) => ({ default: m.RoadmapView })));
 const GraphView = lazy(() => import("../views/GraphView").then((m) => ({ default: m.GraphView })));
 
@@ -43,7 +44,8 @@ export function NoteView({ note }: { note: Note }) {
   const wide = useWide();
   const isBoard = note.type === "whiteboard";
   const isCanvas = note.type === "canvas" || isBoard;
-  const isRoadmap = note.type === "roadmap";
+  const isPath = note.type === "path";
+  const isRoadmap = note.type === "roadmap" || isPath;
   const mode: Mode = ui.mode;
 
   // New untitled note → focus title.
@@ -173,7 +175,7 @@ export function NoteView({ note }: { note: Note }) {
                 <span className="flex-1" />
                 <HeaderSync />
                 <StudyTimer noteId={note.id} />
-                {isRoadmap && <Segmented value={rmEdit ? "edit" : "map"} onChange={(x) => setRmEdit(x === "edit")} options={[{ value: "map", label: <><MapIcon size={13} /> Roadmap</> }, { value: "edit", label: <><PenLine size={13} /> Edit</> }]} />}
+                {isRoadmap && <Segmented value={rmEdit ? "edit" : "map"} onChange={(x) => setRmEdit(x === "edit")} options={[{ value: "map", label: <><MapIcon size={13} /> {isPath ? "Path" : "Roadmap"}</> }, { value: "edit", label: <><PenLine size={13} /> Edit</> }]} />}
                 {moreBtn}
                 {shareBtn}
                 {panelBtn}
@@ -192,7 +194,7 @@ export function NoteView({ note }: { note: Note }) {
               {crumbsEl}
               <span className="flex-1" />
               {markdownNote && switcher(modes)}
-              {isRoadmap && <Segmented value={rmEdit ? "edit" : "map"} onChange={(x) => setRmEdit(x === "edit")} options={[{ value: "map", label: <><MapIcon size={13} /> Roadmap</> }, { value: "edit", label: <><PenLine size={13} /> Edit</> }]} />}
+              {isRoadmap && <Segmented value={rmEdit ? "edit" : "map"} onChange={(x) => setRmEdit(x === "edit")} options={[{ value: "map", label: <><MapIcon size={13} /> {isPath ? "Path" : "Roadmap"}</> }, { value: "edit", label: <><PenLine size={13} /> Edit</> }]} />}
               <span className="flex-1" />
               <HeaderSync wrap />
               {markdownNote && <DirMenu note={note} />}
@@ -239,7 +241,7 @@ export function NoteView({ note }: { note: Note }) {
           ) : isCanvas ? (
             <Suspense fallback={<Skeleton kind="board" />}><CanvasEditor key={note.id} note={note} /></Suspense>
           ) : isRoadmap && !rmEdit ? (
-            <Suspense fallback={<Skeleton kind="list" />}><RoadmapView note={note} /></Suspense>
+            <Suspense fallback={<Skeleton kind="list" />}>{isPath ? <PathView note={note} /> : <RoadmapView note={note} />}</Suspense>
           ) : isRoadmap ? (
             <Editor key={note.id} note={note} />
           ) : effMode === "edit" ? (
