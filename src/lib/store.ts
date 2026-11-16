@@ -1,9 +1,9 @@
-import { useLiveQuery } from "dexie-react-hooks";
-import { useMemo, useSyncExternalStore } from "react";
+import { liveQuery } from "dexie";
+import { useSyncExternalStore } from "react";
 import type { Folder, Note, Space } from "../../shared/types";
 import { db, DEFAULT_SPACE } from "./db";
 import { wikiLinks } from "./parse";
-import { updateIndex } from "./search";
+import { scheduleIndex } from "./search";
 
 export type View = "home" | "notes" | "tasks" | "kanban" | "calendar" | "review" | "graph" | "table" | "space" | "settings" | "trash";
 export type Mode = "edit" | "split" | "read" | "focus" | "slides" | "review";
@@ -92,13 +92,33 @@ function linksOf(n: Note): string[] {
   return links;
 }
 
+// One shared vault for the whole app. Every useVault() caller reads the same snapshot, so the notes table is
+// read from IndexedDB once per change (not once per mounted component) and the derived maps are built once.
+// Full-text indexing runs in the background (scheduleIndex), never inside render: with ~12k notes it takes seconds.
+let rawNotes: Note[] | undefined, rawFolders: Folder[] | undefined, rawSpaces: Space[] | undefined;
+let vaultSnap: Vault = buildVault(undefined, undefined, undefined);
+const vaultSubs = new Set<() => void>();
+let vaultStarted = false;
+function startVault() {
+  if (vaultStarted) return;
+  vaultStarted = true;
+  const rebuild = () => { vaultSnap = buildVault(rawNotes, rawFolders, rawSpaces); vaultSubs.forEach((f) => f()); };
+  const watch = <T,>(q: () => Promise<T>, set: (v: T) => void) =>
+    liveQuery(q).subscribe({ next: (v) => { set(v); rebuild(); }, error: (e) => console.error("vault query failed", e) });
+  watch(() => db.notes.toArray(), (v) => { rawNotes = v; scheduleIndex(v.filter((n) => !n.deleted)); });
+  watch(() => db.folders.toArray(), (v) => { rawFolders = v; });
+  watch(() => db.spaces.toArray(), (v) => { rawSpaces = v; });
+}
+const subscribeVault = (f: () => void) => { vaultSubs.add(f); return () => { vaultSubs.delete(f); }; };
+
 export function useVault(): Vault {
-  const notes = useLiveQuery(() => db.notes.toArray(), []);
-  const folders = useLiveQuery(() => db.folders.toArray(), []);
-  const spaces = useLiveQuery(() => db.spaces.toArray(), []);
-  return useMemo(() => {
+  startVault();
+  return useSyncExternalStore(subscribeVault, () => vaultSnap);
+}
+
+function buildVault(notes: Note[] | undefined, folders: Folder[] | undefined, spaces: Space[] | undefined): Vault {
+  {
     const live = (notes ?? []).filter((n) => !n.deleted);
-    updateIndex(live);
     const byId = new Map((notes ?? []).map((n) => [n.id, n]));
     const byTitle = new Map(live.map((n) => [n.title.toLowerCase(), n]));
     const outlinks = new Map<string, string[]>();
@@ -118,7 +138,7 @@ export function useVault(): Vault {
       spaces: liveSpaces, spaceMap: new Map(liveSpaces.map((s) => [s.id, s])), backlinks, outlinks,
       tags: [...tagCount].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])),
     };
-  }, [notes, folders, spaces]);
+  }
 }
 
 function canvasFiles(body: string): string[] {

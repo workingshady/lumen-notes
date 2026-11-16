@@ -42,8 +42,30 @@ export const normalize = (t: string) =>
 let index: MiniSearch<Note> | null = null;
 let indexed = new Map<string, number>();
 
-/** Incrementally (re)index notes. Cheap to call on every change. */
-export function updateIndex(notes: Note[]) {
+/**
+ * Index in the background: big vaults (10k+ notes) take seconds to index, so the work runs in ~12 ms slices
+ * between frames. A newer snapshot replaces the pending one; work already done is kept (indexing is incremental).
+ */
+let pendingNotes: Note[] | null = null;
+let indexing = false;
+export function scheduleIndex(notes: Note[]) {
+  pendingNotes = notes;
+  if (!indexing) void indexLoop();
+}
+async function indexLoop() {
+  indexing = true;
+  try {
+    while (pendingNotes) {
+      const ns = pendingNotes;
+      pendingNotes = null;
+      await updateIndex(ns, () => pendingNotes !== null);
+    }
+  } finally { indexing = false; }
+}
+const yieldToBrowser = () => new Promise<void>((r) => setTimeout(r, 0));
+
+/** Incrementally (re)index notes, yielding to the browser every ~12 ms. Stops early when `stale()` turns true. */
+export async function updateIndex(notes: Note[], stale: () => boolean = () => false) {
   index ??= new MiniSearch<Note>({
     fields: ["title", "body", "tagText"],
     storeFields: ["id"],
@@ -58,12 +80,18 @@ export function updateIndex(notes: Note[]) {
   for (const [id] of indexed) if (!live.has(id)) gone++;
   if (gone > 200 && gone > indexed.size / 3) { index.removeAll(); indexed = new Map(); }
   for (const [id] of indexed) if (!live.has(id)) { index.discard(id); indexed.delete(id); }
+  let t = performance.now();
   for (const n of live.values()) {
     const v = indexed.get(n.id);
     if (v === n.updatedAt) continue;
     if (v !== undefined) index.discard(n.id);
     index.add(n);
     indexed.set(n.id, n.updatedAt);
+    if (performance.now() - t > 12) {
+      await yieldToBrowser();
+      if (stale()) return;
+      t = performance.now();
+    }
   }
 }
 
