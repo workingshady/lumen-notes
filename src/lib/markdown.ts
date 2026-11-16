@@ -70,7 +70,8 @@ function build() {
     const inner = src.slice(pos + 2, end);
     if (!inner || inner.includes("\n")) return false;
     if (!silent) {
-      const [target, alias] = inner.split("|");
+      // `[[Note\|Alias]]` is how Obsidian escapes the pipe inside tables: drop the backslash.
+      const [target, alias] = inner.replace(/\\\|/g, "|").split("|");
       const [title, heading] = target.split("#");
       const tok = state.push("wikilink", "", 0);
       tok.meta = { title: title.trim(), heading: heading?.trim() ?? "", label: (alias ?? target).trim() };

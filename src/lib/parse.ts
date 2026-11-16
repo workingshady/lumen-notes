@@ -47,7 +47,7 @@ const stripCode = (md: string) => md.replace(/```[\s\S]*?```/g, (m) => m.replace
 
 export function wikiLinks(md: string): string[] {
   const out = new Set<string>();
-  for (const m of stripCode(md).matchAll(/!?\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]/g)) out.add(m[1].trim());
+  for (const m of stripCode(md).matchAll(/!?\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]/g)) out.add(m[1].replace(/\\$/, "").trim()); // `\|` = Obsidian table escape
   return [...out];
 }
 
