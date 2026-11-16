@@ -1,4 +1,5 @@
 import { Archive, ArchiveRestore, Check, Columns3, EllipsisVertical, FileText, FileUp, Flag, GraduationCap, LayoutTemplate, List, Loader2, MoreHorizontal, Pencil, Play, Plus, Settings2, Share, Share2, Sparkles, Target, Trash2 } from "lucide-react";
+import { ProjectHub } from "./ProjectHub";
 import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { SPACE_KINDS, type Note, type Space } from "../../shared/types";
 import { createNote, updateNote } from "../lib/actions";
@@ -194,7 +195,7 @@ export function SpaceView() {
           <RoadmapView note={rm} compact target={deadline || null} view={view} onView={setView} />
         </div>
       ) : isProject ? (
-        <ProjectBody sp={sp} rm={rm} mods={mods} notes={notes} allTasks={allTasks} daysLeft={daysLeft} deadline={deadline} onCreate={addRoadmap} onEdit={() => setEdit(true)} />
+        <ProjectHub sp={sp} overview={<ProjectBody sp={sp} rm={rm} mods={mods} notes={notes} allTasks={allTasks} daysLeft={daysLeft} deadline={deadline} onCreate={addRoadmap} onEdit={() => setEdit(true)} />} />
       ) : (
         <div className="space-y-4 px-4 py-6 md:px-12">
           {(isCourse || rm) && (

@@ -21,7 +21,7 @@ const CALLOUT_ICONS: Record<string, string> = {
   danger: "octagon-alert", error: "octagon-alert", example: "list", question: "circle-help", faq: "circle-help", quote: "quote",
   success: "circle-check", check: "circle-check", todo: "clipboard-list", abstract: "list", summary: "list", bug: "bug",
 };
-const MERMAID_KIND = (src: string) => src.trim().split(/\r?\n/)[0].trim().replace(/\s+/g, " ").slice(0, 40);
+const MERMAID_KIND = (src: string) => (src.trim().split(/\r?\n/).find((l) => l.trim() && !/^\s*%%/.test(l)) ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
 
 /** Direction of the first strong letter (callouts mirror their furniture in RTL: icon and title move right). */
 function strongDir(s: string): "ltr" | "rtl" | "auto" {

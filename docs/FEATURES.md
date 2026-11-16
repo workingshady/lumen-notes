@@ -199,6 +199,20 @@ One concept-first roadmap on top of several overlapping courses. Each course kee
 | Auto-organize (stages from prerequisite depth) and AI organize (Workers AI groups + merges) | ✅ |
 | Dev simulator scenario "Learning paths" (ML Foundations + CS231n + fast.ai) | ✅ |
 
+## 3c. Project hub (software projects, links only)
+Project spaces become a hub for building software. Nothing connects to GitHub/Bitbucket: repo, PR, Figma and Jira are plain links.
+| Feature | Status |
+|---|---|
+| Tabs: Overview · Docs · Board · Requirements · Timeline · Diagrams · AI assistant, plus a links row and a health badge (on track / at risk / behind) | ✅ |
+| **Docs**: PRD, RFC, ADR (decision), Requirements, Action plan, Meeting notes, Spec, Draft, each with a template; header `doc:` + `docstatus:` (draft / in review / approved / superseded / rejected), owner | ✅ |
+| **Task cards** from any note's checkbox lines: `[>]` backlog · `[ ]` todo · `[/]` in progress · `[?]` review · `[x]` done · `[-]` cancelled; inline `!p1` priority, `~3d` estimate, `📅` due, `🛫` start, `#epic/x`, `@owner`, `REQ-n` | ✅ |
+| Board with drag between columns (writes the marker back to the note), epic filter, estimate totals, quick-add card | ✅ |
+| **Requirements** `- REQ-n (must/should/could/wont) …` with MoSCoW counts and traceability: met / in progress / planned / no tasks | ✅ |
+| **Timeline**: Gantt generated from cards (by epic; done/active/critical colors) | ✅ |
+| **Diagrams**: requirements → tasks flowchart, epic mindmap, list of the project's Mermaid notes / canvases / whiteboards; "Save as doc" | ✅ |
+| **AI assistant** (Workers AI, reads docs + cards + requirements): plan from goal, weekly status, next actions, risks, decision summary, draft requirements; save as a doc | ✅ |
+| Dev simulator scenario "Software project hub" (an AI-feature project with every doc type and card state) | ✅ |
+
 ## 8c. Round 2 (Claude Design handoff, 100% pass)
 | Feature | Status |
 |---|---|

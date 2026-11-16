@@ -19,6 +19,11 @@ Single-owner study notebook + blog. Local-first (Dexie/IndexedDB) with sync to C
 - Passcodes/secrets: `SETUP.md` (git-ignored); public guide `docs/PASSCODES.md`. Unlock = `/api/unlock` with D1 attempt limits; API tokens (`lmn_…`, hashed in D1) accepted by `auth`.
 - Android: extra Capacitor plugins send-intent (share-to-Lumen, `ShareActivity`) and @capgo/capacitor-native-biometric (fingerprint lock via `src/lib/native-biometric.ts`). Build with `-Dorg.gradle.jvmargs=-Xmx1536m` on this PC.
 
+## Learning paths & project hub
+- Learning path = note type `path` (`src/lib/path.ts` parse/build/mutations, `src/views/PathView.tsx`). Body: front-matter `courses: [...]` (space names or roadmap note titles), `## Stage`, `- Concept = Alias | Alias`, sub-lines `resource:` `note:` `review: date interval` `done:`. Course roadmaps stay the source of truth for topic status.
+- Project hub = `src/views/ProjectHub.tsx` on Project spaces, logic in `src/lib/project.ts`, doc templates in `src/lib/project-templates.ts`. Docs are notes with front-matter `doc:` + `docstatus:`; cards are checkbox lines with markers `> / ? x -`; requirements are `- REQ-n (must) …` lines. Links live in `space.props.links` (JSON). No VCS integration by design.
+- When editing files from scripts, never let `\b` become a literal backspace (0x08): a regex silently broke that way once. Prefer the Edit tool for regex-heavy lines.
+
 ## Rules
 - All writes go through `save()/patch()` in `src/lib/db.ts` (sets `dirty`, `updatedAt`). Never write Dexie tables directly for synced kinds.
 - Never delete synced records: set `deleted: 1` (tombstones sync to other devices).

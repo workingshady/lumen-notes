@@ -4,13 +4,14 @@ import { NOTE_TYPES, STATUSES, type NoteType, type Status } from "../../shared/t
 import { firstH1, fmList, inlineTags, setFrontMatter, slugify, splitFrontMatter } from "./parse";
 import { TEMPLATES, type Template } from "./templates";
 
-export async function createNote(p: Partial<Note> & { template?: string } = {}) {
-  const { template, ...rest } = p;
+export async function createNote(p: Partial<Note> & { template?: string; fm?: Record<string, string> } = {}) {
+  const { template, fm, ...rest } = p;
   const t: Template | undefined = TEMPLATES.find((x) => x.id === (template ?? "blank"));
   const base = newNote({ type: t?.type ?? "note", status: t?.status ?? null, title: t?.title ?? "Untitled", body: t?.body ?? "", ...rest });
   // Markdown notes carry their title as `# H1` and type/status/tags in front-matter (design: ScreenWorkspace).
   const md = !["canvas", "whiteboard", "roadmap"].includes(base.type);
-  const n = md && rest.body === undefined ? { ...base, body: withMeta(`# ${base.title}\n\n${base.body}`, base) } : base;
+  const n0 = md && rest.body === undefined ? { ...base, body: withMeta(`# ${base.title}\n\n${base.body}`, base) } : base;
+  const n = fm ? { ...n0, body: setFrontMatter(n0.body, fm) } : n0;
   await save("note", n);
   return n;
 }
