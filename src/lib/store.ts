@@ -83,6 +83,21 @@ export interface Vault {
   tags: [string, number][];
 }
 
+/**
+ * Per-note derived data (flashcards, task counts, list previews…), cached by note id + updatedAt.
+ * With 10k+ notes, re-parsing every body on each save is what made typing lag; this re-parses only edited notes.
+ */
+const derivedCache = new Map<string, Map<string, { v: number; r: unknown }>>();
+export function noteDerived<T>(kind: string, n: Note, fn: (n: Note) => T): T {
+  let m = derivedCache.get(kind);
+  if (!m) derivedCache.set(kind, (m = new Map()));
+  const hit = m.get(n.id);
+  if (hit && hit.v === n.updatedAt) return hit.r as T;
+  const r = fn(n);
+  m.set(n.id, { v: n.updatedAt, r });
+  return r;
+}
+
 const linkCache = new Map<string, { v: number; links: string[] }>();
 function linksOf(n: Note): string[] {
   const hit = linkCache.get(n.id);

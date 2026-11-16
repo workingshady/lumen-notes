@@ -5,7 +5,7 @@ import type { Card, Note } from "../../shared/types";
 import { db, save } from "../lib/db";
 import { flashcards, type Flashcard } from "../lib/parse";
 import { newCard, previewIntervals, schedule, type Grade } from "../lib/srs";
-import { go, openNote, toast, useVault } from "../lib/store";
+import { go, noteDerived, openNote, toast, useVault } from "../lib/store";
 import { Preview } from "./Preview";
 import { cardLine, openNoteAtLine } from "./study-nav";
 import { cx, Empty } from "./ui";
@@ -22,7 +22,7 @@ export function useDueCards(notes: Note[], includeNew = true) {
     const out: Item[] = [];
     for (const n of notes) {
       if (n.type === "canvas") continue;
-      for (const fc of flashcards(n.body)) {
+      for (const fc of noteDerived("flashcards", n, (x) => flashcards(x.body))) {
         const id = `${n.id}:${fc.key}`;
         const card = map.get(id) ?? newCard(id, n.id);
         if (card.suspended) continue;

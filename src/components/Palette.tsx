@@ -1,8 +1,8 @@
 import { Route, ArrowLeft, CornerDownLeft, FileText, Hash, LayoutDashboard, Search, Sparkles, Waypoints, X, Zap } from "lucide-react";
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Note } from "../../shared/types";
 import { createNote, dailyNote } from "../lib/actions";
-import { matcher, normalize, parseQuery, search } from "../lib/search";
+import { around, matcher, normalize, parseQuery, search } from "../lib/search";
 import { activeTheme, getSettings, setSettings } from "../lib/settings";
 import { go, openNote, setUI, useUI, useVault, type Mode } from "../lib/store";
 import { syncNow } from "../lib/sync";
@@ -31,7 +31,7 @@ function hl(text: string, terms: string[], cls = "font-bold text-accent"): React
 /** Plain-text snippet around the first hit: no front-matter, no title line, no Markdown marks. */
 function snippet(n: Note, terms: string[], fallback: string) {
   if (n.type === "canvas" || n.type === "whiteboard") return fallback;
-  const plain = plainText(n.body);
+  const plain = plainText(around(n.body, terms));
   if (!plain) return fallback;
   const low = normalize(plain);
   const i = terms.length ? Math.min(...terms.map((t) => low.indexOf(normalize(t))).map((x) => (x < 0 ? Infinity : x))) : 0;
@@ -124,11 +124,15 @@ export function Palette() {
   const allScope = wide || query.folders.includes("all") || ui.spaceId === "all" || query.spaces.length > 0;
   query.folders = query.folders.filter((f) => f !== "all");
   const terms = (isCmd ? q.slice(1) : isTag ? q.slice(1) : query.text).trim().split(/\s+/).filter(Boolean);
+  // Results follow a deferred copy of the query: typing stays instant while the (big-vault) search catches up.
+  const dq = useDeferredValue(q);
   const hits = useMemo(() => {
-    if (isCmd || isTag) return [];
-    const m = matcher(query, v.folderMap, v.spaceMap);
-    return search(query, v.byId, (n) => m(n) && (allScope || n.spaceId === ui.spaceId), 30);
-  }, [q, v, allScope, ui.spaceId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (dq.startsWith(">") || (dq.startsWith("#") && !dq.includes(" "))) return [];
+    const dQuery = parseQuery(dq);
+    dQuery.folders = dQuery.folders.filter((f) => f !== "all");
+    const m = matcher(dQuery, v.folderMap, v.spaceMap);
+    return search(dQuery, v.byId, (n) => m(n) && (allScope || n.spaceId === ui.spaceId), 30);
+  }, [dq, v, allScope, ui.spaceId]);
 
   const [selKey, setSelKey] = useState<string | null>(null);
   const target: Note | undefined = (hits.find((h) => h.note.id === selKey) ?? hits[0])?.note;

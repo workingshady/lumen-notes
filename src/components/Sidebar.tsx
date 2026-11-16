@@ -5,7 +5,7 @@ import { createFolder, createNote, dailyNote, deleteFolder, moveFolder, moveNote
 import { patch } from "../lib/db";
 import { natural, progress, roadmap, tasks } from "../lib/parse";
 import { getSettings, useSettings } from "../lib/settings";
-import { go, openNote, setUI, toast, useUI, useVault, type UI, type View } from "../lib/store";
+import { go, noteDerived, openNote, setUI, toast, useUI, useVault, type UI, type View } from "../lib/store";
 import { RailSync, SidebarSync } from "./ws-sync";
 import { num, tr, useRtl } from "./ws-dir";
 import { PRESETS } from "../lib/canvas";
@@ -27,7 +27,7 @@ function activeKey(ui: UI): NavKey | null {
 function useNav(): NavItem[] {
   const v = useVault();
   const due = useDueCards(v.notes)?.length ?? 0;
-  const openTasks = useMemo(() => v.notes.filter((n) => n.type !== "roadmap").reduce((a, n) => a + tasks(n.body).filter((t) => !t.done).length, 0), [v.notes]);
+  const openTasks = useMemo(() => v.notes.filter((n) => n.type !== "roadmap").reduce((a, n) => a + noteDerived("openTasks", n, (x) => tasks(x.body).filter((t) => !t.done).length), 0), [v.notes]);
   const inbox = v.notes.filter((n) => n.spaceId === "inbox").length;
   return [
     { key: "home", icon: <House size={16} />, label: "Home" },

@@ -1,12 +1,12 @@
 import { NewVisualChooser } from "./NewVisualChooser";
 import { NewPathDialog } from "./NewPathDialog";
 import { ArrowDownWideNarrow, Globe, Link2, Pin, Plus, SquarePen, Star, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import type { Note } from "../../shared/types";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import type { Note, Space } from "../../shared/types";
 import { createNote } from "../lib/actions";
 import { importFiles } from "../lib/io";
 import { excerpt } from "../lib/parse";
-import { openNote, scoped, setUI, toast, useUI, useVault } from "../lib/store";
+import { noteDerived, openNote, scoped, setUI, toast, useUI, useVault } from "../lib/store";
 import { TEMPLATES } from "../lib/templates";
 import { dragNote } from "./Sidebar";
 import { Button, cx, Empty, Sheet, STATUS_COLOR } from "./ui";
@@ -38,7 +38,24 @@ export function listTime(t: number) {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(d.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}) });
 }
 
-const preview = (n: Note) => (n.type === "canvas" ? "Canvas board" : n.type === "whiteboard" ? "Whiteboard" : excerpt(listBody(n.body), 160) || "Empty");
+const preview = (n: Note) => (n.type === "canvas" ? "Canvas board" : n.type === "whiteboard" ? "Whiteboard" : noteDerived("listPreview", n, (x) => excerpt(listBody(x.body.slice(0, 8000)), 160)) || "Empty");
+
+/** Big folders/tags (thousands of notes): render the list in pages; the next page mounts when its sentinel scrolls into view. */
+const PAGE = 150;
+function usePaged<T>(items: T[], resetKey: unknown) {
+  const [count, setCount] = useState(PAGE);
+  const sentinel = useRef<HTMLDivElement>(null);
+  useEffect(() => setCount(PAGE), [resetKey]);
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || count >= items.length) return;
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) setCount((c) => c + PAGE); }, { rootMargin: "600px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [count, items.length]);
+  const more = count < items.length ? <div ref={sentinel} className="h-6 shrink-0" aria-hidden /> : null;
+  return { shown: items.length > count ? items.slice(0, count) : items, more };
+}
 
 export function NoteList() {
   const ui = useUI();
@@ -60,6 +77,7 @@ export function NoteList() {
   const space = v.spaceMap.get(ui.spaceId);
   const title = ui.filter === "visual" ? "Canvases & whiteboards" : ui.filter === "paths" ? "Learning paths" : ui.filter === "published" ? "Blog posts" : ui.tag ? `#${ui.tag}` : folder ? folder.name : ui.spaceId === "all" ? tr("All notes", rtl) : space?.name ?? tr("Notes", rtl);
   const spaceId = ui.spaceId === "all" ? "inbox" : ui.spaceId;
+  const { shown, more } = usePaged(notes, `${ui.spaceId}|${ui.folderId}|${ui.tag}|${ui.filter}|${sort}|${filter}`);
 
   const nextSort: Record<Sort, Sort> = { updated: "created", created: "title", title: "updated" };
   const cycleSort = () => { const s = nextSort[sort]; setSort(s); toast(`Sorted by ${s === "updated" ? "last edited" : s === "created" ? "date created" : "title"}`, undefined, { icon: "check" }); try { localStorage.setItem("lumen.sort", s); } catch { /* ignore */ } };
@@ -89,7 +107,7 @@ export function NoteList() {
         <PhoneListHeader />
         <PhoneChips filter={filter} setFilter={setFilter} onSort={cycleSort} sortLabel={sort} />
         <div className={cx("flex min-h-0 flex-1 flex-col overflow-y-auto", over && "bg-accent/5")}>
-          {notes.map((n) => (
+          {shown.map((n) => (
             <SwipeRow key={n.id} n={n}>
               <button onClick={() => openNote(n.id)} className="flex w-full flex-col gap-1.5 px-4 py-3.5 text-start active:bg-surface">
                 <div className="flex w-full items-center gap-2">
@@ -104,6 +122,7 @@ export function NoteList() {
               </button>
             </SwipeRow>
           ))}
+          {more}
           {empty}
         </div>
       </div>
@@ -123,7 +142,8 @@ export function NoteList() {
         <button title={ui.filter === "visual" ? "New canvas or whiteboard" : ui.filter === "paths" ? "New learning path" : "New note (right-click: from template)"} aria-label="New note" className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={() => (ui.filter === "visual" ? setChooser(true) : ui.filter === "paths" ? setPathDlg(true) : newNote())} onContextMenu={(e) => { e.preventDefault(); setTpl(true); }}><SquarePen size={15} /></button>
       </div>
       <div className={cx("flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-1.5", over && "bg-accent/5 ring-1 ring-inset ring-accent/40")}>
-        {notes.map((n) => <NoteRow key={n.id} n={n} active={n.id === ui.noteId} />)}
+        {shown.map((n) => <NoteRow key={n.id} n={n} active={n.id === ui.noteId} space={ui.spaceId === "all" ? v.spaceMap.get(n.spaceId) : undefined} />)}
+        {more}
         {empty}
       </div>
       <TemplatePicker open={tpl} onClose={() => setTpl(false)} spaceId={spaceId} folderId={ui.folderId} />
@@ -133,10 +153,8 @@ export function NoteList() {
   );
 }
 
-export function NoteRow({ n, active }: { n: Note; active?: boolean }) {
-  const v = useVault();
-  const space = v.spaceMap.get(n.spaceId);
-  const ui = useUI();
+/** One list row. Memoized on what it shows, so a save re-renders only the edited note's row. */
+export const NoteRow = memo(function NoteRow({ n, active, space }: { n: Note; active?: boolean; /** shown when listing all spaces */ space?: Space }) {
   return (
     <button
       draggable
@@ -155,13 +173,14 @@ export function NoteRow({ n, active }: { n: Note; active?: boolean }) {
       <div dir="auto" className="line-clamp-2 h-9 w-full text-[12.5px] leading-[18px] text-muted">{preview(n)}</div>
       <div className="flex w-full items-center gap-1">
         {n.tags.slice(0, 2).map((t) => <span key={t} className="rounded-[6px] bg-surface-2 px-1.5 text-[11px] leading-[18px] text-muted">#{t}</span>)}
-        {ui.spaceId === "all" && space && <span className="truncate text-[11px] text-muted">{space.icon} {space.name}</span>}
+        {space && <span className="truncate text-[11px] text-muted">{space.icon} {space.name}</span>}
         <span className="flex-1" />
         <span className="text-[11px] text-muted">{listTime(n.updatedAt)}</span>
       </div>
     </button>
   );
-}
+}, (a, b) => a.n.id === b.n.id && a.n.updatedAt === b.n.updatedAt && a.n.title === b.n.title && a.active === b.active
+  && a.space?.id === b.space?.id && a.space?.name === b.space?.name && a.space?.icon === b.space?.icon);
 
 export function TemplatePicker({ open, onClose, spaceId, folderId }: { open: boolean; onClose: () => void; spaceId: string; folderId: string | null }) {
   return (

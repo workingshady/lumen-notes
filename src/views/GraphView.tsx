@@ -20,6 +20,8 @@ const css = (v: string) => getComputedStyle(document.documentElement).getPropert
 /** Canvas can't paint `var(--x)`: resolve it first. */
 const paint = (c: string) => { const m = /^var\((--[\w-]+)\)$/.exec(c); return m ? css(m[1]) || "#888" : c; };
 const PANEL_KEY = "lumen.graphPanel";
+/** Above this many nodes the layout runs progressively with cheaper forces (no collide, approximate charge). */
+const BIG_GRAPH = 1500;
 const ls = { get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* ignore */ } } };
 const useWidth = () => { const [w, setW] = useState(() => innerWidth); useEffect(() => { const f = () => setW(innerWidth); addEventListener("resize", f); return () => removeEventListener("resize", f); }, []); return w; };
 
@@ -349,27 +351,54 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
     const ro = new ResizeObserver(resize);
     ro.observe(cv);
     const linkArr = links.map((l) => ({ ...l }));
+    // Big vaults (thousands of notes): fewer, cheaper layout steps, run a slice per frame instead of all up front.
+    const big = nodes.length > BIG_GRAPH;
+    const charge = forceManyBody<GNode>().strength((d) => (d.deg ? -170 : -50));
+    if (big) charge.theta(1.2).distanceMax(700);
     const sim = forceSimulation(nodes)
       .force("link", forceLink<GNode, GLink>(linkArr).id((d) => d.id).distance((l) => (l.tag ? 50 : 80)))
-      .force("charge", forceManyBody<GNode>().strength((d) => (d.deg ? -170 : -50)))
+      .force("charge", charge)
       .force("center", forceCenter(0, 0))
-      .force("x", forceX<GNode>(0).strength((d) => (d.deg ? 0.05 : 0.14))).force("y", forceY<GNode>(0).strength((d) => (d.deg ? 0.05 : 0.14)))
-      .force("collide", forceCollide<GNode>((d) => 8 + Math.min(d.deg, 12) * 1.1));
+      .force("x", forceX<GNode>(0).strength((d) => (d.deg ? 0.05 : 0.14))).force("y", forceY<GNode>(0).strength((d) => (d.deg ? 0.05 : 0.14)));
+    if (!big) sim.force("collide", forceCollide<GNode>((d) => 8 + Math.min(d.deg, 12) * 1.1));
     s.sim = sim;
+    let simTicks = 0; // ticks from d3's own timer (dragging restarts it)
+    sim.on("tick", () => { simTicks++; });
     // Re-fit once the layout has settled (first mount + when fitKey changes).
     const want = fitKey ?? "";
-    // Settle the layout up front (deterministic), then fit once per fitKey.
-    sim.stop(); sim.tick(320);
-    if (s.fitted !== want && nodes.length) { s.fitted = want; fit(); }
+    const total = big ? Math.max(60, Math.round((320 * BIG_GRAPH) / nodes.length)) : 320;
+    sim.stop();
+    let ticked = 0;
+    const fitOnce = () => { if (s.fitted !== want && nodes.length) { s.fitted = want; fit(); } };
+    // Small graphs settle up front (deterministic, fitted on first paint), as before.
+    if (!big) { sim.tick(total); ticked = total; fitOnce(); }
 
-    const neighbors = (n: GNode | null) => {
-      if (!n) return null;
-      const set = new Set([n.id]);
-      for (const l of linkArr) { const a = (l.source as GNode).id, b = (l.target as GNode).id; if (a === n.id) set.add(b); if (b === n.id) set.add(a); }
-      return set;
-    };
+    // Neighbour sets per node, built once (the draw loop used to scan every link on every frame).
+    const adj = new Map<string, Set<string>>();
+    for (const l of linkArr) {
+      const a = typeof l.source === "object" ? (l.source as GNode).id : String(l.source), b = typeof l.target === "object" ? (l.target as GNode).id : String(l.target);
+      (adj.get(a) ?? adj.set(a, new Set([a])).get(a)!).add(b);
+      (adj.get(b) ?? adj.set(b, new Set([b])).get(b)!).add(a);
+    }
+    const neighbors = (n: GNode | null) => (n ? adj.get(n.id) ?? new Set([n.id]) : null);
     let raf = 0;
+    let lastSig = "";
+    let shown = ticked, shownAt = 0; // layout progress last drawn (big graphs redraw ~3×/s while settling)
     const draw = () => {
+      raf = requestAnimationFrame(draw);
+      if (ticked < total) {
+        const first = ticked === 0;
+        const t0 = performance.now();
+        while (ticked < total && performance.now() - t0 < 24) { sim.tick(); ticked++; }
+        // Fit after the first slice (something sensible on screen) and again once the layout has settled.
+        if (first) fitOnce();
+        else if (ticked === total) { s.fitted = ""; fitOnce(); }
+        if (first || ticked === total || t0 - shownAt > 300) { shown = ticked; shownAt = t0; }
+      }
+      // Redraw only when something visible changed (view, hover, selection, layout, size, theme).
+      const sig = `${s.k}|${s.x}|${s.y}|${s.hover?.id ?? ""}|${s.selected ?? ""}|${shown}|${simTicks}|${cv.width}x${cv.height}|${css("--accent")}|${css("--bg")}`;
+      if (sig === lastSig) return;
+      lastSig = sig;
       const w = cv.width, h = cv.height;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, w, h);
@@ -382,14 +411,25 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
       const text = css("--text") || "#ddd";
       const bg = css("--bg") || "#000";
       const px = 1 / s.k;
-      // Edges: muted at 35%; around the lit node amber, others fade to 10%.
-      for (const l of linkArr) {
-        const a = l.source as GNode, b = l.target as GNode;
-        const on = !!lit && (a === lit || b === lit);
-        ctx.strokeStyle = on ? accent : edge;
-        ctx.lineWidth = (on ? 1.5 : 1) * px;
-        ctx.globalAlpha = lit ? (on ? 0.9 : 0.1) : l.tag ? 0.2 : 0.35;
-        ctx.beginPath(); ctx.moveTo(a.x!, a.y!); ctx.lineTo(b.x!, b.y!); ctx.stroke();
+      // Edges: muted at 35% (tag edges 20%); around the lit node amber, others fade to 10%.
+      // Batched into one path per style: one stroke() for thousands of edges instead of one each.
+      const batch = (pick: (l: GLink, on: boolean) => boolean, style: string, width: number, alpha: number) => {
+        ctx.strokeStyle = style; ctx.lineWidth = width * px; ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        for (const l of linkArr) {
+          const a = l.source as GNode, b = l.target as GNode;
+          if (pick(l, !!lit && (a === lit || b === lit))) { ctx.moveTo(a.x!, a.y!); ctx.lineTo(b.x!, b.y!); }
+        }
+        ctx.stroke();
+      };
+      if (lit) {
+        batch((_l, on) => !on, edge, 1, 0.1);
+        batch((_l, on) => on, accent, 1.5, 0.9);
+      } else {
+        // Thousands of overlapping edges at 35% turn into a solid sheet: fade them with graph size.
+        const fade = big ? Math.max(0.15, BIG_GRAPH / nodes.length) : 1;
+        batch((l) => !l.tag, edge, 1, 0.35 * fade);
+        batch((l) => !!l.tag, edge, 1, 0.2 * fade);
       }
       const zoomF = Math.max(0.75, Math.min(1, s.k * 1.1));
       for (const n of nodes) {
@@ -421,7 +461,6 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
         const p = selNode ? `${Math.round(s.x + selNode.x! * s.k)},${Math.round(s.y + selNode.y! * s.k)}` : "";
         if (p !== s.pos) { s.pos = p; const [x, y] = p.split(",").map(Number); posCb.current(p ? { x, y } : null); }
       }
-      raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(raf); sim.stop(); ro.disconnect(); };

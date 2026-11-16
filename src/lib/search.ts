@@ -102,6 +102,21 @@ function canvasText(json: string) {
   } catch { return ""; }
 }
 
+/**
+ * The part of a note worth building a snippet from: ~1 KB around the first raw hit of any term, else the start.
+ * Snippet helpers (plain-text conversion, normalization) are linear in their input, so this keeps search results cheap
+ * on huge notes. Arabic-normalized matches that the raw lowercase scan misses fall back to the start.
+ */
+export function around(body: string, terms: string[], before = 400, after = 900) {
+  if (body.length <= before + after) return body;
+  const low = body.toLowerCase();
+  let i = -1;
+  for (const t of terms) { const j = low.indexOf(t.toLowerCase()); if (j >= 0 && (i < 0 || j < i)) i = j; }
+  if (i < 0) return body.slice(0, before + after);
+  const head = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(body.slice(0, 4000))?.[0] ?? "";
+  return i - before <= head.length ? body.slice(0, i + after) : body.slice(i - before, i + after);
+}
+
 export interface Hit { note: Note; score: number; snippet: string }
 export function search(q: Query, notes: Map<string, Note>, filter: (n: Note) => boolean, limit = 50): Hit[] {
   if (!q.text.trim()) {
@@ -118,6 +133,7 @@ export function search(q: Query, notes: Map<string, Note>, filter: (n: Note) => 
 }
 
 function snippetFor(body: string, terms: string[]) {
+  body = around(body, terms);
   const low = normalize(body);
   const i = Math.max(0, ...terms.map((t) => low.indexOf(t)).filter((x) => x >= 0).slice(0, 1));
   return excerpt(body.slice(Math.max(0, i - 50)), 140);

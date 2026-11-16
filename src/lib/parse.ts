@@ -71,7 +71,8 @@ export const words = (md: string) => (md.match(/[\p{L}\p{N}]+/gu) ?? []).length;
 export const readingMinutes = (md: string) => Math.max(1, Math.round(words(md) / 220));
 
 export function excerpt(md: string, n = 160) {
-  return splitFrontMatter(md).body
+  // Only the start can reach the first n chars: clean a bounded prefix, not the whole (possibly huge) note.
+  return splitFrontMatter(md).body.slice(0, Math.max(4000, n * 25))
     .replace(/```[\s\S]*?```/g, " ").replace(/\$\$[\s\S]*?\$\$/g, " ").replace(/\$[^$\n]+\$/g, "…").replace(/!\[[^\]]*\]\([^)]*\)/g, "")
     .replace(/\[\[([^\]|]+)\|?([^\]]*)\]\]/g, (_, a, b) => b || a).replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/^>\s*\[![^\]]+\][-+]?/gm, "").replace(/[#>*_`~|-]/g, " ").replace(/\s+/g, " ").trim().slice(0, n);
