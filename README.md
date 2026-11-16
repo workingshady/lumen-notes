@@ -34,6 +34,7 @@ npm run db:migrate:remote
 ```
 
 ## Android (APK)
+**Download:** [latest Lumen.apk](https://github.com/workingshady/lumen-notes/releases/latest/download/Lumen.apk) (see [Releases](https://github.com/workingshady/lumen-notes/releases)). Build it yourself:
 ```bash
 npm run android:sync    # static build with VITE_API_BASE from .env.app → android/
 cd android && gradlew assembleDebug   # Capacitor 6: JDK 17 (JAVA_HOME) + Android SDK
