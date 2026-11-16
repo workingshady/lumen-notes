@@ -7,6 +7,21 @@ const TOKEN_KEY = "lumen.token";
 export const getToken = () => { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } };
 export const setToken = (t: string | null) => { try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch { /* private mode */ } };
 
+/**
+ * Which server account this device is signed in to ("main" or an extra one, see worker/accounts.ts).
+ * Each account has its own local database (db.ts), so switching accounts reloads the app.
+ */
+const ACCOUNT_KEY = "lumen.account";
+export const getAccount = () => { try { return localStorage.getItem(ACCOUNT_KEY) || "main"; } catch { return "main"; } };
+/** Store the token + account from a sign-in; returns true when the page must reload into another account's data. */
+export function signedIn(token: string, account = "main") {
+  const switched = account !== getAccount();
+  setToken(token);
+  try { account === "main" ? localStorage.removeItem(ACCOUNT_KEY) : localStorage.setItem(ACCOUNT_KEY, account); } catch { /* private mode */ }
+  if (switched) setTimeout(() => location.reload(), 300);
+  return switched;
+}
+
 export class ApiError extends Error { constructor(msg: string, public status: number) { super(msg); } }
 
 export async function api<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
@@ -31,8 +46,8 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
 }
 
 export async function login(passcode: string) {
-  const { token } = await api<{ token: string }>("/login", { method: "POST", json: { passcode } });
-  setToken(token);
+  const { token, account } = await api<{ token: string; account?: string }>("/login", { method: "POST", json: { passcode } });
+  signedIn(token, account);
 }
 
 export const aiRun = (action: string, text: string) => api<{ text: string }>("/ai", { method: "POST", json: { action, text } }).then((r) => r.text);

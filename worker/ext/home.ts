@@ -35,7 +35,7 @@ export default function register(api: Hono<Env>, h: Helpers) {
     const ok = !!passcode && h.safeEqual(await h.hmac("cmp", passcode), await h.hmac("cmp", c.env.APP_PASSCODE));
     if (ok) {
       await db.prepare("DELETE FROM unlock_attempts WHERE client = ?1").bind(client).run();
-      return c.json({ token: await h.hmac(c.env.APP_PASSCODE, "lumen:owner:v1") });
+      return c.json({ token: await h.hmac(c.env.APP_PASSCODE, "lumen:owner:v1"), account: c.env.ACCOUNT ?? "main" });
     }
 
     let fails = (row?.fails ?? 0) + 1;

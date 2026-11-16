@@ -22,7 +22,9 @@ export class LumenDB extends Dexie {
   blobs!: Table<AttachmentBlob, string>;
   meta!: Table<Meta, string>;
   constructor() {
-    super(DEMO ? "lumen-demo" : "lumen");
+    // One local database per server account (main = "lumen"), so two accounts never mix on a device.
+    const account = (() => { try { return localStorage.getItem("lumen.account") || "main"; } catch { return "main"; } })();
+    super(DEMO ? "lumen-demo" : account === "main" ? "lumen" : `lumen-${account}`);
     this.version(1).stores({
       spaces: "id, kind, sort, dirty, deleted",
       notes: "id, spaceId, folderId, type, status, updatedAt, createdAt, pinned, published, slug, dirty, deleted, *tags",

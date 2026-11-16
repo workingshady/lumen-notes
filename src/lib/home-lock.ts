@@ -4,7 +4,7 @@
 // The device lock is local by design: the WebAuthn credential and its public key live in this browser's
 // localStorage, the assertion is verified here (signature + user-verification flag + challenge), and nothing
 // is sent to the server. It keeps a casual person out of an unlocked device; it is not server auth.
-import { API_BASE, getToken, setToken } from "./api";
+import { API_BASE, getToken, signedIn } from "./api";
 import { Capacitor } from "@capacitor/core";
 import { isNativeBiometricAvailable, nativeBiometricVerify } from "./native-biometric";
 
@@ -33,8 +33,8 @@ export async function unlockWithServer(passcode: string): Promise<UnlockResult> 
   } catch {
     return { ok: false, error: "Can't reach the server · check your connection" };
   }
-  const data = (await res.json().catch(() => ({}))) as { token?: string; error?: string; attemptsLeft?: number; retryAfterSec?: number };
-  if (res.ok && data.token) { setToken(data.token); markSessionUnlocked(); return { ok: true }; }
+  const data = (await res.json().catch(() => ({}))) as { token?: string; account?: string; error?: string; attemptsLeft?: number; retryAfterSec?: number };
+  if (res.ok && data.token) { signedIn(data.token, data.account); markSessionUnlocked(); return { ok: true }; }
   return { ok: false, error: data.error ?? `HTTP ${res.status}`, attemptsLeft: data.attemptsLeft, retryAfterSec: data.retryAfterSec };
 }
 

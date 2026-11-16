@@ -8,6 +8,7 @@ import extNavigate from "./ext/navigate";
 import extStudy from "./ext/study";
 import extSettings from "./ext/settings";
 import extWorkspace from "./ext/workspace";
+import { accountRouter } from "./accounts";
 
 export type Env = {
   Bindings: {
@@ -18,6 +19,11 @@ export type Env = {
     /** Owner passphrase (wrangler secret). */
     APP_PASSCODE: string;
     BLOG_NAME?: string;
+    /** Second account (worker/accounts.ts): its own D1 + passcode. */
+    DB_ROADMAP?: D1Database;
+    ROADMAP_PASSCODE?: string;
+    /** Set by accountRouter when the request belongs to an extra account. */
+    ACCOUNT?: string;
   };
 };
 
@@ -43,6 +49,9 @@ function safeEqual(a: string, b: string) {
 /** Token = HMAC(passcode). Changing the passcode secret signs every device out. */
 const ownerToken = (env: Env["Bindings"]) => hmac(env.APP_PASSCODE, "lumen:owner:v1");
 
+// Pick the account (main or an extra one) before any route runs.
+api.use("*", accountRouter({ hmac, safeEqual }));
+
 const failures = new Map<string, { n: number; until: number }>(); // per-isolate brute-force brake
 api.post("/login", async (c) => {
   const ip = c.req.header("cf-connecting-ip") ?? "?";
@@ -56,7 +65,7 @@ api.post("/login", async (c) => {
     return c.json({ error: "Wrong passcode." }, 401);
   }
   failures.delete(ip);
-  return c.json({ token: await ownerToken(c.env) });
+  return c.json({ token: await ownerToken(c.env), account: c.env.ACCOUNT ?? "main" });
 });
 
 /** Owner token (from /login) or a named API token (`lmn_…`, Settings › Developer; only its SHA-256 is stored). */
