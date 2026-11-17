@@ -46,6 +46,8 @@ export async function updateNote(id: string, changes: Partial<Note>, opts: { kee
   await save("note", next);
   if (opts.keepTime) await db.notes.update(id, { updatedAt: old.updatedAt });
   maybeSnapshot(next);
+  // Diagrams auto-save (only when on in Settings › Diagrams; loaded lazily to keep actions free of that module).
+  if (changes.body !== undefined && isMarkdown(next.type) && /```\s*mermaid/i.test(next.body)) void import("./diagram-autosave").then((m) => m.scheduleDiagramAutoSave(id));
 }
 
 export const trashNote = (id: string) => patch("note", id, { deleted: 1 });

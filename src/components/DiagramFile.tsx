@@ -1,6 +1,8 @@
-import { FileText, LayoutDashboard, Undo2 } from "lucide-react";
+import { Download, FileText, LayoutDashboard, Loader2, Sparkles, Undo2 } from "lucide-react";
+import { useState } from "react";
+import { openDiagramExport } from "../lib/diagram-export";
 import type { Note } from "../../shared/types";
-import { canvasesWith, diagramFocus, diagramHash, diagramKind, fenced, mermaidBlocks, metaOf, placeOnCanvas } from "../lib/diagrams";
+import { canvasesWith, diagramFocus, diagramHash, diagramKind, fenced, mermaidBlocks, metaOf, placeOnCanvas, renameDiagramWithAI } from "../lib/diagrams";
 import { openNote, toast, useVault } from "../lib/store";
 import { Editor } from "./Editor";
 import { Preview } from "./Preview";
@@ -41,6 +43,11 @@ function DiagramPreview({ note }: { note: Note }) {
     openNote(r.canvasId);
   };
   const chip = "inline-flex items-center gap-1 rounded-[6px] border border-line px-1.5 py-0.5 hover:bg-surface-2 hover:text-ink";
+  const [naming, setNaming] = useState(false);
+  const suggest = async () => {
+    setNaming(true);
+    try { const t = await renameDiagramWithAI(note, v.notes); toast(t ? `Renamed to ${t}` : "No name suggestion (AI off or over today's limit)"); } finally { setNaming(false); }
+  };
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px] text-muted">
@@ -48,6 +55,9 @@ function DiagramPreview({ note }: { note: Note }) {
         <span className="rounded-[6px] bg-surface-2 px-1.5 font-mono text-[11.5px]">{diagramKind(note.body)}</span>
         <span>updated {relTime(note.updatedAt)}</span>
         {meta?.savedAt && <span>· saved {relTime(Date.parse(meta.savedAt))}</span>}
+        <span className="flex-1" />
+        <button className={chip} onClick={() => void suggest()} disabled={naming} title="Ask the AI for a short descriptive file name">{naming ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}Suggest name</button>
+        <button className={chip} onClick={() => openDiagramExport(note.body, note.title)} title="Export: SVG, PNG, JPEG, WebP"><Download size={12} />Export</button>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
         {meta ? (

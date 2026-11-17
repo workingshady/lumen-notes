@@ -6,7 +6,7 @@ import { wikiLinks } from "./parse";
 import { scheduleIndex } from "./search";
 
 export type View = "home" | "notes" | "tasks" | "kanban" | "calendar" | "review" | "graph" | "table" | "space" | "settings" | "trash";
-export type Mode = "edit" | "split" | "read" | "focus" | "slides" | "review";
+export type Mode = "edit" | "split" | "read" | "focus" | "slides" | "review" | "diagrams";
 export type Panel = null | "outline" | "backlinks" | "properties" | "versions" | "ai";
 
 export interface UI {
@@ -133,6 +133,9 @@ function startVault() {
   watch(() => db.spaces.toArray(), (v) => { rawSpaces = v; });
 }
 const subscribeVault = (f: () => void) => { vaultSubs.add(f); return () => { vaultSubs.delete(f); }; };
+
+/** Current vault snapshot outside React (same object useVault returns). */
+export const getVault = (): Vault => { startVault(); return vaultSnap; };
 
 export function useVault(): Vault {
   startVault();

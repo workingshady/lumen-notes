@@ -326,6 +326,7 @@ const PROMPTS: Record<string, string> = {
   project_decisions: "Summarize the decisions found in the docs (ADRs, RFCs, meeting notes) as a Markdown table: Decision | Date | Why | Status (active/superseded) | Source doc. Then list decisions that seem pending.",
   project_reqs: "Draft requirements from the PRD/docs as Markdown lines exactly `- REQ-N (must|should|could|wont) The system shall …`, numbered after the highest existing REQ id. Group under `## Functional` and `## Non-functional`. No other text.",
   path: "You organize a multi-course learning path. Group the concepts into 3-6 stages from foundations to advanced, respecting prerequisites. Merge concepts that are the same idea under different names by writing `- Main name = Other name | Another`. Output ONLY Markdown: `## Stage N · Short title` headings, then `- Concept` lines. Use the given concept names exactly. No other text.",
+  diagram_name: "You name Mermaid diagram files. From the diagram source (and the section heading, if given) write ONE short descriptive file name: 2-5 lowercase words joined by hyphens, specific to what the diagram shows (e.g. order-checkout-sequence, feed-refresh-pipeline). No extension, no quotes, no other text.",
   roadmap: "Create a learning roadmap for the topic below as Markdown: `## Module` headings, and under each 3-8 topics as `- [ ] Topic` lines. Add `(needs: Other Topic)` only where a real prerequisite exists. No other text.",
 };
 api.post("/ai", auth, async (c) => {

@@ -12,6 +12,7 @@ import { createFolder, createNote, updateNote } from "./actions";
 import { getSettings } from "./settings";
 import { parseCanvas, stringify } from "./canvas";
 import { hash } from "./parse";
+import { aiRun } from "./api";
 
 export interface DiagramBlock { line: number; src: string; heading: string; kind: string }
 
@@ -131,10 +132,42 @@ export async function saveDiagramFile(src: Note, b: DiagramBlock, notes: Note[],
     return { file: { ...found.file, body: b.src.trim() + "\n" }, created: false };
   }
   const taken = new Set(notes.filter((n) => !n.deleted).map((n) => n.title.toLowerCase()));
-  const title = opts.name ? diagramName(src.title, { heading: opts.name.replace(/\.mermaid$/i, ""), kind: b.kind }, taken) : diagramName(src.title, b, taken);
+  const ai = !opts.name && getSettings().diagramAiNames ? await aiDiagramName(b.src, b.heading) : null;
+  const wanted = opts.name ?? ai;
+  const title = wanted ? diagramName(src.title, { heading: wanted.replace(/\.mermaid$/i, ""), kind: b.kind }, taken) : diagramName(src.title, b, taken);
   const folderId = await diagramFolderFor(src.spaceId, src.folderId, opts.mode ?? getSettings().diagramFolder ?? "sub", opts.folders ?? []);
   const file = await createNote({ type: "diagram", title, body: b.src.trim() + "\n", spaceId: src.spaceId, folderId, tags: ["diagram"], props: metaProps(src, b) });
   return { file, created: true };
+}
+
+/**
+ * A short file name for a diagram from Workers AI (2-5 kebab-case words), or null when AI is off, over its daily
+ * limit or returns nothing usable. Never throws: saving must not depend on the AI.
+ */
+export async function aiDiagramName(src: string, heading = ""): Promise<string | null> {
+  try {
+    const raw = await aiRun("diagram_name", `${heading ? `Section: ${heading}\n` : ""}${src.slice(0, 4000)}`);
+    const name = slug(raw.split("\n")[0].replace(/\.mermaid$/i, "").replace(/["'`]/g, "")).split("-").slice(0, 6).join("-");
+    return name.length >= 3 ? name : null;
+  } catch { return null; }
+}
+
+/** Rename a diagram file to an AI-suggested name (keeps it unique) and update canvases that show it. */
+export async function renameDiagramWithAI(file: Note, notes: Note[]): Promise<string | null> {
+  const meta = metaOf(file);
+  const name = await aiDiagramName(file.body, meta?.heading ?? "");
+  if (!name) return null;
+  const taken = new Set(notes.filter((n) => !n.deleted && n.id !== file.id).map((n) => n.title.toLowerCase()));
+  const title = diagramName("", { heading: name, kind: diagramKind(file.body) }, taken);
+  if (title === file.title) return title;
+  // Canvases reference the file by title: rewrite their file nodes first.
+  for (const w of canvasesWith(notes, file)) {
+    const { canvas } = parseCanvas(w.canvas.body);
+    for (const n of canvas.nodes ?? []) if (n.type === "file" && n.file === file.title) n.file = title;
+    await updateNote(w.canvas.id, { body: stringify(canvas) });
+  }
+  await updateNote(file.id, { title });
+  return title;
 }
 
 /** A new, standalone `.mermaid` file (canvas "Diagram" tool, command palette). */

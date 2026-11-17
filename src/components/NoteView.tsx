@@ -1,5 +1,5 @@
-import { Share2, Link2, ChevronRight, Layers, ArrowLeft, BookOpen, Columns2, Copy, Download, FileCode2, Globe, ImagePlus, Info, ListTree, Map as MapIcon, Maximize2, Mic, MoreHorizontal, EllipsisVertical, Network, PanelRight, PanelLeft, PenLine, Pin, Presentation, Printer, Star, Trash2 } from "lucide-react";
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { Waypoints, Share2, Link2, ChevronRight, Layers, ArrowLeft, BookOpen, Columns2, Copy, Download, FileCode2, Globe, ImagePlus, Info, ListTree, Map as MapIcon, Maximize2, Mic, MoreHorizontal, EllipsisVertical, Network, PanelRight, PanelLeft, PenLine, Pin, Presentation, Printer, Star, Trash2 } from "lucide-react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { canvasToSkeleton } from "../lib/whiteboard";
 import { parseCanvas } from "../lib/canvas";
 import type { Note } from "../../shared/types";
@@ -21,6 +21,7 @@ import { HeaderSync, PhoneSyncLine, useSaving, useSyncLook } from "./ws-sync";
 import { DirMenu, UiDirRow } from "./ws-bidi";
 import { ReadMenu, ReadRows } from "./ws-read";
 import { DiagramFile } from "./DiagramFile";
+import { DiagramsTab } from "./DiagramsTab";
 import { tr, useRtl } from "./ws-dir";
 
 const Whiteboard = lazy(() => import("./Whiteboard"));
@@ -49,6 +50,7 @@ export function NoteView({ note }: { note: Note }) {
   const isPath = note.type === "path";
   const isRoadmap = note.type === "roadmap" || isPath;
   const isDiagram = note.type === "diagram";
+  const diagramCount = useMemo(() => (note.type === "canvas" || note.type === "whiteboard" || note.type === "diagram" ? 0 : (note.body.match(/^\s*(`{3,}|~{3,})\s*mermaid/gim) ?? []).length), [note.body, note.type]);
   // A .mermaid file has three views (Source / Split / Preview); other modes show the preview.
   const mode: Mode = isDiagram && !["edit", "split", "read"].includes(ui.mode) ? "read" : ui.mode;
 
@@ -92,6 +94,8 @@ export function NoteView({ note }: { note: Note }) {
     { value: "focus" as Mode, icon: <Maximize2 size={13} />, l: "Focus", title: "Focus (Esc to leave)" },
     { value: "slides" as Mode, icon: <Presentation size={13} />, l: "Slides", title: "Present as slides" },
     { value: "review" as Mode, icon: <Layers size={13} />, l: "Review", title: "Review flashcards" },
+    // Diagrams tab: only when the note has Mermaid diagrams (count in the label).
+    ...(diagramCount ? [{ value: "diagrams" as Mode, icon: <Waypoints size={13} />, l: "Diagrams", badge: diagramCount, title: `${diagramCount} diagram${diagramCount === 1 ? "" : "s"} in this note: zoom, export, canvas` }] : []),
   ];
   const effMode: Mode = mode === "split" && !wide ? "read" : mode;
   const words = isCanvas ? 0 : (note.body.match(/[\p{L}\p{N}]+/gu) ?? []).length;
@@ -116,6 +120,7 @@ export function NoteView({ note }: { note: Note }) {
             <button className={item} onClick={() => setUI({ mode: "focus" })}><Maximize2 size={15} /> Focus</button>
             <button className={item} onClick={() => setUI({ mode: "slides" })}><Presentation size={15} /> Present as slides</button>
             <button className={item} onClick={() => setUI({ mode: "review" })}><Layers size={15} /> Review flashcards</button>
+            {diagramCount > 0 && <button className={item} onClick={() => setUI({ mode: "diagrams" })}><Waypoints size={15} /> Diagrams ({diagramCount})</button>}
             <button className={item} onClick={() => setUI({ panel: "outline" })}><PanelRight size={15} /> Outline, links, history</button>
             <button className={item} onClick={() => setPublish(true)}><Share2 size={15} /> Share / publish…</button>
             <div className="my-1 h-px bg-line" />
@@ -162,7 +167,7 @@ export function NoteView({ note }: { note: Note }) {
   const switcher = (list: typeof modes) => (
     <div className="flex gap-0.5 rounded-[10px] border border-line bg-surface p-[3px]">
       {list.map((m) => (
-        <button key={m.value} title={m.title} onClick={() => setUI({ mode: m.value })} className={"flex h-[26px] items-center gap-1.5 rounded-[7px] px-2.5 text-[12.5px] " + (mode === m.value ? "bg-surface-2 font-semibold text-ink" : "font-[450] text-muted hover:text-ink")}>{m.icon}{tr(m.l, rtl)}</button>
+        <button key={m.value} title={m.title} onClick={() => setUI({ mode: m.value })} className={"flex h-[26px] items-center gap-1.5 whitespace-nowrap rounded-[7px] px-2.5 text-[12.5px] " + (mode === m.value ? "bg-surface-2 font-semibold text-ink" : "font-[450] text-muted hover:text-ink")}>{m.icon}{tr(m.l, rtl)}{"badge" in m && m.badge ? <span className="rounded-full bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] px-1.5 text-[10.5px] font-semibold leading-4 text-accent">{m.badge}</span> : null}</button>
       ))}
     </div>
   );
@@ -259,6 +264,8 @@ export function NoteView({ note }: { note: Note }) {
             <DiagramFile note={note} mode={effMode as "edit" | "split" | "read"} wide={wide} />
           ) : effMode === "edit" ? (
             <Editor key={note.id} note={note} live={!wide} />
+          ) : effMode === "diagrams" ? (
+            diagramCount ? <DiagramsTab note={note} wide={wide} /> : <div className="flex h-full items-center justify-center text-muted">No diagrams in this note.</div>
           ) : effMode === "review" ? (
             <ReviewSession key={note.id} notes={[note]} title={note.title} />
           ) : effMode === "split" ? (

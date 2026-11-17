@@ -4,6 +4,7 @@ import { AppLockSetting } from "./Welcome";
 import {
   ArrowLeft, Check, ChevronRight, CircleCheck, Clock, Code, Copy, Database, Eye, File, FileAudio, FileText, FileVideo, Globe, GraduationCap, HardDrive, Image, Info,
   Layers, LayoutDashboard, Link2, Link2Off, Loader2, LogOut, Palette, PenTool, Pencil, Presentation, RefreshCw, Rss, Share, Sparkles, Trash2, type LucideIcon,
+  Waypoints,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Note, Space } from "../../shared/types";
@@ -21,12 +22,14 @@ import { Button, cx, inputCls, relTime } from "../components/ui";
 import { setAdvanced, useAdvanced, type Advanced } from "./settings-advanced";
 import { DeveloperSection } from "./settings-developer";
 import { AISection, BlogSection } from "./settings-blog-ai";
+import { DiagramsSection } from "./settings-diagrams";
 
-type SecId = "appearance" | "branding" | "sync" | "sharing" | "blog" | "storage" | "ai" | "developer" | "about";
+type SecId = "appearance" | "branding" | "diagrams" | "sync" | "sharing" | "blog" | "storage" | "ai" | "developer" | "about";
 // Round-3 settings nav (Lumen 09 / 11): Appearance · Branding · Sync · Sharing · Blog · Storage · AI · Developer · About.
 const SECTIONS: { id: SecId; label: string; icon: LucideIcon }[] = [
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "branding", label: "Branding", icon: PenTool },
+  { id: "diagrams", label: "Diagrams", icon: Waypoints },
   { id: "sync", label: "Sync", icon: RefreshCw },
   { id: "sharing", label: "Sharing", icon: Share },
   { id: "blog", label: "Blog", icon: Rss },
@@ -163,6 +166,7 @@ export function SettingsView() {
         <div className={cx("pb-10 md:px-10 md:py-7", sec === "appearance" ? "max-md:px-0" : "px-4")}>
           {sec === "appearance" && <Appearance />}
           {sec === "branding" && <Branding />}
+          {sec === "diagrams" && <DiagramsSection />}
           {sec === "sync" && <><SyncSection /><div className="mt-6"><AppLockSetting /></div></>}
           {sec === "sharing" && <SharingSection />}
           {sec === "blog" && <BlogSection />}
@@ -358,10 +362,6 @@ function AdvancedPanel({ adv, widthSeg, densitySeg }: { adv: Advanced; widthSeg:
         <Row title="Spellcheck" hint="Underline misspellings while you write." on={s.spellcheck} onChange={(v) => setSettings({ spellcheck: v })} />
         <Row title="Johnny-Decimal sorting" hint="Sort folders by their number prefix (10-19 Area / 11 Category / 11.01)" on={s.johnnyDecimal} onChange={(v) => setSettings({ johnnyDecimal: v })} />
       </div>
-      <Group label="Diagram files (.mermaid) saved from notes go to">
-        <Seg value={s.diagramFolder ?? "sub"} onChange={(v) => setSettings({ diagramFolder: v as "sub" | "space" | "same" })}
-          options={[{ value: "sub", label: "diagrams/ next to the note" }, { value: "space", label: "One Diagrams folder" }, { value: "same", label: "The note's folder" }]} />
-      </Group>
       <Group label="Custom CSS snippet" right={css && <button onClick={() => setCss("")} className="text-[12px] text-link">Clear</button>}>
         <textarea value={css} onChange={(e) => setCss(e.target.value)} spellCheck={false} rows={5} placeholder={".prose h2 { letter-spacing: -.01em; }"}
           className="resize-y rounded-[10px] border border-line bg-surface p-3 font-mono text-[12.5px] leading-5 focus:border-accent focus:outline-none" />
