@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import type { Note } from "../../shared/types";
 import { findOrCreateByTitle, updateNote } from "../lib/actions";
 import { parseCanvas, previewSvg } from "../lib/canvas";
-import { canvasesWith, diagramFiles, diagramFocus, diagramHash, fileFor, mermaidBlocks, saveDiagramFile, saveDiagramToCanvas, type DiagramBlock } from "../lib/diagrams";
+import { canvasesWith, diagramFiles, diagramName, diagramFocus, diagramHash, fileFor, mermaidBlocks, saveDiagramFile, saveDiagramToCanvas, type DiagramBlock } from "../lib/diagrams";
 import { handleCopyClick, hydrate, render } from "../lib/markdown";
 import { relTime } from "./ui";
 import { icon } from "./ws-icons";
@@ -71,7 +71,9 @@ export function Preview({ note, className, onLine }: { note: Pick<Note, "id" | "
   useEffect(() => {
     const el = ref.current;
     const src = vault.byId.get(note.id);
-    if (!el || !src || src.type === "canvas" || src.type === "diagram" || src.deleted) return;
+    if (!el || !src || src.type === "canvas" || src.deleted) return;
+    // Export file names: a .mermaid file exports under its own name.
+    if (src.type === "diagram") { el.querySelectorAll<HTMLElement>(".mermaid-card").forEach((c) => { c.dataset.name = src.title; }); return; }
     const blocks = new Map(mermaidBlocks(note.body).map((b) => [b.line, b]));
     const index = diagramFiles(vault.notes);
     const current = () => { const cur = vault.byId.get(note.id); return cur ? { ...cur, body: note.body } : null; };
@@ -100,6 +102,7 @@ export function Preview({ note, className, onLine }: { note: Pick<Note, "id" | "
       card.querySelectorAll(".mm-canvas, .mm-file, .mm-foot").forEach((x) => x.remove());
       if (!b) return;
       const found = fileFor(index, note.id, b);
+      card.dataset.name = found?.file.title ?? diagramName(vault.byId.get(note.id)?.title ?? "diagram", b);
       const where = found ? canvasesWith(vault.notes, found.file) : [];
       const src = card.querySelector(".mm-src");
       src?.before(btn("mm-file", found ? `Open ${found.file.title}` : "Save as a .mermaid file", "file-text", () => void toFile(b, !!found && !found.stale)));

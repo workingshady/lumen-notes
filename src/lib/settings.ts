@@ -15,6 +15,24 @@ export const THEMES: Theme[] = [
   T("contrast", "High contrast", true, "#000000", "#0A0A0A", "#161616", "#6A6A6A", "#FFFFFF", "#D6D6D6", "#FFD400", "#000000", "#66CCFF"),
 ];
 
+/** Diagram export preferences (Settings › Diagrams and the Export dialog remember the last choice). */
+export interface DiagramExportPrefs {
+  format: "svg" | "png" | "jpeg" | "webp";
+  /** Raster scale (× the diagram's natural size); 1–8. SVG is vector and ignores it. */
+  scale: number;
+  /** JPEG/WebP quality 0.5–1. */
+  quality: number;
+  background: "transparent" | "theme" | "custom";
+  color: string;
+  theme: "app" | "default" | "dark" | "neutral" | "forest";
+  padding: number;
+  /** Labels as SVG <text> (sharp, editable in Figma/Illustrator) instead of HTML. */
+  svgText: boolean;
+  /** Embed the used Inter glyphs so text looks the same outside Lumen. */
+  embedFont: boolean;
+}
+export const DIAGRAM_EXPORT_DEFAULTS: DiagramExportPrefs = { format: "png", scale: 3, quality: 0.92, background: "theme", color: "#ffffff", theme: "app", padding: 24, svgText: true, embedFont: true };
+
 export interface Settings {
   theme: ThemeId | "auto";
   /** OKLCH hue override for the accent; null = theme default. */
@@ -32,10 +50,15 @@ export interface Settings {
   dailyTemplate: string;
   /** Where diagrams saved from a note go: a `diagrams` subfolder next to the note, one `Diagrams` folder per space, or the note's own folder. */
   diagramFolder: "sub" | "space" | "same";
+  /** Save every new Mermaid block of a note to its diagram canvas automatically. */
+  diagramAutoSave: boolean;
+  /** Ask the AI for a short file name when a diagram is saved (otherwise the nearest heading). */
+  diagramAiNames: boolean;
+  diagramExport: DiagramExportPrefs;
 }
 const DEFAULTS: Settings = {
   theme: "auto", accentHue: null, readingFont: "serif", fontSize: 16, measure: 68, density: "comfortable",
-  blogName: "Lumen", tagline: "Notes from what I'm learning", author: "", avatar: "🕯️", johnnyDecimal: false, spellcheck: true, dailyTemplate: "journal", diagramFolder: "sub",
+  blogName: "Lumen", tagline: "Notes from what I'm learning", author: "", avatar: "🕯️", johnnyDecimal: false, spellcheck: true, dailyTemplate: "journal", diagramFolder: "sub", diagramAutoSave: false, diagramAiNames: false, diagramExport: DIAGRAM_EXPORT_DEFAULTS,
 };
 
 const KEY = "lumen.settings";

@@ -53,7 +53,7 @@ function build() {
     const t = tokens[idx];
     const lang = t.info.trim().split(/\s+/)[0];
     const line = t.map ? ` data-line="${t.map[0]}"` : "";
-    if (lang === "mermaid") return `<div class="mermaid-card"${line} tabindex="-1"><div class="mm-head"><span>mermaid · ${esc(MERMAID_KIND(t.content))}</span><span class="mm-tools"><button type="button" class="mm-zout" title="Zoom out (−)" aria-label="Zoom out">${icon("minus", 13)}</button><button type="button" class="mm-zlabel" title="Fit (0) · double-click the diagram to switch between fit and 100%">Fit</button><button type="button" class="mm-zin" title="Zoom in (+)" aria-label="Zoom in">${icon("plus", 13)}</button><button type="button" class="mm-z100" title="Actual size (100%)">1:1</button><span class="mm-sep"></span><button type="button" class="mm-src" title="Show source">${icon("code", 14)}</button><button type="button" class="mm-full" title="Full screen">${icon("maximize-2", 13)}</button></span></div><div class="mermaid-block" data-src="${enc(t.content)}"><div class="muted">Rendering diagram…</div></div><pre class="mm-code" hidden><code>${esc(t.content)}</code></pre></div>`;
+    if (lang === "mermaid") return `<div class="mermaid-card"${line} tabindex="-1"><div class="mm-head"><span>mermaid · ${esc(MERMAID_KIND(t.content))}</span><span class="mm-tools"><button type="button" class="mm-zout" title="Zoom out (−)" aria-label="Zoom out">${icon("minus", 13)}</button><button type="button" class="mm-zlabel" title="Fit (0) · double-click the diagram to switch between fit and 100%">Fit</button><button type="button" class="mm-zin" title="Zoom in (+)" aria-label="Zoom in">${icon("plus", 13)}</button><button type="button" class="mm-z100" title="Actual size (100%)">1:1</button><span class="mm-sep"></span><button type="button" class="mm-export" title="Export: SVG, PNG, JPEG, WebP · copy image">${icon("download", 13)}</button><button type="button" class="mm-src" title="Show source">${icon("code", 14)}</button><button type="button" class="mm-full" title="Full screen">${icon("maximize-2", 13)}</button></span></div><div class="mermaid-block" data-src="${enc(t.content)}"><div class="muted">Rendering diagram…</div></div><pre class="mm-code" hidden><code>${esc(t.content)}</code></pre></div>`;
     if (lang === "canvas") return `<div class="canvas-embed"${line} data-canvas="${enc(t.content)}"></div>`;
     if (lang === "query") return `<div class="query-block"${line} data-q="${enc(t.content.trim())}"></div>`;
     return fence(tokens, idx, opts, env, self).replace("<pre", `<pre${line}`);
@@ -403,6 +403,39 @@ function diagramViewer(card: HTMLElement, stage: HTMLElement) {
   fit();
 }
 
+export type ExportTheme = "app" | "default" | "dark" | "neutral" | "forest";
+/**
+ * Render Mermaid source for export (diagram-export.ts) with the chosen theme and labels as SVG <text> (no
+ * foreignObject: HTML labels taint a canvas when rasterized and don't open in Figma/Illustrator/Inkscape), then
+ * reset so the next in-app render re-applies the app theme.
+ */
+export async function renderMermaidForExport(src: string, theme: ExportTheme, svgText = true): Promise<string> {
+  mermaidMod ??= import("mermaid");
+  const mermaid = (await mermaidMod).default;
+  const css = getComputedStyle(document.documentElement);
+  const tok = (k: string) => css.getPropertyValue(k).trim();
+  const font = "Inter, \"IBM Plex Sans Arabic\", system-ui, sans-serif";
+  mermaid.initialize({
+    startOnLoad: false, securityLevel: "strict", fontFamily: font,
+    theme: theme === "app" ? "base" : theme,
+    themeVariables: theme === "app" ? {
+      darkMode: document.documentElement.dataset.dark === "1", fontFamily: font, fontSize: "14px",
+      primaryColor: tok("--surface-2"), primaryBorderColor: tok("--border"), primaryTextColor: tok("--text"), secondaryColor: tok("--surface-2"), tertiaryColor: tok("--surface"),
+      lineColor: tok("--muted"), textColor: tok("--text"), mainBkg: tok("--surface-2"), nodeBorder: tok("--border"), clusterBkg: tok("--surface"), edgeLabelBackground: tok("--surface"),
+    } : { fontFamily: font, fontSize: "14px" },
+    htmlLabels: !svgText,
+    flowchart: { curve: "basis", padding: 12, nodeSpacing: 24, rankSpacing: 28, htmlLabels: !svgText },
+  });
+  mermaidTheme = ""; // force the in-app theme back on the next in-app render
+  const id = `mmx-${++seq}`;
+  try {
+    return (await mermaid.render(id, src)).svg;
+  } finally {
+    document.getElementById(`d${id}`)?.remove();
+    document.getElementById(id)?.remove();
+  }
+}
+
 export interface HydrateCtx extends EmbedCtx {
   /** Renders a ```query block (Dataview-lite) into the element. */
   query?: (el: HTMLElement, q: string) => void;
@@ -416,6 +449,11 @@ export function hydrate(root: HTMLElement, ctx: HydrateCtx = {}) {
   root.querySelectorAll<HTMLElement>(".mermaid-card").forEach((card) => {
     card.querySelector(".mm-src")?.addEventListener("click", () => { const c = card.querySelector<HTMLElement>(".mm-code")!; c.hidden = !c.hidden; card.classList.toggle("src-open", !c.hidden); });
     card.querySelector(".mm-full")?.addEventListener("click", () => { if (document.fullscreenElement === card) void document.exitFullscreen(); else void card.requestFullscreen?.(); });
+    card.querySelector(".mm-export")?.addEventListener("click", () => {
+      const src = decodeURIComponent(card.querySelector<HTMLElement>(".mermaid-block")?.dataset.src ?? "");
+      if (document.fullscreenElement) void document.exitFullscreen();
+      void import("./diagram-export").then((m) => m.openDiagramExport(src, card.dataset.name || "diagram"));
+    });
   });
   root.querySelectorAll<HTMLImageElement>("img[data-att]").forEach(async (img) => {
     const id = img.dataset.att!;

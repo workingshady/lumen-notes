@@ -11,6 +11,7 @@ import { NoteList } from "./components/NoteList";
 import { NoteView } from "./components/NoteView";
 import { Palette } from "./components/Palette";
 import { ImportExportDialog, NewSpaceDialog } from "./components/Dialogs";
+import { DiagramExport } from "./components/DiagramExport";
 import { useDueCards } from "./components/Review";
 import { cx, IconButton } from "./components/ui";
 import { LumenMark } from "./components/LumenMark";
@@ -207,6 +208,7 @@ function Workspace() {
       <Palette />
       <NewSpaceDialog />
       <ImportExportDialog />
+      <DiagramExport />
       <ConflictSheet />
       <ShareSheet />
       <Toasts />
