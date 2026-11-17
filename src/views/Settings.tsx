@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Note, Space } from "../../shared/types";
-import { API_BASE, api, getAccount, getToken, login, setToken } from "../lib/api";
+import { API_BASE, api, getAccount, getToken, setToken } from "../lib/api";
 import { updateNote } from "../lib/actions";
 import { db, DEFAULT_SPACE, patch } from "../lib/db";
 import { exportBackup } from "../lib/io";
@@ -23,6 +23,7 @@ import { setAdvanced, useAdvanced, type Advanced } from "./settings-advanced";
 import { DeveloperSection } from "./settings-developer";
 import { AISection, BlogSection } from "./settings-blog-ai";
 import { DiagramsSection } from "./settings-diagrams";
+import { AccountSwitcher } from "../components/AccountSwitcher";
 import { ReadingSection } from "./settings-reading";
 
 type SecId = "appearance" | "branding" | "reading" | "diagrams" | "sync" | "sharing" | "blog" | "storage" | "ai" | "developer" | "about";
@@ -407,8 +408,6 @@ function About() {
 const accountName = (a: string) => (a === "main" ? "Main" : a === "roadmap" ? "Road-map" : a);
 function SyncSection() {
   const st = useSync();
-  const [pass, setPass] = useState("");
-  const [busy, setBusy] = useState(false);
   const [health, setHealth] = useState<{ r2: boolean; ai: boolean } | null>(null);
   const tok = getToken();
   useEffect(() => { if (tok) api<{ r2: boolean; ai: boolean }>("/health").then(setHealth).catch(() => {}); }, [tok]);
@@ -419,27 +418,20 @@ function SyncSection() {
         <div className="flex flex-col gap-3 rounded-[12px] border border-line bg-surface p-4">
           <div className="flex items-center gap-2"><Check size={16} className="text-ok" /><span className="font-semibold">Sync on</span><span className="text-muted">· {st.status}{st.last ? ` · last ${new Date(st.last).toLocaleTimeString()}` : ""}{st.pending ? ` · ${st.pending} pending` : ""}</span></div>
           {st.error && <div className="text-[12.5px] text-bad">{st.error}</div>}
-          <div className="text-[12.5px] text-muted">Account: <b className="text-ink">{accountName(getAccount())}</b> · each passcode opens its own account and notes</div>
           {health && <div className="text-[12.5px] text-muted">Server: {API_BASE || location.host} · files in {health.r2 ? "R2" : "D1 (1.5 MB parts)"} · AI {health.ai ? "on" : "off"}</div>}
           <div className="flex gap-2">
             <Button size="sm" variant="primary" onClick={() => void syncNow()}>{st.status === "syncing" ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} Sync now</Button>
-            <Button size="sm" variant="ghost" onClick={() => { setToken(null); void syncNow(); toast("Sync locked on this device. Your notes stay here."); }}><LogOut size={14} /> Lock</Button>
-            <Button size="sm" variant="ghost" onClick={() => { setToken(null); void syncNow(); toast("Signed out. Enter the other account's passcode to switch."); }}><LogOut size={14} /> Sign out / switch account</Button>
+            <Button size="sm" variant="ghost" title="Stop syncing on this device until you sign in again (the account stays saved)" onClick={() => { setToken(null); void syncNow(); toast("Sync locked on this device. Your notes stay here."); }}><LogOut size={14} /> Lock</Button>
           </div>
         </div>
       ) : (
-        <>
-        <div className="text-[12.5px] text-muted">This device shows the <b className="text-ink">{accountName(getAccount())}</b> account. Enter its passcode to sync, or another account's passcode to switch to that account (the app reloads; each account's notes stay separate).</div>
-        <form className="flex gap-2" onSubmit={async (e) => {
-          e.preventDefault();
-          setBusy(true);
-          try { await login(pass); setPass(""); toast("Sync unlocked"); await syncNow(); } catch (err) { toast((err as Error).message); } finally { setBusy(false); }
-        }}>
-          <input type="password" autoComplete="current-password" className={inputCls} value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Passphrase" />
-          <Button variant="primary" disabled={!pass || busy}>{busy ? <Loader2 size={15} className="animate-spin" /> : "Unlock"}</Button>
-        </form>
-        </>
+        <div className="rounded-[12px] border border-line bg-surface p-4 text-[13px] text-muted">Sync is locked on this device for <b className="text-ink">{accountName(getAccount())}</b>. Switch to a saved account below, or sign in again (“Unlock or add an account”).</div>
       )}
+      <div className="flex flex-col gap-2">
+        <div className="text-[12px] font-semibold uppercase tracking-[.06em] text-muted">Accounts on this device</div>
+        <div className="text-[12.5px] text-muted">Each passcode opens its own account with its own notes. Sign in once and switch here (or from the space menu) without typing the passcode again. Only the sign-in token is kept on this device, never the passcode.</div>
+        <div className="rounded-[12px] border border-line bg-surface p-1.5"><AccountSwitcher /></div>
+      </div>
     </div>
   );
 }

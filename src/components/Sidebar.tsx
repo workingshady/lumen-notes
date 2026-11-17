@@ -11,6 +11,7 @@ import { num, tr, useRtl } from "./ws-dir";
 import { PRESETS } from "../lib/canvas";
 import { useDueCards } from "./Review";
 import { cx } from "./ui";
+import { AccountSwitcher } from "./AccountSwitcher";
 
 export const KIND_LABEL: Record<Space["kind"], string> = { project: "Project", area: "Area", course: "Course", resource: "Resource", archive: "Archive" };
 const colorOf = (c: string | null | undefined) => (c ? PRESETS[c] ?? c : null);
@@ -197,6 +198,9 @@ function SpaceSwitcher({ onClose }: { onClose: () => void }) {
         )}
         <div className="my-1 h-px bg-line" />
         <button className={row(false)} onClick={() => setUI({ newSpace: true })}><Plus size={15} /> New space…</button>
+        <div className="my-1 h-px bg-line" />
+        <div className="px-2 py-1 text-[10.5px] font-semibold uppercase tracking-[.06em] text-muted">Accounts</div>
+        <AccountSwitcher compact onDone={onClose} />
       </div>
     </>
   );
