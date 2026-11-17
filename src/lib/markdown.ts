@@ -248,11 +248,15 @@ export function render(src: string): string {
 
 // ------------------------------------------------------------------ post-render hydration
 let mermaidMod: Promise<typeof import("mermaid")> | null = null;
+/** Lazy-load Mermaid; a failed load (e.g. a chunk missing right after a deploy) is not cached, so the next try works. */
+async function loadMermaid() {
+  mermaidMod ??= import("mermaid");
+  try { return (await mermaidMod).default; } catch (e) { mermaidMod = null; throw e; }
+}
 let mermaidTheme = "";
 let seq = 0;
 async function renderMermaid(el: HTMLElement) {
-  mermaidMod ??= import("mermaid");
-  const mermaid = (await mermaidMod).default;
+  const mermaid = await loadMermaid();
   // Diagram colors come from the theme tokens (design 5A: surface-2 nodes, border strokes, muted edges, 12 px Inter).
   const css = getComputedStyle(document.documentElement);
   const tok = (k: string) => css.getPropertyValue(k).trim();
@@ -410,8 +414,7 @@ export type ExportTheme = "app" | "default" | "dark" | "neutral" | "forest";
  * reset so the next in-app render re-applies the app theme.
  */
 export async function renderMermaidForExport(src: string, theme: ExportTheme, svgText = true): Promise<string> {
-  mermaidMod ??= import("mermaid");
-  const mermaid = (await mermaidMod).default;
+  const mermaid = await loadMermaid();
   const css = getComputedStyle(document.documentElement);
   const tok = (k: string) => css.getPropertyValue(k).trim();
   const font = "Inter, \"IBM Plex Sans Arabic\", system-ui, sans-serif";

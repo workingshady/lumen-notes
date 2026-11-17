@@ -39,6 +39,17 @@ async function seedIfDemo() {
 }
 
 applyTheme();
+// A code chunk failed to load (usually right after a deploy: this tab runs the old build, or the new chunk is not at
+// the edge yet). Reload once to pick up the current build; a session flag stops reload loops.
+addEventListener("vite:preloadError", (e) => {
+  try {
+    const last = Number(sessionStorage.getItem("lumen.chunkReload") ?? 0);
+    if (Date.now() - last < 30_000) return;
+    sessionStorage.setItem("lumen.chunkReload", String(Date.now()));
+  } catch { /* storage blocked: still reload once */ }
+  e.preventDefault();
+  location.reload();
+});
 const isBlog = location.pathname === "/blog" || location.pathname.startsWith("/blog/") || location.pathname.startsWith("/s/") || location.pathname.startsWith("/remote/");
 if (!isBlog) {
   void seedIfDemo().then(ensureDefaults).then(startSync);
