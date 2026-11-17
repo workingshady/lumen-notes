@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef } from "react";
 import type { Note } from "../../shared/types";
 import { findOrCreateByTitle, updateNote } from "../lib/actions";
 import { parseCanvas, previewSvg } from "../lib/canvas";
-import { diagramFocus, diagramHash, diagramIndex, linkFor, mermaidBlocks, saveDiagramToCanvas, type DiagramBlock } from "../lib/diagrams";
+import { canvasesWith, diagramFiles, diagramFocus, diagramHash, fileFor, mermaidBlocks, saveDiagramFile, saveDiagramToCanvas, type DiagramBlock } from "../lib/diagrams";
 import { handleCopyClick, hydrate, render } from "../lib/markdown";
+import { relTime } from "./ui";
 import { icon } from "./ws-icons";
 import { tasks, toggleTask } from "../lib/parse";
 import { matcher, parseQuery } from "../lib/search";
@@ -70,38 +71,52 @@ export function Preview({ note, className, onLine }: { note: Pick<Note, "id" | "
   useEffect(() => {
     const el = ref.current;
     const src = vault.byId.get(note.id);
-    if (!el || !src || src.type === "canvas" || src.deleted) return;
+    if (!el || !src || src.type === "canvas" || src.type === "diagram" || src.deleted) return;
     const blocks = new Map(mermaidBlocks(note.body).map((b) => [b.line, b]));
-    const index = diagramIndex(vault.notes);
-    const go = async (b: DiagramBlock, stay = false) => {
-      const cur = vault.byId.get(note.id);
+    const index = diagramFiles(vault.notes);
+    const current = () => { const cur = vault.byId.get(note.id); return cur ? { ...cur, body: note.body } : null; };
+    const toCanvas = async (b: DiagramBlock) => {
+      const cur = current();
       if (!cur) return;
-      const r = await saveDiagramToCanvas({ ...cur, body: note.body }, b, vault.notes);
-      if (stay) { toast("Canvas copy updated"); return; }
+      const r = await saveDiagramToCanvas(cur, b, vault.notes);
       diagramFocus.canvas = { canvasId: r.canvasId, nodeId: r.nodeId };
-      if (r.created) toast("Diagram saved to a new canvas");
+      if (r.created) toast(`Saved as ${r.file.title}`);
       openNote(r.canvasId);
+    };
+    const toFile = async (b: DiagramBlock, open = false) => {
+      const cur = current();
+      if (!cur) return;
+      const { file, created } = await saveDiagramFile(cur, b, vault.notes);
+      if (open) openNote(file.id, "read");
+      else toast(created ? `Saved as ${file.title}` : `${file.title} updated`, { label: "Open", run: () => openNote(file.id, "read") });
+    };
+    const btn = (cls: string, title: string, ic: string, run: () => void) => {
+      const x = document.createElement("button");
+      x.type = "button"; x.className = cls; x.title = title; x.innerHTML = icon(ic, 13); x.onclick = run;
+      return x;
     };
     el.querySelectorAll<HTMLElement>(".mermaid-card[data-line]").forEach((card) => {
       const b = blocks.get(Number(card.dataset.line));
-      card.querySelector(".mm-canvas")?.remove();
-      card.querySelector(".mm-foot")?.remove();
+      card.querySelectorAll(".mm-canvas, .mm-file, .mm-foot").forEach((x) => x.remove());
       if (!b) return;
-      const link = linkFor(index, note.id, b);
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "mm-canvas";
-      btn.title = link ? "Open in canvas" : "Save to canvas (as a .mermaid card) and open it";
-      btn.innerHTML = icon("layout-dashboard", 13);
-      btn.onclick = () => void go(b);
-      card.querySelector(".mm-src")?.before(btn);
-      if (!link) return;
+      const found = fileFor(index, note.id, b);
+      const where = found ? canvasesWith(vault.notes, found.file) : [];
+      const src = card.querySelector(".mm-src");
+      src?.before(btn("mm-file", found ? `Open ${found.file.title}` : "Save as a .mermaid file", "file-text", () => void toFile(b, !!found && !found.stale)));
+      src?.before(btn("mm-canvas", where.length ? "Open in canvas" : "Save to canvas (as a .mermaid file card) and open it", "layout-dashboard", () => void toCanvas(b)));
+      if (!found) return;
       const foot = document.createElement("div");
       foot.className = "mm-foot";
-      foot.innerHTML = `${icon("layout-dashboard", 12)}<span>In canvas</span><a href="#" class="mm-open">${esc(link.canvas.title)} › <b>${esc(link.name)}</b></a>${link.stale ? `<span class="mm-stale">changed here</span><button type="button" class="mm-sync">${icon("refresh-cw", 12)} Update canvas copy</button>` : ""}`;
-      foot.querySelector<HTMLAnchorElement>(".mm-open")!.onclick = (e) => { e.preventDefault(); diagramFocus.canvas = { canvasId: link.canvas.id, nodeId: link.nodeId }; openNote(link.canvas.id); };
+      const saved = found.file.props?.diagramSavedAt ? ` · saved ${relTime(Date.parse(found.file.props.diagramSavedAt))}` : "";
+      foot.innerHTML = `${icon("file-text", 12)}<span>Saved as</span><a href="#" class="mm-openfile"><b>${esc(found.file.title)}</b></a><span class="mm-dim">${esc(saved)}</span>`
+        + (where.length ? `<span class="mm-dot">·</span>${icon("layout-dashboard", 12)}<span>In canvas</span>${where.map((w, i) => `<a href="#" class="mm-open" data-i="${i}">${esc(w.canvas.title)}</a>`).join(", ")}` : `<span class="mm-dot">·</span><button type="button" class="mm-tocanvas">${icon("layout-dashboard", 12)} Add to canvas</button>`)
+        + (found.stale ? `<span class="mm-stale">changed here since saved</span><button type="button" class="mm-sync">${icon("refresh-cw", 12)} Update file</button>` : "");
+      foot.querySelector<HTMLAnchorElement>(".mm-openfile")!.onclick = (e) => { e.preventDefault(); openNote(found.file.id, "read"); };
+      foot.querySelectorAll<HTMLAnchorElement>(".mm-open").forEach((a) => { a.onclick = (e) => { e.preventDefault(); const w = where[Number(a.dataset.i)]; diagramFocus.canvas = { canvasId: w.canvas.id, nodeId: w.nodeId }; openNote(w.canvas.id); }; });
+      const add = foot.querySelector<HTMLButtonElement>(".mm-tocanvas");
+      if (add) add.onclick = () => void toCanvas(b);
       const sync = foot.querySelector<HTMLButtonElement>(".mm-sync");
-      if (sync) sync.onclick = () => void go(b, true);
+      if (sync) sync.onclick = () => void toFile(b);
       card.append(foot);
     });
     // Arrived from a canvas card ("↩ note"): scroll to that diagram and flash it.

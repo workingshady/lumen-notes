@@ -11,13 +11,13 @@ import type { CanvasEdge, CanvasNode, JsonCanvas, Note, Side } from "../../share
 import { createNote, duplicateNote, findOrCreateByTitle, restoreNote, trashNote, updateNote } from "../lib/actions";
 import { unfurl, type Unfurl } from "../lib/api";
 import { colorOf, fromOutline, layout, parseCanvas, PRESETS, runScript, stringify, validate } from "../lib/canvas";
-import { diagramFocus, diagramHash, diagramText, mermaidBlocks, parseDiagramText, type DiagramNode } from "../lib/diagrams";
+import { diagramFocus, diagramHash, diagramKind, diagramText, fenced, mermaidBlocks, metaOf, migrateDiagramCards, newDiagramFile, parseDiagramText, type DiagramNode } from "../lib/diagrams";
 import { download } from "../lib/io";
 import { openNote, setUI, toast, useVault } from "../lib/store";
 import { canvasToSkeleton, type Skeleton } from "../lib/whiteboard";
 import { plainExcerpt } from "./nav-text";
 import { Preview } from "./Preview";
-import { cx, STATUS_COLOR } from "./ui";
+import { cx, relTime, STATUS_COLOR } from "./ui";
 import {
   CodeEditor, CodePanel, ErrorBanner, errorLine, ExamplesMenu, itemAt, jsonItemSpans, OutputStrip, PanelBar, PhoneActions, RunButton, runKey, ValidChip, ValidFooter,
   type CodeEditorHandle, type CodeTab, type Example,
@@ -179,12 +179,43 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
   );
 });
 
+/** A file card pointing at a `.mermaid` file: name + type header (drag handle), the zoomable diagram, and where it came from. */
+function DiagramFileCard({ n, note, selected }: { n: CanvasNode; note: Note; selected: boolean }) {
+  const v = useVault();
+  const s = shell(n, selected);
+  const meta = metaOf(note);
+  const src = meta ? v.byId.get(meta.from) : undefined;
+  const back = () => { if (!src || !meta) return; const b = mermaidBlocks(src.body).find((x) => diagramHash(x.src) === meta.hash); diagramFocus.note = { noteId: src.id, line: b?.line ?? meta.line, hash: b ? diagramHash(b.src) : meta.hash }; openNote(src.id, "read"); };
+  const body = useMemo(() => fenced(note.body), [note.body]);
+  return (
+    <div {...s}>
+      <div className="flex h-[30px] shrink-0 cursor-grab items-center gap-1.5 border-b border-line px-2.5 text-[11.5px] text-muted" title="Drag to move">
+        <Waypoints size={12} className="shrink-0 text-accent" />
+        <button className="nodrag min-w-0 flex-1 truncate text-left font-mono text-ink hover:text-accent" title="Open the .mermaid file" onClick={() => openNote(note.id, "read")}>{note.title}</button>
+        <span className="shrink-0 rounded-[5px] bg-surface-2 px-1 font-mono text-[10.5px]">{diagramKind(note.body)}</span>
+      </div>
+      <div className="nodrag nowheel diagram-node min-h-0 flex-1 overflow-hidden">{note.body.trim() ? <Preview note={{ id: note.id, body, spaceId: note.spaceId }} className="!m-0 !max-w-none" /> : <div className="p-4 text-[12px] text-muted">Empty diagram. Open it to write Mermaid.</div>}</div>
+      <div className="flex h-[24px] shrink-0 items-center gap-1.5 border-t border-line px-2.5 text-[11px] text-muted">
+        {src && !src.deleted ? <button className="nodrag min-w-0 truncate hover:text-ink" title="Open the source note at this diagram" onClick={back}>↩ {src.title}{meta?.heading ? ` › ${meta.heading}` : ""}</button> : <span className="truncate">{meta ? `from “${meta.fromTitle}”` : "standalone diagram"}</span>}
+        <span className="ms-auto shrink-0">updated {relTime(note.updatedAt)}</span>
+      </div>
+    </div>
+  );
+}
+
 const FileNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
   const n = data.node as Extract<CanvasNode, { type: "file" }>;
   const v = useVault();
   const { spaceId } = useContext(Ctx);
   const title = n.file.replace(/\.md$/i, "").split("/").pop()!;
   const note = v.byTitle.get(title.toLowerCase());
+  if (note?.type === "diagram") return (
+    <>
+      <NodeResizer isVisible={!!selected} minWidth={240} minHeight={180} {...RESIZER} />
+      <Handles />
+      <DiagramFileCard n={n} note={note} selected={!!selected} />
+    </>
+  );
   const folder = note ? (note.folderId ? v.folderMap.get(note.folderId)?.name : v.spaceMap.get(note.spaceId)?.name) : n.file.split("/").slice(-2, -1)[0];
   const s = shell(n, !!selected);
   return (
@@ -415,6 +446,8 @@ function Inner({ note }: { note: Note }) {
   const delSelected = () => { const ids = new Set(selected.map((n) => n.id)); setNodes((ns) => ns.filter((n) => !n.selected)); setEdges((es) => es.filter((e) => !e.selected && !ids.has(e.source) && !ids.has(e.target))); };
   const doLayout = (k: "grid" | "tree" | "force") => { load(layout(fromFlow(nodes, edges), k)); setTimeout(() => rf.fitView({ padding: 0.2, duration: 300 }), 50); };
   const fit = () => rf.fitView({ padding: 0.2, duration: 300 });
+  // Canvases from the first diagram version (text cards) are upgraded to .mermaid file cards once, on open.
+  useEffect(() => { if (note.body.includes("lumenDiagram")) void migrateDiagramCards(note, v.notes).then((c) => c && toast("Diagram cards upgraded to .mermaid files")); }, [note.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // Arrived from a note's diagram ("Open in canvas"): select that card and centre it, once it exists (a just-saved
   // card can arrive a moment after the canvas opens).
   useEffect(() => {
@@ -487,7 +520,7 @@ function Inner({ note }: { note: Note }) {
 
   const addTools: Tool[] = [
     ["Text", <Type size={15} />, "Add text card", () => addNode({ type: "text", text: "" })],
-    ["Diagram", <Waypoints size={15} />, "Add a Mermaid diagram card (.mermaid)", () => addNode({ type: "text", text: diagramText(`diagram-${nodes.filter((x) => x.data.node.type === "text" && parseDiagramText((x.data.node as DiagramNode).text)).length + 1}.mermaid`, "flowchart LR\n  A[Start] --> B[Next step]\n  B --> C{Decision}\n  C -->|yes| D[Done]\n  C -->|no| B"), width: 560, height: 360 })],
+    ["Diagram", <Waypoints size={15} />, "New .mermaid diagram file on this canvas", async () => { const f = await newDiagramFile(note, v.notes); addNode({ type: "file", file: f.title, width: 560, height: 380 }); toast(`Created ${f.title}`, { label: "Open", run: () => openNote(f.id, "edit") }); }],
     ["Note", <FilePlus size={15} />, "Add note card", () => { const t = prompt("Note title"); if (t) addNode({ type: "file", file: t, width: 300, height: 200 }); }],
     ["Link", <Link2 size={15} />, "Add link card", () => { const u = prompt("URL", "https://"); if (u) addNode({ type: "link", url: u, width: 300, height: 84 }); }],
     ["Group", <Group size={15} />, "Add group", () => addNode({ type: "group", label: "Group", width: 600, height: 400 })],

@@ -15,7 +15,7 @@ import { PhoneChips, PhoneListHeader, SwipeRow, type PhoneFilter } from "./ws-ph
 import { num, tr, useRtl } from "./ws-dir";
 
 type Sort = "updated" | "created" | "title";
-const TYPE_ICON: Record<Note["type"], string> = { note: "", lesson: "📘", journal: "📓", flashcards: "🧠", slides: "📽️", post: "✍️", canvas: "🧩", whiteboard: "🖍️", roadmap: "🗺️", moc: "🧭", path: "🛤️" };
+const TYPE_ICON: Record<Note["type"], string> = { note: "", lesson: "📘", journal: "📓", flashcards: "🧠", slides: "📽️", post: "✍️", canvas: "🧩", whiteboard: "🖍️", roadmap: "🗺️", moc: "🧭", path: "🛤️", diagram: "📈" };
 const useWide = () => { const [w, setW] = useState(() => innerWidth >= 900); useEffect(() => { const f = () => setW(innerWidth >= 900); addEventListener("resize", f); return () => removeEventListener("resize", f); }, []); return w; };
 
 /** Body without front-matter and the title H1 (the title is shown above the excerpt). */

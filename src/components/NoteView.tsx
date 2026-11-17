@@ -20,6 +20,7 @@ import { Button, cx, relTime, Segmented, Sheet, STATUS_COLOR } from "./ui";
 import { HeaderSync, PhoneSyncLine, useSaving, useSyncLook } from "./ws-sync";
 import { DirMenu, UiDirRow } from "./ws-bidi";
 import { ReadMenu, ReadRows } from "./ws-read";
+import { DiagramFile } from "./DiagramFile";
 import { tr, useRtl } from "./ws-dir";
 
 const Whiteboard = lazy(() => import("./Whiteboard"));
@@ -47,7 +48,9 @@ export function NoteView({ note }: { note: Note }) {
   const isCanvas = note.type === "canvas" || isBoard;
   const isPath = note.type === "path";
   const isRoadmap = note.type === "roadmap" || isPath;
-  const mode: Mode = ui.mode;
+  const isDiagram = note.type === "diagram";
+  // A .mermaid file has three views (Source / Split / Preview); other modes show the preview.
+  const mode: Mode = isDiagram && !["edit", "split", "read"].includes(ui.mode) ? "read" : ui.mode;
 
   // New untitled note → focus title.
   useEffect(() => { if (note.title === "Untitled" && !note.body) titleRef.current?.select(); }, [note.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -78,7 +81,11 @@ export function NoteView({ note }: { note: Note }) {
   const seen = new Set<string>(); // guard against a parent cycle in synced folder data
   for (let f = note.folderId ? v.folderMap.get(note.folderId) : undefined; f && !seen.has(f.id); f = f.parentId ? v.folderMap.get(f.parentId) : undefined) { seen.add(f.id); crumbs.unshift(f.name); }
 
-  const modes = [
+  const modes = isDiagram ? [
+    { value: "edit" as Mode, icon: <PenLine size={13} />, l: "Source", title: "Mermaid source (Ctrl+E)" },
+    { value: "split" as Mode, icon: <Columns2 size={13} />, l: "Split", title: "Source + preview" },
+    { value: "read" as Mode, icon: <BookOpen size={13} />, l: "Preview", title: "Diagram preview" },
+  ] : [
     { value: "edit" as Mode, icon: <PenLine size={13} />, l: "Edit", title: "Edit (Ctrl+E)" },
     { value: "split" as Mode, icon: <Columns2 size={13} />, l: "Split", title: "Split: editor + preview" },
     { value: "read" as Mode, icon: <BookOpen size={13} />, l: "Read", title: "Read" },
@@ -248,6 +255,8 @@ export function NoteView({ note }: { note: Note }) {
             <Suspense fallback={<Skeleton kind="list" />}>{isPath ? <PathView note={note} /> : <RoadmapView note={note} />}</Suspense>
           ) : isRoadmap ? (
             <Editor key={note.id} note={note} />
+          ) : isDiagram ? (
+            <DiagramFile note={note} mode={effMode as "edit" | "split" | "read"} wide={wide} />
           ) : effMode === "edit" ? (
             <Editor key={note.id} note={note} live={!wide} />
           ) : effMode === "review" ? (

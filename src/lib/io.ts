@@ -23,7 +23,7 @@ export function noteToMarkdown(n: Note) {
   const fm = toFrontMatter({ title: n.title, type: n.type !== "note" ? n.type : undefined, status: n.status ?? undefined, tags: n.tags, created: new Date(n.createdAt).toISOString(), slug: n.slug || undefined, ...n.props });
   return fm + splitFrontMatter(n.body).body;
 }
-const fileName = (n: Note) => safe(n.title) + (n.type === "canvas" ? ".canvas" : n.type === "whiteboard" ? ".excalidraw" : ".md");
+const fileName = (n: Note) => n.type === "diagram" ? safe(n.title.replace(/\.mermaid$/i, "")) + ".mermaid" : safe(n.title) + (n.type === "canvas" ? ".canvas" : n.type === "whiteboard" ? ".excalidraw" : ".md");
 
 export const exportNoteMd = (n: Note) => download(fileName(n), noteToMarkdown(n), "text/markdown");
 
@@ -158,7 +158,7 @@ export async function exportVaultZip(opts: ExportOptions = {}): Promise<ExportRe
   const used = new Set<string>();
   for (const n of live) {
     let p = `${pathOf(n)}/${fileName(n)}`;
-    for (let i = 2; used.has(p.toLowerCase()); i++) p = `${pathOf(n)}/${safe(n.title)} ${i}${n.type === "canvas" ? ".canvas" : n.type === "whiteboard" ? ".excalidraw" : ".md"}`;
+    for (let i = 2; used.has(p.toLowerCase()); i++) p = `${pathOf(n)}/${safe(n.title.replace(/\.mermaid$/i, ""))} ${i}${n.type === "canvas" ? ".canvas" : n.type === "whiteboard" ? ".excalidraw" : n.type === "diagram" ? ".mermaid" : ".md"}`;
     used.add(p.toLowerCase());
     zip.file(p, noteToMarkdown(n));
     opts.onProgress?.(++done, total, p);

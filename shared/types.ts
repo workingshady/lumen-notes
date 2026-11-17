@@ -1,9 +1,10 @@
 // Shared between the app (src) and the Worker (worker).
 
-export type NoteType = "note" | "lesson" | "journal" | "flashcards" | "slides" | "post" | "canvas" | "whiteboard" | "roadmap" | "moc" | "path";
+/** `diagram` = a `.mermaid` file: body is raw Mermaid source (no front-matter), title ends in `.mermaid` (lib/diagrams.ts). */
+export type NoteType = "note" | "lesson" | "journal" | "flashcards" | "slides" | "post" | "canvas" | "whiteboard" | "roadmap" | "moc" | "path" | "diagram";
 export type Status = "todo" | "learning" | "review" | "mastered";
 export const STATUSES: Status[] = ["todo", "learning", "review", "mastered"];
-export const NOTE_TYPES: NoteType[] = ["note", "lesson", "journal", "flashcards", "slides", "post", "canvas", "whiteboard", "roadmap", "moc", "path"];
+export const NOTE_TYPES: NoteType[] = ["note", "lesson", "journal", "flashcards", "slides", "post", "canvas", "whiteboard", "roadmap", "moc", "path", "diagram"];
 
 /** PARA-style space kinds. A space encapsulates its own folder tree, notes, roadmap and settings. */
 export type SpaceKind = "project" | "area" | "course" | "resource" | "archive";

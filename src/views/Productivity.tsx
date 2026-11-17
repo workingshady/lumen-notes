@@ -439,7 +439,7 @@ type Chip = { k: FKey; vals: string[] };
 const F_LABEL: Record<FKey, string> = { status: "Status", type: "Type", tag: "Tag", in: "Folder", space: "Space", is: "Is", text: "Text" };
 const TABLE_KEY = "lumen.table";
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const MD_TYPES = NOTE_TYPES.filter((t) => t !== "canvas" && t !== "whiteboard");
+const MD_TYPES = NOTE_TYPES.filter((t) => t !== "canvas" && t !== "whiteboard" && t !== "diagram");
 
 function loadTable(): { order: Col[]; hidden: Col[]; sort: Sort[]; chips: Chip[] } {
   const def = { order: ALL_COLS, hidden: ["created", "cards"] as Col[], sort: [{ col: "updated", dir: -1 }] as Sort[], chips: [] as Chip[] };
