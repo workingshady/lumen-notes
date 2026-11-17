@@ -19,6 +19,7 @@ import { StudyTimer } from "./Timer";
 import { Button, cx, relTime, Segmented, Sheet, STATUS_COLOR } from "./ui";
 import { HeaderSync, PhoneSyncLine, useSaving, useSyncLook } from "./ws-sync";
 import { DirMenu, UiDirRow } from "./ws-bidi";
+import { ReadMenu, ReadRows } from "./ws-read";
 import { tr, useRtl } from "./ws-dir";
 
 const Whiteboard = lazy(() => import("./Whiteboard"));
@@ -133,6 +134,7 @@ export function NoteView({ note }: { note: Note }) {
         {!isCanvas && <button className={item} onClick={() => printNote(note)}><Printer size={15} /> Print / PDF</button>}
         <button className={item} onClick={async () => { const d = await duplicateNote(note.id); if (d) openNote(d.id); }}><Copy size={15} /> Duplicate</button>
         <div className="my-1 h-px bg-line" />
+        {!wide && markdownNote && <><ReadRows /><div className="my-1 h-px bg-line" /></>}
         <UiDirRow />
         <div className="my-1 h-px bg-line" />
         <button className={item + " text-bad"} onClick={async () => { const t = note.title; await trashNote(note.id); setUI({ noteId: null }); toast(`“${t}” moved to Trash`, { label: "Undo", run: () => { void restoreNote(note.id); openNote(note.id); } }); }}><Trash2 size={15} /> Move to trash</button>
@@ -184,6 +186,7 @@ export function NoteView({ note }: { note: Note }) {
                 <div className="flex h-11 items-center gap-3 border-b border-line px-5">
                   {switcher(modes)}
                   <span className="flex-1" />
+                  <ReadMenu />
                   <span className="text-[12px] text-muted">{words.toLocaleString()} {tr("words", rtl)} · {mins} {tr("min", rtl)}</span>
                 </div>
               )}
@@ -197,6 +200,7 @@ export function NoteView({ note }: { note: Note }) {
               {isRoadmap && <Segmented value={rmEdit ? "edit" : "map"} onChange={(x) => setRmEdit(x === "edit")} options={[{ value: "map", label: <><MapIcon size={13} /> {isPath ? "Path" : "Roadmap"}</> }, { value: "edit", label: <><PenLine size={13} /> Edit</> }]} />}
               <span className="flex-1" />
               <HeaderSync wrap />
+              {markdownNote && <ReadMenu />}
               {markdownNote && <DirMenu note={note} />}
               {shareBtn}
               {moreBtn}
@@ -258,7 +262,7 @@ export function NoteView({ note }: { note: Note }) {
               </div>
             </div>
           ) : (
-            <div className={cx("h-full overflow-y-auto", wide ? "px-8 py-14" : "px-5 py-5")} onDoubleClick={(e) => { if (!(e.target as HTMLElement).closest("a,button,input,.embed,.vthumb")) setUI({ mode: wide ? "split" : "edit" }); }}>
+            <div className={cx("h-full overflow-y-auto", wide ? "px-8 py-14" : "px-5 py-5")} onDoubleClick={(e) => { if (!(e.target as HTMLElement).closest("a,button,input,.embed,.vthumb,.mermaid-card")) setUI({ mode: wide ? "split" : "edit" }); }}>
               <div className={cx("mx-auto flex flex-col", wide ? "max-w-[680px] gap-5" : "gap-4")}>
                 <MetaRow note={note} kind={wide ? "read" : "phone"} words={words} />
                 {!firstH1(note.body) && <div className={cx("prose reading", wide ? "read-wide max-w-none" : "read-phone")}><h1 dir="auto">{note.title}</h1></div>}

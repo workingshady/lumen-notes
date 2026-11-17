@@ -107,6 +107,17 @@ button { cursor: pointer; }
 .mermaid-card .mermaid-block { border: 0; margin: 0; border-radius: 0; background: transparent; padding: 22px 16px; }
 .mermaid-card .mm-code { margin: 0; border-top: 1px solid var(--border); padding: 10px 14px; font: 12.5px/1.6 var(--font-mono); overflow-x: auto; }
 .mermaid-card:fullscreen { display: flex; flex-direction: column; background: var(--bg); } .mermaid-card:fullscreen .mermaid-block { flex: 1; align-items: center; } .mermaid-card:fullscreen svg { max-height: 90vh; }
+.mermaid-card:focus { outline: none; } .mermaid-card:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+.mm-tools { align-items: center; } .mm-tools .mm-sep { width: 1px; height: 14px; background: var(--border); margin: 0 2px; }
+.mm-tools .mm-zlabel, .mm-tools .mm-z100 { font: 500 11px/1 var(--font-mono); padding: 4px 6px; min-width: 34px; justify-content: center; }
+.mm-tools .mm-zlabel { min-width: 72px; }
+/* Zoom/pan viewer (markdown.ts diagramViewer): the SVG keeps its natural size and moves with a transform. */
+.mermaid-card .mermaid-block.mm-stage { display: block; position: relative; overflow: hidden; padding: 0; touch-action: pan-y; }
+.mermaid-card:fullscreen .mermaid-block.mm-stage { flex: 1; min-height: 0; }
+.mm-stage .mm-pan { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+.mm-stage svg, .mermaid-card:fullscreen .mm-stage svg { max-width: none; max-height: none; }
+.mm-stage.mm-zoomed { cursor: grab; touch-action: none; } .mm-stage.mm-grabbing { cursor: grabbing; }
+.mm-stage.mm-grabbing .mm-pan { will-change: transform; user-select: none; }
 .mermaid-block { display: flex; justify-content: center; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 1em 0; overflow-x: auto; }
 .mermaid-block svg { max-width: 100%; height: auto; }
 

@@ -53,7 +53,7 @@ function build() {
     const t = tokens[idx];
     const lang = t.info.trim().split(/\s+/)[0];
     const line = t.map ? ` data-line="${t.map[0]}"` : "";
-    if (lang === "mermaid") return `<div class="mermaid-card"${line}><div class="mm-head"><span>mermaid · ${esc(MERMAID_KIND(t.content))}</span><span class="mm-tools"><button type="button" class="mm-src" title="Show source">${icon("code", 14)}</button><button type="button" class="mm-full" title="Full screen">${icon("maximize-2", 13)}</button></span></div><div class="mermaid-block" data-src="${enc(t.content)}"><div class="muted">Rendering diagram…</div></div><pre class="mm-code" hidden><code>${esc(t.content)}</code></pre></div>`;
+    if (lang === "mermaid") return `<div class="mermaid-card"${line} tabindex="-1"><div class="mm-head"><span>mermaid · ${esc(MERMAID_KIND(t.content))}</span><span class="mm-tools"><button type="button" class="mm-zout" title="Zoom out (−)" aria-label="Zoom out">${icon("minus", 13)}</button><button type="button" class="mm-zlabel" title="Fit (0) · double-click the diagram to switch between fit and 100%">Fit</button><button type="button" class="mm-zin" title="Zoom in (+)" aria-label="Zoom in">${icon("plus", 13)}</button><button type="button" class="mm-z100" title="Actual size (100%)">1:1</button><span class="mm-sep"></span><button type="button" class="mm-src" title="Show source">${icon("code", 14)}</button><button type="button" class="mm-full" title="Full screen">${icon("maximize-2", 13)}</button></span></div><div class="mermaid-block" data-src="${enc(t.content)}"><div class="muted">Rendering diagram…</div></div><pre class="mm-code" hidden><code>${esc(t.content)}</code></pre></div>`;
     if (lang === "canvas") return `<div class="canvas-embed"${line} data-canvas="${enc(t.content)}"></div>`;
     if (lang === "query") return `<div class="query-block"${line} data-q="${enc(t.content.trim())}"></div>`;
     return fence(tokens, idx, opts, env, self).replace("<pre", `<pre${line}`);
@@ -273,10 +273,131 @@ async function renderMermaid(el: HTMLElement) {
   try {
     const { svg } = await mermaid.render(id, decodeURIComponent(el.dataset.src ?? ""));
     el.innerHTML = svg;
+    const card = el.closest<HTMLElement>(".mermaid-card");
+    if (card) diagramViewer(card, el);
   } catch (e) {
     el.innerHTML = `<div class="render-error">Mermaid: ${esc(String((e as Error).message ?? e).split("\n")[0])}</div>`;
     document.getElementById(`d${id}`)?.remove();
   }
+}
+
+/**
+ * Zoom + pan for a rendered Mermaid diagram (card toolbar: − / Fit / + / 1:1).
+ * - Starts fitted to the card width (never upscaled inline), so wide diagrams are readable on demand, not squished.
+ * - Ctrl/⌘ + wheel or trackpad pinch zooms at the pointer (plain wheel too in full screen); two-finger pinch on touch.
+ * - Drag to pan once zoomed in; double-click toggles fit ↔ 100%; keys + − 0 while the card has focus or is full screen.
+ * The SVG keeps its natural size and is moved with a CSS transform, so text stays crisp at every zoom level.
+ */
+function diagramViewer(card: HTMLElement, stage: HTMLElement) {
+  const svg = stage.querySelector("svg");
+  if (!svg || stage.dataset.viewer || card.closest(".lslide")) return; // slides size diagrams themselves
+  stage.dataset.viewer = "1";
+  const vb = svg.viewBox.baseVal;
+  const W = vb && vb.width ? vb.width : svg.getBoundingClientRect().width || 600;
+  const H = vb && vb.height ? vb.height : svg.getBoundingClientRect().height || 400;
+  svg.removeAttribute("width");
+  svg.style.maxWidth = "none";
+  svg.style.width = `${W}px`;
+  svg.style.height = `${H}px`;
+  const pan = document.createElement("div");
+  pan.className = "mm-pan";
+  svg.replaceWith(pan);
+  pan.appendChild(svg);
+  stage.classList.add("mm-stage");
+  const label = card.querySelector<HTMLElement>(".mm-zlabel");
+  const MIN = 0.1, MAX = 8;
+  let k = 1, x = 0, y = 0, fitted = true;
+
+  const full = () => document.fullscreenElement === card;
+  const pad = () => (full() ? 24 : 16);
+  const fitScale = () => {
+    const w = stage.clientWidth - pad() * 2;
+    const s = w / W;
+    if (!full()) return Math.min(1, s);
+    const h = stage.clientHeight - pad() * 2;
+    return Math.min(s, h / H);
+  };
+  const apply = () => {
+    // Inline: the stage grows with the diagram up to 75% of the screen; full screen: the card's flex area.
+    if (!full()) stage.style.height = `${Math.round(Math.min(Math.max(H * k, H * fitScale()) + pad() * 2, innerHeight * 0.75))}px`;
+    else stage.style.height = "";
+    const sw = stage.clientWidth, sh = stage.clientHeight, cw = W * k, ch = H * k;
+    // Keep the drawing on screen: centred when smaller than the stage, clamped to its edges when larger.
+    x = cw <= sw ? (sw - cw) / 2 : Math.min(pad(), Math.max(sw - cw - pad(), x));
+    y = ch <= sh ? (sh - ch) / 2 : Math.min(pad(), Math.max(sh - ch - pad(), y));
+    pan.style.transform = `translate(${x}px, ${y}px) scale(${k})`;
+    stage.classList.toggle("mm-zoomed", cw > sw + 1 || ch > sh + 1);
+    if (label) label.textContent = fitted ? `Fit · ${Math.round(k * 100)}%` : `${Math.round(k * 100)}%`;
+  };
+  /** Zoom to `nk`, keeping the stage point (px, py) still. */
+  const zoomTo = (nk: number, px = stage.clientWidth / 2, py = stage.clientHeight / 2) => {
+    nk = Math.min(MAX, Math.max(MIN, nk));
+    x = px - ((px - x) * nk) / k;
+    y = py - ((py - y) * nk) / k;
+    k = nk;
+    fitted = false;
+    apply();
+  };
+  const fit = () => { k = fitScale(); fitted = true; x = 0; y = 0; apply(); };
+  const step = (dir: 1 | -1) => zoomTo(dir > 0 ? k * 1.25 : k / 1.25);
+
+  card.querySelector(".mm-zin")?.addEventListener("click", () => step(1));
+  card.querySelector(".mm-zout")?.addEventListener("click", () => step(-1));
+  label?.addEventListener("click", fit);
+  card.querySelector(".mm-z100")?.addEventListener("click", () => zoomTo(1));
+  stage.addEventListener("dblclick", (e) => {
+    e.stopPropagation(); e.preventDefault(); // the reader's double-click-to-edit must not fire on a diagram
+    const r = stage.getBoundingClientRect();
+    if (fitted && Math.abs(k - 1) > 0.01) zoomTo(1, e.clientX - r.left, e.clientY - r.top); else fit();
+  });
+  stage.addEventListener("wheel", (e) => {
+    if (!(e.ctrlKey || e.metaKey || full())) return; // plain wheel scrolls the page inline
+    e.preventDefault();
+    const r = stage.getBoundingClientRect();
+    zoomTo(k * Math.exp(-e.deltaY * (e.ctrlKey && Math.abs(e.deltaY) < 50 ? 0.01 : 0.0025)), e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+
+  // Drag to pan (mouse / pen / one finger when zoomed); two fingers pinch-zoom.
+  const pts = new Map<number, { x: number; y: number }>();
+  let pinch: { d: number; k: number } | null = null;
+  stage.addEventListener("pointerdown", (e) => {
+    if (!stage.classList.contains("mm-zoomed") && e.pointerType !== "touch") return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), k }; }
+    if (stage.classList.contains("mm-zoomed") || pts.size === 2) { stage.setPointerCapture(e.pointerId); stage.classList.add("mm-grabbing"); }
+  });
+  stage.addEventListener("pointermove", (e) => {
+    const prev = pts.get(e.pointerId);
+    if (!prev) return;
+    const cur = { x: e.clientX, y: e.clientY };
+    pts.set(e.pointerId, cur);
+    if (pinch && pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      const r = stage.getBoundingClientRect();
+      zoomTo(pinch.k * (Math.hypot(a.x - b.x, a.y - b.y) / pinch.d), (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top);
+    } else if (stage.classList.contains("mm-zoomed")) {
+      x += cur.x - prev.x; y += cur.y - prev.y; fitted = false; apply();
+    }
+  });
+  const end = (e: PointerEvent) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) stage.classList.remove("mm-grabbing"); };
+  stage.addEventListener("pointerup", end);
+  stage.addEventListener("pointercancel", end);
+
+  card.addEventListener("keydown", (e) => {
+    if (e.target instanceof HTMLElement && e.target.closest("input, textarea, [contenteditable]")) return;
+    if (e.key === "+" || e.key === "=") { e.preventDefault(); step(1); }
+    else if (e.key === "-" || e.key === "_") { e.preventDefault(); step(-1); }
+    else if (e.key === "0") { e.preventDefault(); fit(); }
+  });
+  stage.addEventListener("pointerdown", () => card.focus({ preventScroll: true }));
+  // Re-fit when the card resizes (window, side panel, full screen) unless the reader picked a zoom.
+  new ResizeObserver(() => { if (fitted) fit(); else apply(); }).observe(stage);
+  const onFs = () => {
+    if (!card.isConnected) { document.removeEventListener("fullscreenchange", onFs); return; }
+    if (document.fullscreenElement === card || !document.fullscreenElement) requestAnimationFrame(fit);
+  };
+  document.addEventListener("fullscreenchange", onFs);
+  fit();
 }
 
 export interface HydrateCtx extends EmbedCtx {
