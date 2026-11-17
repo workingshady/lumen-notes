@@ -400,3 +400,12 @@ a.link-card.lc-failed { height: auto; } .lc-failed { border-style: dashed; backg
 /* ==highlight== (accent highlight), H~2~O, x^2^ */
 .prose mark { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; padding: 0 .15em; border-radius: 3px; }
 .prose sub, .prose sup { font-size: .75em; line-height: 0; }
+/* Diagram ↔ canvas (lib/diagrams.ts): footer link under a note's diagram, flash on arrival, diagram cards on a canvas. */
+.mermaid-card .mm-foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 6px 12px; border-top: 1px solid var(--border); font: 400 11.5px/1.4 var(--font-sans); color: var(--muted); }
+.mermaid-card .mm-foot a { color: var(--link, var(--accent)); text-decoration: none; } .mermaid-card .mm-foot a:hover { text-decoration: underline; }
+.mermaid-card .mm-foot b { font-family: var(--font-mono); font-weight: 500; }
+.mermaid-card .mm-stale { color: var(--warning); } .mermaid-card .mm-sync { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 6px; color: var(--text); border: 1px solid var(--border); }
+.mermaid-card .mm-sync:hover { background: var(--surface-2); }
+.mermaid-card.mm-flash { box-shadow: 0 0 0 2px var(--accent), 0 0 0 6px color-mix(in srgb, var(--accent) 20%, transparent); transition: box-shadow .3s; }
+.diagram-node > .prose { margin: 0; max-width: none; height: 100%; } .diagram-node .mermaid-card { margin: 0; border: 0; border-radius: 0; height: 100%; display: flex; flex-direction: column; background: transparent; }
+.diagram-node .mermaid-card .mm-head > span:first-child { visibility: hidden; } .diagram-node .mermaid-card .mermaid-block.mm-stage { flex: 1; min-height: 0; }

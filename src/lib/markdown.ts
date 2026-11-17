@@ -309,17 +309,20 @@ function diagramViewer(card: HTMLElement, stage: HTMLElement) {
   let k = 1, x = 0, y = 0, fitted = true;
 
   const full = () => document.fullscreenElement === card;
+  // Full screen, or a diagram card on a canvas: the stage fills its box, fits both ways and zooms on plain wheel.
+  const boxed = () => full() || !!card.closest(".diagram-node");
   const pad = () => (full() ? 24 : 16);
   const fitScale = () => {
     const w = stage.clientWidth - pad() * 2;
     const s = w / W;
-    if (!full()) return Math.min(1, s);
+    if (!boxed()) return Math.min(1, s);
     const h = stage.clientHeight - pad() * 2;
-    return Math.min(s, h / H);
+    const t = Math.min(s, h / H);
+    return t > 0.01 ? t : Math.max(0.05, Math.min(1, s)); // box not laid out yet: fit the width for now
   };
   const apply = () => {
     // Inline: the stage grows with the diagram up to 75% of the screen; full screen: the card's flex area.
-    if (!full()) stage.style.height = `${Math.round(Math.min(Math.max(H * k, H * fitScale()) + pad() * 2, innerHeight * 0.75))}px`;
+    if (!boxed()) stage.style.height = `${Math.round(Math.min(Math.max(H * k, H * fitScale()) + pad() * 2, innerHeight * 0.75))}px`;
     else stage.style.height = "";
     const sw = stage.clientWidth, sh = stage.clientHeight, cw = W * k, ch = H * k;
     // Keep the drawing on screen: centred when smaller than the stage, clamped to its edges when larger.
@@ -351,7 +354,7 @@ function diagramViewer(card: HTMLElement, stage: HTMLElement) {
     if (fitted && Math.abs(k - 1) > 0.01) zoomTo(1, e.clientX - r.left, e.clientY - r.top); else fit();
   });
   stage.addEventListener("wheel", (e) => {
-    if (!(e.ctrlKey || e.metaKey || full())) return; // plain wheel scrolls the page inline
+    if (!(e.ctrlKey || e.metaKey || boxed())) return; // plain wheel scrolls the page inline
     e.preventDefault();
     const r = stage.getBoundingClientRect();
     zoomTo(k * Math.exp(-e.deltaY * (e.ctrlKey && Math.abs(e.deltaY) < 50 ? 0.01 : 0.0025)), e.clientX - r.left, e.clientY - r.top);

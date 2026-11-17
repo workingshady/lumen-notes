@@ -4,13 +4,14 @@ import {
 } from "@xyflow/react";
 import {
   ArrowRight, Code2, Copy, Download, Ellipsis, FilePlus, FileText, GitFork, Group, LayoutDashboard, LayoutGrid, Link2, ListTree, Minus, Network, Orbit, Pencil, Plus, Scan,
-  Search, SquareTerminal, Trash2, Type, Workflow,
+  Search, SquareTerminal, Trash2, Type, Waypoints, Workflow,
 } from "lucide-react";
 import { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { CanvasEdge, CanvasNode, JsonCanvas, Note, Side } from "../../shared/types";
 import { createNote, duplicateNote, findOrCreateByTitle, restoreNote, trashNote, updateNote } from "../lib/actions";
 import { unfurl, type Unfurl } from "../lib/api";
 import { colorOf, fromOutline, layout, parseCanvas, PRESETS, runScript, stringify, validate } from "../lib/canvas";
+import { diagramFocus, diagramHash, diagramText, mermaidBlocks, parseDiagramText, type DiagramNode } from "../lib/diagrams";
 import { download } from "../lib/io";
 import { openNote, setUI, toast, useVault } from "../lib/store";
 import { canvasToSkeleton, type Skeleton } from "../lib/whiteboard";
@@ -102,11 +103,51 @@ function splitTitle(t: string) {
   return m ? { title: m[1], body: t.slice(m[0].length).trim() } : { title: "", body: t };
 }
 
+/**
+ * A diagram card (lib/diagrams.ts): `## name.mermaid` + one ```mermaid fence. Header = drag handle with the name,
+ * "↩ note" back to the source diagram and "Update from note" when the note's copy changed; body = the zoomable
+ * diagram (nodrag/nowheel so its own pan/zoom work). Double-click the header to edit the source.
+ */
+function DiagramBody({ id, n, name, src, selected, onEdit }: { id: string; n: DiagramNode; name: string; src: string; selected: boolean; onEdit: () => void }) {
+  const v = useVault();
+  const { updateNodeData } = useReactFlow();
+  const { spaceId } = useContext(Ctx);
+  const s = shell(n, selected);
+  const ref = n.lumenDiagram;
+  const source = ref ? v.byId.get(ref.note) : undefined;
+  const now = source && !source.deleted ? mermaidBlocks(source.body) : [];
+  const cur = ref ? now.find((b) => diagramHash(b.src) === ref.hash) ?? now.find((b) => b.line === ref.line) : undefined;
+  const stale = !!cur && diagramHash(cur.src) !== diagramHash(src);
+  const back = () => { if (!source || !ref) return; diagramFocus.note = { noteId: source.id, line: cur?.line ?? ref.line, hash: cur ? diagramHash(cur.src) : ref.hash }; openNote(source.id, "read"); };
+  const pull = () => { if (!cur || !ref) return; updateNodeData(id, { node: { ...n, text: diagramText(name, cur.src), lumenDiagram: { ...ref, line: cur.line, hash: diagramHash(cur.src) } } }); toast("Diagram updated from the note"); };
+  const body = useMemo(() => `\`\`\`mermaid\n${src}\n\`\`\``, [src]);
+  return (
+    <div {...s}>
+      <div className="flex h-[30px] shrink-0 cursor-grab items-center gap-1.5 border-b border-line px-2.5 text-[11.5px] text-muted" onDoubleClick={onEdit} title="Drag to move · double-click to edit the source">
+        <Waypoints size={12} className="shrink-0 text-accent" />
+        <span className="min-w-0 flex-1 truncate font-mono text-ink">{name}</span>
+        {stale && <button className="nodrag shrink-0 rounded-[6px] px-1.5 py-0.5 text-warn hover:bg-surface-2" title="The note's copy of this diagram changed" onClick={pull}>↻ Update from note</button>}
+        {source && <button className="nodrag max-w-[45%] shrink-0 truncate rounded-[6px] px-1.5 py-0.5 hover:bg-surface-2 hover:text-ink" title={`Open “${source.title}” at this diagram`} onClick={back}>↩ {source.title}</button>}
+        {ref && !source && <span className="shrink-0 text-[11px]" title="The source note was deleted or renamed">source missing</span>}
+      </div>
+      <div className="nodrag nowheel diagram-node min-h-0 flex-1 overflow-hidden"><Preview note={{ id, body, spaceId }} className="!m-0 !max-w-none" /></div>
+    </div>
+  );
+}
+
 const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
   const n = data.node as Extract<CanvasNode, { type: "text" }>;
   const { updateNodeData } = useReactFlow();
   const { spaceId } = useContext(Ctx);
   const [edit, setEdit] = useState(!n.text);
+  const diagram = !edit ? parseDiagramText(n.text) : null;
+  if (diagram) return (
+    <>
+      <NodeResizer isVisible={!!selected} minWidth={240} minHeight={160} {...RESIZER} />
+      <Handles />
+      <DiagramBody id={id} n={n as DiagramNode} name={diagram.name} src={diagram.src} selected={!!selected} onEdit={() => setEdit(true)} />
+    </>
+  );
   const s = shell(n, !!selected);
   const { title, body } = splitTitle(n.text);
   const rich = /\$|\*\*|`|\[\[|^\s*([-*>]|\d+\.)\s/m.test(body);
@@ -374,6 +415,15 @@ function Inner({ note }: { note: Note }) {
   const delSelected = () => { const ids = new Set(selected.map((n) => n.id)); setNodes((ns) => ns.filter((n) => !n.selected)); setEdges((es) => es.filter((e) => !e.selected && !ids.has(e.source) && !ids.has(e.target))); };
   const doLayout = (k: "grid" | "tree" | "force") => { load(layout(fromFlow(nodes, edges), k)); setTimeout(() => rf.fitView({ padding: 0.2, duration: 300 }), 50); };
   const fit = () => rf.fitView({ padding: 0.2, duration: 300 });
+  // Arrived from a note's diagram ("Open in canvas"): select that card and centre it, once it exists (a just-saved
+  // card can arrive a moment after the canvas opens).
+  useEffect(() => {
+    const f = diagramFocus.canvas;
+    if (!f || f.canvasId !== note.id || !nodes.some((n) => n.id === f.nodeId)) return;
+    diagramFocus.canvas = null;
+    setNodes((ns) => ns.map((n) => (n.selected !== (n.id === f.nodeId) ? { ...n, selected: n.id === f.nodeId } : n)));
+    setTimeout(() => rf.fitView({ nodes: [{ id: f.nodeId }], padding: 0.25, maxZoom: 1, duration: 400 }), 80);
+  }, [nodes, note.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const onConnect = (c: Connection) => setEdges((es) => addEdge({ ...c, id: crypto.randomUUID().slice(0, 12), type: "straight", markerEnd: { type: MarkerType.ArrowClosed, color: "var(--muted)", width: 18, height: 18 }, style: { stroke: "var(--muted)", strokeWidth: 2 }, labelBgPadding: [8, 3], labelBgBorderRadius: 6 }, es));
   const refit = () => setTimeout(() => rf.fitView({ padding: 0.12, maxZoom: 1, duration: 200 }), 60);
   const togglePanel = (t: CodeTab) => { if (t === "json") setCodeText(stringify(fromFlow(nodes, edges))); setPanel((p) => (p === t ? null : t)); refit(); };
@@ -437,6 +487,7 @@ function Inner({ note }: { note: Note }) {
 
   const addTools: Tool[] = [
     ["Text", <Type size={15} />, "Add text card", () => addNode({ type: "text", text: "" })],
+    ["Diagram", <Waypoints size={15} />, "Add a Mermaid diagram card (.mermaid)", () => addNode({ type: "text", text: diagramText(`diagram-${nodes.filter((x) => x.data.node.type === "text" && parseDiagramText((x.data.node as DiagramNode).text)).length + 1}.mermaid`, "flowchart LR\n  A[Start] --> B[Next step]\n  B --> C{Decision}\n  C -->|yes| D[Done]\n  C -->|no| B"), width: 560, height: 360 })],
     ["Note", <FilePlus size={15} />, "Add note card", () => { const t = prompt("Note title"); if (t) addNode({ type: "file", file: t, width: 300, height: 200 }); }],
     ["Link", <Link2 size={15} />, "Add link card", () => { const u = prompt("URL", "https://"); if (u) addNode({ type: "link", url: u, width: 300, height: 84 }); }],
     ["Group", <Group size={15} />, "Add group", () => addNode({ type: "group", label: "Group", width: 600, height: 400 })],

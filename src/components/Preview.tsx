@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef } from "react";
 import type { Note } from "../../shared/types";
 import { findOrCreateByTitle, updateNote } from "../lib/actions";
 import { parseCanvas, previewSvg } from "../lib/canvas";
+import { diagramFocus, diagramHash, diagramIndex, linkFor, mermaidBlocks, saveDiagramToCanvas, type DiagramBlock } from "../lib/diagrams";
 import { handleCopyClick, hydrate, render } from "../lib/markdown";
+import { icon } from "./ws-icons";
 import { tasks, toggleTask } from "../lib/parse";
 import { matcher, parseQuery } from "../lib/search";
 import { go, openNote, toast, useVault, type Vault } from "../lib/store";
@@ -61,6 +63,57 @@ export function Preview({ note, className, onLine }: { note: Pick<Note, "id" | "
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [html, vault.notes.length]);
+
+  // Diagram ↔ canvas (lib/diagrams.ts): a "save to canvas" button on every Mermaid card of a real note, a footer link
+  // when the diagram is already on a canvas, and scrolling to the diagram when the reader comes back from the canvas.
+  // Runs after the render effect and only touches the cards' toolbar/footer, so vault changes don't re-render diagrams.
+  useEffect(() => {
+    const el = ref.current;
+    const src = vault.byId.get(note.id);
+    if (!el || !src || src.type === "canvas" || src.deleted) return;
+    const blocks = new Map(mermaidBlocks(note.body).map((b) => [b.line, b]));
+    const index = diagramIndex(vault.notes);
+    const go = async (b: DiagramBlock, stay = false) => {
+      const cur = vault.byId.get(note.id);
+      if (!cur) return;
+      const r = await saveDiagramToCanvas({ ...cur, body: note.body }, b, vault.notes);
+      if (stay) { toast("Canvas copy updated"); return; }
+      diagramFocus.canvas = { canvasId: r.canvasId, nodeId: r.nodeId };
+      if (r.created) toast("Diagram saved to a new canvas");
+      openNote(r.canvasId);
+    };
+    el.querySelectorAll<HTMLElement>(".mermaid-card[data-line]").forEach((card) => {
+      const b = blocks.get(Number(card.dataset.line));
+      card.querySelector(".mm-canvas")?.remove();
+      card.querySelector(".mm-foot")?.remove();
+      if (!b) return;
+      const link = linkFor(index, note.id, b);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "mm-canvas";
+      btn.title = link ? "Open in canvas" : "Save to canvas (as a .mermaid card) and open it";
+      btn.innerHTML = icon("layout-dashboard", 13);
+      btn.onclick = () => void go(b);
+      card.querySelector(".mm-src")?.before(btn);
+      if (!link) return;
+      const foot = document.createElement("div");
+      foot.className = "mm-foot";
+      foot.innerHTML = `${icon("layout-dashboard", 12)}<span>In canvas</span><a href="#" class="mm-open">${esc(link.canvas.title)} › <b>${esc(link.name)}</b></a>${link.stale ? `<span class="mm-stale">changed here</span><button type="button" class="mm-sync">${icon("refresh-cw", 12)} Update canvas copy</button>` : ""}`;
+      foot.querySelector<HTMLAnchorElement>(".mm-open")!.onclick = (e) => { e.preventDefault(); diagramFocus.canvas = { canvasId: link.canvas.id, nodeId: link.nodeId }; openNote(link.canvas.id); };
+      const sync = foot.querySelector<HTMLButtonElement>(".mm-sync");
+      if (sync) sync.onclick = () => void go(b, true);
+      card.append(foot);
+    });
+    // Arrived from a canvas card ("↩ note"): scroll to that diagram and flash it.
+    const f = diagramFocus.note;
+    if (f && f.noteId === note.id) {
+      diagramFocus.note = null;
+      const all = [...blocks.values()];
+      const b = all.find((x) => diagramHash(x.src) === f.hash) ?? all.reduce<DiagramBlock | undefined>((best, x) => (!best || Math.abs(x.line - f.line) < Math.abs(best.line - f.line) ? x : best), undefined);
+      const card = b && el.querySelector<HTMLElement>(`.mermaid-card[data-line="${b.line}"]`);
+      if (card) requestAnimationFrame(() => { card.scrollIntoView({ block: "center", behavior: "smooth" }); card.classList.add("mm-flash"); setTimeout(() => card.classList.remove("mm-flash"), 1800); });
+    }
+  }, [html, vault, note.id, note.body]);
 
   async function onClick(e: React.MouseEvent) {
     if (handleCopyClick(e)) return;
