@@ -55,7 +55,12 @@ export const now = () => Date.now();
 
 /** Write a record and mark it for sync. */
 export async function save<K extends Kind>(kind: K, rec: { id: string } & Record<string, any>) {
-  const r = { ...rec, updatedAt: now(), dirty: 1 as const, deleted: (rec.deleted ?? 0) as 0 | 1 };
+  // Sync is last-write-wins on updatedAt. A device clock behind the server's (e.g. 17 s) would stamp an edit as
+  // older than the server-stamped version it was made from, and the server would silently keep the old one.
+  // An edit is always at least 1 ms newer than the version it edits, whatever the device clock says.
+  const prev = typeof rec.updatedAt === "number" ? rec.updatedAt : 0;
+  const stored = (await TABLE[kind].get(rec.id))?.updatedAt ?? 0;
+  const r = { ...rec, updatedAt: Math.max(now(), prev + 1, stored + 1), dirty: 1 as const, deleted: (rec.deleted ?? 0) as 0 | 1 };
   await TABLE[kind].put(r);
   schedulePush();
   return r;
