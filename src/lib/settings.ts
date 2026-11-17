@@ -55,10 +55,18 @@ export interface Settings {
   /** Ask the AI for a short file name when a diagram is saved (otherwise the nearest heading). */
   diagramAiNames: boolean;
   diagramExport: DiagramExportPrefs;
+  /** Focus mode opens for reading (rendered note, highlighter) or writing (editor). */
+  focusMode: "read" | "write";
+  /** Writing focus: dim every paragraph except the one with the cursor. */
+  focusDim: boolean;
+  /** Leaving Focus with unsaved highlights: ask, always save into the note, or discard. */
+  highlightOnExit: "ask" | "save" | "discard";
+  /** Read-aloud speed (0.5–3). */
+  ttsRate: number;
 }
 const DEFAULTS: Settings = {
   theme: "auto", accentHue: null, readingFont: "serif", fontSize: 16, measure: 68, density: "comfortable",
-  blogName: "Lumen", tagline: "Notes from what I'm learning", author: "", avatar: "🕯️", johnnyDecimal: false, spellcheck: true, dailyTemplate: "journal", diagramFolder: "sub", diagramAutoSave: false, diagramAiNames: false, diagramExport: DIAGRAM_EXPORT_DEFAULTS,
+  blogName: "Lumen", tagline: "Notes from what I'm learning", author: "", avatar: "🕯️", johnnyDecimal: false, spellcheck: true, dailyTemplate: "journal", diagramFolder: "sub", diagramAutoSave: false, diagramAiNames: false, diagramExport: DIAGRAM_EXPORT_DEFAULTS, focusMode: "read", focusDim: true, highlightOnExit: "ask", ttsRate: 1,
 };
 
 const KEY = "lumen.settings";

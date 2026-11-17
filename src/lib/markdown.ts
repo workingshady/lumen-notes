@@ -42,6 +42,21 @@ function build() {
     },
   });
   md.use(footnote).use(taskLists, { enabled: true, label: true }).use(mark).use(sub).use(sup); // ==mark==, H~2~O, x^2^
+  // Highlight colours (lib/highlights.ts): ==text=={.hl-green} → <mark class="hl-green">; plain ==text== stays yellow.
+  md.core.ruler.after("inline", "hl-color", (state) => {
+    for (const blk of state.tokens) {
+      const ch = blk.children;
+      if (blk.type !== "inline" || !ch) continue;
+      for (let i = 0; i < ch.length; i++) {
+        if (ch[i].type !== "mark_close") continue;
+        const next = ch[i + 1];
+        const m = next?.type === "text" ? /^\{\.hl-(yellow|green|blue|pink|purple)\}/.exec(next.content) : null;
+        if (!m) continue;
+        next!.content = next!.content.slice(m[0].length);
+        for (let j = i - 1; j >= 0; j--) if (ch[j].type === "mark_open") { ch[j].attrJoin("class", `hl-${m[1]}`); break; }
+      }
+    }
+  });
   // Footnote refs as a bare superscript number (design 5A), back-links as ↩
   md.renderer.rules.footnote_caption = (tokens, idx) => { const m = tokens[idx].meta as { id: number; subId: number }; return String(m.id + 1) + (m.subId > 0 ? `:${m.subId}` : ""); };
   md.renderer.rules.footnote_anchor = (tokens, idx, opts, env, slf) => ` <a href="#fnref${slf.rules.footnote_anchor_name!(tokens, idx, opts, env, slf)}${(tokens[idx].meta as { subId: number }).subId > 0 ? `:${(tokens[idx].meta as { subId: number }).subId}` : ""}" class="footnote-backref">↩</a>`;

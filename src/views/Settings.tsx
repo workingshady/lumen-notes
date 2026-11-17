@@ -4,7 +4,7 @@ import { AppLockSetting } from "./Welcome";
 import {
   ArrowLeft, Check, ChevronRight, CircleCheck, Clock, Code, Copy, Database, Eye, File, FileAudio, FileText, FileVideo, Globe, GraduationCap, HardDrive, Image, Info,
   Layers, LayoutDashboard, Link2, Link2Off, Loader2, LogOut, Palette, PenTool, Pencil, Presentation, RefreshCw, Rss, Share, Sparkles, Trash2, type LucideIcon,
-  Waypoints,
+  Waypoints, BookOpenText,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Note, Space } from "../../shared/types";
@@ -23,12 +23,14 @@ import { setAdvanced, useAdvanced, type Advanced } from "./settings-advanced";
 import { DeveloperSection } from "./settings-developer";
 import { AISection, BlogSection } from "./settings-blog-ai";
 import { DiagramsSection } from "./settings-diagrams";
+import { ReadingSection } from "./settings-reading";
 
-type SecId = "appearance" | "branding" | "diagrams" | "sync" | "sharing" | "blog" | "storage" | "ai" | "developer" | "about";
+type SecId = "appearance" | "branding" | "reading" | "diagrams" | "sync" | "sharing" | "blog" | "storage" | "ai" | "developer" | "about";
 // Round-3 settings nav (Lumen 09 / 11): Appearance · Branding · Sync · Sharing · Blog · Storage · AI · Developer · About.
 const SECTIONS: { id: SecId; label: string; icon: LucideIcon }[] = [
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "branding", label: "Branding", icon: PenTool },
+  { id: "reading", label: "Reading", icon: BookOpenText },
   { id: "diagrams", label: "Diagrams", icon: Waypoints },
   { id: "sync", label: "Sync", icon: RefreshCw },
   { id: "sharing", label: "Sharing", icon: Share },
@@ -166,6 +168,7 @@ export function SettingsView() {
         <div className={cx("pb-10 md:px-10 md:py-7", sec === "appearance" ? "max-md:px-0" : "px-4")}>
           {sec === "appearance" && <Appearance />}
           {sec === "branding" && <Branding />}
+          {sec === "reading" && <ReadingSection />}
           {sec === "diagrams" && <DiagramsSection />}
           {sec === "sync" && <><SyncSection /><div className="mt-6"><AppLockSetting /></div></>}
           {sec === "sharing" && <SharingSection />}

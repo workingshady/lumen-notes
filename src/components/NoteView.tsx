@@ -17,11 +17,13 @@ import { RightPanel } from "./RightPanel";
 import { Slides } from "./Slides";
 import { StudyTimer } from "./Timer";
 import { Button, cx, relTime, Segmented, Sheet, STATUS_COLOR } from "./ui";
-import { HeaderSync, PhoneSyncLine, useSaving, useSyncLook } from "./ws-sync";
+import { HeaderSync, PhoneSyncLine, useSaving } from "./ws-sync";
+import { getSettings } from "../lib/settings";
 import { DirMenu, UiDirRow } from "./ws-bidi";
 import { ReadMenu, ReadRows } from "./ws-read";
 import { DiagramFile } from "./DiagramFile";
 import { DiagramsTab } from "./DiagramsTab";
+import { FocusView } from "./FocusView";
 import { tr, useRtl } from "./ws-dir";
 
 const Whiteboard = lazy(() => import("./Whiteboard"));
@@ -59,7 +61,8 @@ export function NoteView({ note }: { note: Note }) {
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && (mode === "focus" || mode === "slides" || mode === "review")) setUI({ mode: wide ? "split" : "edit" });
+      // Focus handles its own Esc (it may ask to save highlights first).
+      if (e.key === "Escape" && (mode === "slides" || mode === "review")) setUI({ mode: wide ? "split" : "edit" });
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); void snapshot(note, "Manual save").then(() => toast("Version saved")); }
       if ((e.ctrlKey || e.metaKey) && e.key === "e") { e.preventDefault(); setUI({ mode: mode === "edit" ? "read" : "edit" }); }
     };
@@ -176,7 +179,8 @@ export function NoteView({ note }: { note: Note }) {
   const panelBtn = <button aria-label="Side panel" title="Outline, links, history" className={iconBtn + (ui.panel ? " !text-accent" : "")} onClick={() => setUI({ panel: ui.panel ? null : "outline" })}><PanelIcon size={16} /></button>;
 
   // Focus mode is a full-screen layer (7A / 7B): no chrome, Esc hint, saved state + word count in the corners.
-  if (effMode === "focus" && markdownNote) return <FocusMode note={note} words={words} wide={wide} onExit={() => setUI({ mode: wide ? "split" : "edit" })} />;
+  // Focus: full-screen reading (highlighter, read aloud, outline) or writing (FocusView). Leaving returns to the matching view.
+  if (effMode === "focus" && markdownNote) return <FocusView note={note} wide={wide} onExit={() => setUI({ mode: (getSettings().focusMode ?? "read") === "read" ? "read" : wide ? "split" : "edit" })} />;
 
   return (
     <div className="flex h-full min-h-0">
@@ -339,32 +343,6 @@ function OutlinePill({ note }: { note: Note }) {
     <button onClick={() => setUI({ panel: "outline" })} className="absolute bottom-[calc(16px+env(safe-area-inset-bottom))] end-4 z-10 flex h-11 items-center gap-2 rounded-full border border-line bg-surface-2 px-4 text-[13px] font-semibold shadow-[0_8px_24px_rgba(0,0,0,.35)]">
       <ListTree size={15} />Outline · Links {links}
     </button>
-  );
-}
-
-function FocusMode({ note, words, wide, onExit }: { note: Note; words: number; wide: boolean; onExit: () => void }) {
-  const l = useSyncLook();
-  const saving = useSaving();
-  const start = useRef<{ y: number; t: number } | null>(null);
-  return (
-    <div className="fixed inset-0 z-[45] flex flex-col bg-bg fade-in"
-      onTouchStart={(e) => { start.current = { y: e.touches[0].clientY, t: Date.now() }; }}
-      onTouchEnd={(e) => { const s = start.current; if (s && e.changedTouches[0].clientY - s.y > 140 && Date.now() - s.t < 600 && (document.querySelector(".focus-mode .cm-scroller")?.scrollTop ?? 0) < 4) onExit(); }}>
-      {wide && (
-        <button onClick={onExit} className="absolute left-1/2 top-7 z-10 -translate-x-1/2 text-[12px] text-muted opacity-80 hover:opacity-100">
-          <span className="me-1.5 rounded-[4px] border border-line px-1.5 py-0.5 font-mono text-[11px]">Esc</span>to leave focus
-        </button>
-      )}
-      <div className="safe-t min-h-0 flex-1"><Editor key={note.id} note={note} focus /></div>
-      <div className="safe-b pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between px-6 pb-7 pt-10 text-[12px] text-muted md:px-8" style={{ background: "linear-gradient(transparent, var(--bg) 55%)" }}>
-        {wide ? (
-          <span className="flex items-center gap-2"><span className="size-1.5 rounded-full" style={{ background: saving ? "var(--info)" : l.kind === "error" ? "var(--danger)" : "var(--success)" }} />{saving ? "Saving…" : "Saved"}</span>
-        ) : (
-          <button className="pointer-events-auto flex items-center gap-1" onClick={onExit}>Tap <Maximize2 size={11} className="inline" /> or swipe down to exit</button>
-        )}
-        <span>{words.toLocaleString()} words</span>
-      </div>
-    </div>
   );
 }
 
