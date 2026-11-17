@@ -4,7 +4,7 @@ import {
 } from "@xyflow/react";
 import {
   ArrowRight, Code2, Copy, Download, Ellipsis, FilePlus, FileText, GitFork, Group, LayoutDashboard, LayoutGrid, Link2, ListTree, Minus, Network, Orbit, Pencil, Plus, Scan,
-  Search, SquareTerminal, Trash2, Type, Waypoints, Workflow,
+  Image as ImageIcon, Search, SquareTerminal, Trash2, Type, Waypoints, Workflow,
 } from "lucide-react";
 import { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { CanvasEdge, CanvasNode, JsonCanvas, Note, Side } from "../../shared/types";
@@ -14,6 +14,8 @@ import { colorOf, fromOutline, layout, parseCanvas, PRESETS, runScript, stringif
 import { diagramFocus, diagramFolderFor, diagramHash, diagramKind, diagramText, fenced, mermaidBlocks, metaOf, migrateDiagramCards, newDiagramFile, parseDiagramText, type DiagramNode } from "../lib/diagrams";
 import { getSettings } from "../lib/settings";
 import { download } from "../lib/io";
+import { openExport } from "../lib/diagram-export";
+import { canvasSvg } from "../lib/visual-export";
 import { openNote, setUI, toast, useVault } from "../lib/store";
 import { canvasToSkeleton, type Skeleton } from "../lib/whiteboard";
 import { plainExcerpt } from "./nav-text";
@@ -535,6 +537,7 @@ function Inner({ note }: { note: Note }) {
     ["JSON", <Code2 size={15} />, "Code: edit as JSON Canvas", () => togglePanel("json"), panel === "json"],
     ["Script", <SquareTerminal size={15} />, "Script console (Ctrl `)", () => togglePanel("script"), panel === "script"],
     ["Export", <Download size={15} />, "Download .canvas", exportCanvas],
+    ["Image", <ImageIcon size={15} />, "Export as image: SVG, PNG, JPEG, WebP (diagram cards included)", () => openExport({ name: note.title, title: "Export canvas", themable: true, build: (pr) => canvasSvg(fromFlow(nodes, edges), v.notes, pr) })],
   ];
   const ring = "0 0 0 2px var(--surface),0 0 0 3.5px var(--text)";
   const swatches = (size: string) => (

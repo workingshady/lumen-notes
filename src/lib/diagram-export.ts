@@ -28,7 +28,7 @@ export function backgroundOf(p: DiagramExportPrefs): string | null {
 const fontCache = new Map<string, Promise<string>>();
 const toB64 = (buf: ArrayBuffer) => { let s = ""; const b = new Uint8Array(buf); for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(s); };
 /** @font-face rules (base64 woff2, subset to `text`) for Inter, plus IBM Plex Sans Arabic when the text has Arabic. */
-async function fontFaces(text: string): Promise<string> {
+export async function fontFaces(text: string): Promise<string> {
   const chars = [...new Set(text)].join("");
   if (!chars.trim()) return "";
   const key = chars;
@@ -114,9 +114,9 @@ export async function rasterize(b: BuiltSvg, p: DiagramExportPrefs): Promise<{ b
   } finally { URL.revokeObjectURL(url); }
 }
 
-/** The final file for the chosen format. */
-export async function exportDiagram(src: string, p: DiagramExportPrefs): Promise<{ blob: Blob; width: number; height: number; scale: number }> {
-  const b = await buildSvg(src, p);
+export const exportDiagram = async (src: string, p: DiagramExportPrefs) => finalize(await buildSvg(src, p), p);
+/** The final file for the chosen format from a built SVG. */
+export async function finalize(b: BuiltSvg, p: DiagramExportPrefs): Promise<{ blob: Blob; width: number; height: number; scale: number }> {
   if (p.format === "svg") return { blob: new Blob([`<?xml version="1.0" encoding="UTF-8"?>\n${b.svg}`], { type: "image/svg+xml" }), width: Math.round(b.width), height: Math.round(b.height), scale: 1 };
   return rasterize(b, p);
 }
@@ -139,7 +139,13 @@ export async function copyImage(blob: Blob) {
   await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
 }
 
-/** Ask the app to open the export dialog for a diagram (DiagramExport.tsx listens). */
+/**
+ * Something the Export dialog can export: a Mermaid diagram, a whole canvas or the graph. `build` returns a standalone
+ * SVG for the options (background, padding, fonts and, when `themable`, the theme); the dialog does the rest.
+ */
+export interface ExportJob { name: string; title: string; build: (p: DiagramExportPrefs) => Promise<BuiltSvg>; themable: boolean; src?: string }
+/** Open the export dialog (DiagramExport.tsx listens). */
+export function openExport(job: ExportJob) { dispatchEvent(new CustomEvent("lumen:export", { detail: job })); }
 export function openDiagramExport(src: string, name = "diagram") {
-  dispatchEvent(new CustomEvent("lumen:diagram-export", { detail: { src, name } }));
+  openExport({ name, title: "Export diagram", src, themable: true, build: (p) => buildSvg(src, p) });
 }

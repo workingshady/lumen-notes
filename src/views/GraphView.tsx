@@ -1,5 +1,7 @@
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY, type Simulation, type SimulationLinkDatum, type SimulationNodeDatum } from "d3-force";
-import { ArrowLeft, ChevronDown, ChevronUp, Locate, Minus, Plus, Scan, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, ImageDown, Locate, Minus, Plus, Scan, Search, SlidersHorizontal, X } from "lucide-react";
+import { openExport } from "../lib/diagram-export";
+import { graphSvg } from "../lib/visual-export";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Note } from "../../shared/types";
 import { matcher, parseQuery } from "../lib/search";
@@ -331,6 +333,22 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
   const posCb = useRef(onSelectedPos);
   posCb.current = onSelectedPos;
 
+  // Export the graph as laid out on screen (vector SVG, or PNG/JPEG/WebP through the shared Export dialog).
+  const exportImage = () => {
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    const degs = nodes.map((n) => n.deg).sort((a, b) => b - a);
+    const labelMin = Math.max(3, degs[Math.floor(degs.length * 0.3)] ?? 3);
+    const end = (v: unknown) => (typeof v === "object" && v ? (v as GNode) : byId.get(String(v)));
+    openExport({
+      name: focus ? `graph-${byId.get(focus)?.label ?? "local"}` : "graph", title: "Export graph", themable: true,
+      build: (pr) => graphSvg(
+        // Labels: only the most connected nodes (top 30 %, at least 3 links) so a dense graph stays readable.
+        nodes.map((n) => { const d = Math.max(5, 6 + Math.min(n.deg, 12) * 2.1); return { x: n.x ?? 0, y: n.y ?? 0, r: d / 2, color: paint(n.color), label: n.label, showLabel: !!focus || n.deg >= labelMin }; }),
+        links.map((l) => ({ a: end(l.source), b: end(l.target), tag: l.tag })).filter((l): l is { a: GNode; b: GNode; tag: boolean | undefined } => !!l.a && !!l.b).map((l) => ({ a: { x: l.a.x ?? 0, y: l.a.y ?? 0 }, b: { x: l.b.x ?? 0, y: l.b.y ?? 0 }, tag: l.tag })),
+        pr,
+      ),
+    });
+  };
   const fit = () => {
     const s = st.current, cv = ref.current;
     if (!cv || !nodes.length) return;
@@ -553,7 +571,7 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
       />
       {controls && (
         <div className="absolute bottom-4 left-4 z-10 hidden gap-0.5 rounded-[10px] border border-line bg-surface p-[3px] md:flex">
-          {([["Zoom in", <Plus size={14} />, () => zoomBy(1.25)], ["Zoom out", <Minus size={14} />, () => zoomBy(0.8)], ["Fit", <Scan size={14} />, fit]] as const).map(([l, i, f]) => (
+          {([["Zoom in", <Plus size={14} />, () => zoomBy(1.25)], ["Zoom out", <Minus size={14} />, () => zoomBy(0.8)], ["Fit", <Scan size={14} />, fit], ["Export image (SVG, PNG, JPEG, WebP)", <ImageDown size={14} />, exportImage]] as const).map(([l, i, f]) => (
             <button key={l} aria-label={l} title={l} onClick={f} className="flex h-7 w-[30px] items-center justify-center rounded-[7px] text-ink hover:bg-surface-2">{i}</button>
           ))}
         </div>

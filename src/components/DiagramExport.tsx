@@ -1,6 +1,6 @@
 import { Clipboard, Code2, Download, FileCode, Image as ImageIcon, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { buildSvg, copyImage, downloadBlob, EXT, exportDiagram, exportPrefs, maxScale, safeName, saveExportPrefs, type DiagramExportPrefs } from "../lib/diagram-export";
+import { copyImage, downloadBlob, EXT, exportPrefs, finalize, maxScale, safeName, saveExportPrefs, type DiagramExportPrefs, type ExportJob } from "../lib/diagram-export";
 import { toast } from "../lib/store";
 import { Toggle } from "./ShareSheet";
 import { Button, cx, Segmented, Sheet } from "./ui";
@@ -14,7 +14,7 @@ const fmtBytes = (n: number) => (n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Mat
  * Live preview of the real output; choices are remembered as the defaults (Settings › Diagrams edits them too).
  */
 export function DiagramExport() {
-  const [job, setJob] = useState<{ src: string; name: string } | null>(null);
+  const [job, setJob] = useState<ExportJob | null>(null);
   const [p, setP] = useState<DiagramExportPrefs>(exportPrefs);
   const [name, setName] = useState("diagram");
   const [out, setOut] = useState<{ url: string; blob: Blob; width: number; height: number; scale: number; natural: { w: number; h: number } } | null>(null);
@@ -24,13 +24,13 @@ export function DiagramExport() {
 
   useEffect(() => {
     const on = (e: Event) => {
-      const d = (e as CustomEvent<{ src: string; name: string }>).detail;
+      const d = (e as CustomEvent<ExportJob>).detail;
       setP(exportPrefs());
       setName(safeName(d.name));
       setJob(d);
     };
-    addEventListener("lumen:diagram-export", on);
-    return () => removeEventListener("lumen:diagram-export", on);
+    addEventListener("lumen:export", on);
+    return () => removeEventListener("lumen:export", on);
   }, []);
 
   // Re-render the real output (debounced) whenever an option changes.
@@ -40,11 +40,12 @@ export function DiagramExport() {
     setBusy(true); setErr(null);
     const t = setTimeout(async () => {
       try {
-        const b = await buildSvg(job.src, { ...p, format: "svg" });
-        const r = await exportDiagram(job.src, p);
+        const b = await job.build(p);
+        const r = await finalize(b, p);
         if (my !== seq.current) return;
         setOut((old) => { if (old) URL.revokeObjectURL(old.url); return { ...r, url: URL.createObjectURL(r.blob), natural: { w: b.width, h: b.height } }; });
       } catch (e) {
+        console.warn("export failed", e);
         if (my === seq.current) setErr((e as Error).message);
       } finally { if (my === seq.current) setBusy(false); }
     }, 250);
@@ -65,17 +66,17 @@ export function DiagramExport() {
   const copyImg = async () => {
     if (!job) return;
     try {
-      const png = p.format === "png" ? out!.blob : (await exportDiagram(job.src, { ...p, format: "png" })).blob;
+      const png = p.format === "png" ? out!.blob : (await finalize(await job.build({ ...p, format: "png" }), { ...p, format: "png" })).blob;
       await copyImage(png);
       toast("Image copied");
     } catch (e) { toast((e as Error).message); }
   };
-  const copySvg = async () => { if (!job) return; const b = await buildSvg(job.src, { ...p, format: "svg" }); await navigator.clipboard.writeText(b.svg); toast("SVG code copied"); };
-  const copySrc = async () => { if (!job) return; await navigator.clipboard.writeText(job.src); toast("Mermaid source copied"); };
+  const copySvg = async () => { if (!job) return; const b = await job.build({ ...p, format: "svg" }); await navigator.clipboard.writeText(b.svg); toast("SVG code copied"); };
+  const copySrc = async () => { if (!job?.src) return; await navigator.clipboard.writeText(job.src); toast("Mermaid source copied"); };
 
   const label = "text-[12px] font-semibold uppercase tracking-[.05em] text-muted";
   return (
-    <Sheet open={!!job} onClose={close} title="Export diagram" wide>
+    <Sheet open={!!job} onClose={close} title={job?.title ?? "Export"} wide>
       <div className="flex flex-col gap-4 md:flex-row">
         {/* preview */}
         <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -116,9 +117,9 @@ export function DiagramExport() {
               </div>
             )}
           </div>
-          <div className="flex flex-col gap-1.5"><span className={label}>Theme</span>
+          {job?.themable !== false && <div className="flex flex-col gap-1.5"><span className={label}>Theme</span>
             <Segmented value={p.theme} onChange={(t) => set({ theme: t })} options={[{ value: "app", label: "App" }, { value: "default", label: "Light" }, { value: "dark", label: "Dark" }, { value: "neutral", label: "Neutral" }, { value: "forest", label: "Forest" }]} />
-          </div>
+          </div>}
           <div className="flex flex-col gap-1.5"><span className={label}>Padding <span className="font-normal normal-case tracking-normal">· {p.padding} px</span></span>
             <input type="range" min={0} max={120} step={4} value={p.padding} onChange={(e) => set({ padding: Number(e.target.value) })} className="accent-[var(--accent)]" />
           </div>
@@ -132,7 +133,7 @@ export function DiagramExport() {
         </div>
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-3.5">
-        <Button size="sm" variant="ghost" onClick={() => void copySrc()}><Code2 size={14} />Copy source</Button>
+        {job?.src && <Button size="sm" variant="ghost" onClick={() => void copySrc()}><Code2 size={14} />Copy source</Button>}
         <Button size="sm" variant="ghost" onClick={() => void copySvg()}><FileCode size={14} />Copy SVG</Button>
         <Button size="sm" variant="ghost" onClick={() => void copyImg()}><Clipboard size={14} />Copy image</Button>
         <span className="flex-1" />
