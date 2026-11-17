@@ -117,7 +117,15 @@ let vaultStarted = false;
 function startVault() {
   if (vaultStarted) return;
   vaultStarted = true;
-  const rebuild = () => { vaultSnap = buildVault(rawNotes, rawFolders, rawSpaces); vaultSubs.forEach((f) => f()); };
+  // Leading + trailing throttle: the first change rebuilds at once (typing stays instant); a burst of changes
+  // (a big sync writes page after page) folds into one rebuild per 250 ms instead of one per page.
+  let lastBuild = 0, timer = 0;
+  const build = () => { timer = 0; lastBuild = performance.now(); vaultSnap = buildVault(rawNotes, rawFolders, rawSpaces); vaultSubs.forEach((f) => f()); };
+  const rebuild = () => {
+    if (timer) return;
+    const wait = 250 - (performance.now() - lastBuild);
+    if (wait <= 0) build(); else timer = window.setTimeout(build, wait);
+  };
   const watch = <T,>(q: () => Promise<T>, set: (v: T) => void) =>
     liveQuery(q).subscribe({ next: (v) => { set(v); rebuild(); }, error: (e) => console.error("vault query failed", e) });
   watch(() => db.notes.toArray(), (v) => { rawNotes = v; scheduleIndex(v.filter((n) => !n.deleted)); });

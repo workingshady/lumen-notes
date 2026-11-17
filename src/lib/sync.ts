@@ -47,11 +47,14 @@ async function run() {
     for (;;) {
       const res = await api<SyncResponse & { more: boolean }>("/sync", { method: "POST", json: { since, items: first ? items : [] } });
       if (first) {
-        // Clear dirty flags on records that weren't edited again while the request was in flight.
+        // Clear dirty flags on records that weren't edited again while the request was in flight (bulk, per kind).
         await db.transaction("rw", KINDS.map((k) => TABLE[k]), async () => {
-          for (const s of sent) {
-            const cur = await TABLE[s.kind].get(s.id);
-            if (cur && cur.updatedAt === s.updatedAt) await TABLE[s.kind].update(s.id, { dirty: 0 });
+          for (const kind of KINDS) {
+            const mine = sent.filter((s) => s.kind === kind);
+            if (!mine.length) continue;
+            const cur = await TABLE[kind].bulkGet(mine.map((s) => s.id));
+            const done = cur.filter((c, i) => c && c.updatedAt === mine[i].updatedAt).map((c) => ({ ...c, dirty: 0 }));
+            if (done.length) await TABLE[kind].bulkPut(done);
           }
         });
         first = false;
@@ -60,24 +63,48 @@ async function run() {
       since = res.cursor;
       await setMeta("cursor", since);
       if (!res.more) break;
+      await new Promise((r) => setTimeout(r, 0)); // let the page paint between big pages
     }
+    await compactTombstones();
     set({ status: "idle", last: Date.now(), pending: await countDirty() });
   } catch (e) {
     set({ status: navigator.onLine ? "error" : "offline", error: (e as Error).message, pending: await countDirty() });
   }
 }
 
-/** Last-write-wins: remote replaces local unless local has a newer unsynced edit. */
+/**
+ * Last-write-wins: remote replaces local unless local has a newer unsynced edit.
+ * One bulkGet + one bulkPut per kind and page (a page is up to 1500 records): per-record get/put froze the page
+ * for 0.2–1.3 s per page on big pulls.
+ */
 async function apply(items: SyncItem[]) {
   if (!items.length) return;
   await db.transaction("rw", KINDS.map((k) => TABLE[k]), async () => {
-    for (const it of items) {
-      const t = TABLE[it.kind];
-      if (!t) continue;
-      const cur = await t.get(it.id);
-      if (cur?.dirty && cur.updatedAt > it.updatedAt) continue;
-      await t.put({ ...(it.data as object), id: it.id, updatedAt: it.updatedAt, deleted: it.deleted, dirty: 0 });
+    for (const kind of KINDS) {
+      const t = TABLE[kind];
+      const mine = items.filter((it) => it.kind === kind);
+      if (!t || !mine.length) continue;
+      const cur = await t.bulkGet(mine.map((it) => it.id));
+      const rows = mine
+        .filter((it, i) => !(cur[i]?.dirty && cur[i].updatedAt > it.updatedAt))
+        .map((it) => ({ ...(it.data as object), id: it.id, updatedAt: it.updatedAt, deleted: it.deleted, dirty: 0 }));
+      if (rows.length) await t.bulkPut(rows);
     }
+  });
+}
+
+/**
+ * Drop tombstones of notes deleted forever (title "(deleted)", empty body) once the server has them (not dirty),
+ * plus their versions. The server keeps the tombstone, so every other device still learns about the deletion; this
+ * only stops thousands of empty rows from being re-read on every change. Notes in the Trash are untouched.
+ */
+async function compactTombstones() {
+  const dead = await db.notes.where("deleted").equals(1).filter((n) => !n.dirty && n.title === "(deleted)" && !n.body).primaryKeys();
+  if (dead.length < 50) return;
+  await db.transaction("rw", [db.notes, db.versions], async () => {
+    await db.notes.bulkDelete(dead);
+    const vs = await db.versions.where("noteId").anyOf(dead).filter((v) => !v.dirty).primaryKeys();
+    if (vs.length) await db.versions.bulkDelete(vs);
   });
 }
 
