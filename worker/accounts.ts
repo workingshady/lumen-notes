@@ -29,6 +29,17 @@ export function accountRouter(h: H) {
     const authz = c.req.header("authorization") ?? "";
     const tok = authz.startsWith("Bearer ") ? authz.slice(7) : "";
 
+    // Sign-in comes first and is decided by the passcode alone: a device signed in to one account must be able to
+    // add another (any token sent along is ignored here).
+    // Sign-in: the passcode picks the account (Hono caches the parsed body, so the route can read it again).
+    if (c.req.method === "POST" && (path === "/api/login" || path === "/api/unlock")) {
+      const { passcode } = await c.req.json<{ passcode?: string }>().catch(() => ({ passcode: "" }));
+      if (passcode) for (const a of accounts) {
+        if (h.safeEqual(await h.hmac("cmp", passcode), await h.hmac("cmp", env[a.pass] as string))) { use(c, a); break; }
+      }
+      return next();
+    }
+
     if (tok) {
       for (const a of accounts) {
         if (h.safeEqual(tok, await h.hmac(env[a.pass] as string, "lumen:owner:v1"))) { use(c, a); return next(); }
@@ -41,15 +52,6 @@ export function accountRouter(h: H) {
           if (hit) { use(c, a); return next(); }
         }
       }
-    }
-
-    // Sign-in: the passcode picks the account (Hono caches the parsed body, so the route can read it again).
-    if (c.req.method === "POST" && (path === "/api/login" || path === "/api/unlock")) {
-      const { passcode } = await c.req.json<{ passcode?: string }>().catch(() => ({ passcode: "" }));
-      if (passcode) for (const a of accounts) {
-        if (h.safeEqual(await h.hmac("cmp", passcode), await h.hmac("cmp", env[a.pass] as string))) { use(c, a); break; }
-      }
-      return next();
     }
 
     // Public, unauthenticated reads that are keyed by a random id: fall back to the account that has it.

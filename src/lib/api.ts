@@ -65,7 +65,8 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
   }
   const headers = new Headers(init.headers);
   const tok = getToken();
-  if (tok) headers.set("Authorization", `Bearer ${tok}`);
+  // Sign-in requests carry no token: the passcode alone picks the account.
+  if (tok && path !== "/login" && path !== "/unlock") headers.set("Authorization", `Bearer ${tok}`);
   let body = init.body;
   if (init.json !== undefined) { headers.set("Content-Type", "application/json"); body = JSON.stringify(init.json); }
   const res = await fetch(API_BASE + "/api" + path, { ...init, headers, body });
