@@ -7,8 +7,9 @@
 //   note → file/canvas: under each saved diagram, "Saved as … · In canvas …" (stale → "Update file");
 //   file/canvas → note: "↩ <source note>" opens the note scrolled to that diagram.
 // One diagram canvas per source note ("<note> · diagrams", same space and folder), created on first use.
-import type { CanvasNode, JsonCanvas, Note } from "../../shared/types";
-import { createNote, updateNote } from "./actions";
+import type { CanvasNode, Folder, JsonCanvas, Note } from "../../shared/types";
+import { createFolder, createNote, updateNote } from "./actions";
+import { getSettings } from "./settings";
 import { parseCanvas, stringify } from "./canvas";
 import { hash } from "./parse";
 
@@ -100,9 +101,28 @@ export function canvasesWith(notes: Note[], file: Note): { canvas: Note; nodeId:
 // ------------------------------------------------------------------ navigation hand-off (in-memory, one shot)
 export const diagramFocus: { canvas: { canvasId: string; nodeId: string } | null; note: { noteId: string; line: number; hash: string } | null } = { canvas: null, note: null };
 
+// ------------------------------------------------------------------ where diagram files live
+// Like an attachments folder: diagrams saved from notes go to one place instead of mixing with the notes.
+//   "sub"   → a `diagrams` subfolder of the note's folder (default; at the space root when the note has no folder)
+//   "space" → one `Diagrams` folder at the root of the space
+//   "same"  → the note's own folder
+export const DIAGRAM_FOLDER = { sub: "diagrams", space: "Diagrams" } as const;
+/** The folder for diagram files of a note in `spaceId` / `folderId` (created on first use), or null for "same". */
+export async function diagramFolderFor(spaceId: string, folderId: string | null, mode: "sub" | "space" | "same", folders: Folder[]): Promise<string | null> {
+  if (mode === "same") return folderId;
+  const parentId = mode === "space" ? null : folderId;
+  const name = mode === "space" ? DIAGRAM_FOLDER.space : DIAGRAM_FOLDER.sub;
+  // Already inside a diagrams folder (e.g. a note kept there)? Use it.
+  const here = folderId ? folders.find((f) => f.id === folderId) : undefined;
+  if (here && here.name.toLowerCase() === name.toLowerCase()) return here.id;
+  const hit = folders.find((f) => !f.deleted && f.spaceId === spaceId && f.parentId === parentId && f.name.toLowerCase() === name.toLowerCase());
+  if (hit) return hit.id;
+  return (await createFolder(spaceId, parentId, name)).id;
+}
+
 // ------------------------------------------------------------------ save
-/** Save (or refresh) diagram `b` of note `src` as a `.mermaid` file next to the note. Returns the file note. */
-export async function saveDiagramFile(src: Note, b: DiagramBlock, notes: Note[], name?: string): Promise<{ file: Note; created: boolean }> {
+/** Save (or refresh) diagram `b` of note `src` as a `.mermaid` file in the diagram folder. Returns the file note. */
+export async function saveDiagramFile(src: Note, b: DiagramBlock, notes: Note[], opts: { name?: string; folders?: Folder[]; mode?: "sub" | "space" | "same" } = {}): Promise<{ file: Note; created: boolean }> {
   const found = fileFor(diagramFiles(notes), src.id, b);
   if (found) {
     if (found.stale || found.file.body.trim() !== b.src.trim() || found.file.props?.diagramLine !== String(b.line)) {
@@ -111,15 +131,16 @@ export async function saveDiagramFile(src: Note, b: DiagramBlock, notes: Note[],
     return { file: { ...found.file, body: b.src.trim() + "\n" }, created: false };
   }
   const taken = new Set(notes.filter((n) => !n.deleted).map((n) => n.title.toLowerCase()));
-  const title = name ? diagramName(src.title, { heading: name.replace(/\.mermaid$/i, ""), kind: b.kind }, taken) : diagramName(src.title, b, taken);
-  const file = await createNote({ type: "diagram", title, body: b.src.trim() + "\n", spaceId: src.spaceId, folderId: src.folderId, tags: ["diagram"], props: metaProps(src, b) });
+  const title = opts.name ? diagramName(src.title, { heading: opts.name.replace(/\.mermaid$/i, ""), kind: b.kind }, taken) : diagramName(src.title, b, taken);
+  const folderId = await diagramFolderFor(src.spaceId, src.folderId, opts.mode ?? getSettings().diagramFolder ?? "sub", opts.folders ?? []);
+  const file = await createNote({ type: "diagram", title, body: b.src.trim() + "\n", spaceId: src.spaceId, folderId, tags: ["diagram"], props: metaProps(src, b) });
   return { file, created: true };
 }
 
 /** A new, standalone `.mermaid` file (canvas "Diagram" tool, command palette). */
 export async function newDiagramFile(where: Pick<Note, "spaceId" | "folderId">, notes: Note[], kind = "flowchart", src = STARTERS.flowchart): Promise<Note> {
   const taken = new Set(notes.filter((n) => !n.deleted).map((n) => n.title.toLowerCase()));
-  return createNote({ type: "diagram", title: diagramName("", { heading: `${kind}`, kind }, taken), body: src.trim() + "\n", spaceId: where.spaceId, folderId: where.folderId, tags: ["diagram"] });
+  return createNote({ type: "diagram", title: diagramName("", { heading: kind === "flowchart" ? "diagram" : `${kind}-diagram`, kind }, taken), body: src.trim() + "\n", spaceId: where.spaceId, folderId: where.folderId, tags: ["diagram"] });
 }
 export const STARTERS: Record<string, string> = {
   flowchart: "flowchart LR\n  A[Start] --> B[Next step]\n  B --> C{Decision}\n  C -->|yes| D[Done]\n  C -->|no| B",
@@ -164,8 +185,8 @@ export async function placeOnCanvas(file: Note, src: Note | null, notes: Note[],
 }
 
 /** Note diagram → `.mermaid` file → the note's diagram canvas. */
-export async function saveDiagramToCanvas(src: Note, b: DiagramBlock, notes: Note[]) {
-  const { file, created } = await saveDiagramFile(src, b, notes);
+export async function saveDiagramToCanvas(src: Note, b: DiagramBlock, notes: Note[], folders: Folder[] = []) {
+  const { file, created } = await saveDiagramFile(src, b, notes, { folders });
   const where = await placeOnCanvas(file, src, created ? [...notes, file] : notes);
   return { ...where, file, created };
 }
@@ -180,7 +201,7 @@ export type DiagramNode = Extract<CanvasNode, { type: "text" }> & { lumenDiagram
  * Returns true when the canvas changed.
  */
 const migrating = new Set<string>();
-export async function migrateDiagramCards(canvasNote: Note, notes: Note[]): Promise<boolean> {
+export async function migrateDiagramCards(canvasNote: Note, notes: Note[], folders: Folder[] = []): Promise<boolean> {
   if (!canvasNote.body.includes("lumenDiagram") || migrating.has(canvasNote.id)) return false;
   migrating.add(canvasNote.id);
   try {
@@ -215,7 +236,8 @@ export async function migrateDiagramCards(canvasNote: Note, notes: Note[]): Prom
       const props: Record<string, string> = src
         ? { diagramFrom: src.id, diagramFromTitle: src.title, diagramHeading: b?.heading ?? "", diagramLine: String(b?.line ?? ref.line), diagramHash: diagramHash(d.src), diagramKind: diagramKind(d.src), diagramSavedAt: new Date().toISOString() }
         : {};
-      await createNote({ type: "diagram", title, body: d.src.trim() + "\n", spaceId: canvasNote.spaceId, folderId: canvasNote.folderId, tags: ["diagram"], props });
+      const folderId = await diagramFolderFor(canvasNote.spaceId, canvasNote.folderId, getSettings().diagramFolder ?? "sub", folders);
+      await createNote({ type: "diagram", title, body: d.src.trim() + "\n", spaceId: canvasNote.spaceId, folderId, tags: ["diagram"], props });
       const { text: _t, lumenDiagram: _l, ...rest } = n as DiagramNode;
       nodes.push({ ...rest, type: "file", file: title } as CanvasNode);
       changed = true;

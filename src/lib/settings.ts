@@ -30,10 +30,12 @@ export interface Settings {
   johnnyDecimal: boolean;
   spellcheck: boolean;
   dailyTemplate: string;
+  /** Where diagrams saved from a note go: a `diagrams` subfolder next to the note, one `Diagrams` folder per space, or the note's own folder. */
+  diagramFolder: "sub" | "space" | "same";
 }
 const DEFAULTS: Settings = {
   theme: "auto", accentHue: null, readingFont: "serif", fontSize: 16, measure: 68, density: "comfortable",
-  blogName: "Lumen", tagline: "Notes from what I'm learning", author: "", avatar: "🕯️", johnnyDecimal: false, spellcheck: true, dailyTemplate: "journal",
+  blogName: "Lumen", tagline: "Notes from what I'm learning", author: "", avatar: "🕯️", johnnyDecimal: false, spellcheck: true, dailyTemplate: "journal", diagramFolder: "sub",
 };
 
 const KEY = "lumen.settings";

@@ -78,7 +78,7 @@ export function Preview({ note, className, onLine }: { note: Pick<Note, "id" | "
     const toCanvas = async (b: DiagramBlock) => {
       const cur = current();
       if (!cur) return;
-      const r = await saveDiagramToCanvas(cur, b, vault.notes);
+      const r = await saveDiagramToCanvas(cur, b, vault.notes, vault.folders);
       diagramFocus.canvas = { canvasId: r.canvasId, nodeId: r.nodeId };
       if (r.created) toast(`Saved as ${r.file.title}`);
       openNote(r.canvasId);
@@ -86,7 +86,7 @@ export function Preview({ note, className, onLine }: { note: Pick<Note, "id" | "
     const toFile = async (b: DiagramBlock, open = false) => {
       const cur = current();
       if (!cur) return;
-      const { file, created } = await saveDiagramFile(cur, b, vault.notes);
+      const { file, created } = await saveDiagramFile(cur, b, vault.notes, { folders: vault.folders });
       if (open) openNote(file.id, "read");
       else toast(created ? `Saved as ${file.title}` : `${file.title} updated`, { label: "Open", run: () => openNote(file.id, "read") });
     };

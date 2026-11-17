@@ -11,7 +11,8 @@ import type { CanvasEdge, CanvasNode, JsonCanvas, Note, Side } from "../../share
 import { createNote, duplicateNote, findOrCreateByTitle, restoreNote, trashNote, updateNote } from "../lib/actions";
 import { unfurl, type Unfurl } from "../lib/api";
 import { colorOf, fromOutline, layout, parseCanvas, PRESETS, runScript, stringify, validate } from "../lib/canvas";
-import { diagramFocus, diagramHash, diagramKind, diagramText, fenced, mermaidBlocks, metaOf, migrateDiagramCards, newDiagramFile, parseDiagramText, type DiagramNode } from "../lib/diagrams";
+import { diagramFocus, diagramFolderFor, diagramHash, diagramKind, diagramText, fenced, mermaidBlocks, metaOf, migrateDiagramCards, newDiagramFile, parseDiagramText, type DiagramNode } from "../lib/diagrams";
+import { getSettings } from "../lib/settings";
 import { download } from "../lib/io";
 import { openNote, setUI, toast, useVault } from "../lib/store";
 import { canvasToSkeleton, type Skeleton } from "../lib/whiteboard";
@@ -447,7 +448,7 @@ function Inner({ note }: { note: Note }) {
   const doLayout = (k: "grid" | "tree" | "force") => { load(layout(fromFlow(nodes, edges), k)); setTimeout(() => rf.fitView({ padding: 0.2, duration: 300 }), 50); };
   const fit = () => rf.fitView({ padding: 0.2, duration: 300 });
   // Canvases from the first diagram version (text cards) are upgraded to .mermaid file cards once, on open.
-  useEffect(() => { if (note.body.includes("lumenDiagram")) void migrateDiagramCards(note, v.notes).then((c) => c && toast("Diagram cards upgraded to .mermaid files")); }, [note.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (note.body.includes("lumenDiagram")) void migrateDiagramCards(note, v.notes, v.folders).then((c) => c && toast("Diagram cards upgraded to .mermaid files")); }, [note.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // Arrived from a note's diagram ("Open in canvas"): select that card and centre it, once it exists (a just-saved
   // card can arrive a moment after the canvas opens).
   useEffect(() => {
@@ -520,7 +521,7 @@ function Inner({ note }: { note: Note }) {
 
   const addTools: Tool[] = [
     ["Text", <Type size={15} />, "Add text card", () => addNode({ type: "text", text: "" })],
-    ["Diagram", <Waypoints size={15} />, "New .mermaid diagram file on this canvas", async () => { const f = await newDiagramFile(note, v.notes); addNode({ type: "file", file: f.title, width: 560, height: 380 }); toast(`Created ${f.title}`, { label: "Open", run: () => openNote(f.id, "edit") }); }],
+    ["Diagram", <Waypoints size={15} />, "New .mermaid diagram file on this canvas", async () => { const folderId = await diagramFolderFor(note.spaceId, note.folderId, getSettings().diagramFolder ?? "sub", v.folders); const f = await newDiagramFile({ spaceId: note.spaceId, folderId }, v.notes); addNode({ type: "file", file: f.title, width: 560, height: 380 }); toast(`Created ${f.title}`, { label: "Open", run: () => openNote(f.id, "edit") }); }],
     ["Note", <FilePlus size={15} />, "Add note card", () => { const t = prompt("Note title"); if (t) addNode({ type: "file", file: t, width: 300, height: 200 }); }],
     ["Link", <Link2 size={15} />, "Add link card", () => { const u = prompt("URL", "https://"); if (u) addNode({ type: "link", url: u, width: 300, height: 84 }); }],
     ["Group", <Group size={15} />, "Add group", () => addNode({ type: "group", label: "Group", width: 600, height: 400 })],

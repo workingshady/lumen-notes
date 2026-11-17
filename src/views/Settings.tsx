@@ -358,6 +358,10 @@ function AdvancedPanel({ adv, widthSeg, densitySeg }: { adv: Advanced; widthSeg:
         <Row title="Spellcheck" hint="Underline misspellings while you write." on={s.spellcheck} onChange={(v) => setSettings({ spellcheck: v })} />
         <Row title="Johnny-Decimal sorting" hint="Sort folders by their number prefix (10-19 Area / 11 Category / 11.01)" on={s.johnnyDecimal} onChange={(v) => setSettings({ johnnyDecimal: v })} />
       </div>
+      <Group label="Diagram files (.mermaid) saved from notes go to">
+        <Seg value={s.diagramFolder ?? "sub"} onChange={(v) => setSettings({ diagramFolder: v as "sub" | "space" | "same" })}
+          options={[{ value: "sub", label: "diagrams/ next to the note" }, { value: "space", label: "One Diagrams folder" }, { value: "same", label: "The note's folder" }]} />
+      </Group>
       <Group label="Custom CSS snippet" right={css && <button onClick={() => setCss("")} className="text-[12px] text-link">Clear</button>}>
         <textarea value={css} onChange={(e) => setCss(e.target.value)} spellCheck={false} rows={5} placeholder={".prose h2 { letter-spacing: -.01em; }"}
           className="resize-y rounded-[10px] border border-line bg-surface p-3 font-mono text-[12.5px] leading-5 focus:border-accent focus:outline-none" />

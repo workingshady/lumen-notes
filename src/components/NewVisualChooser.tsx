@@ -1,13 +1,15 @@
 import { CircleCheck, Info, Network, X } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { createNote } from "../lib/actions";
+import { newDiagramFile } from "../lib/diagrams";
 import { go, openNote, useUI, useVault } from "../lib/store";
 import { cx } from "./ui";
 
-type Kind = "canvas" | "whiteboard" | "graph";
+type Kind = "canvas" | "whiteboard" | "mermaid" | "graph";
 const KINDS: { k: Kind; e: string; n: string; u: string; f: string; ed: string; cta: string }[] = [
   { k: "canvas", e: "🧩", n: "Canvas", u: "you want cards — notes, text, links — arranged and connected by arrows.", f: ".canvas · JSON Canvas 1.0", ed: "Drag & drop · JSON · script · REST API", cta: "Create canvas" },
   { k: "whiteboard", e: "🖍️", n: "Whiteboard", u: "you want to sketch freely — pen, shapes, stickies, frames, images.", f: ".excalidraw", ed: "Draw · JSON · script · Mermaid → shapes · REST", cta: "Create whiteboard" },
+  { k: "mermaid", e: "📈", n: "Mermaid diagram", u: "you want a diagram as text — flowchart, sequence, state, ER, Gantt, mind map…", f: ".mermaid · Mermaid", ed: "Source + live preview · zoom · export · on canvases", cta: "Create diagram" },
   { k: "graph", e: "", n: "Graph from note", u: "you want to see how a note connects to everything else.", f: "Generated · not stored", ed: "Filters only", cta: "Open graph" },
 ];
 
@@ -22,6 +24,11 @@ function shapes(kind: Kind, W: number, H: number): CSSProperties[] {
   const tint = (c: string) => ({ b: `1.5px solid ${c}`, f: `color-mix(in srgb,${c} 14%,var(--surface))` });
   if (kind === "canvas") return [L(110, 48, 160, 48), L(205, 70, 205, 98), R(30, 26, 80, 46), R(160, 24, 90, 46, tint("#A371F7")), R(150, 98, 110, 34), R(30, 92, 90, 40, tint("#39C5CF"))];
   if (kind === "whiteboard") return [R(30, 30, 64, 58, { f: "#fff3bf", b: "none", r: "2px", t: "rotate(-4deg)" }), R(104, 36, 64, 58, { f: "#d0ebff", b: "none", r: "2px", t: "rotate(3deg)" }), R(60, 92, 64, 46, { f: "#ffc9c9", b: "none", r: "2px", t: "rotate(-2deg)" }), R(190, 30, 62, 62, { f: "transparent", b: "2px solid var(--text)", r: "50%" }), L(160, 112, 200, 104, "var(--text)"), L(200, 104, 240, 118, "var(--text)")];
+  if (kind === "mermaid") {
+    const box = (x: number, y: number, w: number, c?: string) => R(x, y, w, 26, c ? tint(c) : { r: "5px" });
+    return [L(95, 37, 120, 37), L(190, 37, 215, 37), L(155, 50, 155, 78), L(190, 91, 215, 103), L(120, 91, 95, 103),
+      box(30, 24, 65, "#39C5CF"), box(120, 24, 70), box(215, 24, 40, "#57AB5A"), R(127, 72, 56, 38, { ...tint("#E8893A"), t: "rotate(45deg) scale(.7)", r: "4px" }), box(30, 98, 65), box(215, 98, 45, "#A371F7")];
+  }
   const N = [[60, 40], [120, 70], [200, 40], [230, 100], [150, 120], [70, 110], [180, 80]];
   const E = [[0, 1], [1, 2], [1, 4], [2, 3], [4, 5], [1, 6], [6, 3]];
   const C = ["#39C5CF", "var(--text)", "#E8893A", "#E8893A", "#A371F7", "#A371F7", "#57AB5A"];
@@ -54,6 +61,11 @@ export function NewVisualChooser({ open, onClose }: { open: boolean; onClose: ()
       // GraphView is lazy-loaded; hand it the "start local" request through sessionStorage.
       try { if (ui.noteId) sessionStorage.setItem("lumen.graphLocal", ui.noteId); } catch { /* ignore */ } // no note open → the whole graph
       go("graph");
+      return;
+    }
+    if (k === "mermaid") {
+      const d = await newDiagramFile({ spaceId, folderId: ui.spaceId === "all" ? null : ui.folderId }, v.notes);
+      openNote(d.id, "split");
       return;
     }
     const n = await createNote({ template: k, spaceId, folderId: ui.spaceId === "all" ? null : ui.folderId });
@@ -93,7 +105,7 @@ export function NewVisualChooser({ open, onClose }: { open: boolean; onClose: ()
           <span className="text-[18px] font-[650]">New…</span>
           {where && <span className="text-[12.5px] text-muted">in {folder?.name ?? where}</span>}
         </div>
-        <div className="flex flex-col gap-2.5 px-4 md:grid md:grid-cols-3 md:gap-3.5 md:px-6">
+        <div className="flex flex-col gap-2.5 px-4 md:grid md:grid-cols-4 md:gap-3.5 md:px-6">
           {KINDS.map((k, i) => {
             const on = sel === i;
             return (
@@ -122,7 +134,7 @@ export function NewVisualChooser({ open, onClose }: { open: boolean; onClose: ()
         </div>
         <div className="flex items-center gap-2 px-4 pb-3 pt-4 md:px-6 md:py-[18px]">
           <Info size={14} className="hidden shrink-0 text-muted md:block" />
-          <span className="hidden flex-1 text-[12.5px] text-muted md:block">You can convert later: note outline → canvas, canvas → whiteboard, Mermaid → whiteboard.</span>
+          <span className="hidden flex-1 text-[12.5px] text-muted md:block">You can convert later: note outline → canvas, canvas → whiteboard, Mermaid → whiteboard. Diagrams can be placed on any canvas.</span>
           <button className="hidden h-9 items-center rounded-[10px] px-3.5 text-muted hover:text-ink md:flex" onClick={onClose}>Cancel</button>
           <button className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-[12px] bg-accent text-[15px] font-semibold text-accent-fg hover:brightness-110 md:h-9 md:flex-none md:rounded-[10px] md:px-4 md:text-[13px]" onClick={() => create()}>
             {KINDS[sel].cta} <span className="hidden font-mono text-[11px] font-medium opacity-65 md:inline">↵</span>
