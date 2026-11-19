@@ -13,15 +13,15 @@ import { limitState, usedPct, useAiUsage } from "../lib/ai-usage";
 import { API_BASE, api, forgetAccount, getAccount, getToken, setToken } from "../lib/api";
 import { db, DEFAULT_SPACE, DEMO } from "../lib/db";
 import { APP_VERSION } from "../lib/home-meta";
-import { fmtDate, fmtNum, fmtRelative, setDigits, setLang, t, tk, useLang, type Digits, type LangPref } from "../lib/i18n";
+import { fmtDate, fmtNum, fmtRelative, t, tk, useLang } from "../lib/i18n";
 import { setExtraPrefs, useExtraPrefs } from "../lib/reading-prefs";
 import { OPTIONS, setScale, useScale, type GraphDefault } from "../lib/scale-prefs";
-import { activeTheme, setSettings, useSettings, type Settings as S } from "../lib/settings";
+import { setSettings, useSettings, type Settings as S } from "../lib/settings";
 import { getUI, setUI, toast, useVault } from "../lib/store";
 import { runNav } from "../components/Sidebar";
 import { syncNow, useSync } from "../lib/sync";
 import { MODE_LABEL, setAssistantPrefs, setTabPrefs, TAB_META, useAssistantPrefs, useTabPrefs, type TabPref } from "../lib/tab-prefs";
-import { AppearanceClassic, SharingSection, StorageSection, SyncSection, Branding as BrandingClassic, hexHue, saveBranding } from "./Settings";
+import { AppearanceClassic, SharingSection, StorageSection, SyncSection, Branding as BrandingClassic, saveBranding } from "./Settings";
 import { AISection } from "./settings-ai";
 import { BlogSection, setInboxProps } from "./settings-blog-ai";
 import { DeveloperSection } from "./settings-developer";
@@ -282,41 +282,20 @@ function AccountR6() {
 }
 
 // ------------------------------------------------------------------ Appearance (R6-29M)
-const HUES: [number, string][] = [[20, tk("Red")], [45, tk("Coral")], [80, tk("Amber")], [110, tk("Yellow")], [160, tk("Green")], [200, tk("Teal")], [250, tk("Blue")], [300, tk("Violet")], [345, tk("Pink")], [361, tk("Red")]];
-const hueName = (h: number) => t(HUES.find(([m]) => h < m)?.[1] ?? "Red");
 function AppearanceR6() {
-  const s = useSettings();
-  const lang = useLang();
+  useLang();
   const adv = useAdvanced();
-  const { open, toggle } = useOpen();
-  const act = activeTheme();
-  const hue = s.accentHue ?? hexHue(act.vars.accent);
-  const theme = s.theme === "auto" ? "auto" : s.theme === "paper" ? "paper" : s.theme === "lamplight" ? "lamplight" : "other";
+  // Owner request: keep every theme (Lamplight, Paper, Midnight, Sepia, Forest, High contrast) with the palette swatches
+  // and the live preview from the round-2/4 Appearance page as the main view; round-6 extras sit below it.
   return (
-    <SPage title={t("Appearance")} sub={t("Changes apply instantly on this device.")}>
-      <SGroup>
-        <SRow label={t("Theme")} control={<SSeg label={t("Theme")} value={theme} onChange={(v) => v !== "other" && setSettings({ theme: v as S["theme"] })}
-          options={[{ value: "lamplight", label: t("Lamplight") }, { value: "paper", label: t("Paper") }, { value: "auto", label: t("System") }]} />} />
-        <SRow label={t("Accent")} value={`${hueName(hue)} · ${fmtNum(hue, G)}°`} onOpen={() => toggle("accent")} />
-        {open === "accent" && (
-          <SEdit>
-            <input type="range" min={0} max={360} value={hue} aria-label={t("Accent hue")} onChange={(e) => setSettings({ accentHue: Number(e.target.value) })}
-              className="h-5 w-full cursor-pointer appearance-none rounded-full" style={{ background: "linear-gradient(90deg,oklch(.75 .15 0),oklch(.75 .15 60),oklch(.75 .15 120),oklch(.75 .15 180),oklch(.75 .15 240),oklch(.75 .15 300),oklch(.75 .15 360))" }} />
-            {s.accentHue !== null && <button className="self-start text-[12px] text-link" onClick={() => setSettings({ accentHue: null })}>{t("Reset to the theme's accent")}</button>}
-          </SEdit>
-        )}
-        <SRow label={t("Language")} desc={t("The direction follows the language. “Auto” uses the device language.")} control={<SSeg label={t("Language")} value={lang.pref} onChange={(v) => setLang(v as LangPref)} options={[{ value: "en", label: "English" }, { value: "ar", label: "العربية" }, { value: "auto", label: t("Auto") }]} />} />
-        <SRow label={t("Numbers")} desc={fmtDate(Date.now(), { weekday: "long", day: "numeric", month: "long", year: "numeric" })} control={<SSeg label={t("Numbers")} value={lang.digits} onChange={(v) => setDigits(v as Digits)} options={[{ value: "latn", label: t("Western 0123") }, { value: "arab", label: t("Arabic-Indic ٠١٢٣") }]} />} />
-        <SRow label={t("Density")} control={<SSeg label={t("Density")} value={s.density} onChange={(v) => setSettings({ density: v })} options={[{ value: "comfortable", label: t("Comfortable") }, { value: "compact", label: t("Compact") }]} />} />
-      </SGroup>
-      <SAdvanced summary={t("UI font size · reduce motion · custom CSS")}>
-        <SGroup>
-          <SRow label={t("Customise sidebar")} desc={t("Reorder, hide, show counts, row height")} glyph="rail" onOpen={openSidebarCustomise} />
-          <SRow label={t("Reduce effects")} desc={t("Simpler graph and canvas: no animation, labels on zoom. Turns on by itself on slow devices.")} control={<SToggle on={!!adv.reduceEffects} onChange={(v) => setAdvanced({ reduceEffects: v })} label={t("Reduce effects")} />} />
-        </SGroup>
-        <Classic><AppearanceClassic /></Classic>
-      </SAdvanced>
-    </SPage>
+    <div className="flex flex-col gap-6">
+      {/* AppearanceClassic carries its own "Appearance" heading, theme swatches and live preview */}
+      <AppearanceClassic />
+      <div className="max-w-[560px]"><SGroup>
+        <SRow label={t("Customise sidebar")} desc={t("Reorder, hide, show counts, row height")} glyph="rail" onOpen={openSidebarCustomise} />
+        <SRow label={t("Reduce effects")} desc={t("Simpler graph and canvas: no animation, labels on zoom. Turns on by itself on slow devices.")} control={<SToggle on={!!adv.reduceEffects} onChange={(v) => setAdvanced({ reduceEffects: v })} label={t("Reduce effects")} />} />
+      </SGroup></div>
+    </div>
   );
 }
 
