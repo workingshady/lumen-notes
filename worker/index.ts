@@ -19,7 +19,8 @@ import { accountRouter } from "./accounts";
 import registerAuth, { authGate } from "./ext/auth"; // user accounts, behind ACCOUNTS_ENABLED (off) — docs/ACCOUNTS.md
 import registerAiUsage from "./ext/ai-usage"; // AI usage meter + daily limit (Settings › AI, round 6)
 import registerAccountData from "./ext/account-data"; // Settings › Account › Delete account and all data (round 6)
-import registerLinks from "./ext/links"; // Note › Links tab: page snapshots + link check (round 6)
+import registerLinks from "./ext/links";
+import registerRest from "./ext/rest"; // REST API for scripts and agents (docs/API.md) // Note › Links tab: page snapshots + link check (round 6)
 
 export type Env = {
   Bindings: {
@@ -160,12 +161,16 @@ async function putNote(db: D1Database, note: Note) {
 
 api.get("/notes", auth, async (c) => {
   const q = (c.req.query("q") ?? "").toLowerCase();
-  const type = c.req.query("type");
+  const type = c.req.query("type"), space = c.req.query("space"), folder = c.req.query("folder"), tag = c.req.query("tag");
+  const since = Number(c.req.query("since") ?? 0) || 0;
+  const limit = Math.min(Number(c.req.query("limit") ?? 0) || 0, 5000), offset = Number(c.req.query("offset") ?? 0) || 0;
   const { results } = await c.env.DB.prepare("SELECT data FROM items WHERE kind = 'note' AND deleted = 0").all<{ data: string }>();
   const notes = results.map((r) => JSON.parse(r.data) as Note)
-    .filter((n) => (!type || n.type === type) && (!q || n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q)))
+    .filter((n) => (!type || n.type === type) && (!space || n.spaceId === space) && (!folder || n.folderId === folder) && (!tag || (n.tags ?? []).includes(tag))
+      && (!since || n.updatedAt > since) && (!q || n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q)))
+    .sort((a, b) => b.updatedAt - a.updatedAt)
     .map(({ body, ...meta }) => ({ ...meta, size: body.length }));
-  return c.json(notes);
+  return c.json(limit ? notes.slice(offset, offset + limit) : notes.slice(offset));
 });
 api.get("/notes/:id", auth, async (c) => {
   const n = await getNote(c.env.DB, c.req.param("id")!);
@@ -514,7 +519,7 @@ registerAsk(api, helpers); // "Ask your vault" (worker/ext/ask.ts)
 registerChat(api, helpers); registerTutor(api, helpers); // Ask chat + AI tutor (worker/ext/chat.ts, tutor.ts)
 registerHub(api, helpers); // project hub "Ask" (worker/ext/hub.ts)
 registerAccess(api, helpers); // devices that sync (worker/ext/access.ts)
-registerAccountData(api, helpers); registerLinks(api, helpers); // POST /api/vault/wipe (worker/ext/account-data.ts)
+registerAccountData(api, helpers); registerLinks(api, helpers); registerRest(api, helpers); // POST /api/vault/wipe (worker/ext/account-data.ts)
 registerAuth(api, helpers); // /api/accounts/config + /api/auth/* (worker/ext/auth.ts; 404 while accounts are off)
 extOg(api, helpers); ogPages(app); // OG image routes + /s/:token, /blog/:slug meta (worker/ext/og.ts)
 

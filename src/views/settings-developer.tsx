@@ -18,10 +18,20 @@ import { SBtn, SGroup, SHead, SPage, SRow } from "./settings-kit";
 export type ApiToken = { id: string; name: string; last4: string; createdAt: number; lastUsedAt: number | null; lastIp: string | null; access?: "r" | "rw"; expiresAt?: number | null };
 
 const ENDPOINTS: { m: string; p: string; d: string }[] = [
-  { m: "GET  PUT   ", p: "/api/notes/:id", d: tk("Markdown + front-matter") },
+  { m: "GET  POST  ", p: "/api/notes", d: tk("List (q, type, space, folder, tag, since, limit) · create") },
+  { m: "GET PUT DEL", p: "/api/notes/:id", d: tk("Note JSON · create or update · move to Trash") },
+  { m: "GET  ", p: "/api/notes/:id/markdown", d: tk("Markdown + front-matter") },
+  { m: "POST  ", p: "/api/notes/:id/append", d: tk("Append text, optionally under a heading") },
+  { m: "GET  ", p: "/api/search", d: tk("Search titles and text, with snippets") },
+  { m: "GET  POST  ", p: "/api/spaces", d: tk("List and create spaces") },
+  { m: "GET  POST  ", p: "/api/folders", d: tk("List (by space) and create folders") },
+  { m: "GET  ", p: "/api/tags", d: tk("Tags with counts") },
+  { m: "GET  ", p: "/api/cards/due", d: tk("Flashcards due now") },
   { m: "GET  PUT   ", p: "/api/canvas/:id", d: tk("JSON Canvas 1.0 body") },
   { m: "GET  PUT   ", p: "/api/whiteboard/:id", d: tk("Excalidraw scene") },
   { m: "POST  ", p: "/api/whiteboard/:id/elements", d: tk("Append stickies and shapes") },
+  { m: "GET  PUT   ", p: "/api/att/:id", d: tk("Download or upload an attachment") },
+  { m: "GET  ", p: "/api/openapi.json", d: tk("OpenAPI description for agents and API tools") },
 ];
 const EXPIRY = [{ d: 30, l: tk("30 days") }, { d: 90, l: tk("90 days") }, { d: 365, l: tk("1 year") }, { d: 0, l: tk("Never") }];
 const day = (at: number) => fmtDate(at, { day: "numeric", month: "short", year: "numeric" });

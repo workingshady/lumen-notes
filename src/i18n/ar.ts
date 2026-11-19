@@ -15,11 +15,12 @@ import { ar as r6a } from "./ar/chat-r6"; // round 6 part A: Ask, tutor, note ta
 import { ar as common } from "./ar/common";
 import { ar as scale } from "./ar/scale";
 import { ar as r6b } from "./ar/r6b"; // round 6 part B: settings, sidebar, big data
-import { ar as organize } from "./ar/organize"; // round 6: note list filter/multi-select, tags, history panel
+import { ar as organize } from "./ar/organize";
+import { ar as api } from "./ar/api"; // Settings › Developer endpoints // round 6: note list filter/multi-select, tags, history panel
 
 /**
  * Arabic catalog (Modern Standard Arabic, concise UI wording). Keys = English source strings used in `t()`.
  * Split by area so several people can add strings without conflicts; later areas override earlier ones on a clash.
  * Product names (Lumen) and technical terms Arabic users expect in English (Markdown, PDF, FSRS, JSON, URL) stay as is.
  */
-export const AR: Catalog = { ...scale, ...shell, ...home, ...workspace, ...editor, ...paths, ...review, ...settings, ...data, ...dialogs, ...imports, ...accounts, ...sweep, ...r6b, ...r6a, ...organize, ...common };
+export const AR: Catalog = { ...scale, ...shell, ...home, ...workspace, ...editor, ...paths, ...review, ...settings, ...data, ...dialogs, ...imports, ...accounts, ...sweep, ...r6b, ...r6a, ...organize, ...api, ...common };
