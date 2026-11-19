@@ -135,7 +135,7 @@ export function Diagrams({ sp, cards, reqs, notes, phone }: { sp: Space; cards: 
     <div className="flex flex-col gap-3.5">
       <div className={cx("grid content-start gap-3.5", phone ? "grid-cols-1" : "grid-cols-[1.2fr_1fr]")}>
         <section className="flex flex-col gap-2.5 rounded-[14px] border border-line bg-surface p-3.5">
-          <span className="flex items-center gap-2 font-semibold"><Glyph name="mermaid" size={16} />{tr("Requirements → tasks")}<CardActions sp={sp} title="Requirements → tasks" code={traceMermaid(reqs)} /></span>
+          <span className="flex items-center gap-2 font-semibold"><Glyph name="mermaid" size={16} />{tr("Requirements → tasks")}<CardActions sp={sp} title={tr("Requirements → tasks")} code={traceMermaid(reqs)} /></span>
           {reqs.length ? (
             <div className="grid grid-cols-2 gap-x-[30px] gap-y-2 text-[12px]">
               {shownReqs.flatMap((r) => {
@@ -152,7 +152,7 @@ export function Diagrams({ sp, cards, reqs, notes, phone }: { sp: Space; cards: 
           {reqs.length > 3 && <button onClick={() => setAllReqs((x) => !x)} className="self-start text-[12px] text-muted hover:text-ink">{allReqs ? tr("Show fewer") : tr("Show all {n}", { n: reqs.length })}</button>}
         </section>
         <section className="flex flex-col gap-2.5 rounded-[14px] border border-line bg-surface p-3.5">
-          <span className="flex items-center gap-2 font-semibold"><Glyph name="moc" size={16} />{tr("Epic mind map")}<CardActions sp={sp} title="Epic breakdown" code={epicMermaid(cards, sp.name)} /></span>
+          <span className="flex items-center gap-2 font-semibold"><Glyph name="moc" size={16} />{tr("Epic mind map")}<CardActions sp={sp} title={tr("Epic breakdown")} code={epicMermaid(cards, sp.name)} /></span>
           {epics.length ? (
             <div className="flex items-center gap-4">
               <span className="shrink-0 rounded-full bg-surface-2 px-3 py-2 font-semibold" dir="auto">{sp.name.length > 22 ? sp.name.slice(0, 20) + "…" : sp.name}</span>

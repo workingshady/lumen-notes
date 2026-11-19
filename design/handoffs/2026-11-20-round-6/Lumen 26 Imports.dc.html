@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 26 Imports</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 5</span></div><div style="font-size:14px;color:#9A9890">One Import dialog for Anki, Notion, Obsidian and Markdown. Source → read → preview → target → import → result. Nothing is written until you confirm; the whole import is one undo step.</div></div>
+  </div>
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="4">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ sec.k }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ sec.t }}</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">{{ sec.d }}</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+        <sc-for list="{{ sec.frames }}" as="f" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)">
+              <dc-import name="ImportDesk" step="{{ f.s }}" source="{{ f.src }}" drag="{{ f.drag }}" phone="{{ f.ph }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+            </div>
+            <div style="max-width:{{ f.w }};font-size:13px;line-height:20px;color:#CFCBC3;display:{{ f.nS }};gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', inn:'#7AA2F7', le:'#B48EF0' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', inn:'#2F5BD3', le:'#7A4BD1' };
+    const F = (id,l,s,src,t,n,ph=false,drag=false) => ({ id, l, s, src, t, n, nS: n?'flex':'none', ph, drag, w: ph?'412px':'1440px', h: ph?'915px':'900px', r: ph?'28px':'12px' });
+    const sections = [
+      { k:'R5 · 4 · SHARED STEPS', t:'The flow, shown with an Obsidian vault', d:'Opened from Settings › Data or + › Import…. Markdown import from round 1 now lives here too.', frames:[
+        F('R5-26A','1 · Choose a source','source','obsidian',L,'Four cards with glyph, one-line result and accepted file types. Drop zone below accepts any of them and picks the source automatically.'),
+        F('R5-26B','1 · Dragging a file over','source','obsidian',L,'Amber dashed outline and the file name before you let go.',false,true),
+        F('R5-26C','2 · Reading the file','reading','obsidian',L,'Progress in MB, not a spinner.'),
+        F('R5-26D','3 · Preview · title conflicts','preview','obsidian',P,'Folder tree with checkboxes and counts; .trash unticked by default. Each title conflict picks Skip / Rename / Merge.'),
+        F('R5-26E','4 · Target space and folder','target','obsidian',L,'New space (default for vaults), existing space, or Inbox. A dated folder keeps the import together.'),
+        F('R5-26F','5 · Importing with counts','importing','obsidian',P,'Counts per kind; can run in the background with a toast when done.'),
+        F('R5-26G','6 · Result · Open / Undo import','result','obsidian',L,'Counts, what was skipped or renamed, an “Import report” note, and Undo for the whole batch.')
+      ]},
+      { k:'R5 · 4 · PER SOURCE', t:'Anki and Notion previews', d:'Only the preview step differs per source.', frames:[
+        F('R5-26H','Anki · decks, note types, field mapping','preview','anki',L,'Decks with card counts (sub-decks become separate notes), note types found (Basic, Cloze, Image Occlusion), Anki fields → Front/Back, and “Keep review history” so FSRS starts from where Anki left off.'),
+        F('R5-26I','Anki · result · Paper','result','anki',P,''),
+        F('R5-26J','Notion · page tree, databases → bases, warnings','preview','notion',P,'Pages tree with checkboxes. CSV databases become Bases with a chosen first view. Embeds and synced blocks that can\'t come over are listed up front.'),
+        F('R5-26K','Notion · wrong export format','error','notion',L,'Says exactly how to export the right format from Notion.')
+      ]},
+      { k:'R5 · 4 · PHONE', t:'Phone · full-screen steps', d:'Same steps; Back in the header, one primary button at the bottom.', frames:[
+        F('R5-26L','Source','source','anki',L,'',true),
+        F('R5-26M','Preview · Anki · Paper','preview','anki',P,'',true),
+        F('R5-26N','Preview · Obsidian','preview','obsidian',L,'',true),
+        F('R5-26O','Importing · Paper','importing','obsidian',P,'',true),
+        F('R5-26P','Result','result','notion',L,'',true)
+      ]}
+    ];
+    return { sections };
+  }
+}
+</script>
+</body>
+</html>

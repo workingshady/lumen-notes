@@ -2,7 +2,7 @@ import { Archive, Braces, Briefcase, ChevronDown, ChevronRight, CircleCheck, Com
 import { useEffect, useRef, useState, type KeyboardEvent as RKeyboardEvent, type ReactNode } from "react";
 import { SPACE_KINDS, type SpaceKind } from "../../shared/types";
 import { createFolder, createNote, createSpace } from "../lib/actions";
-import { t, tk } from "../lib/i18n";
+import { fmtNum, t, tk, tx } from "../lib/i18n";
 import { PRESETS } from "../lib/canvas";
 import { patch } from "../lib/db";
 import {
@@ -199,10 +199,10 @@ function DetailField({ label, children }: { label: string; children: ReactNode }
   return <label className="flex flex-col gap-1.5"><span className="text-[12px] font-medium text-muted">{label}</span>{children}</label>;
 }
 
-const plural = (n: number, w: string) => `${n.toLocaleString("en-US")} ${w}${n === 1 ? "" : "s"}`;
 function importSummary(r: ImportResult) {
-  const parts = [r.notes || !r.replaced ? `Imported ${plural(r.notes, "note")}` : "", r.replaced ? `${r.notes ? "replaced" : "Replaced"} ${plural(r.replaced, "note")}` : ""].filter(Boolean);
-  return parts.join(", ");
+  if (r.notes && r.replaced) return t("Imported {n} notes, replaced {r}", { n: r.notes, r: r.replaced });
+  if (r.replaced) return t("Replaced {n} note|Replaced {n} notes", { n: r.replaced });
+  return t("Imported {n} note|Imported {n} notes", { n: r.notes });
 }
 
 type Progress = { done: number; total: number; current: string };
@@ -219,14 +219,14 @@ function parseTagMap(s: string): Record<string, string> {
 }
 
 const IMPORT_SOURCES: { I: typeof FileText; n: string; d: string; accept: string }[] = [
-  { I: FileText, n: "Markdown files", d: ".md, front-matter aware", accept: ".md,.markdown,.txt" },
-  { I: FileArchive, n: "Vault .zip", d: "Obsidian folders preserved", accept: ".zip" },
-  { I: LayoutDashboard, n: "Canvas", d: ".canvas (JSON Canvas 1.0)", accept: ".canvas,.excalidraw" },
-  { I: Braces, n: "JSON backup", d: "Full restore from Lumen", accept: ".json" },
+  { I: FileText, n: tk("Markdown files"), d: tk(".md, front-matter aware"), accept: ".md,.markdown,.txt" },
+  { I: FileArchive, n: tk("Vault .zip"), d: tk("Obsidian folders preserved"), accept: ".zip" },
+  { I: LayoutDashboard, n: tk("Canvas"), d: tk(".canvas (JSON Canvas 1.0)"), accept: ".canvas,.excalidraw" },
+  { I: Braces, n: tk("JSON backup"), d: tk("Full restore from Lumen"), accept: ".json" },
 ];
 
 /** Import from other apps: opens the Import dialog (ImportDialog.tsx) on that source. */
-const FROM_APPS = { label: "From another app", items: [["anki", "flashcards", "Anki"], ["notion", "database", "Notion"], ["obsidian", "wikilink", "Obsidian"]] as const };
+const FROM_APPS = { label: tk("From another app"), items: [["anki", "flashcards", "Anki"], ["notion", "database", "Notion"], ["obsidian", "wikilink", "Obsidian"]] as const };
 
 export function ImportExportDialog() {
   const ui = useUI();
@@ -270,8 +270,8 @@ export function ImportExportDialog() {
         onProgress: (done, total, current) => setJob((x) => x && { ...x, p: { done, total, current } }),
       });
       setRes(r);
-      toast(r.cancelled ? `Import cancelled after ${r.notes} notes` : importSummary(r));
-    } catch (e) { toast(`Import failed: ${(e as Error).message}`); } finally { setJob(null); }
+      toast(r.cancelled ? t("Import cancelled after {n} notes", { n: r.notes }) : importSummary(r));
+    } catch (e) { toast(t("Import failed: {msg}", { msg: (e as Error).message })); } finally { setJob(null); }
   }
   function pick(accept: string) {
     if (!input.current) return;
@@ -283,13 +283,13 @@ export function ImportExportDialog() {
     setFmt(kind);
     setExported(null);
     const date = new Date().toISOString().slice(0, 10);
-    const t = await chooseSaveTarget(kind === "zip" ? `lumen-vault-${date}.zip` : `lumen-backup-${date}.json`, kind === "zip" ? "application/zip" : "application/json", kind === "zip" ? ".zip" : ".json");
-    if (!t) return; // picker cancelled
+    const target = await chooseSaveTarget(kind === "zip" ? `lumen-vault-${date}.zip` : `lumen-backup-${date}.json`, kind === "zip" ? "application/zip" : "application/json", kind === "zip" ? ".zip" : ".json");
+    if (!target) return; // picker cancelled
     setExp({ kind, p: { done: 0, total: 0, current: "" } });
     try {
       const onProgress = (done: number, total: number, current: string) => setExp((x) => x && { ...x, p: { done, total, current } });
-      setExported(kind === "zip" ? await exportVaultZip({ target: t, onProgress }) : await exportBackup({ target: t }));
-    } catch (e) { toast(`Export failed: ${(e as Error).message}`); } finally { setExp(null); }
+      setExported(kind === "zip" ? await exportVaultZip({ target, onProgress }) : await exportBackup({ target }));
+    } catch (e) { toast(t("Export failed: {msg}", { msg: (e as Error).message })); } finally { setExp(null); }
   }
   /** "fetch & retry": pull the missing attachments from the server, then export the zip again to the same place. */
   async function retry() {
@@ -297,15 +297,15 @@ export function ImportExportDialog() {
     setExp({ kind: "retry", p: { done: 0, total: exported.skipped.length, current: "" } });
     try {
       const still = await fetchMissingAttachments(exported.skipped.map((s) => s.id), (done, total, current) => setExp((x) => x && { ...x, p: { done, total, current } }));
-      if (still.length === exported.skipped.length) { toast("Still unreachable. Check your connection or sync, then retry."); return; }
-      const t = exported.target.kind === "picker" ? exported.target : (await chooseSaveTarget(exported.file, "application/zip", ".zip")) ?? exported.target;
+      if (still.length === exported.skipped.length) { toast(t("Still unreachable. Check your connection or sync, then retry.")); return; }
+      const target = exported.target.kind === "picker" ? exported.target : (await chooseSaveTarget(exported.file, "application/zip", ".zip")) ?? exported.target;
       setExp({ kind: "zip", p: { done: 0, total: 0, current: "" } });
-      setExported(await exportVaultZip({ target: t, onProgress: (done, total, current) => setExp((x) => x && { ...x, p: { done, total, current } }) }));
+      setExported(await exportVaultZip({ target, onProgress: (done, total, current) => setExp((x) => x && { ...x, p: { done, total, current } }) }));
     } finally { setExp(null); }
   }
   async function reveal() {
     if (!exported) return;
-    if (!(await showInFolder(exported.target))) toast(`Saved to your browser's Downloads folder as ${exported.file}. Browsers can't open the folder for you.`);
+    if (!(await showInFolder(exported.target))) toast(t("Saved to your browser's Downloads folder as {file}. Browsers can't open the folder for you.", { file: exported.file }));
   }
 
   const fmtBtn = "flex h-[34px] items-center gap-1.5 rounded-[10px] border border-line px-3 hover:bg-surface-2 disabled:opacity-50";
@@ -319,7 +319,7 @@ export function ImportExportDialog() {
     <div className="flex flex-col gap-4 px-[22px] py-5">
       {!job && (
         <div className="flex flex-wrap items-center gap-2 text-[12.5px]" data-testid="io-import-sources">
-          <span className="text-muted">{FROM_APPS.label}</span>
+          <span className="text-muted">{t(FROM_APPS.label)}</span>
           {FROM_APPS.items.map(([k, g, n]) => (
             <button key={k} onClick={() => { setUI({ io: false }); openImport(k); }} className="flex h-8 items-center gap-1.5 rounded-[8px] border border-line px-2.5 hover:bg-surface-2">
               <Glyph name={g} size={14} color="var(--accent)" />{n}
@@ -330,8 +330,8 @@ export function ImportExportDialog() {
       {phone && !job && !res ? (
         <div className="flex flex-col gap-2.5">
           {IMPORT_SOURCES.map(({ I, n, d, accept }) => (
-            <button key={n} onClick={() => pick(accept)} className="flex h-[60px] items-center gap-3 rounded-[12px] border border-line px-3.5 text-left hover:bg-surface-2">
-              <I size={20} className="shrink-0 text-muted" /><span className="flex min-w-0 flex-1 flex-col gap-0.5"><span className="font-medium">{n}</span><span className="text-[12px] text-muted">{d}</span></span><ChevronRight size={16} className="text-muted" />
+            <button key={n} onClick={() => pick(accept)} className="flex h-[60px] items-center gap-3 rounded-[12px] border border-line px-3.5 text-start hover:bg-surface-2">
+              <I size={20} className="shrink-0 text-muted" /><span className="flex min-w-0 flex-1 flex-col gap-0.5"><span className="font-medium">{t(n)}</span><span className="text-[12px] text-muted">{t(d)}</span></span><ChevronRight size={16} className="text-muted" />
             </button>
           ))}
         </div>
@@ -345,44 +345,44 @@ export function ImportExportDialog() {
           className={cx("flex h-[120px] cursor-pointer flex-col items-center justify-center gap-2 rounded-[12px] border-[1.5px] border-dashed text-muted", over ? "border-accent bg-accent/10" : "border-line hover:border-muted")}
         >
           <Upload size={22} />
-          <span className="font-medium text-ink">Drop files or <span className="text-link">browse</span></span>
-          <span className="text-[12px]">.md · .zip vault · .canvas · JSON backup</span>
+          <span className="font-medium text-ink">{tx("Drop files or {browse}", { browse: <span className="text-link">{t("browse")}</span> })}</span>
+          <span className="text-[12px]">{t(".md · .zip vault · .canvas · JSON backup")}</span>
         </div>
       )}
       {job && (
         <div className="flex flex-col gap-2.5 rounded-[10px] bg-surface-2 p-3.5">
           <div className="flex items-center gap-2.5"><FileArchive size={18} className="shrink-0 text-muted" />
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5"><span className="truncate font-semibold">{job.name}</span><span className="flex min-w-0 items-center gap-1 truncate text-[12px] text-muted">Into {targetSpace && <SpaceIcon space={targetSpace} size={15} />} {targetSpace?.name} · folders preserved</span></div>
-            <span className="shrink-0 font-mono text-[12px] font-medium">{job.p.done.toLocaleString("en-US")} / {job.p.total.toLocaleString("en-US")}</span>
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5"><span className="truncate font-semibold">{job.name}</span><span className="flex min-w-0 items-center gap-1 truncate text-[12px] text-muted">{tx("Into {space} · folders preserved", { space: <>{targetSpace && <SpaceIcon space={targetSpace} size={15} />} <span dir="auto">{targetSpace?.name}</span></> })}</span></div>
+            <span className="shrink-0 font-mono text-[12px] font-medium">{fmtNum(job.p.done)} / {fmtNum(job.p.total)}</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-[3px] bg-[var(--border)]"><div className="h-full bg-accent transition-[width] duration-150" style={{ width: `${pct(job.p)}%` }} /></div>
           <span className="truncate font-mono text-[12px] text-muted">{job.p.current}</span>
         </div>
       )}
       {res && !job && (
-        <ResultCard title={res.cancelled ? `Cancelled · imported ${res.notes} notes` : importSummary(res)}
-          stats={[[res.notes, "notes"], [res.folders, "folders"], [res.replaced ?? 0, "replaced"], [res.skipped.length, "skipped", !!res.skipped.length]]}>
-          {res.skipped.length > 0 && <span className="text-[12px] text-muted">Skipped: {res.skipped.slice(0, 6).join(", ")}{res.skipped.length > 6 ? "…" : ""}</span>}
+        <ResultCard title={res.cancelled ? t("Cancelled · imported {n} notes", { n: res.notes }) : importSummary(res)}
+          stats={[[res.notes, t("notes")], [res.folders, t("folders")], [res.replaced ?? 0, t("replaced")], [res.skipped.length, t("skipped"), !!res.skipped.length]]}>
+          {res.skipped.length > 0 && <span className="text-[12px] text-muted">{t("Skipped:")} {res.skipped.slice(0, 6).join(", ")}{res.skipped.length > 6 ? "…" : ""}</span>}
         </ResultCard>
       )}
       {(!phone || job || res) && <div className="flex flex-col gap-3">
-        <button onClick={() => setAdv((x) => !x)} aria-expanded={adv} className="flex items-center gap-2 text-left text-[12px] text-muted hover:text-ink">
-          {adv ? <ChevronDown size={13} className="shrink-0" /> : <ChevronRight size={13} className="shrink-0" />}Advanced · duplicate handling (skip / rename / overwrite as new version), tag mapping
+        <button onClick={() => setAdv((x) => !x)} aria-expanded={adv} className="flex items-center gap-2 text-start text-[12px] text-muted hover:text-ink">
+          {adv ? <ChevronDown size={13} className="shrink-0" /> : <ChevronRight size={13} className="shrink-0" />}{t("Advanced · duplicate handling (skip / rename / overwrite as new version), tag mapping")}
         </button>
         {adv && (
-          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-3 pl-5 text-[12.5px]">
-            <span className="text-muted">Into space</span>
+          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-3 ps-5 text-[12.5px]">
+            <span className="text-muted">{t("Into space")}</span>
             <select disabled={!!job} className="h-8 rounded-[6px] border border-line bg-bg px-2 focus:border-accent focus:outline-none" value={target} onChange={(e) => setTarget(e.target.value)}>{v.spaces.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-            <span className="text-muted">Duplicates</span>
-            <div role="radiogroup" aria-label="Duplicates" className="grid grid-cols-3 gap-0.5 rounded-[8px] border border-line bg-bg p-[3px]">
-              {([["skip", "Skip"], ["rename", "Rename"], ["overwrite", "Overwrite"]] as const).map(([k, l]) => (
-                <button key={k} role="radio" aria-checked={dups === k} disabled={!!job} onClick={() => setDups(k)} className={cx("h-[26px] rounded-[6px]", dups === k ? "bg-surface-2 font-semibold text-ink" : "text-muted hover:text-ink")}>{l}</button>
+            <span className="text-muted">{t("Duplicates")}</span>
+            <div role="radiogroup" aria-label={t("Duplicates")} className="grid grid-cols-3 gap-0.5 rounded-[8px] border border-line bg-bg p-[3px]">
+              {([["skip", tk("Skip")], ["rename", tk("Rename")], ["overwrite", tk("Overwrite")]] as const).map(([k, l]) => (
+                <button key={k} role="radio" aria-checked={dups === k} disabled={!!job} onClick={() => setDups(k)} className={cx("h-[26px] rounded-[6px]", dups === k ? "bg-surface-2 font-semibold text-ink" : "text-muted hover:text-ink")}>{t(l)}</button>
               ))}
             </div>
             <span />
-            <span className="-mt-1.5 text-[11.5px] text-muted">{dups === "skip" ? "Same title in the same folder: keep the existing note." : dups === "rename" ? "Keep both: the new one becomes “Title 2”." : "Replace the existing note's text; the old text is kept as a version."}</span>
-            <span className="text-muted">Tag mapping</span>
-            <input disabled={!!job} className="h-8 rounded-[6px] border border-line bg-bg px-2 font-mono text-[12px] focus:border-accent focus:outline-none" value={tagMap} onChange={(e) => setTagMap(e.target.value)} placeholder="ml → machine-learning, todo → inbox" />
+            <span className="-mt-1.5 text-[11.5px] text-muted">{dups === "skip" ? t("Same title in the same folder: keep the existing note.") : dups === "rename" ? t("Keep both: the new one becomes “Title 2”.") : t("Replace the existing note's text; the old text is kept as a version.")}</span>
+            <span className="text-muted">{t("Tag mapping")}</span>
+            <input disabled={!!job} className="h-8 rounded-[6px] border border-line bg-bg px-2 font-mono text-[12px] focus:border-accent focus:outline-none" value={tagMap} onChange={(e) => setTagMap(e.target.value)} placeholder={t("ml → machine-learning, todo → inbox")} />
           </div>
         )}
       </div>}
@@ -392,7 +392,7 @@ export function ImportExportDialog() {
   const exportBody = (
     <div className="flex flex-col gap-4 px-[22px] py-5">
       {note && (
-        <div className="flex flex-col gap-2"><span className="truncate text-[12px] font-medium text-muted">This note · {note.title || "Untitled"}</span>
+        <div className="flex flex-col gap-2"><span className="truncate text-[12px] font-medium text-muted">{t("This note")} · <span dir="auto">{note.title || t("Untitled")}</span></span>
           <div className="flex flex-wrap gap-2">
             <button className={fmtBtn} onClick={() => exportNoteMd(note)}><FileText size={14} className="text-muted" />.md</button>
             <button className={fmtBtn} onClick={() => exportNoteHtml(note)}><FileCode size={14} className="text-muted" />.html</button>
@@ -400,33 +400,33 @@ export function ImportExportDialog() {
           </div>
         </div>
       )}
-      <div className="flex flex-col gap-2"><span className="text-[12px] font-medium text-muted">Whole vault · {v.spaces.length} space{v.spaces.length === 1 ? "" : "s"}</span>
+      <div className="flex flex-col gap-2"><span className="text-[12px] font-medium text-muted">{t("Whole vault · {n} space|Whole vault · {n} spaces", { n: v.spaces.length })}</span>
         <div className="flex flex-wrap gap-2">
-          <button className={cx(fmtBtn, fmt === "zip" && "border-0 font-semibold")} style={fmt === "zip" ? onStyle : undefined} disabled={busy} onClick={() => doExport("zip")} title="Markdown + .canvas + attachments, Obsidian-compatible"><FileArchive size={14} className={fmt === "zip" ? "" : "text-muted"} />.zip (Obsidian-compatible)</button>
-          <button className={cx(fmtBtn, fmt === "json" && "border-0 font-semibold")} style={fmt === "json" ? onStyle : undefined} disabled={busy} onClick={() => doExport("json")} title="Everything incl. history, cards, spaces (not attachment bytes)"><Braces size={14} className={fmt === "json" ? "" : "text-muted"} />JSON backup</button>
+          <button className={cx(fmtBtn, fmt === "zip" && "border-0 font-semibold")} style={fmt === "zip" ? onStyle : undefined} disabled={busy} onClick={() => doExport("zip")} title={t("Markdown + .canvas + attachments, Obsidian-compatible")}><FileArchive size={14} className={fmt === "zip" ? "" : "text-muted"} />{t(".zip (Obsidian-compatible)")}</button>
+          <button className={cx(fmtBtn, fmt === "json" && "border-0 font-semibold")} style={fmt === "json" ? onStyle : undefined} disabled={busy} onClick={() => doExport("json")} title={t("Everything incl. history, cards, spaces (not attachment bytes)")}><Braces size={14} className={fmt === "json" ? "" : "text-muted"} />{t("JSON backup")}</button>
         </div>
         {!exported && !exp && est && (
           <span className="text-[12px] text-muted">
-            ≈ {fmtBytes(est.bytes)} · {est.notes.toLocaleString("en-US")} notes · {est.canvases} canvases · {est.attachments.toLocaleString("en-US")} attachment{est.attachments === 1 ? "" : "s"}
-            {est.missing ? ` (${est.missing} not on this device, fetched during export)` : ""}{canPickFolder() ? " · you choose the folder" : " · saves to Downloads"}
+            ≈ {fmtBytes(est.bytes)} · {t("{n} note|{n} notes", { n: est.notes })} · {t("{n} canvas|{n} canvases", { n: est.canvases })} · {t("{n} attachment|{n} attachments", { n: est.attachments })}
+            {est.missing ? ` ${t("({n} not on this device, fetched during export)", { n: est.missing })}` : ""} · {canPickFolder() ? t("you choose the folder") : t("saves to Downloads")}
           </span>
         )}
       </div>
       {exp && (
         <div className="flex flex-col gap-2.5 rounded-[10px] bg-surface-2 p-3.5">
           <div className="flex items-center gap-2.5"><FileArchive size={18} className="shrink-0 text-muted" />
-            <span className="min-w-0 flex-1 truncate font-semibold">{exp.kind === "retry" ? "Fetching attachments" : exp.kind === "zip" ? "Building vault .zip" : "Writing JSON backup"}</span>
-            {exp.p.total > 0 && <span className="shrink-0 font-mono text-[12px] font-medium">{exp.p.done.toLocaleString("en-US")} / {exp.p.total.toLocaleString("en-US")}</span>}
+            <span className="min-w-0 flex-1 truncate font-semibold">{exp.kind === "retry" ? t("Fetching attachments") : exp.kind === "zip" ? t("Building vault .zip") : t("Writing JSON backup")}</span>
+            {exp.p.total > 0 && <span className="shrink-0 font-mono text-[12px] font-medium">{fmtNum(exp.p.done)} / {fmtNum(exp.p.total)}</span>}
           </div>
           <div className="h-1.5 overflow-hidden rounded-[3px] bg-[var(--border)]"><div className="h-full bg-accent transition-[width] duration-150" style={{ width: `${exp.p.total ? pct(exp.p) : 100}%`, opacity: exp.p.total ? 1 : 0.5 }} /></div>
           {exp.p.current && <span className="truncate font-mono text-[12px] text-muted">{exp.p.current}</span>}
         </div>
       )}
       {exported && !exp && (
-        <ResultCard title={`Exported ${exported.file}`} right={fmtBytes(exported.bytes)}
-          stats={[[exported.notes, "notes"], [exported.canvases, "canvases"], [exported.attachments, "attachments"], [exported.skipped.length, "skipped", exported.skipped.length > 0]]}>
+        <ResultCard title={t("Exported {file}", { file: exported.file })} right={fmtBytes(exported.bytes)}
+          stats={[[exported.notes, t("notes")], [exported.canvases, t("canvases")], [exported.attachments, t("attachments")], [exported.skipped.length, t("skipped"), exported.skipped.length > 0]]}>
           {exported.skipped.length > 0 && (
-            <span className="text-[12px] text-muted">Skipped {exported.skipped.length} attachment{exported.skipped.length === 1 ? "" : "s"} still downloading from Cloudflare D1 — <button className="text-link hover:underline" onClick={() => void retry()}>fetch &amp; retry</button></span>
+            <span className="text-[12px] text-muted">{tx("Skipped {n} attachments still downloading from Cloudflare D1 — {retry}", { n: exported.skipped.length, retry: <button className="text-link hover:underline" onClick={() => void retry()}>{t("fetch & retry")}</button> })}</span>
           )}
         </ResultCard>
       )}
@@ -436,44 +436,44 @@ export function ImportExportDialog() {
   const footer = (
     <div className="flex justify-end gap-2 border-t border-line px-[22px] py-3.5">
       {job ? <>
-        <button className={btnGhost} onClick={() => { setJob((j) => j && { ...j, background: true }); setUI({ io: false }); toast(`Importing ${job.name} in the background…`); }}>Run in background</button>
-        <button className={btnOutline} onClick={() => job.ctl.abort()}>Cancel</button>
+        <button className={btnGhost} onClick={() => { setJob((j) => j && { ...j, background: true }); setUI({ io: false }); toast(t("Importing {name} in the background…", { name: job.name })); }}>{t("Run in background")}</button>
+        <button className={btnOutline} onClick={() => job.ctl.abort()}>{t("Cancel")}</button>
       </> : tab === "export" && exported ? <>
-        <button className={btnOutline} onClick={() => void reveal()} title={exported.target.kind === "picker" ? "Opens the folder you saved to" : "Saved to Downloads"}>Show in folder</button>
-        <button className={btnPrimary} onClick={close}>Done</button>
-      </> : <button className={btnPrimary} onClick={close} disabled={!!exp}>Done</button>}
+        <button className={btnOutline} onClick={() => void reveal()} title={exported.target.kind === "picker" ? t("Opens the folder you saved to") : t("Saved to Downloads")}>{t("Show in folder")}</button>
+        <button className={btnPrimary} onClick={close}>{t("Done")}</button>
+      </> : <button className={btnPrimary} onClick={close} disabled={!!exp}>{t("Done")}</button>}
     </div>
   );
 
   return (
     <>
       {fileInput}
-      <Modal open={ui.io} onClose={close} width={600} phoneHeight="600px" label="Import and export">
+      <Modal open={ui.io} onClose={close} width={600} phoneHeight="600px" label={t("Import and export")}>
         <div className="flex min-h-full flex-col text-[13px] max-md:text-[14px]">
           {phone ? (
             <>
               <div className="flex justify-center pb-1 pt-2.5"><span className="h-1 w-9 rounded-[2px] bg-[var(--border)]" /></div>
-              <div className="px-5 pt-2 text-[18px] font-[650]">Import &amp; export</div>
+              <div className="px-5 pt-2 text-[18px] font-[650]">{t("Import & export")}</div>
               <div role="tablist" className="mx-5 mt-3.5 grid grid-cols-2 gap-0.5 rounded-[10px] border border-line bg-bg p-[3px]">
                 {(["import", "export"] as const).map((k) => (
-                  <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cx("h-10 rounded-[8px] capitalize", tab === k ? "bg-surface-2 font-semibold" : "text-muted")}>{k}</button>
+                  <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cx("h-10 rounded-[8px] capitalize", tab === k ? "bg-surface-2 font-semibold" : "text-muted")}>{k === "import" ? t("Import") : t("Export")}</button>
                 ))}
               </div>
             </>
           ) : (
             <>
-              <div className="flex items-center px-[22px] pt-[18px]"><span className="flex-1 text-[18px] font-[650]">Import &amp; export</span>
-                <button aria-label="Close" onClick={close} className="-m-1 rounded-md p-1 text-ink hover:bg-surface-2"><X size={18} /></button></div>
+              <div className="flex items-center px-[22px] pt-[18px]"><span className="flex-1 text-[18px] font-[650]">{t("Import & export")}</span>
+                <button aria-label={t("Close")} onClick={close} className="-m-1 rounded-md p-1 text-ink hover:bg-surface-2"><X size={18} /></button></div>
               <div role="tablist" className="flex gap-5 border-b border-line px-[22px] pt-3.5">
                 {(["import", "export"] as const).map((k) => (
-                  <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cx("-mb-px border-b-2 pb-2.5 capitalize", tab === k ? "border-accent font-semibold text-ink" : "border-transparent text-muted hover:text-ink")}>{k}</button>
+                  <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cx("-mb-px border-b-2 pb-2.5 capitalize", tab === k ? "border-accent font-semibold text-ink" : "border-transparent text-muted hover:text-ink")}>{k === "import" ? t("Import") : t("Export")}</button>
                 ))}
               </div>
             </>
           )}
           <div className={phone ? "[&>div]:px-5 [&>div]:py-4" : ""}>{tab === "import" ? importBody : exportBody}</div>
           {phone && <span className="flex-1" />}
-          {phone && tab === "import" && !job && !res && <div className="px-5 pb-3 text-center text-[12.5px] text-muted">Tip: share a .md file to Lumen from any app.</div>}
+          {phone && tab === "import" && !job && !res && <div className="px-5 pb-3 text-center text-[12.5px] text-muted">{t("Tip: share a .md file to Lumen from any app.")}</div>}
           {(!phone || job || res || tab === "export") && footer}
         </div>
       </Modal>
@@ -486,7 +486,7 @@ function ResultCard({ title, right, stats, children }: { title: string; right?: 
     <div className="flex flex-col gap-2.5 rounded-[10px] p-3.5" style={{ background: "color-mix(in srgb, var(--success) 9%, transparent)", border: "1px solid color-mix(in srgb, var(--success) 28%, transparent)" }}>
       <div className="flex items-center gap-2.5"><CircleCheck size={18} className="shrink-0 text-ok" /><span className="min-w-0 flex-1 truncate font-semibold">{title}</span>{right && <span className="shrink-0 text-muted">{right}</span>}</div>
       <div className="grid grid-cols-4 gap-2 text-[12px] text-muted">
-        {stats.map(([n, l, warn]) => <span key={l}><b className={cx("block text-[16px] font-[650]", warn ? "text-warn" : "text-ink")}>{n.toLocaleString("en-US")}</b>{l}</span>)}
+        {stats.map(([n, l, warn]) => <span key={l}><b className={cx("block text-[16px] font-[650]", warn ? "text-warn" : "text-ink")}>{fmtNum(n)}</b>{l}</span>)}
       </div>
       {children}
     </div>

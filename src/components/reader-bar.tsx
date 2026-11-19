@@ -12,7 +12,7 @@ export function ReaderBack({ phone }: { phone: boolean }) {
   if (!phone) return <NavButtons />;
   return (
     <button aria-label={t("Back")} className="-my-2.5 -ms-2 flex size-11 shrink-0 items-center justify-center" onClick={() => (canGoBack() ? history.back() : back())}>
-      <ArrowLeft size={20} className="rtl:rotate-180" />
+      <ArrowLeft size={20} />
     </button>
   );
 }

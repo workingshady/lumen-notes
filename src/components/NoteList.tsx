@@ -1,10 +1,11 @@
 import { NewVisualChooser } from "./NewVisualChooser";
+import { DateScrubber } from "./date-scrubber"; // Lumen 22: month headers + date scrubber on long lists
 import { openNewMenu } from "./NewMenu";
 import { NewPathDialog } from "./NewPathDialog";
-import { ArrowDownWideNarrow, FileText, Globe, LayoutTemplate, Table2, Link2, Pin, Plus, SquarePen, Star, X } from "lucide-react";
+import { FileText, Globe, LayoutTemplate, Link2, Pin, Plus, X } from "lucide-react";
 import { PdfLibrary } from "./pdf-library";
-import { memo, useEffect, useMemo, useState } from "react";
-import type { Note, Space } from "../../shared/types";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Note } from "../../shared/types";
 import { createNote } from "../lib/actions";
 import { importFiles } from "../lib/io";
 import { excerpt } from "../lib/parse";
@@ -17,10 +18,11 @@ import { Glyph } from "./Glyph";
 import { SpaceIcon } from "./SpaceIcon";
 import { PhoneChips, PhoneListHeader, SwipeRow, type PhoneFilter } from "./ws-phone";
 import { num, tr, useRtl } from "./ws-dir";
-import { filterByQuery, NoteListQueryBar, openSmartEditor, SmartListHeader, smartListFor, SmartRow, useSmartFolders } from "./SmartFolders";
+import { filterByQuery, openSmartEditor, scopeQuery, SmartListHeader, smartListFor, SmartRow, useSmartFolders } from "./SmartFolders";
+import { BulkBar, DeskRow, Dropdown, FilterBox, FilterEmpty, GroupHeader, groupRows, useTagColors, type Group } from "./note-list-desk";
 import { EmptyState } from "./EmptyState";
 import { indexLabel, LIST_PAGE, useIndexStatus } from "../lib/big-vault";
-import { fmtDate, t, useLang } from "../lib/i18n";
+import { fmtDate, t } from "../lib/i18n";
 
 type Sort = "updated" | "created" | "title";
 /** Note type → glyph (Lumen 13 › B1 note types; the glyph name equals the type). Flashcards carry the violet "practice" colour. */
@@ -91,8 +93,20 @@ export function NoteList() {
   const [pdfs, setPdfs] = useState(false); // PDF library of this space (components/pdf-library.tsx)
   // Smart folders (filter "smart:<id>") + the desktop list search box (search operators, lib/smart.ts).
   const smart = useSmartFolders();
-  const [lq, setLq] = useState("");
-  useEffect(() => setLq(""), [ui.filter, ui.folderId, ui.tag, ui.spaceId]);
+  // Desktop filter box (R6-30D/J): finished operators and words become chips; `draft` is what's still being typed.
+  const [chips, setChips] = useState<string[]>([]);
+  const [draft, setDraft] = useState("");
+  const lq = [...chips, draft].join(" ").trim();
+  const setLq = (q: string) => { setChips([]); setDraft(q); };
+  const keepFilter = useRef(false); // "Search all spaces" keeps the chips while the scope changes
+  useEffect(() => { if (keepFilter.current) { keepFilter.current = false; return; } setChips([]); setDraft(""); }, [ui.filter, ui.folderId, ui.spaceId]);
+  const [group, setGroup] = useState<Group>(() => { try { return (localStorage.getItem("lumen.group") as Group) || "date"; } catch { return "date"; } });
+  // Multi-select (R6-30L): Select / Done in the header, click toggles, shift-click selects a range, Esc leaves.
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const anchor = useRef<string | null>(null);
+  const exitSelect = () => { setSelecting(false); setSelected(new Set()); anchor.current = null; };
+  useEffect(exitSelect, [ui.filter, ui.folderId, ui.spaceId, ui.tag]);
   const smartSel = smartListFor(v, ui, smart);
   const indexing = !!indexLabel(useIndexStatus()); // big vaults: "Indexing 512 / 738" replaces the count while it runs
   const notes = useMemo(() => {
@@ -105,9 +119,44 @@ export function NoteList() {
   }, [v, ui, sort, filter, wide, smart, lq]);
   const folder = ui.folderId ? v.folderMap.get(ui.folderId) : null;
   const space = v.spaceMap.get(ui.spaceId);
-  const title = smartSel ? smartSel.sf?.name ?? t("Smart folder") : ui.filter === "visual" ? t("Canvases & whiteboards") : ui.filter === "paths" ? t("Learning paths") : ui.filter === "published" ? t("Blog posts") : ui.tag ? `#${ui.tag}` : folder ? folder.name : ui.spaceId === "all" ? tr("All notes", rtl) : space?.name ?? tr("Notes", rtl);
+  const title = smartSel ? smartSel.sf?.name ?? t("Smart folder") : ui.filter === "visual" ? t("Canvases & whiteboards") : ui.filter === "paths" ? t("Learning paths") : ui.filter === "published" ? t("Blog posts") : folder ? folder.name : ui.spaceId === "all" ? (ui.tag && !wide ? `#${ui.tag}` : tr("All notes", rtl)) : space?.name ?? tr("Notes", rtl);
   const spaceId = ui.spaceId === "all" ? "inbox" : ui.spaceId;
   const { shown, more } = usePaged(notes, `${ui.spaceId}|${ui.folderId}|${ui.tag}|${ui.filter}|${sort}|${filter}|${lq}`);
+  const colors = useTagColors(v);
+  // desktop rows in display order: Pinned first, then the chosen grouping
+  const rows = useMemo(() => (smartSel?.sf ? shown : groupRows(shown, group, (n) => (sort === "created" ? n.createdAt : n.updatedAt), notes.length)), [shown, group, sort, smartSel?.sf, notes.length]);
+  const order = useMemo(() => rows.filter((r): r is Note => "id" in r), [rows]);
+  const selIds = useMemo(() => [...selected].filter((id) => v.byId.get(id) && !v.byId.get(id)!.deleted), [selected, v]);
+  useEffect(() => {
+    if (!selecting) return;
+    const k = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.closest?.("input,textarea,.cm-editor,[contenteditable=true]")) return;
+      if (e.key === "Escape") exitSelect();
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") { e.preventDefault(); setSelected(new Set(order.map((n) => n.id))); }
+    };
+    addEventListener("keydown", k);
+    return () => removeEventListener("keydown", k);
+  }, [selecting, order]);
+  const onRow = (e: React.MouseEvent, n: Note) => {
+    if (!selecting && !e.shiftKey) return openNote(n.id);
+    e.preventDefault();
+    if (!selecting) setSelecting(true);
+    const from = anchor.current ?? (selecting ? null : ui.noteId);
+    if (e.shiftKey && from) {
+      const a = order.findIndex((x) => x.id === from), b = order.findIndex((x) => x.id === n.id);
+      if (a >= 0 && b >= 0) { const [lo, hi] = a < b ? [a, b] : [b, a]; setSelected((s) => new Set([...s, ...order.slice(lo, hi + 1).map((x) => x.id)])); anchor.current = n.id; return; }
+    }
+    setSelected((s) => { const x = new Set(s); if (x.has(n.id)) x.delete(n.id); else x.add(n.id); return x; });
+    anchor.current = n.id;
+  };
+  const setGroupSaved = (g: Group) => { setGroup(g); try { localStorage.setItem("lumen.group", g); } catch { /* ignore */ } };
+  const setSortSaved = (s: Sort) => { setSort(s); try { localStorage.setItem("lumen.sort", s); } catch { /* ignore */ } };
+  const hasPdfs = useMemo(() => wide && scoped(v, { ...ui, tag: null }).some((n) => n.type === "pdf"), [wide, v, ui]);
+  const filterChips = [
+    ...(ui.tag ? [{ text: `tag:#${ui.tag}`, onRemove: () => setUI({ tag: null }) }] : []),
+    ...chips.map((c, i) => ({ text: c, onRemove: () => setChips((cs) => cs.filter((_, j) => j !== i)) })),
+  ];
+  const filterText = [...filterChips.map((c) => c.text), draft.trim()].filter(Boolean).join(" ");
 
   const nextSort: Record<Sort, Sort> = { updated: "created", created: "title", title: "updated" };
   const cycleSort = () => { const s = nextSort[sort]; setSort(s); toast(s === "updated" ? t("Sorted by last edited") : s === "created" ? t("Sorted by date created") : t("Sorted by title"), undefined, { icon: "check" }); try { localStorage.setItem("lumen.sort", s); } catch { /* ignore */ } };
@@ -177,67 +226,59 @@ export function NoteList() {
     );
   }
 
+  // R6-30J/K: a filter that matches nothing names the filter and the place, with Clear filter + Search all spaces
+  const deskEmpty = !notes.length && !smartSel?.sf && !ui.filter && filterText ? (
+    <FilterEmpty filter={filterText} where={folder?.name ?? (ui.spaceId === "all" ? t("all spaces") : space?.name ?? t("Inbox"))}
+      onClear={() => { setChips([]); setDraft(""); setUI({ tag: null }); }}
+      onAllSpaces={ui.spaceId !== "all" || ui.folderId ? () => { keepFilter.current = true; setUI({ spaceId: "all", folderId: null }); } : undefined} />
+  ) : empty;
+  const headIcon = folder ? <span className="size-2 shrink-0 rounded-[3px]" style={{ background: folder.color ? PRESETS[folder.color] ?? folder.color : "var(--muted)" }} />
+    : ui.filter ? null : ui.spaceId === "all" && ui.tag ? <Glyph name="tag" size={16} color="var(--learn)" /> : space ? <SpaceIcon space={space} size={16} /> : null;
   return (
-    <div className="flex h-full min-h-0 flex-col" onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); setOver(true); } }} onDragLeave={() => setOver(false)} onDrop={onDrop}>
-      {smartSel?.sf ? <SmartListHeader sf={smartSel.sf} query={lq} setQuery={setLq} count={notes.length} /> : <>
-      <div className="safe-t flex h-12 shrink-0 items-center gap-2 border-b border-line pe-3 ps-4">
-        {folder ? <span className="size-2 shrink-0 rounded-[3px]" style={{ background: folder.color ? PRESETS[folder.color] ?? folder.color : "var(--muted)" }} /> : ui.filter ? null : space ? <SpaceIcon space={space} size={15} /> : null}
-        <span dir="auto" className="truncate text-[14px] font-semibold">{title}</span>
-        {!indexing && <span className="text-muted">{num(notes.length, rtl)}</span>}
-        {(ui.tag || folder || ui.filter) && <button aria-label={t("Clear filter")} className="text-muted hover:text-ink" onClick={() => setUI({ tag: null, folderId: null, filter: null })}><X size={13} /></button>}
-        {indexing && <IndexingBadge />}
-        <span className="flex-1" />
-        {ui.filter === "published" && <a href="/blog" target="_blank" rel="noreferrer" className="text-[12px] text-link">{t("View blog")}↗</a>}
-        <button title={sort === "updated" ? t("Sort: last edited") : sort === "created" ? t("Sort: date created") : t("Sort: title")} aria-label={t("Sort")} className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={cycleSort}><ArrowDownWideNarrow size={15} /></button>
-        <button title={t("New base (database view of notes) or another template")} aria-label={t("New base")} className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={() => setTpl(true)}><Table2 size={15} /></button>
-        <button title={t("PDFs in this space")} aria-label={t("PDFs")} aria-pressed={pdfs} className={cx("flex size-7 items-center justify-center rounded-[6px] hover:bg-surface-2 hover:text-ink", pdfs ? "bg-surface-2 text-ink" : "text-muted")} onClick={() => setPdfs(!pdfs)}><FileText size={15} /></button>
-        <button title={ui.filter === "visual" ? t("New canvas or whiteboard") : ui.filter === "paths" ? t("New learning path") : t("New… note, dashboard, base, PDF, canvas, path or template (right-click: from template)")} aria-label={t("New note")} className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={(e) => (ui.filter === "visual" ? setChooser(true) : ui.filter === "paths" ? setPathDlg(true) : openNewMenu(e.currentTarget))} onContextMenu={(e) => { e.preventDefault(); setTpl(true); }}><SquarePen size={15} /></button>
-      </div>
-      <NoteListQueryBar query={lq} setQuery={setLq} count={notes.length} />
-      </>}
+    <div className="flex h-full min-h-0 flex-col text-[13px] leading-[1.35]" onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); setOver(true); } }} onDragLeave={() => setOver(false)} onDrop={onDrop}>
+      {smartSel?.sf ? <SmartListHeader sf={smartSel.sf} query={lq} setQuery={setLq} count={notes.length} /> : (
+        <div className="group/head flex shrink-0 flex-col gap-2 border-b border-line px-3 pb-2 pt-[max(12px,env(safe-area-inset-top))] leading-[1.35]" data-list-head>
+          <div className="flex h-[26px] items-center gap-2">
+            {headIcon}
+            <span dir="auto" className="min-w-0 flex-1 truncate font-[650]">{title}</span>
+            {(folder || ui.filter) && <button aria-label={t("Clear filter")} title={t("Back to the whole space")} className="text-muted hover:text-ink" onClick={() => setUI({ folderId: null, filter: null })}><X size={13} /></button>}
+            {indexing ? <IndexingBadge /> : <span className="text-[12px] text-muted">{num(notes.length, rtl)}</span>}
+            {ui.filter === "published" && <a href="/blog" target="_blank" rel="noreferrer" className="text-[12px] text-link">{t("View blog")}↗</a>}
+            {(hasPdfs || pdfs) && <button title={t("PDFs in this space")} aria-label={t("PDFs")} aria-pressed={pdfs} className={cx("flex size-[26px] items-center justify-center rounded-[6px] border border-line hover:bg-surface-2 hover:text-ink", pdfs ? "bg-surface-2 text-ink" : "text-muted")} onClick={() => setPdfs(!pdfs)}><FileText size={14} /></button>}
+            <button title={ui.filter === "visual" ? t("New canvas or whiteboard") : ui.filter === "paths" ? t("New learning path") : t("New… note, dashboard, base, PDF, canvas, path or template (right-click: from template)")} aria-label={t("New note")}
+              className="flex size-[26px] items-center justify-center rounded-[6px] border border-line hover:bg-surface-2" onClick={(e) => (ui.filter === "visual" ? setChooser(true) : ui.filter === "paths" ? setPathDlg(true) : openNewMenu(e.currentTarget))} onContextMenu={(e) => { e.preventDefault(); setTpl(true); }}><Glyph name="plus" size={14} /></button>
+          </div>
+          <FilterBox chips={filterChips} draft={draft} setDraft={setDraft} addChips={(toks) => setChips((cs) => [...cs, ...toks.filter((x) => !cs.includes(x) && x !== `tag:#${ui.tag}`)])}
+            popChip={() => (chips.length ? setChips((cs) => cs.slice(0, -1)) : setUI({ tag: null }))}
+            onSaveSmart={() => openSmartEditor({ query: [scopeQuery(v, ui), [...chips, draft.trim()].filter(Boolean).join(" ")].filter(Boolean).join(" ") })} />
+          <div className="flex h-4 items-center gap-2 text-[12px] text-muted">
+            <Dropdown label={t("Sort:")} value={sort} onChange={setSortSaved} options={[{ value: "updated", label: t("Updated") }, { value: "created", label: t("Created") }, { value: "title", label: t("Title") }]} />
+            <span>·</span>
+            <Dropdown label={t("Group:")} value={group} onChange={setGroupSaved} options={[{ value: "date", label: t("Date") }, { value: "status", label: t("Status") }, { value: "none", label: t("None") }]} />
+            <span className="flex-1" />
+            <button onClick={() => (selecting ? exitSelect() : setSelecting(true))} aria-pressed={selecting} title={selecting ? t("Leave select mode (Esc)") : t("Select notes (or shift-click a note)")}
+              className={cx("font-semibold", selecting ? "text-accent" : "text-muted opacity-0 hover:text-ink focus-visible:opacity-100 group-hover/head:opacity-100")}>{selecting ? t("Done") : t("Select")}</button>
+          </div>
+        </div>
+      )}
       {pdfs && <PdfLibrary spaceId={spaceId} folderId={ui.folderId} onClose={() => setPdfs(false)} />}
-      <div className={cx("flex min-h-0 flex-1 flex-col overflow-y-auto", !smartSel?.sf && "gap-0.5 p-1.5", over && "bg-accent/5 ring-1 ring-inset ring-accent/40", pdfs && "hidden")}>
+      <div className={cx("flex min-h-0 flex-1 flex-col overflow-y-auto", over && "bg-accent/5 ring-1 ring-inset ring-accent/40", pdfs && "hidden")} data-note-list>
+        {!smartSel?.sf && group === "date" && <DateScrubber notes={notes} timeOf={(n) => (sort === "created" ? n.createdAt : n.updatedAt)} />}
         {smartSel?.sf ? shown.map((n) => <SmartRow key={n.id} n={n} active={n.id === ui.noteId} onOpen={() => openNote(n.id)} />)
-          : shown.map((n) => <NoteRow key={n.id} n={n} active={n.id === ui.noteId} space={ui.spaceId === "all" ? v.spaceMap.get(n.spaceId) : undefined} />)}
+          : rows.map((r, i) => ("id" in r
+            ? <DeskRow key={r.id} n={r} active={r.id === ui.noteId} selecting={selecting} selected={selected.has(r.id)} colors={colors} preview={preview(r)} time={listTime(sort === "created" ? r.createdAt : r.updatedAt)}
+                space={ui.spaceId === "all" ? v.spaceMap.get(r.spaceId) : undefined} onClick={(e) => onRow(e, r)} onDragStart={(e) => dragNote(e, r.id)} />
+            : <GroupHeader key={"h" + i + r.h} h={r.h} pin={r.pin} />))}
         {more}
-        {empty}
+        {deskEmpty}
       </div>
+      {selecting && <BulkBar ids={selIds} onDone={exitSelect} />}
       <TemplatePicker open={tpl} onClose={() => setTpl(false)} spaceId={spaceId} folderId={ui.folderId} />
       <NewVisualChooser open={chooser} onClose={() => setChooser(false)} />
       <NewPathDialog open={pathDlg} onClose={() => setPathDlg(false)} />
     </div>
   );
 }
-
-/** One list row. Memoized on what it shows, so a save re-renders only the edited note's row. */
-export const NoteRow = memo(function NoteRow({ n, active, space }: { n: Note; active?: boolean; /** shown when listing all spaces */ space?: Space }) {
-  useLang();
-  return (
-    <button
-      draggable
-      onDragStart={(e) => dragNote(e, n.id)}
-      onClick={() => openNote(n.id)}
-      className={cx("flex w-full flex-col gap-[5px] rounded-[10px] px-3 py-2.5 text-start transition-colors", active ? "bg-surface-2" : "hover:bg-surface-2")}
-    >
-      <div className="flex w-full items-center gap-2">
-        <span className="size-[7px] shrink-0 rounded-full" style={{ background: n.status ? STATUS_COLOR[n.status] : "var(--muted)" }} />
-        <span dir="auto" className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">{n.title || t("Untitled")}</span>
-        {n.shareId ? <Link2 size={12} className="text-info" /> : null}
-        {n.published ? <Globe size={12} className="text-ok" /> : null}
-        {n.favorite ? <Star size={12} className="text-warn" /> : null}
-        {n.pinned ? <Pin size={12} className="text-muted" /> : null}
-      </div>
-      <div dir="auto" className="line-clamp-2 h-9 w-full text-[12.5px] leading-[18px] text-muted">{preview(n)}</div>
-      <div className="flex w-full items-center gap-1">
-        {n.tags.slice(0, 2).map((tag) => <span key={tag} dir="auto" className="rounded-[6px] bg-surface-2 px-1.5 text-[11px] leading-[18px] text-muted">#{tag}</span>)}
-        {space && <span dir="auto" className="flex min-w-0 items-center gap-1 truncate text-[11px] text-muted"><SpaceIcon space={space} size={12} />{space.name}</span>}
-        <span className="flex-1" />
-        <span className="text-[11px] text-muted">{listTime(n.updatedAt)}</span>
-      </div>
-    </button>
-  );
-}, (a, b) => a.n.id === b.n.id && a.n.updatedAt === b.n.updatedAt && a.n.title === b.n.title && a.active === b.active
-  && a.space?.id === b.space?.id && a.space?.name === b.space?.name && a.space?.icon === b.space?.icon && a.space?.color === b.space?.color);
 
 export function TemplatePicker({ open, onClose, spaceId, folderId }: { open: boolean; onClose: () => void; spaceId: string; folderId: string | null }) {
   return (

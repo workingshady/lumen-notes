@@ -1,5 +1,5 @@
-// Lumen glyph set (design round 4, "Lumen 13 Icon System"): 24 px grid, 1.75 stroke, round caps/joins.
-// Source of truth: design/handoffs/2026-11-19-round-4/lumen-glyphs.js (ported verbatim). Use <Glyph name=… /> (components/Glyph.tsx).
+// Lumen glyph set (design round 6, "Lumen 13 Icon System" + round 6 additions): 24 px grid, 1.75 stroke, round caps/joins.
+// Source of truth: design/handoffs/2026-11-20-round-6/lumen-glyphs.js (ported verbatim) + app-only glyphs appended below.
 /* eslint-disable */
 export type GlyphPart = string | { d: string; fill?: boolean; stroke?: string };
 const C = (x: number, y: number, r: number) => `M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
@@ -27,7 +27,7 @@ const G: Record<string, GlyphPart[]> = {
   'area': [C(12, 12, 9), C(12, 12, 4), F(C(12, 12, 1))],
   'course': ['M2 9l10-5 10 5-10 5z', 'M6 11v5c3 2 9 2 12 0v-5', 'M22 9v5'],
   'resource': ['M4 19V5a2 2 0 0 1 2-2h12v15H6a2 2 0 0 0-2 2 2 2 0 0 0 2 2h12', 'M9 7h5'],
-  'archive': [R(3, 4, 18, 5, 1.5), 'M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9', 'M10 13h4'],
+  '_overridden-archive': [R(3, 4, 18, 5, 1.5), 'M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9', 'M10 13h4'],
   'math': ['M4 6h7 M7.5 2.5v7', 'M14 6h6', 'M5 15l5 5 M10 15l-5 5', 'M14 16h6 M14 19h6'],
   'code': ['M8 7l-5 5 5 5', 'M16 7l5 5-5 5', 'M14 4l-4 16'],
   'language': ['M4 5h8 M8 3v2 M5 5c1 4 4 7 7 8 M11 5c-1 4-3 7-7 9', 'M13 21l4-9 4 9 M14.5 18h5'],
@@ -59,8 +59,8 @@ const G: Record<string, GlyphPart[]> = {
   'columns-2': [R(3, 4, 18, 16, 2), 'M12 4v16'], 'columns-3': [R(3, 4, 18, 16, 2), 'M9 4v16 M15 4v16'], 'sidebar-main': [R(3, 4, 18, 16, 2), 'M15 4v16', 'M6 8h6 M6 11h6'],
   'tabs': ['M3 20V8h6V5h6v3h6v12z', 'M9 8h6'], 'expand': ['M6 9l6 6 6-6'], 'wide': ['M3 12h18 M6 9l-3 3 3 3 M18 9l3 3-3 3', 'M3 5v14 M21 5v14'], 'full': ['M3 8V3h5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5'], 'aside': [R(3, 4, 18, 16, 2), R(13, 7, 5, 6, 1)], 'center': ['M3 6h18 M7 10h10 M5 14h14 M8 18h8'], 'box': [R(4, 4, 16, 16, 2), 'M4 9h16'],
   'image': [R(3, 4, 18, 16, 2), C(9, 9.5, 1.8), 'M21 16l-5-5-9 9'], 'video': [R(2, 6, 14, 12, 2), 'M16 10l6-3v10l-6-3'], 'audio': ['M3 10v4 M7 7v10 M11 4v16 M15 8v8 M19 10v4'], 'file': [DOC], 'link-card': [R(3, 5, 18, 14, 2), R(6, 8, 5, 5, 1), 'M14 9h4 M14 12h3 M6 16h12'], 'embed': [R(3, 4, 18, 16, 2), 'M10 10l-3 2 3 2 M14 10l3 2-3 2'],
-  'wikilink': ['M8 4H5v16h3 M16 4h3v16h-3', 'M10 12h4'], 'block-embed': [R(3, 6, 18, 12, 2), 'M7 10h10 M7 14h6', 'M19 3v3 M17.5 4.5h3'], 'include': [R(3, 3, 18, 18, 2), R(7, 8, 10, 8, 1.5)], 'query': [C(10, 10, 6), 'M14.5 14.5L20 20', 'M8 10h4'], 'search': [C(11, 11, 7), 'M16 16l5 5'], 'toc': ['M4 6h2 M9 6h11 M6 12h2 M11 12h9 M6 18h2 M11 18h9'], 'status-pill': [R(3, 8, 18, 8, 4), F(C(7.5, 12, 1.4)), 'M11 12h6'], 'date': [R(3, 5, 18, 16, 2), 'M3 10h18 M8 3v4 M16 3v4'], 'voice': [R(9, 3, 6, 11, 3), 'M5 11a7 7 0 0 0 14 0 M12 18v3'],
-  'cloze': [R(3, 8, 18, 8, 2), 'M8 12h8', 'M3 5h4 M17 5h4 M3 19h4 M17 19h4'], 'occlusion': [R(3, 4, 18, 16, 2), R(6, 7, 5, 4, 1), 'M14 9h4', F(R(13, 13, 5, 4, 1)), 'M6 15h4'], 'timestamp': [C(12, 13, 8), 'M12 9v4l3 2', 'M9 2h6'], 'smart-folder': ['M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z', C(12, 13, 2.2), 'M13.7 14.7l2 2'],
+  'wikilink': ['M8 4H5v16h3 M16 4h3v16h-3', 'M10 12h4'], 'block-embed': [R(3, 6, 18, 12, 2), 'M7 10h10 M7 14h6', 'M19 3v3 M17.5 4.5h3'], 'include': [R(3, 3, 18, 18, 2), R(7, 8, 10, 8, 1.5)], 'query': [C(10, 10, 6), 'M14.5 14.5L20 20', 'M8 10h4'], '_overridden-search': [C(11, 11, 7), 'M16 16l5 5'], 'toc': ['M4 6h2 M9 6h11 M6 12h2 M11 12h9 M6 18h2 M11 18h9'], 'status-pill': [R(3, 8, 18, 8, 4), F(C(7.5, 12, 1.4)), 'M11 12h6'], 'date': [R(3, 5, 18, 16, 2), 'M3 10h18 M8 3v4 M16 3v4'], 'voice': [R(9, 3, 6, 11, 3), 'M5 11a7 7 0 0 0 14 0 M12 18v3'],
+  'cloze': [R(3, 8, 18, 8, 2), 'M8 12h8', 'M3 5h4 M17 5h4 M3 19h4 M17 19h4'], 'occlusion': [R(3, 4, 18, 16, 2), R(6, 7, 5, 4, 1), 'M14 9h4', F(R(13, 13, 5, 4, 1)), 'M6 15h4'], 'timestamp': [C(12, 13, 8), 'M12 9v4l3 2', 'M9 2h6'], '_overridden-smart-folder': ['M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z', C(12, 13, 2.2), 'M13.7 14.7l2 2'],
   'c-note': [R(4, 3, 16, 18, 2), 'M8 8h8 M8 12h8 M8 16h5'], 'c-info': [C(12, 12, 9), 'M12 11v5', F(C(12, 8, 1))], 'c-tip': ['M9 18h6 M10 21h4', 'M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z'], 'c-success': [C(12, 12, 9), 'M8 12l3 3 5-6'], 'c-warning': ['M12 3l10 17H2z', 'M12 10v4', F(C(12, 17, 1))], 'c-danger': ['M8 3h8l5 5v8l-5 5H8l-5-5V8z', 'M12 8v5', F(C(12, 16, 1))], 'c-question': [C(12, 12, 9), 'M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.7', F(C(12, 17, 1))], 'c-example': [R(3, 4, 18, 16, 2), 'M7 9l3 3-3 3 M12 15h5'], 'c-quote': ['M4 18c0-6 2-10 6-11 M14 18c0-6 2-10 6-11', 'M4 18h5v-5H4 M14 18h5v-5h-5'], 'c-abstract': ['M4 5h16 M4 10h16 M4 15h10 M4 20h6'],
   's-todo': [C(12, 12, 7.5)], 's-learning': [C(12, 12, 7.5), F('M12 4.5a7.5 7.5 0 0 1 0 15z')], 's-done': [F(C(12, 12, 8)), { d: 'M8.5 12l2.5 2.5 4.5-5', stroke: 'var(--bg, #0F1115)' }], 's-skipped': [C(12, 12, 7.5), 'M7 17L17 7'], 's-locked': [R(5, 11, 14, 10, 2), 'M8 11V8a4 4 0 0 1 8 0v3'], 's-mastered': ['M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z'], 's-revise': ['M3 12a9 9 0 1 0 3-6.7', 'M3 4v5h5', 'M12 8v4l2.5 1.5'],
   'd-draft': ['M4 20h4l11-11-4-4L4 16z', 'M13 7l4 4'], 'd-review': [C(11, 11, 6), 'M15.5 15.5L20 20'], 'd-approved': ['M12 3l2 2.2 3-.4.6 3 2.6 1.6-1.3 2.7 1.3 2.7-2.6 1.6-.6 3-3-.4L12 21l-2-2.2-3 .4-.6-3-2.6-1.6 1.3-2.7-1.3-2.7 2.6-1.6.6-3 3 .4z', 'M9 12l2 2 4-4'], 'd-superseded': [R(3, 6, 12, 14, 2), 'M9 3h10a2 2 0 0 1 2 2v12', 'M6 13h6'], 'd-rejected': [C(12, 12, 9), 'M9 9l6 6 M15 9l-6 6'],
@@ -71,11 +71,33 @@ const G: Record<string, GlyphPart[]> = {
   'v-table': [R(3, 4, 18, 16, 2), 'M3 9h18 M3 14h18 M9 4v16'], 'v-board': [R(3, 4, 5, 16, 1.5), R(10, 4, 5, 10, 1.5), R(17, 4, 4, 13, 1.5)], 'v-gallery': [R(3, 4, 8, 7, 1.5), R(13, 4, 8, 7, 1.5), R(3, 13, 8, 7, 1.5), R(13, 13, 8, 7, 1.5)], 'v-list': ['M8 6h13 M8 12h13 M8 18h13', 'M3 6h1 M3 12h1 M3 18h1'], 'v-calendar': [R(3, 5, 18, 16, 2), 'M3 10h18 M8 3v4 M16 3v4', F(C(8, 14, 1)), F(C(12, 14, 1)), F(C(16, 14, 1))],
   'folder': ['M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z'], 'inbox': ['M3 13l3-8h12l3 8v6H3z', 'M3 13h5l1 2h6l1-2h5'], 'owl': [C(8.5, 11, 2.5), C(15.5, 11, 2.5), 'M5 6l2 2 M19 6l-2 2', 'M5 8v6a7 7 0 0 0 14 0V8', 'M11 15l1 1.5 1-1.5'],
   'overlap': [C(9, 12, 6), C(15, 12, 6)], 'merge': ['M6 3v6a6 6 0 0 0 6 6h0a6 6 0 0 1 6 6', 'M18 3v6a6 6 0 0 1-6 6', 'M12 15v6'], 'organize': ['M4 6h10 M4 12h7 M4 18h10', 'M17 4v16 M14 17l3 3 3-3'], 'grip': [F(C(9, 6, 1.2)), F(C(15, 6, 1.2)), F(C(9, 12, 1.2)), F(C(15, 12, 1.2)), F(C(9, 18, 1.2)), F(C(15, 18, 1.2))], 'plus': ['M12 5v14 M5 12h14'], 'chevron-down': ['M6 9l6 6 6-6'], 'chevron-right': ['M9 6l6 6-6 6'], 'filter': ['M4 5h16l-6 8v6l-4 2v-8z'], 'more': [F(C(6, 12, 1.4)), F(C(12, 12, 1.4)), F(C(18, 12, 1.4))], 'play': ['M7 4l13 8-13 8z'], 'check': ['M5 12l5 5 9-10'], 'x': ['M6 6l12 12 M18 6L6 18'], 'clock': [C(12, 12, 9), 'M12 7v5l3 2'], 'flame': ['M12 3c3 4 6 6.5 6 10.5a6 6 0 0 1-12 0C6 10 8 8.5 9 6c1 2 2 3 3 3.5 0-2.5 0-4.5 0-6.5z'],
-  // added in round 4 (editor & read): slash rows that had no glyph in lumen-glyphs.js
-  'footnote': ['M3 9h11 M3 14h11 M3 19h7', 'M17 6l2-1.5V10 M17 10h4'], 'tag': ['M3 12V4h8l10 10-8 8z', F(C(7.5, 8.5, 1.3))], 'columns-4': [R(3, 4, 18, 16, 2), 'M7.5 4v16 M12 4v16 M16.5 4v16']
+  'assistant': ['M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-6l-5 4v-4H6a2 2 0 0 1-2-2z', 'M12 6.5c1.6 1.8 2.5 2.9 2.5 4.2a2.5 2.5 0 0 1-5 0c0-1.3.9-2.4 2.5-4.2z', 'M8.5 14h7'],
+  'zoom-in': [C(10.5, 10.5, 6.5), 'M15.5 15.5L21 21', 'M10.5 7.5v6 M7.5 10.5h6'], 'zoom-out': [C(10.5, 10.5, 6.5), 'M15.5 15.5L21 21', 'M7.5 10.5h6'],
+  'fit': ['M4 9V5a1 1 0 0 1 1-1h4 M15 4h4a1 1 0 0 1 1 1v4 M20 15v4a1 1 0 0 1-1 1h-4 M9 20H5a1 1 0 0 1-1-1v-4', R(8, 8, 8, 8, 1.5)],
+  'minimap': [R(3, 4, 18, 16, 2), R(12, 12, 7, 6, 1), 'M6 8h4 M6 11h3'],
+  'pause': ['M8 5v14 M16 5v14'], 'link': ['M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1', 'M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1'],
+  'media': [R(3, 5, 13, 14, 2), 'M16 10l5-3v10l-5-3', 'M8 9.5l3.5 2.5-3.5 2.5z'],
+  'links-tab': ['M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1', 'M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1', F(C(19, 19, 2))],
+  'diagrams-tab': [R(3, 3, 7, 5, 1.5), R(14, 9, 7, 5, 1.5), R(3, 16, 7, 5, 1.5), 'M6.5 8v8 M10 5.5h3a1.5 1.5 0 0 1 1.5 1.5V9 M10 18.5h4.5a1 1 0 0 0 1-1V14'],
+  'history': ['M3 12a9 9 0 1 0 2.6-6.4', 'M3 4v4.5h4.5', 'M12 7.5v4.5l3 2'],
+  'token': [C(8, 15, 4.5), 'M11.2 11.8L20 3', 'M16 7l2.5 2.5 M18.5 4.5L21 7'],
+  'simulator': [R(3, 4, 18, 13, 2), 'M8 21h8 M12 17v4', 'M7 9l2.5 2-2.5 2 M12 13h4'],
+  'meter': ['M4 17a8 8 0 1 1 16 0', 'M12 17l4-5', F(C(12, 17, 1.4)), 'M6.5 12.5l1 .6 M12 9v1.2 M17.5 12.5l-1 .6'],
+  'limit': ['M4 17a8 8 0 1 1 16 0', 'M12 17l5-1', F(C(12, 17, 1.4)), 'M5 20h14'],
+  'smart-folder': ['M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z', C(12, 13, 2.5), 'M13.8 14.8L16 17'],
+  'smart-star': ['M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z', 'M12 10l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z'],
+  'smart-clock': ['M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z', C(12, 13, 3), 'M12 11.5v1.5l1 .8'],
+  'path-add': [C(5, 6, 2), C(5, 18, 2), 'M5 8v8 M7 6h4a3 3 0 0 1 3 3v1', 'M17 13v8 M13 17h8'],
+  'tag': ['M3 11V4a1 1 0 0 1 1-1h7l10 10-8 8z', F(C(7.5, 7.5, 1.4))], 'tag-nested': ['M3 9V4a1 1 0 0 1 1-1h5l8 8-6 6z', 'M13 19l8-8-4-4', F(C(6.5, 6.5, 1.2))],
+  'pin': ['M9 3h6l-1 6 3 3v2H7v-2l3-3z', 'M12 14v7'], 'trash': ['M4 7h16 M9 7V4h6v3', 'M6 7l1 13h10l1-13', 'M10 11v6 M14 11v6'], 'account': [C(12, 12, 9), C(12, 10, 3), 'M6.5 18.5a6.5 6.5 0 0 1 11 0'], 'switch': ['M7 4L3 8l4 4 M3 8h14', 'M17 12l4 4-4 4 M21 16H7'], 'search': [C(11, 11, 7), 'M16 16l5 5'], 'archive': [R(3, 4, 18, 5, 1.5), 'M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9', 'M10 13h4'], 'external': ['M14 4h6v6 M20 4l-9 9', 'M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5'], 'broken-link': ['M10 14l-1 1a4 4 0 0 1-5.7-5.7l1-1 M14 10l1-1a4 4 0 0 1 5.7 5.7l-1 1', 'M8 3v3 M3 8h3 M16 21v-3 M21 16h-3'],
+  'copy': [R(8, 8, 12, 12, 2), 'M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3'], 'insert': ['M4 6h16 M4 18h16', 'M12 9v6 M9 12h6'], 'replace': ['M4 7h12l-3-3 M20 17H8l3 3'], 'rail': [R(3, 4, 18, 16, 2), 'M15 4v16'], 'gear': [C(12, 12, 3), 'M12 2v3 M12 19v3 M4.9 4.9L7 7 M17 17l2.1 2.1 M2 12h3 M19 12h3 M4.9 19.1L7 17 M17 7l2.1-2.1'], 'cluster': [C(7, 8, 3.5), C(17, 8, 3.5), C(12, 17, 3.5), 'M10 10l1 4 M14 10l-1 4'], 'tree': [R(9, 3, 6, 4, 1), R(2, 17, 6, 4, 1), R(9, 17, 6, 4, 1), R(16, 17, 6, 4, 1), 'M12 7v5 M5 17v-3h14v3 M12 12v5']
 };
 
 
+// App-only glyphs (not in the design file; keep until the design adds them)
+G["footnote"] = ["M3 9h11 M3 14h11 M3 19h7","M17 6l2-1.5V10 M17 10h4"];
+G["undo"] = ["M9 14L4 9l5-5", "M4 9h10.5a5.5 5.5 0 0 1 0 11H11"]; // Ask › Regenerate (Lumen 23 uses it; not in lumen-glyphs.js)
+G["columns-4"] =["M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2z","M7.5 4v16 M12 4v16 M16.5 4v16"];
 export const GLYPHS = G;
 export type GlyphName = keyof typeof G | (string & {});
 export const hasGlyph = (n: string) => Object.prototype.hasOwnProperty.call(G, n);

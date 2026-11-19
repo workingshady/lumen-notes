@@ -20,17 +20,19 @@ import {
 } from "./import-model";
 import { serializeOcclusion, type Occlusion, type OcclusionBox } from "./occlusion";
 import { flashcards, toFrontMatter } from "./parse";
+import { t } from "./i18n";
 
 export const ANKI_TEXT = {
-  noCollection: "This file has no Anki collection inside (collection.anki21b / .anki21 / .anki2).",
-  dummy: "This export only has the placeholder collection for old Anki versions. Export again from Anki with “Support older Anki versions” off, or use a newer export.",
-  missingMedia: (n: number) => `${n} media file${n === 1 ? " is" : "s are"} referenced but missing from the package.`,
-  emptyQuestion: (n: number) => `${n} note${n === 1 ? " has" : "s have"} an empty front and ${n === 1 ? "was" : "were"} skipped.`,
-  extraTemplates: (n: number) => `${n} card${n === 1 ? "" : "s"} from extra card templates (beyond front/back) ${n === 1 ? "has" : "have"} no Lumen equivalent and ${n === 1 ? "was" : "were"} skipped.`,
-  sameQuestion: (n: number) => `${n} card${n === 1 ? " repeats" : "s repeat"} a question already in the same deck; ${n === 1 ? "it shares" : "they share"} one schedule.`,
-  oldOcclusion: (n: number) => `${n} note${n === 1 ? "" : "s"} from the old Image Occlusion add-on (SVG masks) imported as basic cards.`,
-  noShapes: (n: number) => `${n} image occlusion note${n === 1 ? " has" : "s have"} no shapes and ${n === 1 ? "was" : "were"} imported as a plain image.`,
-  filtered: "Cards in filtered decks were put back in their home decks.",
+  noCollection: () => t("This file has no Anki collection inside (collection.anki21b / .anki21 / .anki2)."),
+  dummy: () => t("This export only has the placeholder collection for old Anki versions. Export again from Anki with “Support older Anki versions” off, or use a newer export."),
+  notAnki: () => t("This isn't an Anki package (.apkg / .colpkg)."),
+  missingMedia: (n: number) => t("{n} media file is referenced but missing from the package.|{n} media files are referenced but missing from the package.", { n }),
+  emptyQuestion: (n: number) => t("{n} note has an empty front and was skipped.|{n} notes have an empty front and were skipped.", { n }),
+  extraTemplates: (n: number) => t("{n} card from extra card templates (beyond front/back) has no Lumen equivalent and was skipped.|{n} cards from extra card templates (beyond front/back) have no Lumen equivalent and were skipped.", { n }),
+  sameQuestion: (n: number) => t("{n} card repeats a question already in the same deck; it shares one schedule.|{n} cards repeat a question already in the same deck; they share one schedule.", { n }),
+  oldOcclusion: (n: number) => t("{n} note from the old Image Occlusion add-on (SVG masks) imported as basic cards.|{n} notes from the old Image Occlusion add-on (SVG masks) imported as basic cards.", { n }),
+  noShapes: (n: number) => t("{n} image occlusion note has no shapes and was imported as a plain image.|{n} image occlusion notes have no shapes and were imported as plain images.", { n }),
+  filtered: () => t("Cards in filtered decks were put back in their home decks."),
 };
 
 // ------------------------------------------------------------------ SQLite access (sql.js shape)
@@ -78,7 +80,7 @@ export async function readAnki(input: Uint8Array | VFile[], name: string, deps: 
     dbBytes = isZstd(b) ? deps.zstd(b) : b;
     break;
   }
-  if (!dbBytes) throw new Error(ANKI_TEXT.noCollection);
+  if (!dbBytes) throw new Error(ANKI_TEXT.noCollection());
   const db = await deps.openDb(dbBytes);
   try {
     onProgress?.(2, 4, "note types");
@@ -129,9 +131,9 @@ export async function readAnki(input: Uint8Array | VFile[], name: string, deps: 
       };
     });
     const warnings: string[] = [];
-    if (cards.some((c) => decks.get(c.did)?.filtered === false) && rows(db, "select count(*) as n from cards where odid != 0")[0]?.n) warnings.push(ANKI_TEXT.filtered);
+    if (cards.some((c) => decks.get(c.did)?.filtered === false) && rows(db, "select count(*) as n from cards where odid != 0")[0]?.n) warnings.push(ANKI_TEXT.filtered());
     const revlog: AnkiRev[] = tables.has("revlog") ? rows(db, "select id, cid, ease, ivl, type from revlog order by id").map((r) => ({ id: num(r.id), cid: num(r.cid), ease: num(r.ease), ivl: num(r.ivl), type: num(r.type) })) : [];
-    if (notes.length === 1 && cards.length <= 1 && /update|newer|latest version/i.test(notes[0].fields.join(" ")) && !by.has("collection.anki21b")) throw new Error(ANKI_TEXT.dummy);
+    if (notes.length === 1 && cards.length <= 1 && /update|newer|latest version/i.test(notes[0].fields.join(" ")) && !by.has("collection.anki21b")) throw new Error(ANKI_TEXT.dummy());
     onProgress?.(4, 4, "media");
     const media = await readMedia(by, deps);
     return { name: name.replace(/\.(apkg|colpkg)$/i, ""), crt, types, decks, notes, cards, revlog, media, warnings };
@@ -165,7 +167,8 @@ async function readMedia(by: Map<string, VFile>, deps: AnkiDeps): Promise<Map<st
 }
 
 // ------------------------------------------------------------------ options
-export interface FieldMap { front: number; back: number; reverse: boolean }
+/** Which Anki field is the front and the back; `extra` fields go under the back, below a line. */
+export interface FieldMap { front: number; back: number; reverse: boolean; extra?: number[] }
 export interface AnkiOptions {
   keepHistory: boolean;
   /** Per basic note type: which field is the front / back, and whether reverse cards are made. */
@@ -173,6 +176,10 @@ export interface AnkiOptions {
   /** FSRS weights used to replay the history (the user's fitted weights, default FSRS-6). */
   w?: readonly number[];
   now?: number;
+  /** One flashcards note per sub-deck (default). Off: one note per top-level deck, sub-decks as `##` sections. */
+  perSubdeck?: boolean;
+  /** Import media files (default). Off: images and sounds stay as their file name. */
+  media?: boolean;
 }
 export function defaultMapping(col: AnkiCollection): Record<string, FieldMap> {
   const out: Record<string, FieldMap> = {};
@@ -182,7 +189,8 @@ export function defaultMapping(col: AnkiCollection): Record<string, FieldMap> {
     const pick = (re: RegExp, fb: number) => { const i = f.findIndex((x) => re.test(x)); return i >= 0 ? i : fb; };
     const front = pick(/^(front|question|q|term|word|prompt|vorderseite|recto)$/, 0);
     const back = pick(/^(back|answer|a|definition|meaning|translation|rückseite|verso)$/, front === 0 ? 1 : 0);
-    out[t.id] = { front, back: back < t.fields.length ? back : -1, reverse: t.templates.length >= 2 };
+    const extra = f.map((x, i) => (i !== front && i !== back && /^(back extra|extra)$/.test(x) ? i : -1)).filter((i) => i >= 0);
+    out[t.id] = { front, back: back < t.fields.length ? back : -1, reverse: t.templates.length >= 2, ...(extra.length ? { extra } : {}) };
   }
   return out;
 }
@@ -248,7 +256,9 @@ export async function ankiPlan(col: AnkiCollection, opts: AnkiOptions, onProgres
   // media → attachments (only what notes reference)
   const mediaRef = new Map<string, string>();
   let missing = 0;
+  const useMedia = opts.media !== false;
   const media = (name: string) => {
+    if (!useMedia) return null;
     const get = col.media.get(name);
     if (!get) { missing++; return null; }
     let ref = mediaRef.get(name);
@@ -300,7 +310,7 @@ export async function ankiPlan(col: AnkiCollection, opts: AnkiOptions, onProgres
       const header = oneLine(md(fieldOf(/^header$/i, -1)));
       const extra = oneLine(md(fieldOf(/^(back extra|extra)$/i, -1)));
       if (!ref || !shapes.length) {
-        counts.noShapes++;
+        if (useMedia) counts.noShapes++;
         const lines = [header && `**${header}**`, ref ? attLink(src!, ref) : "", extra].filter(Boolean);
         if (lines.length) d.blocks.push(lines.join("\n\n"));
         continue;
@@ -327,7 +337,10 @@ export async function ankiPlan(col: AnkiCollection, opts: AnkiOptions, onProgres
     } else {
       if (type.legacyOcclusion) counts.legacy++;
       const map = opts.mapping[type.id] ?? { front: 0, back: 1, reverse: type.templates.length >= 2 };
-      const q = md(note.fields[map.front] ?? ""), a = map.back >= 0 ? md(note.fields[map.back] ?? "") : "";
+      const q = md(note.fields[map.front] ?? "");
+      const extra = (map.extra ?? []).map((i) => md(note.fields[i] ?? "")).filter((x) => htmlText(x) || x.includes("att:")).join("\n");
+      const a0 = map.back >= 0 ? md(note.fields[map.back] ?? "") : "";
+      const a = extra ? `${a0 || "…"}\n***\n${extra}` : a0;
       if (!htmlText(q) && !q.includes("att:")) { counts.empty++; continue; }
       const card = (front: string, back: string) => {
         const ql = oneLine(front);
@@ -368,15 +381,34 @@ export async function ankiPlan(col: AnkiCollection, opts: AnkiOptions, onProgres
       });
     }
   }
-  // deck notes + folders for parent decks
-  for (const d of [...out.values()].sort((a, b) => a.deck.name.localeCompare(b.deck.name))) {
-    if (!d.blocks.length) continue;
-    const parts = d.deck.name.split("::").map((p) => p.trim()).filter(Boolean);
-    const title = parts.pop() || "Default";
-    const tags = [...d.tags].filter(Boolean).sort();
-    const body = toFrontMatter({ type: "flashcards", tags, "anki-deck": d.deck.name }) + `# ${title}\n\n` + d.blocks.join("\n\n") + "\n";
-    const n: PlanNote = { key: d.key, folder: parts, title, type: "flashcards", body, tags, props: { "anki-deck": d.deck.name }, createdAt: d.firstAt, badge: "deck", cards: d.cards };
-    plan.notes.push(n);
+  // deck notes + folders for parent decks (or one note per top-level deck with `##` sections)
+  const audioIn = (blocks: string[]) => blocks.reduce((s, b) => s + [...b.matchAll(/\]\(att:@@(m\d+)@@\)/g)].filter((m) => /^audio\//.test(plan.attachments.get(m[1])?.mime ?? "")).length, 0);
+  const sorted = [...out.values()].sort((a, b) => a.deck.name.localeCompare(b.deck.name));
+  if (opts.perSubdeck === false) {
+    const groups = new Map<string, DeckOut[]>();
+    for (const d of sorted) { const top = d.deck.name.split("::")[0].trim() || "Default"; groups.set(top, [...(groups.get(top) ?? []), d]); }
+    for (const [top, ds] of groups) {
+      if (!ds.some((d) => d.blocks.length)) continue;
+      const key = "deck:" + ds[0].deck.id;
+      const sections = ds.filter((d) => d.blocks.length).map((d) => {
+        const sub = d.deck.name.split("::").slice(1).map((p) => p.trim()).filter(Boolean).join(" › ");
+        return (sub ? `## ${sub}\n\n` : "") + d.blocks.join("\n\n");
+      });
+      const tags = [...new Set(ds.flatMap((d) => [...d.tags]))].filter(Boolean).sort();
+      const body = toFrontMatter({ type: "flashcards", tags, "anki-deck": top }) + `# ${top}\n\n` + sections.join("\n\n") + "\n";
+      for (const d of ds) { for (const c of plan.cards) if (c.noteKey === d.key) c.noteKey = key; for (const r of plan.reviews) if (r.noteKey === d.key) r.noteKey = key; }
+      plan.notes.push({ key, folder: [], title: top, type: "flashcards", body, tags, props: { "anki-deck": top }, createdAt: Math.min(...ds.map((d) => d.firstAt)), badge: "deck", cards: ds.reduce((s, d) => s + d.cards, 0), audio: audioIn(ds.flatMap((d) => d.blocks)) });
+    }
+  } else {
+    for (const d of sorted) {
+      if (!d.blocks.length) continue;
+      const parts = d.deck.name.split("::").map((p) => p.trim()).filter(Boolean);
+      const title = parts.pop() || "Default";
+      const tags = [...d.tags].filter(Boolean).sort();
+      const body = toFrontMatter({ type: "flashcards", tags, "anki-deck": d.deck.name }) + `# ${title}\n\n` + d.blocks.join("\n\n") + "\n";
+      const n: PlanNote = { key: d.key, folder: parts, title, type: "flashcards", body, tags, props: { "anki-deck": d.deck.name }, createdAt: d.firstAt, badge: "deck", cards: d.cards, audio: audioIn(d.blocks) };
+      plan.notes.push(n);
+    }
   }
   if (missing) plan.warnings.push(ANKI_TEXT.missingMedia(missing));
   if (counts.empty) plan.warnings.push(ANKI_TEXT.emptyQuestion(counts.empty));

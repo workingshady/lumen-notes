@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:absolute;inset:0;display:flex;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:13px;overflow:hidden">
+  <div style="display:{{ deskOnly }};height:100%"><dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,100%" style="height:100%"></dc-import></div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <div style="height:{{ barH }};padding:0 {{ px }};display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd);flex-shrink:0"><span style="display:{{ phoneOnly }};font-size:18px">←</span><span style="color:var(--mu);display:{{ deskOnly }}">CS231n ›</span><span style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">Backprop, by hand</span>
+      <div style="display:{{ deskOnly }};gap:2px;padding:3px;border-radius:9px;background:var(--sf);border:1px solid var(--bd);font-size:12px"><sc-for list="{{ widths }}" as="w" hint-placeholder-count="3"><span style="height:24px;padding:0 9px;border-radius:6px;display:flex;align-items:center;gap:5px;background:{{ w.bg }};color:{{ w.c }};font-weight:{{ w.fw }}"><dc-import name="LumenGlyph" glyph="{{ w.g }}" size="{{ 13 }}" hint-size="13px,13px"></dc-import>{{ w.l }}</span></sc-for></div>
+      <span style="color:var(--mu);font-size:16px;padding:0 4px">⋯</span></div>
+    <div style="flex:1;overflow:hidden;display:flex;justify-content:center;padding-top:{{ top }}">
+      <article style="width:{{ cw }};max-width:100%;font-family:'Source Serif 4',Georgia,serif;font-size:{{ fs }};line-height:{{ lh }};display:flex;flex-direction:column;gap:{{ g }}">
+        <h1 style="margin:0;font-size:{{ h1 }};line-height:1.15;font-weight:700;letter-spacing:-.02em">Backprop, by hand</h1>
+        <div style="font-family:Inter,sans-serif;display:flex;gap:6px;flex-wrap:wrap;font-size:12px"><sc-for list="{{ pills }}" as="p" hint-placeholder-count="5"><span style="padding:0 8px;line-height:20px;border-radius:999px;font-weight:600;background:{{ p.bg }};color:{{ p.c }}">{{ p.t }}</span></sc-for></div>
+        <div style="display:grid;grid-template-columns:{{ topCols }};gap:16px;font-family:Inter,sans-serif">
+          <div style="border-radius:10px;border:1px solid var(--bd);padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:13px"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Contents</span><sc-for list="{{ toc }}" as="t" hint-placeholder-count="5"><span style="padding-left:{{ t.ind }};color:{{ t.c }};font-weight:{{ t.w }}">{{ t.n }}</span></sc-for></div>
+          <div style="display:{{ deskOnly }};flex-direction:column;gap:10px;font-family:'Source Serif 4',serif;font-size:{{ fs }};line-height:{{ lh }}"><span>Backpropagation is the chain rule applied from the loss back to every weight. Each node only needs its <i>local</i> gradient and the gradient arriving from above.</span></div>
+        </div>
+        <div style="display:{{ phoneOnly }}">Backpropagation is the chain rule applied from the loss back to every weight.</div>
+        <div style="display:grid;grid-template-columns:{{ colsCols }};gap:12px;font-family:Inter,sans-serif;font-size:13.5px;line-height:20px">
+          <sc-for list="{{ cards }}" as="c" hint-placeholder-count="3"><div style="border-radius:10px;background:var(--sf);border:1px solid var(--bd);padding:12px 14px;display:flex;flex-direction:column;gap:6px"><span style="font-weight:600;display:flex;align-items:center;gap:8px"><dc-import name="LumenGlyph" glyph="{{ c.g }}" size="{{ 15 }}" color="var(--mu)" hint-size="15px,15px"></dc-import>{{ c.t }}</span><span style="color:var(--mu)">{{ c.d }}</span></div></sc-for>
+        </div>
+        <div style="font-family:Inter,sans-serif;border-radius:10px;border:1px solid var(--bd);overflow:hidden">
+          <div style="display:flex;border-bottom:1px solid var(--bd);background:var(--sf)"><sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3"><span style="padding:9px 14px;font-size:13px;box-shadow:{{ t.sh }};color:{{ t.c }};font-weight:{{ t.w }}">{{ t.l }}</span></sc-for></div>
+          <div style="padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:20px;white-space:pre;overflow:hidden">dz = da * a * (1 - a)   # σ'(z)
+dw = dz * x
+db = dz</div>
+        </div>
+        <div style="font-family:Inter,sans-serif;font-size:14px;line-height:21px;border-radius:10px;background:color-mix(in srgb,var(--wa) 9%,transparent);border:1px solid color-mix(in srgb,var(--wa) 30%,transparent);padding:10px 14px;display:flex;gap:10px"><dc-import name="LumenGlyph" glyph="c-warning" size="{{ 17 }}" color="var(--wa)" hint-size="17px,17px"></dc-import><span><b style="color:var(--wa);font-weight:600">Watch out</b> — forgetting to cache a is the classic bug: you end up recomputing the forward pass.</span></div>
+        <div style="font-family:Inter,sans-serif;border-radius:10px;border:1px solid var(--bd);padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:14px"><span style="color:var(--mu)">▸</span><span style="font-weight:600;flex:1">Derivation for a 2-layer MLP</span><span style="color:var(--mu);font-size:12px">toggle</span></div>
+        <div style="font-family:Inter,sans-serif;display:flex;flex-direction:column;gap:6px;margin:0 {{ breakOut }}">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mu)"><span style="flex:1">Activations compared · 5 rows</span><span style="height:26px;padding:0 8px;border-radius:6px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px"><dc-import name="LumenGlyph" glyph="query" size="{{ 12 }}" hint-size="12px,12px"></dc-import>Filter</span><span style="height:26px;padding:0 8px;border-radius:6px;border:1px solid var(--bd);display:flex;align-items:center"><dc-import name="LumenGlyph" glyph="full" size="{{ 12 }}" hint-size="12px,12px"></dc-import></span></div>
+          <div style="border-radius:10px;border:1px solid var(--bd);overflow:hidden;position:relative">
+            <div style="display:grid;grid-template-columns:{{ tcols }};background:var(--sf2);font-size:12px;font-weight:600;color:var(--mu);height:34px;align-items:center"><sc-for list="{{ th }}" as="h" hint-placeholder-count="5"><span style="padding:0 12px;display:flex;align-items:center;gap:4px;color:{{ h.c }};white-space:nowrap">{{ h.t }}<span style="color:var(--ac)">{{ h.s }}</span></span></sc-for></div>
+            <sc-for list="{{ rows }}" as="r" hint-placeholder-count="5"><div style="display:grid;grid-template-columns:{{ tcols }};height:34px;align-items:center;font-size:13px;background:{{ r.bg }}"><sc-for list="{{ r.c }}" as="c" hint-placeholder-count="5"><span style="padding:0 12px;white-space:nowrap;overflow:hidden;font-family:{{ c.ff }};font-weight:{{ c.w }}">{{ c.t }}</span></sc-for></div></sc-for>
+            <span style="display:{{ phoneOnly }};position:absolute;right:0;top:0;bottom:0;width:28px;background:linear-gradient(90deg,transparent,var(--bg))"></span>
+          </div>
+        </div>
+        <div style="font-family:Inter,sans-serif;border-radius:10px;border:1px dashed var(--bd);padding:10px 14px 12px;display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="padding:0 8px;line-height:20px;border-radius:6px;background:color-mix(in srgb,var(--ln) 14%,transparent);color:var(--ln);display:flex;align-items:center;gap:5px"><dc-import name="LumenGlyph" glyph="include" size="{{ 12 }}" hint-size="12px,12px"></dc-import>Chain rule, one neuron › Local gradients</span><span style="flex:1"></span><span style="color:var(--ln)">Go to source →</span></div>
+          <span style="font-family:'Source Serif 4',serif;font-size:{{ fs }};line-height:{{ lh }}">Every node multiplies the gradient from above by its own local gradient, and passes the result down.</span>
+        </div>
+      </article>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;width&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;fixed&quot;,&quot;wide&quot;,&quot;full&quot;],&quot;default&quot;:&quot;wide&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = !!this.props.phone, W = this.props.width ?? 'wide';
+    const widths = [['Fixed','center','fixed'],['Wide','wide','wide'],['Full','full','full']].map(([l,g,k]) => ({ l, g, bg:k===W?'var(--sf2)':'transparent', c:k===W?'var(--tx)':'var(--mu)', fw:k===W?600:450 }));
+    const PC = { green:'var(--ok)', amber:'var(--wa)', red:'var(--da)', blue:'var(--in)', violet:'var(--le)', grey:'var(--mu)' };
+    const pills = [['Reviewed','green'],['In review','amber'],['Blocked','red'],['Learning','blue'],['Has cards','violet'],['Draft','grey']].map(([t,c]) => ({ t, c:PC[c], bg:`color-mix(in srgb, ${PC[c]} 14%, transparent)` }));
+    const toc = [['Local gradients',0,1],['One neuron',1],['Two layers',1],['In code',0],['Common bugs',0]].map(([n,i,a]) => ({ n, ind:i?'14px':'0', c:a?'var(--tx)':'var(--mu)', w:a?600:450 }));
+    const cards = [['s-learning','Forward','Compute and cache every activation.'],['flashcards','Local gradient','Each op knows its own derivative.'],['s-revise','Backward','Multiply upstream × local, pass it on.']].map(([g,t,d]) => ({ g, t, d }));
+    const tabs = ['NumPy','PyTorch','micrograd'].map((l,i) => ({ l, sh:i===0?'inset 0 -2px 0 var(--ac)':'none', c:i===0?'var(--tx)':'var(--mu)', w:i===0?600:450 }));
+    const th = [['Activation','',1],['σ\'(z)',''],['Range',''],['Dead units','↓'],['Used in','']].map(([t,s,f]) => ({ t, s, c: s?'var(--tx)':'var(--mu)' }));
+    const data = [['Sigmoid','σ(1−σ)','(0, 1)','No','Gates, old MLPs'],['Tanh','1 − tanh²','(−1, 1)','No','RNNs'],['ReLU','0 or 1','[0, ∞)','Yes','CNNs'],['GELU','≈ smooth','≈[−0.17, ∞)','Rare','Transformers'],['Leaky ReLU','0.01 or 1','(−∞, ∞)','No','GANs']];
+    const rows = data.map((r,i) => ({ bg: i%2 ? 'color-mix(in srgb,var(--sf) 60%,transparent)' : 'transparent', c: r.map((t,j) => ({ t, ff: j===1 ? "'JetBrains Mono',monospace" : 'Inter,sans-serif', w: j===0?600:400 })) }));
+    const cw = p ? '372px' : W==='fixed' ? '680px' : W==='wide' ? '920px' : '1240px';
+    return { widths, pills, toc, cards, tabs, th, rows,
+      deskOnly: p?'none':'flex', phoneOnly: p?'block':'none', barH: p?'56px':'48px', px: p?'16px':'24px', top: p?'20px':'36px', cw, fs: p?'16px':'17px', lh: p?'28px':'30px', g: p?'14px':'18px', h1: p?'30px':'38px',
+      topCols: p?'1fr':'240px 1fr', colsCols: p?'1fr':'repeat(3,1fr)', tcols: p?'110px 90px 110px 90px 110px':'1.2fr 1fr 1fr .8fr 1.2fr', breakOut: (W==='fixed'&&!p)?'-60px':'0' };
+  }
+}
+</script>
+</body>
+</html>

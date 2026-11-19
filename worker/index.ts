@@ -17,6 +17,9 @@ import registerAccess from "./ext/access";
 import extOg, { ogPages } from "./ext/og"; // OG images + share/blog page meta (round 4 assets)
 import { accountRouter } from "./accounts";
 import registerAuth, { authGate } from "./ext/auth"; // user accounts, behind ACCOUNTS_ENABLED (off) — docs/ACCOUNTS.md
+import registerAiUsage from "./ext/ai-usage"; // AI usage meter + daily limit (Settings › AI, round 6)
+import registerAccountData from "./ext/account-data"; // Settings › Account › Delete account and all data (round 6)
+import registerLinks from "./ext/links"; // Note › Links tab: page snapshots + link check (round 6)
 
 export type Env = {
   Bindings: {
@@ -60,6 +63,7 @@ const ownerToken = (env: Env["Bindings"]) => hmac(env.APP_PASSCODE, "lumen:owner
 // Pick the account (main or an extra one) before any route runs.
 api.use("*", authGate()); // no-op unless accounts are on and the request carries a user session (lms_…)
 api.use("*", accountRouter({ hmac, safeEqual }));
+registerAiUsage(api, auth); // must run before the /ai routes: meters every Workers AI call, enforces the daily limit
 
 const failures = new Map<string, { n: number; until: number }>(); // per-isolate brute-force brake
 api.post("/login", async (c) => {
@@ -84,7 +88,11 @@ async function auth(c: Context<Env>, next: Next) {
   let ok = !!tok && safeEqual(tok, await ownerToken(c.env));
   if (!ok && /^lmn_[A-Za-z0-9]{20,64}$/.test(tok)) {
     const hash = hex(await crypto.subtle.digest("SHA-256", enc.encode(tok)));
-    const row = await c.env.DB.prepare("SELECT id, last_used_at FROM api_tokens WHERE hash = ?").bind(hash).first<{ id: string; last_used_at: number | null }>().catch(() => null);
+    // access/expires_at (round 6) may not exist on an older D1 until Settings › Developer adds them: fall back.
+    const row = await c.env.DB.prepare("SELECT id, last_used_at, access, expires_at FROM api_tokens WHERE hash = ?").bind(hash).first<{ id: string; last_used_at: number | null; access?: string; expires_at?: number | null }>()
+      .catch(() => c.env.DB.prepare("SELECT id, last_used_at FROM api_tokens WHERE hash = ?").bind(hash).first<{ id: string; last_used_at: number | null; access?: string; expires_at?: number | null }>()).catch(() => null);
+    if (row?.expires_at && row.expires_at < Date.now()) return c.json({ error: "This token has expired. Create a new one in Settings › Developer." }, 401);
+    if (row?.access === "r" && !["GET", "HEAD"].includes(c.req.method)) return c.json({ error: "This token is read only." }, 403);
     if (row) {
       ok = true;
       const now = Date.now();
@@ -130,7 +138,11 @@ api.post("/sync", auth, async (c) => {
   const body = await c.req.json<SyncRequest>();
   const stmts = upserts(c.env.DB, (body.items ?? []).slice(0, 2000));
   for (let i = 0; i < stmts.length; i += 100) await c.env.DB.batch(stmts.slice(i, i + 100));
-  const { results } = await c.env.DB.prepare("SELECT * FROM items WHERE rev > ? ORDER BY rev LIMIT ?").bind(Number(body.since) || 0, PAGE).all<Row>();
+  // First sync on a new device asks for some kinds at a time (notes first, then flashcards…: lib/sync.ts firstSync).
+  const kinds = Array.isArray(body.kinds) ? body.kinds.filter((k) => /^[a-z]+$/.test(k)).slice(0, 12) : [];
+  const { results } = kinds.length
+    ? await c.env.DB.prepare(`SELECT * FROM items WHERE rev > ? AND kind IN (${kinds.map(() => "?").join(",")}) ORDER BY rev LIMIT ?`).bind(Number(body.since) || 0, ...kinds, PAGE).all<Row>()
+    : await c.env.DB.prepare("SELECT * FROM items WHERE rev > ? ORDER BY rev LIMIT ?").bind(Number(body.since) || 0, PAGE).all<Row>();
   const head = Number((await c.env.DB.prepare("SELECT v FROM meta WHERE k = 'rev'").first<{ v: string }>())?.v ?? 0);
   const cursor = results.length ? results[results.length - 1].rev : head;
   const res: SyncResponse & { more: boolean } = { cursor, items: results.map(toItem), more: results.length === PAGE };
@@ -327,6 +339,7 @@ const PROMPTS: Record<string, string> = {
   flashcards: "Create 5-12 flashcards from this study note. Output ONLY lines in the exact form `Question :: Answer`, one per line, no numbering.",
   explain: "Explain the following to a motivated learner, simply and correctly, in short Markdown with one example.",
   tags: "Suggest 3-6 short lowercase tags (single words or kebab-case) for this note. Output ONLY the tags separated by spaces, each starting with #.",
+  diagram: "Draw ONE Mermaid diagram (flowchart, sequence or mind map, whichever fits) that shows the main ideas of this note and how they connect. Output ONLY a ```mermaid fenced block, at most 14 nodes, short labels.",
   quiz: "Write 5 short quiz questions (mix of recall and understanding) about this note, then an 'Answers' section. Markdown.",
   project_plan: "You are a pragmatic engineering lead. From the project goal, docs and current cards, write a plan as Markdown: `## Milestone` headings (3-5), each with 3-7 task lines exactly like `- [ ] Task text ~2d !p1 📅 YYYY-MM-DD #epic/short-name`. Use realistic dates after today and before the deadline. Don't repeat cards that already exist. No other text.",
   project_status: "Write a concise weekly status report for stakeholders in Markdown: **Summary** (2 sentences, overall health), **Done this week**, **In progress**, **Blocked / risks**, **Next week**, **Decisions needed**. Base it only on the given cards, docs and dates.",
@@ -501,6 +514,7 @@ registerAsk(api, helpers); // "Ask your vault" (worker/ext/ask.ts)
 registerChat(api, helpers); registerTutor(api, helpers); // Ask chat + AI tutor (worker/ext/chat.ts, tutor.ts)
 registerHub(api, helpers); // project hub "Ask" (worker/ext/hub.ts)
 registerAccess(api, helpers); // devices that sync (worker/ext/access.ts)
+registerAccountData(api, helpers); registerLinks(api, helpers); // POST /api/vault/wipe (worker/ext/account-data.ts)
 registerAuth(api, helpers); // /api/accounts/config + /api/auth/* (worker/ext/auth.ts; 404 while accounts are off)
 extOg(api, helpers); ogPages(app); // OG image routes + /s/:token, /blog/:slug meta (worker/ext/og.ts)
 

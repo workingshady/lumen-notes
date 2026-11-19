@@ -5,9 +5,12 @@ import { api, getToken } from "./api";
 import { DEMO } from "./db";
 import { db, getMeta, onDirty, setMeta, TABLE } from "./db";
 import { uploadPending } from "./attachments";
+let appOpenedUpload = false;
 import { onFaults, simSync } from "./sim/faults";
 
-export type SyncState = { status: "local" | "idle" | "syncing" | "offline" | "error"; last: number; pending: number; error?: string };
+export type SyncState = { status: "local" | "idle" | "syncing" | "offline" | "error"; last: number; pending: number; error?: string; first?: FirstSync };
+/** First sync on a new device (Lumen 22): notes first (readable right away), then flashcards and the rest; files on demand. */
+export interface FirstSync { phase: "notes" | "cards"; got: number; total: number; notes: number; startedAt: number }
 let state: SyncState = { status: getToken() ? "idle" : "local", last: 0, pending: 0 };
 const subs = new Set<() => void>();
 const set = (p: Partial<SyncState>) => { state = { ...state, ...p }; subs.forEach((f) => f()); };
@@ -31,7 +34,8 @@ export function syncNow() {
 async function run() {
   set({ status: "syncing", error: undefined });
   try {
-    await uploadPending().catch(() => {}); // attachment bytes first, so synced notes never point at missing files
+    await uploadPending(!appOpenedUpload).catch(() => {}); // attachment bytes first, so synced notes never point at missing files
+    appOpenedUpload = true; // Settings › Sync › Sync files "On open": files go up on the first round after the app opens
     // Gather dirty records.
     const sent: { kind: Kind; id: string; updatedAt: number }[] = [];
     const items: SyncItem[] = [];
@@ -43,6 +47,7 @@ async function run() {
       }
     }
     let since = await getMeta<number>("cursor", 0);
+    if (since === 0) { since = await firstSync(); await setMeta("cursor", since); }
     let first = true;
     for (;;) {
       const res = await api<SyncResponse & { more: boolean }>("/sync", { method: "POST", json: { since, items: first ? items : [] } });
@@ -68,8 +73,39 @@ async function run() {
     await compactTombstones();
     set({ status: "idle", last: Date.now(), pending: await countDirty() });
   } catch (e) {
-    set({ status: navigator.onLine ? "error" : "offline", error: (e as Error).message, pending: await countDirty() });
+    set({ status: navigator.onLine ? "error" : "offline", error: (e as Error).message, pending: await countDirty(), first: undefined });
   }
+}
+
+const FIRST_PHASES: { phase: FirstSync["phase"]; kinds: Kind[] }[] = [
+  { phase: "notes", kinds: ["space", "folder", "note"] },
+  { phase: "cards", kinds: KINDS.filter((k) => !["space", "folder", "note"].includes(k)) },
+];
+/** Pull everything kind group by kind group; returns a safe cursor (the normal loop re-reads anything newer). */
+async function firstSync(): Promise<number> {
+  let total = 0, notes = 0;
+  try {
+    const u = await api<{ notes?: { count: number }; records?: { byKind?: Record<string, { count: number; deleted: number }> } }>("/usage");
+    for (const k of Object.values(u.records?.byKind ?? {})) total += (k.count ?? 0) + (k.deleted ?? 0);
+    notes = u.notes?.count ?? 0;
+  } catch { /* totals unknown: progress shows counts only */ }
+  const startedAt = Date.now();
+  let got = 0, cursor = Infinity;
+  for (const { phase, kinds } of FIRST_PHASES) {
+    let since = 0;
+    for (;;) {
+      set({ first: { phase, got, total, notes, startedAt } });
+      const res = await api<SyncResponse & { more: boolean }>("/sync", { method: "POST", json: { since, items: [], kinds } });
+      await apply(res.items);
+      got += res.items.length;
+      since = res.cursor;
+      if (!res.more) break;
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    cursor = Math.min(cursor, since);
+  }
+  set({ first: undefined });
+  return Number.isFinite(cursor) ? cursor : 0;
 }
 
 /**

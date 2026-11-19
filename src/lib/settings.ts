@@ -114,5 +114,11 @@ export function applyTheme() {
   root.style.setProperty("--measure", cur.measure ? `${cur.measure}ch` : "100%");
   root.style.setProperty("--read-font", cur.readingFont === "serif" ? "'Source Serif 4', 'Noto Naskh Arabic', Georgia, serif" : cur.readingFont === "mono" ? "'JetBrains Mono', 'IBM Plex Sans Arabic', ui-monospace, monospace" : "Inter, 'IBM Plex Sans Arabic', system-ui, sans-serif");
   root.dataset.density = cur.density;
+  { // Settings › Reading (round 6): Arabic reading font, hyphenation, code wrap.
+    const x = cur as Settings & { arabicFont?: string; hyphenate?: boolean; codeWrap?: boolean };
+    if (x.arabicFont) root.style.setProperty("--read-font-ar", `'${x.arabicFont}', 'IBM Plex Sans Arabic', serif`); else root.style.removeProperty("--read-font-ar");
+    if (x.hyphenate) root.dataset.hyphenate = "1"; else delete root.dataset.hyphenate;
+    if (x.codeWrap) root.dataset.codeWrap = "1"; else delete root.dataset.codeWrap;
+  }
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", t.vars.bg);
 }

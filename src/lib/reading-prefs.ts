@@ -23,9 +23,12 @@ export interface DiagramPrefs {
   diagramOpenIn: "edit" | "split" | "read";
   /** Diagrams larger than this (px, either side) open fitted to the view with a Fit button; 0 = never. */
   diagramMaxPx: number;
+  /** Round 6 (Settings › Diagrams): flowchart edge style and the zoom a diagram opens at. */
+  diagramEdge: "curved" | "elbow" | "straight";
+  diagramZoom: "fit" | "100" | "fill";
 }
 export type ExtraPrefs = ReadingPrefs & DiagramPrefs;
-export const EXTRA_DEFAULTS: ExtraPrefs = { ttsVoice: "", typewriter: true, hlPalette: "default", focusOutline: true, diagramTheme: "app", diagramHand: false, diagramOpenIn: "split", diagramMaxPx: 4000 };
+export const EXTRA_DEFAULTS: ExtraPrefs = { ttsVoice: "", typewriter: true, hlPalette: "default", focusOutline: true, diagramTheme: "app", diagramHand: false, diagramOpenIn: "split", diagramMaxPx: 4000, diagramEdge: "curved", diagramZoom: "fit" };
 
 type All = Settings & Partial<ExtraPrefs>;
 export const useExtraPrefs = (): Settings & ExtraPrefs => ({ ...EXTRA_DEFAULTS, ...(useSettings() as All) } as Settings & ExtraPrefs);
@@ -49,3 +52,6 @@ export function withLook(src: string, hand: boolean): string {
   if (fm) return src.replace(fm[0], `---\n${/\bconfig\s*:/.test(fm[1]) ? fm[1].replace(/\bconfig\s*:\s*\n/, "config:\n  look: handDrawn\n") : `${fm[1]}\nconfig:\n  look: handDrawn`}\n---\n`);
   return `---\nconfig:\n  look: handDrawn\n---\n${src}`;
 }
+
+/** Mermaid flowchart curve for Settings › Diagrams › Edge style. */
+export const edgeCurve = (): "basis" | "step" | "linear" => ({ curved: "basis", elbow: "step", straight: "linear" } as const)[getExtraPrefs().diagramEdge] ?? "basis";

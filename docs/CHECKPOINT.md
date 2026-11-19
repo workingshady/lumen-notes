@@ -1,4 +1,4 @@
-# Checkpoint: where work stopped (2026-11-20)
+# Checkpoint: where work stopped (2026-11-20, updated after rounds 5 + 6)
 
 Live: https://lumen-notes.workingshady.workers.dev · deploy `1645b33d` · commit `2f2fe69` on `main` (everything deployed, committed and pushed; nothing running).
 
@@ -8,7 +8,11 @@ Live: https://lumen-notes.workingshady.workers.dev · deploy `1645b33d` · commi
 - New features (built before their design): Ask as a multi-turn chat + AI tutor modes (`docs/CHAT_AND_TUTOR.md`), Anki/Notion/Obsidian imports (`docs/IMPORT.md`), accounts behind `ACCOUNTS_ENABLED` = **off** (`docs/ACCOUNTS.md`).
 - Live account data enhanced (video previews next to links, lesson durations, course formats, AI Engineer dashboard, 5 smart folders). Backup of the account before that: `private/backups/live-2026-11-19T18-08-37-857Z.json` (git-ignored).
 
-## Next steps (in order)
+## Rounds 5 + 6 (done, deploy 867bd11a)
+- Claude Design rounds 5 + 6 applied from `design/handoffs/2026-11-20-round-6/` (brief `design/ROUND5_BRIEF.md`): Ask chat, Tutor, Note tabs (Diagrams / Media / Links), Assistant sidebar, Settings (13 sections, AI usage meter + daily limit), Sidebar best practice + space switcher, tags, history, big-data and long-content states, Arabic interface (0 missing translations), imports and accounts screens (accounts still OFF).
+- Before turning accounts on, also apply `migrations/0011_email_change.sql` and `0012_token_scopes.sql`.
+
+## Next steps (older list, mostly done)
 1. **Finish the Arabic interface.** The i18n agent was stopped midway: `src/lib/i18n.ts` + `src/i18n/ar/*` exist and type-check; some files are not wrapped with `t()` yet, and the files it was told to skip (Ask/chat/tutor, imports, accounts) still need their strings wrapped + Arabic entries. Run `npx tsx scripts/i18n.test.ts` for the coverage report. See `docs/I18N.md`.
 2. **Apply the round-5 Claude Design handoff** (`design/handoffs/2026-11-20-round-5/`, brief `design/ROUND5_BRIEF.md`, serve with `node design/tools/serve-design.mjs 5391 design/handoffs/2026-11-20-round-5`). Areas: 22 Scale & long content, 23 Ask chat (`AskChat`), 24 Tutor (`TutorDesk`), 25 Arabic (`ArabicDesk`), 26 Imports (`ImportDesk`), 27 Accounts (`AccountDesk`, active + not-active states), 28 Components R5. Suggested agents: chat+tutor, imports+accounts, Arabic (with step 1), scale & long content.
 3. Then: type-check, quick screen check, `npm run deploy`, commit + push (no Co-Authored-By trailer; never commit SETUP.md / .dev.vars / private/ or the design zip).

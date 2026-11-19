@@ -20,6 +20,7 @@ import { Revise } from "./path-revise";
 import { ConceptSheet } from "./path-sheet";
 import { Stages, StagesPhone } from "./path-stages";
 import { Timeline } from "./path-timeline";
+import { COMPACT_ABOVE, CompactStages } from "./path-compact";
 import { FilterRow, FilterSheet, TabBar, usePathConfirm, useStored, type Tab } from "./path-ui";
 import { usePhone } from "./spaces-util";
 
@@ -82,9 +83,13 @@ export function PathView({ note }: { note: Note }) {
     } catch (e) { toast((e as Error).message); } finally { setBusy(false); }
   }
 
+  // Big paths (Lumen 32 R6-32D): compact density by default above COMPACT_ABOVE concepts; remembered per path.
+  const [density, setDensity] = useStored<"auto" | "compact" | "comfortable">(`lumen.path.density.${note.id}`, "auto");
+  const compact = group === "stage" && (density === "compact" || (density === "auto" && path.concepts.length > COMPACT_ABOVE));
   const empty = !courses.length && !path.concepts.length;
   const view = tab === "stages"
     ? phone ? <StagesPhone path={path} note={note} onOpen={openConcept} save={save} confirm={confirm} keep={keep} group={group} allOpen={allOpen} />
+      : compact ? <CompactStages path={path} onOpen={openConcept} sel={sel} onComfortable={() => setDensity("comfortable")} />
       : <Stages path={path} note={note} onOpen={openConcept} save={save} confirm={confirm} keep={keep} group={group} collapsed={cols} setCollapsed={setCols} sel={sel} />
     : empty ? <div className="mx-auto flex max-w-md flex-col items-center gap-3 p-10 text-center text-[13px] text-muted"><Glyph name="path" size={24} color="var(--muted)" />{t("Add courses to this path, or build it yourself in Stages. Each course keeps its own roadmap; the path merges overlapping topics into concepts.")}</div>
     : tab === "graph" ? <ReactFlowProvider><Graph path={path} note={note} save={save} onOpen={openConcept} sel={sel} keep={keep} focus={focus} setFocus={setFocus} /></ReactFlowProvider>
@@ -130,6 +135,7 @@ export function PathView({ note }: { note: Note }) {
       </PathHeader>
       <div className="relative min-h-0 flex-1">
         <div className="absolute inset-0 isolate overflow-hidden">{view}</div>
+        {tab === "stages" && group === "stage" && !compact && path.concepts.length > COMPACT_ABOVE && <button onClick={() => setDensity("compact")} className="absolute bottom-4 start-4 z-10 flex h-8 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3 text-[12px] hover:border-accent">{t("Density: compact")}</button>}
       </div>
       {selected && <ConceptSheet c={selected} path={path} note={note} save={save} onClose={() => setSel(null)} onOpen={openConcept} onFocus={focusIn} phone={false} />}
       {confirmNode}

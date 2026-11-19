@@ -2,56 +2,57 @@
 // Runtime (store, retrieval, network, Dexie) lives in src/lib/ask.ts; prompts in worker/ext/chat.ts.
 // Formats + flows: docs/CHAT_AND_TUTOR.md.
 import type { ChatMessage, ChatMode, ChatScope, ChatSource, ChatThread } from "../../shared/types";
+import { t } from "./i18n";
 
 // ------------------------------------------------------------------ UI strings (one place, for the t() pass later)
 export const CHAT_STR = {
-  newChat: "New chat",
-  threads: "Chats",
-  pinned: "Pinned",
-  recent: "Recent",
-  noThreads: "Conversations you start show here.",
-  placeholder: "Ask your notes…",
-  placeholderFollow: "Ask a follow-up…",
-  send: "Send",
-  stop: "Stop",
-  searchedFor: "Searched for:",
-  contextLine: (turns: number, passages: number) => `Using the last ${turns} turn${turns === 1 ? "" : "s"} · ${passages} passage${passages === 1 ? "" : "s"}`,
-  summarizedLine: "Earlier messages summarized",
-  readingNotes: (n: number, scope: string) => `Reading ${n} note${n === 1 ? "" : "s"} in ${scope}…`,
-  answering: (n: number, scope: string) => `Answering from ${n} passage${n === 1 ? "" : "s"} in ${scope}…`,
-  notInNotes: "Not in your notes.",
+  get newChat() { return t("New chat"); },
+  get threads() { return t("Chats"); },
+  get pinned() { return t("Pinned"); },
+  get recent() { return t("Recent"); },
+  get noThreads() { return t("Conversations you start show here."); },
+  get placeholder() { return t("Ask your notes…"); },
+  get placeholderFollow() { return t("Ask a follow-up…"); },
+  get send() { return t("Send"); },
+  get stop() { return t("Stop"); },
+  get searchedFor() { return t("Searched for:"); },
+  contextLine: (turns: number, passages: number) => `${t("Using the last {n} turn|Using the last {n} turns", { n: turns })} · ${t("{n} passage|{n} passages", { n: passages })}`,
+  get summarizedLine() { return t("Earlier messages summarized"); },
+  readingNotes: (n: number, scope: string) => t("Reading {n} note in {scope}…|Reading {n} notes in {scope}…", { n, scope }),
+  answering: (n: number, scope: string) => t("Answering from {n} passage in {scope}…|Answering from {n} passages in {scope}…", { n, scope }),
+  get notInNotes() { return t("Not in your notes."); },
   notInNotesAr: "ليس في ملاحظاتك.",
-  notInNotesSub: "Nothing in your notes answers this. Ask never guesses on its own.",
-  answerGeneral: "Answer from general knowledge",
-  generalLabel: "General knowledge · not from your notes",
-  offline: "Ask needs a connection.",
-  offlineSub: "Search still works offline. The closest passages from your notes are below.",
-  signedOut: "Ask needs sync: unlock it in Settings › Sync.",
-  errorRetry: "Retry",
-  copy: "Copy",
-  copied: "Copied",
-  saveNote: "Save as note",
-  makeCards: "Make flashcards",
-  makingCards: "Making cards…",
-  regenerate: "Regenerate",
-  helpful: "Helpful",
-  notHelpful: "Not helpful",
-  sources: (n: number) => `${n} source${n === 1 ? "" : "s"}`,
-  followups: "Follow-ups",
-  starters: "Try",
-  rename: "Rename",
-  pin: "Pin",
-  unpin: "Unpin",
-  delete: "Delete",
-  deleteConfirm: "Delete this conversation?",
-  close: "Close",
-  modeAsk: "Ask",
-  modeTutor: "Tutor",
-  savedNote: "Saved as a note",
-  privacy: "Passages are found on this device; only the ones listed as sources are sent to your Cloudflare Worker.",
+  get notInNotesSub() { return t("Nothing in your notes answers this. Ask never guesses on its own."); },
+  get answerGeneral() { return t("Answer from general knowledge"); },
+  get generalLabel() { return t("General knowledge · not from your notes"); },
+  get offline() { return t("Ask needs a connection."); },
+  get offlineSub() { return t("Search still works offline. The closest passages from your notes are below."); },
+  get signedOut() { return t("Ask needs sync: unlock it in Settings › Sync."); },
+  get errorRetry() { return t("Retry"); },
+  get copy() { return t("Copy"); },
+  get copied() { return t("Copied"); },
+  get saveNote() { return t("Save as note"); },
+  get makeCards() { return t("Make flashcards"); },
+  get makingCards() { return t("Making cards…"); },
+  get regenerate() { return t("Regenerate"); },
+  get helpful() { return t("Helpful"); },
+  get notHelpful() { return t("Not helpful"); },
+  sources: (n: number) => t("{n} source|{n} sources", { n }),
+  get followups() { return t("Follow-ups"); },
+  get starters() { return t("Try"); },
+  get rename() { return t("Rename"); },
+  get pin() { return t("Pin"); },
+  get unpin() { return t("Unpin"); },
+  get delete() { return t("Delete"); },
+  get deleteConfirm() { return t("Delete this conversation?"); },
+  get close() { return t("Close"); },
+  get modeAsk() { return t("Ask"); },
+  get modeTutor() { return t("Tutor"); },
+  get savedNote() { return t("Saved as a note"); },
+  get privacy() { return t("Passages are found on this device; only the ones listed as sources are sent to your Cloudflare Worker."); },
 } as const;
 
-export const MODE_LABEL: Record<ChatMode, string> = { ask: "Ask", explain: "Explain", socratic: "Socratic", feynman: "Feynman" };
+export const MODE_LABEL: Record<ChatMode, string> = { get ask() { return t("Ask"); }, get explain() { return t("Explain"); }, get socratic() { return t("Socratic"); }, get feynman() { return t("Feynman"); } };
 
 // ------------------------------------------------------------------ limits
 /** Turns (question + answer) passed to the model verbatim; older ones go through the running summary. */
@@ -216,11 +217,11 @@ export function threadMarkdown(t: Pick<ChatThread, "title" | "messages">) {
 export function starterQuestions(ctx: { noteTitle?: string; headings?: string[]; concepts?: string[] }): string[] {
   const out: string[] = [];
   const h = (ctx.headings ?? []).filter((x) => x.length > 2 && x.length < 60);
-  if (ctx.noteTitle) out.push(`Summarize the key ideas of ${ctx.noteTitle}`);
-  if (h[0]) out.push(`Explain ${h[0]} in simple terms`);
-  if (h[1] && ctx.noteTitle) out.push(`How does ${h[1]} relate to ${h[0] ?? ctx.noteTitle}?`);
-  for (const c of ctx.concepts ?? []) { if (out.length >= 3) break; out.push(`What is ${c} and why does it matter?`); }
-  const fallback = ["What did I learn this week?", "Explain the main idea of my latest lesson", "اشرح أهم فكرة في ملاحظاتي الأخيرة"];
+  if (ctx.noteTitle) out.push(t("Summarize the key ideas of {title}", { title: ctx.noteTitle }));
+  if (h[0]) out.push(t("Explain {topic} in simple terms", { topic: h[0] }));
+  if (h[1] && ctx.noteTitle) out.push(t("How does {a} relate to {b}?", { a: h[1], b: h[0] ?? ctx.noteTitle }));
+  for (const c of ctx.concepts ?? []) { if (out.length >= 3) break; out.push(t("What is {c} and why does it matter?", { c })); }
+  const fallback = [t("What did I learn this week?"), t("Explain the main idea of my latest lesson"), "اشرح أهم فكرة في ملاحظاتي الأخيرة"];
   for (const f of fallback) { if (out.length >= 3) break; out.push(f); }
   return out.slice(0, 3);
 }

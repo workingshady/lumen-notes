@@ -1,21 +1,23 @@
 import { diffLines } from "diff";
+import { FolderGroups } from "./grouped-links"; // Lumen 22: backlinks over 20 group by folder
 import { useLiveQuery } from "dexie-react-hooks";
 import {
-  AlignLeft, ArrowDownToLine, ArrowRight, BookOpen, Bookmark, Calendar, ChevronDown, ChevronRight, CircleDot, Clock, Copy, Gauge, Hash,
-  History, Layers, Link, Link2, ListTree, Loader2, MessageCircleQuestion, Plus, RefreshCw, SlidersHorizontal, Sparkles, Tag, Text, Timer, Trash2, X,
+  ArrowRight, BookOpen, Calendar, ChevronDown, ChevronRight, CircleDot, Copy, Gauge, Hash,
+  History, Link, Link2, ListTree, Plus, SlidersHorizontal, Tag, Text, Timer, Trash2, X,
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { NOTE_TYPES, STATUSES, type Note, type Version } from "../../shared/types";
 import { snapshot, updateNote } from "../lib/actions";
-import { aiRun, getToken } from "../lib/api";
 import { db } from "../lib/db";
 import { inlineTags, outline, setFrontMatter, splitFrontMatter } from "../lib/parse";
 import { noteDerived, openNote, setUI, toast, useUI, useVault, type Panel } from "../lib/store";
 import { aliasesOf, findMentions, ignoredOf, linkMentions, mayMention, normalizeTerm, PROSE_TYPES, relocate, type Mention } from "../lib/mentions";
 import { normalize } from "../lib/search";
-import { getSelectionText, insertText, scrollEditorToLine } from "./Editor";
-import { AskVault } from "./AskVault";
-import { Preview } from "./Preview";
+import { scrollEditorToLine } from "./Editor";
+import { AssistantPanel, AssistantRail, useAssistantRail } from "./Assistant";
+import { Glyph } from "./Glyph";
+import { HistoryPanel } from "./HistoryPanel";
+import { NoteTagPicker } from "./TagPicker";
 import { Button, cx, STATUS_COLOR } from "./ui";
 import { digits, fmtDate, fmtNum, t, tk, tx } from "../lib/i18n";
 
@@ -26,17 +28,20 @@ const TABS: { value: Exclude<Panel, null>; label: string; icon: ReactNode }[] = 
   { value: "backlinks", label: tk("Links"), icon: <Link2 size={15} /> },
   { value: "properties", label: tk("Properties"), icon: <SlidersHorizontal size={15} /> },
   { value: "versions", label: tk("Versions"), icon: <History size={15} /> },
-  { value: "ai", label: tk("AI"), icon: <Sparkles size={15} /> },
+  { value: "ai", label: tk("Assistant"), icon: <Glyph name="assistant" size={15} /> },
 ];
 const useWidth = () => { const [w, setW] = useState(() => innerWidth); useEffect(() => { const f = () => setW(innerWidth); addEventListener("resize", f); return () => removeEventListener("resize", f); }, []); return w; };
 
 export function RightPanel({ note }: { note: Note }) {
   const { panel } = useUI();
   const phone = useWidth() < 768;
+  const railed = useAssistantRail();
   if (!panel) return null;
+  // AI = the note Assistant (R6-31M…T): 360 px panel, phone sheet, or the collapsed rail
+  if (panel === "ai") return railed && !phone ? <AssistantRail /> : <AssistantPanel note={note} phone={phone} />;
   if (panel === "versions" && phone) return <PhoneVersions note={note} />;
   return (
-    <aside className={cx("fixed inset-0 z-40 flex flex-col bg-surface text-[13px] md:static md:z-auto md:shrink-0 md:border-s md:border-line fade-in", panel === "ai" ? "md:w-[340px]" : "md:w-[300px]")}>
+    <aside className={cx("fixed inset-0 z-40 flex flex-col bg-surface text-[13px] md:static md:z-auto md:shrink-0 md:border-s md:border-line fade-in", panel === "versions" ? "md:w-[320px]" : "md:w-[300px]")}>
       {/* Icon tabs; the active one expands to icon + label */}
       <div className="safe-t flex h-12 shrink-0 items-center gap-0.5 border-b border-line px-2">
         <div role="tablist" className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
@@ -52,12 +57,11 @@ export function RightPanel({ note }: { note: Note }) {
         </div>
         <button aria-label={t("Close panel")} title={t("Close panel")} className="flex size-8 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink md:hidden" onClick={() => setUI({ panel: null })}><X size={16} /></button>
       </div>
-      <div className={cx("min-h-0 flex-1 overflow-y-auto", panel === "versions" || panel === "properties" || panel === "ai" ? "" : "p-3")}>
+      <div className={cx("min-h-0 flex-1 overflow-y-auto", panel === "versions" || panel === "properties" ? "" : "p-3")}>
         {panel === "outline" && <Outline note={note} />}
         {panel === "backlinks" && <Backlinks note={note} />}
         {panel === "properties" && <Properties note={note} />}
-        {panel === "versions" && <Versions note={note} />}
-        {panel === "ai" && <AiTab note={note} />}
+        {panel === "versions" && <HistoryPanel note={note} />}
       </div>
     </aside>
   );
@@ -65,14 +69,22 @@ export function RightPanel({ note }: { note: Note }) {
 
 function Outline({ note }: { note: Note }) {
   const hs = useMemo(() => outline(note.body), [note.body]);
+  const [jump, setJump] = useState("");
+  const [folded, setFolded] = useState(false);
   if (!hs.length) return <p className="px-1 text-[13px] text-muted">{tx("No headings yet. Use {h1}, {h2}, {h3}.", { h1: <code>#</code>, h2: <code>##</code>, h3: <code>###</code> })}</p>;
   const min = Math.min(...hs.map((h) => h.level));
+  // Lumen 22 long notes: Collapse all (folds every section in Read mode) + Jump to section… past 12 headings.
+  const shown = jump.trim() ? hs.filter((h) => h.text.toLowerCase().includes(jump.trim().toLowerCase())) : hs;
   return (
     <nav className="flex flex-col gap-px">
-      <div className={SECTION}>{t("Outline · {n}", { n: hs.length })}</div>
-      {hs.map((h) => (
+      <div className={cx(SECTION, "flex items-center")}><span className="flex-1">{t("Outline · {n}", { n: hs.length })}</span>
+        {hs.length > 12 && <button onClick={() => { const f = !folded; setFolded(f); dispatchEvent(new CustomEvent("lumen:fold-all", { detail: { fold: f } })); }} className="normal-case tracking-normal text-[12px] font-normal text-muted hover:text-ink">{folded ? t("Expand all") : t("Collapse all")}</button>}
+      </div>
+      {hs.length > 12 && <input value={jump} onChange={(e) => setJump(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && shown[0]) { scrollEditorToLine(shown[0].line); document.querySelector(`.prose [data-line="${shown[0].line}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" }); } }}
+        placeholder={t("Jump to section…")} aria-label={t("Jump to section…")} className="mb-1.5 h-7 rounded-[6px] border border-line bg-bg px-2 text-[12.5px] outline-none placeholder:text-muted focus:border-accent" />}
+      {shown.map((h) => (
         <button key={h.line} dir="auto" onClick={() => { scrollEditorToLine(h.line); document.querySelector(`.prose [data-line="${h.line}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
-          className={cx("relative block w-full truncate rounded-[8px] py-1.5 pe-2 text-start text-[13px] hover:bg-surface-2 hover:text-ink", h.level === min ? "font-medium text-ink" : "text-muted")}
+          title={h.text} className={cx("relative line-clamp-3 w-full rounded-[8px] py-1.5 pe-2 text-start text-[13px] hover:bg-surface-2 hover:text-ink", h.level === min ? "font-medium text-ink" : "text-muted")}
           style={{ paddingInlineStart: 10 + (h.level - min) * 14 }}>
           {h.level > min && <span className="absolute bottom-1 top-1 w-px bg-line" style={{ insetInlineStart: 4 + (h.level - min) * 14 }} />}
           {h.text}
@@ -90,10 +102,10 @@ function Backlinks({ note }: { note: Note }) {
   const List = ({ title, items, top }: { title: string; items: Note[]; top?: boolean }) => (
     <div className={cx("flex flex-col gap-2 px-0.5 py-2.5", top && "border-t border-line")} data-links={title}>
       <div className="text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("{title} · {n}", { title, n: items.length })}</div>
-      {items.length ? items.map((n) => (
+      {items.length ? <FolderGroups notes={items} item={(n) => (
         <button key={n.id} dir="auto" onClick={() => openNote(n.id)} title={v.folderMap.get(n.folderId ?? "")?.name ?? v.spaceMap.get(n.spaceId)?.name ?? ""}
           className="-mx-1.5 truncate rounded-[6px] px-1.5 text-start text-[13px] font-medium hover:bg-surface-2">{n.title}</button>
-      )) : <div className="text-[12.5px] text-muted">{t("None")}</div>}
+      )} /> : <div className="text-[12.5px] text-muted">{t("None")}</div>}
     </div>
   );
   return (<div className="-mt-2.5"><List title={t("Linked mentions")} items={back} /><UnlinkedMentions note={note} /><List title={t("Links out")} items={out} top /></div>);
@@ -317,7 +329,7 @@ function Properties({ note }: { note: Note }) {
       <Row id="type" k="type" icon={<Tag size={13} />} edit={<Chips opts={NOTE_TYPES.filter((t) => md ? !["canvas", "whiteboard", "diagram"].includes(t) : t === note.type)} cur={note.type} onPick={(t) => void updateNote(note.id, { type: t as Note["type"] })} />}>
         {valBtn("type", valLabel(note.type))}
       </Row>
-      <Row id="tags" k="tags" icon={<Hash size={13} />} edit={<TextEdit init={note.tags.join(" ")} onDone={(x) => void updateNote(note.id, { tags: [...new Set((x ?? "").split(/[\s,]+/).map((t) => t.replace(/^#/, "").toLowerCase()).filter(Boolean))] })} />}>
+      <Row id="tags" k="tags" icon={<Hash size={13} />} edit={<NoteTagPicker note={note} onDone={() => setEditing(null)} />}>
         {valBtn("tags", note.tags.length ? note.tags.map((t) => `#${t}`).join("  ") : t("Add tags"), "var(--muted)")}
       </Row>
       <Row id="studied" k="studied" icon={<Timer size={13} />}><span className="flex-1 truncate py-2" title={t("Study-timer minutes logged to this note")}>{studiedText(minutes)}</span></Row>
@@ -420,79 +432,8 @@ async function restore(note: Note, v: Version, live: Version[]) {
 }
 const copy = (s: string) => { void navigator.clipboard.writeText(s); toast(t("Copied")); };
 
-function Counts({ add, del }: { add: number; del: number }) {
-  return (
-    <span className="mt-px flex shrink-0 gap-1.5 font-mono text-[11.5px] font-medium">
-      {add > 0 && <span className="text-ok">+{fmt(add)}</span>}
-      {del > 0 && <span className="text-bad">−{fmt(del)}</span>}
-    </span>
-  );
-}
-
-function Versions({ note }: { note: Note }) {
-  const { live, deltas } = useVersions(note);
-  const [selId, setSelId] = useState<string | null>(null);
-  const [label, setLabel] = useState("");
-  const sel = live.find((v) => v.id === selId) ?? null;
-  const current = useMemo(() => lineDelta(live[0]?.body ?? "", note.body), [live, note.body]);
-  const ref = useRef<HTMLDivElement>(null);
-
-  // ↑↓ step through versions, Esc returns to the live note.
-  useEffect(() => {
-    if (!sel) return;
-    const k = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.closest?.("input, textarea, .cm-editor")) return;
-      const i = live.findIndex((v) => v.id === sel.id);
-      if (e.key === "ArrowDown" && i < live.length - 1) { e.preventDefault(); setSelId(live[i + 1].id); }
-      else if (e.key === "ArrowUp" && i > 0) { e.preventDefault(); setSelId(live[i - 1].id); }
-      else if (e.key === "Escape") setSelId(null);
-    };
-    addEventListener("keydown", k);
-    return () => removeEventListener("keydown", k);
-  }, [sel, live]);
-
-  let lastGroup = "Today";
-  return (
-    <div ref={ref} className="flex flex-col">
-      <form className="flex gap-2 p-3" onSubmit={async (e) => { e.preventDefault(); await snapshot(note, label || "Manual save"); setLabel(""); toast(t("Version saved")); }}>
-        <input className="h-8 min-w-0 flex-1 rounded-[6px] border border-line bg-bg px-2.5 text-ink outline-none placeholder:text-muted focus:border-accent" value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t("Label (optional)")} />
-        <button type="submit" className="flex h-8 items-center rounded-[10px] border border-line px-2.5 font-medium hover:bg-surface-2">{t("Save")}</button>
-      </form>
-      <div className="flex flex-col gap-0.5 px-2 pb-3">
-        <div className="px-2 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("Today")}</div>
-        <button onClick={() => setSelId(null)} className="flex items-start gap-2.5 rounded-[8px] px-2.5 py-[9px] text-start">
-          <CircleDot size={14} className="mt-0.5 shrink-0 text-muted" />
-          <span className="flex min-w-0 flex-1 flex-col gap-0.5"><span className="leading-4">{t("Current")}</span><span className="text-[12px] leading-[15px] text-muted">{t("Now · this device")}</span></span>
-          <Counts {...current} />
-        </button>
-        {live.map((v, i) => {
-          const group = sameDay(v.createdAt, Date.now()) ? tk("Today") : tk("Earlier");
-          const header = group !== lastGroup;
-          lastGroup = group;
-          const on = v.id === selId;
-          return (
-            <div key={v.id} className="flex flex-col">
-              {header && <div className="px-2 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t(group)}</div>}
-              <button onClick={() => setSelId(on ? null : v.id)} className={cx("flex w-full items-start gap-2.5 rounded-[8px] px-2.5 py-[9px] text-start", on ? "bg-surface-2 shadow-[inset_0_0_0_1px_var(--accent)]" : "hover:bg-surface-2")}>
-                <span className={cx("mt-0.5 shrink-0", on ? "text-accent" : "text-muted")}>{isRestore(v) ? <History size={14} /> : v.label ? <Bookmark size={14} /> : <Clock size={14} />}</span>
-                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className={cx("truncate leading-4", (on || v.label) && "font-semibold")}>{when(v.createdAt)}</span>
-                  <span className="truncate text-[12px] leading-[15px] text-muted">{labelOf(v)}</span>
-                </span>
-                <Counts {...deltas[i]} />
-              </button>
-            </div>
-          );
-        })}
-        {!live.length && <p className="px-2.5 pt-2 text-[13px] text-muted">{t("Versions are saved automatically while you write (every 2 min at most), and whenever you click Save. Restoring never overwrites: it adds a new version on top.")}</p>}
-      </div>
-      {sel && <DiffOverlay anchor={ref} note={note} v={sel} onClose={() => setSelId(null)} onRestore={async () => { await restore(note, sel, live); setSelId(null); }} />}
-    </div>
-  );
-}
-
 /** Full-width diff in the main pane (left of the side panel): Viewing version · read-only. */
-function DiffOverlay({ anchor, note, v, onClose, onRestore }: { anchor: React.RefObject<HTMLDivElement | null>; note: Note; v: Version; onClose: () => void; onRestore: () => void }) {
+export function DiffOverlay({ anchor, note, v, onClose, onRestore }: { anchor: React.RefObject<HTMLDivElement | null>; note: Note; v: Version; onClose: () => void; onRestore: () => void }) {
   const vault = useVault();
   const [box, setBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const [mode, setMode] = useState<"inline" | "side">(() => { try { return (localStorage.getItem("lumen.diffMode") as "inline" | "side") ?? "inline"; } catch { return "inline"; } });
@@ -654,127 +595,4 @@ function Diff({ from, to, mode }: { from: string; to: string; mode: "inline" | "
   );
 }
 
-// ------------------------------------------------------------------ AI assist
-type AiAction = "summarize" | "flashcards" | "explain" | "tags";
-const AI_ACTIONS: { id: AiAction; label: string; icon: ReactNode }[] = [
-  { id: "summarize", label: tk("Summarize"), icon: <AlignLeft size={15} /> },
-  { id: "flashcards", label: tk("Generate flashcards"), icon: <Layers size={15} /> },
-  { id: "explain", label: tk("Explain selection"), icon: <MessageCircleQuestion size={15} /> },
-  { id: "tags", label: tk("Suggest tags"), icon: <Hash size={15} /> },
-];
-const selectedText = () => getSelectionText() || (typeof getSelection === "function" ? getSelection()?.toString() ?? "" : "");
-const parseCards = (t: string) => t.split("\n").map((l) => /^\s*(?:[-*\d.)]+\s*)?(.+?)\s*::\s*(.+)$/.exec(l)).filter((m): m is RegExpExecArray => !!m).map((m) => ({ q: m[1].replace(/\*\*/g, ""), a: m[2] }));
-const parseTags = (t: string) => [...new Set((t.match(/#?[\p{L}\p{N}][\p{L}\p{N}_/-]*/gu) ?? []).map((x) => x.replace(/^#/, "").toLowerCase()))].slice(0, 8);
-
-/** Append flashcards under a "## Flashcards" heading (created if missing) so Review picks them up. */
-function withCards(body: string, cards: { q: string; a: string }[]) {
-  const lines = cards.map((c) => `${c.q} :: ${c.a}`);
-  const m = /^##\s+Flashcards\s*$/im.exec(body);
-  if (!m) return `${body.replace(/\s*$/, "")}\n\n## Flashcards\n\n${lines.join("\n")}\n`;
-  const start = m.index + m[0].length;
-  const next = body.slice(start).search(/\n#{1,2}\s/);
-  const end = next < 0 ? body.length : start + next;
-  return `${body.slice(0, end).replace(/\s*$/, "")}\n${lines.join("\n")}\n${body.slice(end)}`;
-}
-
-/** AI tab: actions on this note, or "Ask vault" (questions answered from all your notes, with citations). */
-function AiTab({ note }: { note: Note }) {
-  const [mode, setMode] = useState<"note" | "ask">(() => { try { return sessionStorage.getItem("lumen.aiMode") === "ask" ? "ask" : "note"; } catch { return "note"; } });
-  const pick = (m: "note" | "ask") => { setMode(m); try { sessionStorage.setItem("lumen.aiMode", m); } catch { /* private mode */ } };
-  return (
-    <div className="flex flex-col">
-      <div role="tablist" aria-label={t("AI mode")} className="mx-3.5 mt-3.5 grid grid-cols-2 gap-0.5 rounded-[9px] bg-surface-2 p-0.5">
-        {([["note", tk("This note"), <Sparkles key="n" size={13} />], ["ask", tk("Ask vault"), <MessageCircleQuestion key="a" size={13} />]] as const).map(([m, label, icon]) => (
-          <button key={m} role="tab" aria-selected={mode === m} onClick={() => pick(m)}
-            className={cx("flex h-7 items-center justify-center gap-1.5 rounded-[7px] text-[12.5px]", mode === m ? "bg-surface font-semibold text-ink shadow-[0_1px_2px_rgba(0,0,0,.18)] [&>svg]:text-accent" : "text-muted hover:text-ink")}>
-            {icon}{t(label)}
-          </button>
-        ))}
-      </div>
-      {mode === "ask" ? <div className="p-3.5"><AskVault note={note} /></div> : <AI note={note} />}
-    </div>
-  );
-}
-
-function AI({ note }: { note: Note }) {
-  const [res, setRes] = useState<{ action: AiAction; text: string; from: "whole note" | "selection" } | null>(null);
-  const [busy, setBusy] = useState<AiAction | null>(null);
-  const [hasSel, setHasSel] = useState(() => !!selectedText().trim());
-  useEffect(() => {
-    const f = () => setHasSel(!!selectedText().trim());
-    document.addEventListener("selectionchange", f);
-    document.addEventListener("keyup", f);
-    return () => { document.removeEventListener("selectionchange", f); document.removeEventListener("keyup", f); };
-  }, []);
-  const token = !!getToken();
-  const active: AiAction = busy ?? res?.action ?? (hasSel ? "explain" : "flashcards");
-
-  async function run(id: AiAction) {
-    if (!getToken()) return toast(t("AI needs sync: unlock it in Settings → Sync."));
-    const sel = selectedText().trim();
-    const useSel = !!sel && (id === "explain" || id === "summarize" || id === "flashcards");
-    const text = useSel ? sel : splitFrontMatter(note.body).body;
-    if (!text.trim()) return toast(t("Note is empty"));
-    setBusy(id);
-    try { setRes({ action: id, text: await aiRun(id, text), from: useSel ? "selection" : "whole note" }); } catch (e) { toast((e as Error).message); } finally { setBusy(null); }
-  }
-  // Palette → "Generate flashcards from …" opens this tab and runs it once.
-  useEffect(() => {
-    try {
-      const r = JSON.parse(sessionStorage.getItem("lumen.aiAuto") ?? "null") as { id: string; action: AiAction } | null;
-      if (r?.id === note.id) { sessionStorage.removeItem("lumen.aiAuto"); void run(r.action); }
-    } catch { /* ignore */ }
-  }, [note.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const cards = res?.action === "flashcards" ? parseCards(res.text) : [];
-  const tags = res?.action === "tags" ? parseTags(res.text) : [];
-  const meta = res && ({
-    summarize: { icon: <AlignLeft size={14} className="text-info" />, title: t("Summary") },
-    flashcards: { icon: <Layers size={14} className="text-learn" />, title: t("{n} flashcard|{n} flashcards", { n: cards.length }) },
-    explain: { icon: <MessageCircleQuestion size={14} className="text-info" />, title: t("Explanation") },
-    tags: { icon: <Hash size={14} className="text-link" />, title: t("{n} tag|{n} tags", { n: tags.length }) },
-  })[res.action];
-  const insert = () => {
-    if (!res) return;
-    if (res.action === "tags") { void updateNote(note.id, { tags: [...new Set([...note.tags, ...tags])] }); toast(t("Added {n} tag|Added {n} tags", { n: tags.length })); return; }
-    if (res.action === "flashcards" && cards.length) { void updateNote(note.id, { body: withCards(note.body, cards) }); toast(t("{n} flashcard added under “Flashcards”|{n} flashcards added under “Flashcards”", { n: cards.length })); return; }
-    const block = "\n\n" + res.text.trim() + "\n";
-    if (!insertText(block, "end")) void updateNote(note.id, { body: note.body.replace(/\s*$/, "") + block });
-  };
-
-  return (
-    <div className="flex flex-col gap-3 p-3.5">
-      <div className="grid grid-cols-2 gap-2">
-        {AI_ACTIONS.map((a) => {
-          const on = a.id === active;
-          return (
-            <button key={a.id} onClick={() => run(a.id)} disabled={!!busy}
-              className={cx("flex h-14 items-center gap-2.5 rounded-[10px] border px-3 text-start leading-tight disabled:cursor-wait", on ? "border-learn bg-[color-mix(in_srgb,var(--learn)_10%,transparent)] font-semibold" : "border-line hover:bg-surface-2")}>
-              <span className={cx("shrink-0", on ? "text-learn" : "text-muted")}>{busy === a.id ? <Loader2 size={15} className="animate-spin" /> : a.icon}</span>{t(a.label)}
-            </button>
-          );
-        })}
-      </div>
-      {res && meta && (
-        <div className="flex flex-col overflow-hidden rounded-[14px] border border-line bg-surface-2 fade-in">
-          <div className="flex items-center gap-2 border-b border-line px-3.5 py-3">{meta.icon}<span className="flex-1 font-semibold">{meta.title}</span><span className="text-[12px] text-muted">{res.from === "selection" ? t("from selection") : t("from whole note")}</span></div>
-          {res.action === "flashcards" && cards.length ? cards.map((c, i) => (
-            <div key={i} className="flex flex-col gap-[3px] border-b border-line px-3.5 py-2.5 text-[12.5px] leading-[18px]"><span dir="auto" className="font-medium">{c.q}</span><span dir="auto" className="text-muted">:: {c.a}</span></div>
-          )) : res.action === "tags" ? (
-            <div className="flex flex-wrap gap-1.5 border-b border-line px-3.5 py-3">{tags.map((tag) => <span key={tag} dir="auto" className={cx("rounded-full px-2 py-0.5 text-[12px]", note.tags.includes(tag) ? "bg-surface text-muted" : "bg-[color-mix(in_srgb,var(--link)_14%,transparent)] text-link")}>#{tag}</span>)}</div>
-          ) : (
-            <div className="max-h-[50vh] overflow-y-auto border-b border-line px-3.5 py-2.5"><Preview note={{ id: note.id, body: res.text, spaceId: note.spaceId }} className="!text-[13px]" /></div>
-          )}
-          <div className="flex gap-2 px-3.5 py-3">
-            <button onClick={insert} className="flex h-[34px] flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-accent font-semibold text-accent-fg hover:brightness-110"><ArrowDownToLine size={14} />{res.action === "tags" ? t("Add tags") : t("Insert below")}</button>
-            <button onClick={() => copy(res.text)} className="flex h-[34px] items-center gap-1.5 rounded-[10px] border border-line px-3 hover:bg-surface"><Copy size={13} />{t("Copy")}</button>
-            <button aria-label={t("Regenerate")} title={t("Regenerate")} onClick={() => run(res.action)} disabled={!!busy} className="flex size-[34px] items-center justify-center rounded-[10px] border border-line hover:bg-surface"><RefreshCw size={13} className={busy ? "animate-spin" : ""} /></button>
-          </div>
-        </div>
-      )}
-      <span className="text-[12px] leading-[18px] text-muted">
-        {token ? t("Runs on Cloudflare Workers AI. Only this note's text is sent; nothing is stored. Results are never inserted without your click.") : t("Runs on Cloudflare Workers AI once sync is unlocked (Settings → Sync). Only this note's text is sent; nothing is stored.")}
-      </span>
-    </div>
-  );
-}
+// ------------------------------------------------------------------ AI: the note Assistant (round 6, Lumen 31) lives in Assistant.tsx

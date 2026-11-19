@@ -43,9 +43,9 @@ export function NavButtons() {
         onPointerUp={() => { if (timer.current) clearTimeout(timer.current); }} onPointerLeave={() => { if (timer.current) clearTimeout(timer.current); }}
         onContextMenu={(e) => { e.preventDefault(); setMenu(true); }}
         onClick={() => { if (!long.current) goBack(); }}>
-        <ArrowLeft size={15} className="rtl:rotate-180" />
+        <ArrowLeft size={15} />
       </button>
-      <button aria-label={t("Forward")} title={t("Forward")} disabled={!canGoForward()} className={btn} onClick={() => history.forward()}><ArrowRight size={15} className="rtl:rotate-180" /></button>
+      <button aria-label={t("Forward")} title={t("Forward")} disabled={!canGoForward()} className={btn} onClick={() => history.forward()}><ArrowRight size={15} /></button>
       {menu && (
         <div role="menu" aria-label={t("Back history")} className="absolute start-0 top-[calc(100%+6px)] z-50 flex w-[260px] flex-col rounded-[10px] border border-line bg-surface-2 p-1 text-[12.5px] shadow-[0_8px_24px_rgb(0_0_0/.3)]">
           <span className="px-2 py-1.5 text-[11px] text-muted">{t("Back · long-press")}</span>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:absolute;inset:0;display:flex;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:13px;overflow:hidden">
+  <div style="display:{{ deskOnly }};height:100%"><dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,100%" style="height:100%"></dc-import></div>
+  <div style="display:{{ navShow }};width:{{ navW }};flex-shrink:0;border-right:{{ navBd }};padding:{{ navPad }};flex-direction:column;gap:2px;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:8px;padding:0 8px 10px"><span style="display:{{ phoneOnly }};font-size:18px;width:24px">←</span><span style="font-size:{{ navH }};font-weight:650;flex:1">Settings</span></div>
+    <div style="height:{{ srchH }};margin:0 4px 10px;border-radius:7px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--mu)"><dc-import name="LumenGlyph" glyph="search" size="{{ 14 }}" hint-size="14px,14px"></dc-import>{{ searchPh }}</div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="13"><div style="display:{{ n.hS }};padding:10px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">{{ n.h }}</div><div style="display:{{ n.rS }};height:{{ rowH }};padding:0 10px;border-radius:8px;align-items:center;gap:10px;background:{{ n.bg }};color:{{ n.c }};font-weight:{{ n.w }}"><dc-import name="LumenGlyph" glyph="{{ n.g }}" size="{{ 16 }}" color="{{ n.ic }}" hint-size="16px,16px"></dc-import><span style="flex:1">{{ n.l }}</span><span style="display:{{ n.bS }};padding:0 6px;line-height:18px;border-radius:999px;font-size:11px;font-weight:600;background:{{ n.bbg }};color:{{ n.bc }}">{{ n.b }}</span><span style="display:{{ phoneOnly }};color:var(--mu)">›</span></div></sc-for>
+  </div>
+
+  <div style="display:{{ paneShow }};flex:1;min-width:0;flex-direction:column;overflow:hidden">
+    <div style="display:{{ phoneOnly }};height:52px;padding:0 12px;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><span style="font-size:18px">←</span><span style="font-weight:650;font-size:16px">{{ title }}</span></div>
+    <div style="flex:1;overflow:hidden;padding:{{ pPad }};display:flex;flex-direction:column;gap:20px;max-width:760px">
+      <div style="display:{{ deskOnly }};flex-direction:column;gap:4px"><span style="font-size:22px;font-weight:650;letter-spacing:-.02em">{{ title }}</span><span style="color:var(--mu);line-height:19px">{{ sub }}</span></div>
+
+      <sc-for list="{{ blocks }}" as="b" hint-placeholder-count="5">
+        <div style="display:{{ b.headS }};flex-direction:column;gap:2px;padding-top:4px"><span style="font-weight:650;font-size:14px">{{ b.h }}</span><span style="display:{{ b.hdS }};color:var(--mu);font-size:12.5px;line-height:18px">{{ b.hd }}</span></div>
+        <div style="display:{{ b.groupS }};border-radius:12px;border:1px solid var(--bd);background:var(--sf);flex-direction:column;overflow:hidden">
+          <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="4">
+            <div style="min-height:{{ rowMin }};padding:10px 14px;display:flex;align-items:center;gap:12px;border-top:{{ r.bt }};opacity:{{ r.op }}">
+              <span style="display:{{ r.gS }}"><dc-import name="LumenGlyph" glyph="{{ r.g }}" size="{{ 16 }}" color="{{ r.gc }}" tile="{{ r.tile }}" hint-size="28px,28px"></dc-import></span>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-weight:500">{{ r.l }}</span><span style="display:{{ r.dS }};color:var(--mu);font-size:12.5px;line-height:18px">{{ r.d }}</span></div>
+              <span style="display:{{ r.vS }};color:{{ r.vc }};font-size:12.5px;white-space:nowrap;font-family:{{ r.vf }}">{{ r.v }}</span>
+              <span style="display:{{ r.tgS }};width:34px;height:20px;border-radius:10px;background:{{ r.tb }};position:relative;flex-shrink:0"><span style="position:absolute;top:3px;left:{{ r.tl }};width:14px;height:14px;border-radius:50%;background:{{ r.tk }}"></span></span>
+              <div style="display:{{ r.segS }};gap:2px;padding:3px;border-radius:8px;background:var(--bg);border:1px solid var(--bd);flex-shrink:0"><sc-for list="{{ r.seg }}" as="s" hint-placeholder-count="3"><span style="height:24px;padding:0 9px;border-radius:6px;display:flex;align-items:center;font-size:12px;background:{{ s.bg }};color:{{ s.c }};font-weight:{{ s.w }}">{{ s.l }}</span></sc-for></div>
+              <span style="display:{{ r.btnS }};height:30px;padding:0 12px;border-radius:8px;border:1px solid {{ r.bb }};background:{{ r.bbg }};color:{{ r.bcol }};align-items:center;font-weight:{{ r.bw }};white-space:nowrap">{{ r.btn }}</span>
+              <span style="display:{{ r.chS }};color:var(--mu)">›</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:{{ b.meterS }};border-radius:12px;border:1px solid {{ meterBd }};background:var(--sf);padding:16px;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:baseline;gap:8px"><dc-import name="LumenGlyph" glyph="meter" size="{{ 18 }}" color="{{ meterC }}" hint-size="18px,18px"></dc-import><b style="font-size:22px">{{ used }}</b><span style="color:var(--mu)">of 10,000 neurons today</span><span style="flex:1"></span><span style="color:var(--mu);font-size:12px">Resets in {{ resetIn }} · 00:00 UTC</span></div>
+          <div style="height:10px;border-radius:5px;background:var(--sf2);overflow:hidden;display:flex;gap:2px"><sc-for list="{{ usage }}" as="u" hint-placeholder-count="5"><span style="width:{{ u.w }};background:{{ u.c }}"></span></sc-for></div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--mu)"><sc-for list="{{ usage }}" as="u" hint-placeholder-count="5"><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:{{ u.c }}"></span>{{ u.l }} · {{ u.n }}</span></sc-for></div>
+          <span style="font-size:12.5px;line-height:18px">{{ leftLine }}</span>
+          <div style="display:{{ warnS }};border-radius:9px;background:color-mix(in srgb,{{ meterC }} 10%,transparent);border:1px solid color-mix(in srgb,{{ meterC }} 30%,transparent);padding:9px 12px;align-items:center;gap:10px"><dc-import name="LumenGlyph" glyph="limit" size="{{ 16 }}" color="{{ meterC }}" hint-size="16px,16px"></dc-import><span style="flex:1;line-height:18px">{{ warnT }}</span></div>
+          <div style="display:flex;align-items:flex-end;gap:6px;height:56px;padding-top:6px;border-top:1px solid var(--bd)"><span style="font-size:11px;color:var(--mu);width:52px;align-self:center">Last 7 days</span><sc-for list="{{ week }}" as="d" hint-placeholder-count="7"><div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><span style="width:100%;max-width:26px;height:{{ d.h }};border-radius:3px 3px 0 0;background:{{ d.c }}"></span><span style="font-size:10.5px;color:var(--mu)">{{ d.l }}</span></div></sc-for></div>
+        </div>
+        <div style="display:{{ b.codeS }};border-radius:12px;border:1px solid var(--bd);background:var(--sf);flex-direction:column;overflow:hidden">
+          <div style="display:flex;align-items:center;border-bottom:1px solid var(--bd);padding:0 8px"><sc-for list="{{ codeTabs }}" as="t" hint-placeholder-count="3"><span style="padding:9px 10px;box-shadow:{{ t.sh }};color:{{ t.c }};font-weight:{{ t.w }}">{{ t.l }}</span></sc-for><span style="flex:1"></span><span style="height:26px;padding:0 8px;border-radius:6px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-size:12px"><dc-import name="LumenGlyph" glyph="copy" size="{{ 12 }}" hint-size="12px,12px"></dc-import>Copy</span></div>
+          <div style="padding:12px 14px;font:12.5px/21px 'JetBrains Mono',monospace;white-space:pre;overflow:hidden;color:var(--tx)">{{ code }}</div>
+        </div>
+        <div style="display:{{ b.tokenS }};border-radius:12px;border:1px solid var(--ac);background:color-mix(in srgb,var(--ac) 6%,var(--sf));padding:14px;flex-direction:column;gap:10px">
+          <span style="font-weight:600">“Study agent” created · copy it now</span>
+          <div style="height:40px;border-radius:8px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 6px 0 12px"><span style="flex:1;font:12.5px 'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">lmn_live_7Hq2v9WkLz0cR3xNfA8pT1mE5sJ6bY4d</span><span style="height:30px;padding:0 10px;border-radius:7px;background:var(--ac);color:var(--af);display:flex;align-items:center;gap:6px;font-weight:600"><dc-import name="LumenGlyph" glyph="copy" size="{{ 13 }}" hint-size="13px,13px"></dc-import>Copy</span></div>
+          <span style="color:var(--mu);font-size:12.5px">You won't see this again. Read + write · expires 19 Feb 2027.</span>
+        </div>
+        <div style="display:{{ b.emptyS }};border-radius:12px;border:1px dashed var(--bd);padding:18px;flex-direction:column;align-items:flex-start;gap:10px"><dc-import name="LumenGlyph" glyph="token" size="{{ 18 }}" color="var(--mu)" tile="#9AA0AA" hint-size="31px,31px"></dc-import><span style="font-weight:600">No tokens yet</span><span style="color:var(--mu);line-height:18px">Scripts and agents use a token instead of your passcode. Each token can be revoked on its own.</span><span style="height:32px;padding:0 12px;border-radius:8px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">Create token</span></div>
+        <div style="display:{{ b.advS }};height:40px;border-radius:10px;border:1px solid var(--bd);padding:0 14px;align-items:center;gap:8px;color:var(--mu)"><span>▸</span><span style="color:var(--tx);font-weight:500">Advanced</span><span style="font-size:12px">{{ b.adv }}</span></div>
+      </sc-for>
+    </div>
+  </div>
+
+  <sc-if value="{{ dialog }}">
+    <div style="position:absolute;inset:0;background:rgba(5,6,8,.55)"></div>
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:{{ dlgW }};border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column">
+      <div style="padding:18px 20px 6px;display:flex;align-items:center;gap:10px"><dc-import name="LumenGlyph" glyph="token" size="{{ 18 }}" hint-size="18px,18px"></dc-import><span style="font-size:16px;font-weight:650;flex:1">Create access token</span><span style="color:var(--mu)">×</span></div>
+      <div style="padding:10px 20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--mu)">Name</span><div style="height:38px;border-radius:8px;background:var(--bg);border:1px solid var(--ac);display:flex;align-items:center;padding:0 12px">Study agent</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--mu)">Access</span><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><span style="height:56px;border-radius:9px;border:1px solid var(--bd);padding:0 12px;display:flex;flex-direction:column;justify-content:center"><b style="font-weight:600">Read only</b><span style="font-size:12px;color:var(--mu)">GET requests</span></span><span style="height:56px;border-radius:9px;border:1.5px solid var(--ac);background:color-mix(in srgb,var(--ac) 6%,transparent);padding:0 12px;display:flex;flex-direction:column;justify-content:center"><b style="font-weight:600">Read + write</b><span style="font-size:12px;color:var(--mu)">GET, PUT, POST</span></span></div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--mu)">Expires</span><div style="display:flex;gap:2px;padding:3px;border-radius:8px;background:var(--bg);border:1px solid var(--bd);align-self:flex-start"><span style="height:26px;padding:0 10px;display:flex;align-items:center;color:var(--mu)">30 days</span><span style="height:26px;padding:0 10px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;font-weight:600">90 days</span><span style="height:26px;padding:0 10px;display:flex;align-items:center;color:var(--mu)">1 year</span><span style="height:26px;padding:0 10px;display:flex;align-items:center;color:var(--mu)">Never</span></div></div>
+      </div>
+      <div style="padding:14px 20px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px"><span style="height:34px;padding:0 12px;display:flex;align-items:center;color:var(--mu)">Cancel</span><span style="height:34px;padding:0 14px;border-radius:9px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">Create token</span></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sim }}">
+    <div style="position:absolute;left:0;right:0;top:0;height:30px;background:color-mix(in srgb,var(--wa) 18%,var(--bg));border-bottom:1px solid color-mix(in srgb,var(--wa) 40%,transparent);display:flex;align-items:center;justify-content:center;gap:10px;font-size:12px"><dc-import name="LumenGlyph" glyph="simulator" size="{{ 14 }}" color="var(--wa)" hint-size="14px,14px"></dc-import><b style="font-weight:600">Simulator on</b> · Offline · Big vault (3,000 notes) · Date 2 Mar 2027 09:00<span style="color:var(--ln)">Reset all</span></div>
+    <div style="position:absolute;left:{{ simL }};right:0;bottom:0;height:{{ simH }};background:var(--sf);border-top:1px solid var(--bd);display:flex;flex-direction:column">
+      <div style="height:40px;padding:0 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><dc-import name="LumenGlyph" glyph="simulator" size="{{ 16 }}" color="var(--ac)" hint-size="16px,16px"></dc-import><b style="font-weight:600">Simulator</b><span style="color:var(--mu);font-size:12px;font-family:'JetBrains Mono',monospace">Ctrl+Shift+D</span><span style="flex:1"></span><span style="color:var(--mu)">⌄</span></div>
+      <div style="flex:1;display:grid;grid-template-columns:{{ simCols }};gap:12px;padding:12px 16px;overflow:hidden">
+        <sc-for list="{{ simGroups }}" as="g" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">{{ g.h }}</span><sc-for list="{{ g.items }}" as="i" hint-placeholder-count="4"><div style="height:30px;display:flex;align-items:center;gap:8px"><span style="width:28px;height:16px;border-radius:8px;background:{{ i.tb }};position:relative;flex-shrink:0"><span style="position:absolute;top:2px;left:{{ i.tl }};width:12px;height:12px;border-radius:50%;background:{{ i.tk }}"></span></span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.l }}</span><span style="font-size:11.5px;color:var(--mu)">{{ i.v }}</span></div></sc-for></div></sc-for>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;section&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;account&quot;,&quot;palette&quot;,&quot;branding&quot;,&quot;reading&quot;,&quot;study&quot;,&quot;diagrams&quot;,&quot;sync&quot;,&quot;sharing&quot;,&quot;blog&quot;,&quot;storage&quot;,&quot;ai&quot;,&quot;developer&quot;,&quot;about&quot;],&quot;default&quot;:&quot;ai&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;limit&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;near&quot;,&quot;reached&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;tokens&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;empty&quot;,&quot;list&quot;],&quot;default&quot;:&quot;empty&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;dialog&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;sim&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;list&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const sec = this.props.section ?? 'ai', p = !!this.props.phone, list = !!this.props.list, lim = this.props.limit ?? 'normal';
+    const tg = on => ({ tb: on?'var(--ac)':'var(--bd)', tl: on?'17px':'3px', tk: on?'var(--af)':'var(--mu)' });
+    const NAV = [['h','You'],['account','Account','account'],['palette','Appearance','canvas'],['branding','Branding','owl'],['h','Learning'],['reading','Reading','lesson'],['study','Study plan','date'],['diagrams','Diagrams','diagrams-tab'],['h','Data'],['sync','Sync','switch'],['sharing','Sharing','link'],['blog','Blog','post'],['storage','Storage','archive'],['h','Advanced'],['ai','AI','assistant'],['developer','Developer','code'],['about','About','c-info']];
+    const badges = { ai: lim==='reached'?['Limit','var(--da)']:lim==='near'?['84%','var(--wa)']:null, sync:['On','var(--ok)'], storage:null };
+    const nav = NAV.map(([k,l,g]) => k==='h' ? { hS:'block', rS:'none', h:l, g:'note', l:'', bg:'', c:'', w:400, ic:'', bS:'none', b:'', bbg:'', bc:'' } : (() => { const on = k===sec && !list; const b = badges[k]; return { hS:'none', rS:'flex', h:'', g, l, bg: on?'var(--sf2)':'transparent', c: on?'var(--tx)':(p?'var(--tx)':'var(--mu)'), w: on?600:450, ic: on?'var(--ac)':'var(--mu)', bS: b?'inline':'none', b: b?b[0]:'', bbg: b?`color-mix(in srgb, ${b[1]} 16%, transparent)`:'', bc: b?b[1]:'' }; })());
+    const R = (l, o={}) => { const t = o.tog !== undefined ? tg(o.tog) : tg(false); return { l, d:o.d||'', dS:o.d?'block':'none', g:o.g||'note', gS:o.g?'block':'none', gc:o.gc||'var(--mu)', tile:o.tile||'', v:o.v||'', vS:o.v?'inline':'none', vc:o.vc||'var(--mu)', vf:o.mono?"'JetBrains Mono',monospace":'Inter,sans-serif', tgS: o.tog!==undefined?'block':'none', ...t, seg:(o.seg||[]).map((s,i) => ({ l:s, bg:i===(o.si||0)?'var(--sf2)':'transparent', c:i===(o.si||0)?'var(--tx)':'var(--mu)', w:i===(o.si||0)?600:450 })), segS:o.seg?'flex':'none', btn:o.btn||'', btnS:o.btn?'flex':'none', bb:o.danger?'color-mix(in srgb,var(--da) 40%,transparent)':o.pri?'var(--ac)':'var(--bd)', bbg:o.pri?'var(--ac)':'transparent', bcol:o.danger?'var(--da)':o.pri?'var(--af)':'var(--tx)', bw:o.pri?600:500, chS:o.ch?'inline':'none', op:o.off?.45:1, bt:'' }; };
+    const G = (h, rows, o={}) => ({ h:h||'', headS:h?'flex':'none', hd:o.hd||'', hdS:o.hd?'block':'none', groupS: rows?'flex':'none', rows:(rows||[]).map((r,i) => ({ ...r, bt: i?'1px solid var(--bd)':'none' })), meterS:o.meter?'flex':'none', codeS:o.code?'flex':'none', tokenS:o.token?'flex':'none', emptyS:o.empty?'flex':'none', advS:o.adv?'flex':'none', adv:o.adv||'' });
+    const reached = lim==='reached', near = lim==='near';
+    const aiOff = reached;
+    const feat = (l,d,cost,g) => R(l,{ d: reached ? 'Daily free AI limit reached. Try tomorrow.' : d+' · '+cost, g, gc:'var(--tx)', tog:true, off:aiOff });
+    const S = {
+      account: ['Account','Signed in as one owner. Lumen has no shared accounts on this server.',[
+        G('',[R('Amir Hakim',{ d:'amir@nightshift.dev · Google', g:'account', gc:'var(--tx)', btn:'Edit profile' }),R('Devices unlocked for sync',{ d:'Pixel 8 · MacBook · iPad', v:'3', ch:1 }),R('Passcode',{ d:'Changed 2 Nov', btn:'Change' })]),
+        G('Danger zone',[R('Sign out of this device',{ btn:'Sign out' }),R('Delete account and all data',{ d:'Removes notes from your Cloudflare. Export first.', btn:'Delete…', danger:1 })])]],
+      palette: ['Appearance','Changes apply instantly on this device.',[
+        G('',[R('Theme',{ seg:['Lamplight','Paper','System'] }),R('Accent',{ v:'Amber · 72°', ch:1 }),R('Language',{ seg:['English','العربية','Auto'] }),R('Density',{ seg:['Comfortable','Compact'] })]),
+        G('',[],{ adv:'UI font size · reduce motion · custom CSS' })]],
+      branding: ['Branding','How your blog and shared pages introduce you.',[
+        G('',[R('Blog name',{ v:'Night Shift Notes', ch:1 }),R('Tagline',{ v:'Learning in public', ch:1 }),R('Author',{ v:'Amir Hakim', ch:1 }),R('Avatar',{ g:'owl', gc:'var(--tx)', tile:'#E8E6E1', btn:'Change' })])]],
+      reading: ['Reading','Text and layout for Read mode and the blog.',[
+        G('',[R('Reading font',{ seg:['Sans','Serif','Mono'], si:1 }),R('Size',{ v:'17 px', ch:1 }),R('Line width',{ seg:['Fixed','Wide','Full'], si:1 }),R('Arabic reading font',{ v:'Noto Naskh Arabic', ch:1 })]),
+        G('',[],{ adv:'Hyphenation · footnote style · code wrap' })]],
+      study: ['Study plan','How Today builds your plan.',[
+        G('',[R('Daily goal',{ v:'90 min', ch:1 }),R('Reviews first',{ d:'Due cards always come before new lessons', tog:true }),R('New lessons per day',{ v:'2', ch:1 }),R('Rest day',{ v:'Friday', ch:1 })]),
+        G('Review scheduling',[R('Algorithm',{ seg:['SM-2','FSRS'], si:0 }),R('Target retention',{ v:'90%', ch:1 })])]],
+      diagrams: ['Diagrams','Defaults for Mermaid, graphs and the Diagrams tab.',[
+        G('',[R('Show Diagrams tab',{ d:'Only on notes with at least one diagram', tog:true }),R('Default zoom',{ seg:['Fit','100%','Fill'] }),R('Edge style',{ seg:['Curved','Elbow','Straight'] }),R('Hand-drawn look',{ tog:false })]),
+        G('Note tabs',[R('Tab order',{ d:'Note · Diagrams · Media · Links · Outline', ch:1 }),R('Hide empty tabs',{ tog:true })])]],
+      sync: ['Sync','This device syncs with your own Cloudflare Worker.',[
+        G('',[R('Status',{ g:'s-done', gc:'var(--ok)', d:'Synced 2 min ago · 1,240 notes', btn:'Sync now', pri:1 }),R('Sync on mobile data',{ tog:false }),R('Sync files',{ seg:['Always','On Wi-Fi','On open'], si:1 })]),
+        G('',[],{ adv:'Conflict policy · reset local cache' })]],
+      sharing: ['Sharing','Everything reachable without your passcode.',[
+        G('',[R('Shared links',{ v:'5', ch:1, g:'link', gc:'var(--in)' }),R('Published posts',{ v:'12', ch:1, g:'post', gc:'var(--ok)' }),R('Turn off all links',{ btn:'Turn off', danger:1 })])]],
+      blog: ['Blog','Your public site.',[
+        G('',[R('Address',{ v:'nightshift.pages.dev', vc:'var(--ln)', ch:1 }),R('RSS feed',{ tog:true }),R('Comments',{ tog:false, d:'Off. Readers can email you instead.' }),R('Posts',{ v:'12 published · 2 drafts', ch:1 })])]],
+      storage: ['Storage','Free Cloudflare D1 · 100 MB per file.',[
+        G('',[R('Cloudflare',{ v:'1.38 of 5 GB', ch:1, g:'archive', gc:'var(--tx)' }),R('This device',{ v:'640 MB', ch:1 }),R('Largest files',{ ch:1 })])]],
+      ai: ['AI','Optional helpers. They run on Workers AI inside your own Cloudflare account; nothing goes to any other company.',[
+        G('',[R('AI features',{ d:'On · Workers AI is bound to your Worker', g:'assistant', gc:'var(--ac)', tile:'#F2A93B', tog:true })]),
+        G('Daily free limit',null,{ meter:1, hd:'Workers AI includes 10,000 neurons a day free. Without the paid plan, requests simply stop at the limit — nothing is ever charged.' }),
+        G('Your Cloudflare · Llama 3.3 70B · Whisper',[feat('Summarize','3–6 bullet summary','~120 neurons','c-abstract'),feat('Make flashcards','Question :: Answer cards','~180','flashcards'),feat('Explain','Plain-language explanation','~150','c-question'),feat('Suggest tags','3–6 tags','~40','tag'),feat('Quiz me','5 questions + answers','~200','c-question'),feat('Draft a roadmap','Modules and topics','~400','roadmap'),feat('Voice to text','Dictation (Whisper)','~70 / min','voice')]),
+        G('This device · always on, works offline',[R('Search',{ d:'Full-text, Arabic normalisation', g:'search', v:'No AI' }),R('Outline, backlinks, graph',{ d:'Computed from your notes', g:'graph', v:'No AI' }),R('Spaced repetition',{ d:'Review scheduling (SM-2)', g:'flashcards', v:'No AI' })]),
+        G('',[],{ adv:'Model override · log requests on this device' })]],
+      developer: ['Developer','Read and write your notes, canvases and whiteboards from scripts and agents.',[
+        G('',[R('Simulator',{ d:'Bottom drawer: fake date, offline, slow sync, big vault, RTL, Paper, dummy data, AI and upload faults. Ctrl+Shift+D.', g:'simulator', gc:'var(--ac)', tile:'#F2A93B', btn:'Open simulator' })]),
+        G('',[R('Base URL',{ v:'lumen-notes.workingshady.workers.dev', mono:1, vc:'var(--tx)', btn:'Copy' })]),
+        G('Endpoints',[R('GET  PUT   /api/notes/:id',{ d:'Markdown + front-matter', btn:'Copy' }),R('GET  PUT   /api/canvas/:id',{ d:'JSON Canvas 1.0 body', btn:'Copy' }),R('GET  PUT   /api/whiteboard/:id',{ d:'Excalidraw scene', btn:'Copy' }),R('POST  /api/whiteboard/:id/elements',{ d:'Append stickies and shapes', btn:'Copy' })]),
+        this.props.tokens === 'list' ? G('Access tokens',[R('Study agent',{ d:'Read + write · used 2 min ago · expires 19 Feb', g:'token', btn:'Revoke', danger:1 }),R('Backup script',{ d:'Read only · used yesterday · never expires', g:'token', btn:'Revoke', danger:1 }),R('Create token',{ g:'plus', gc:'var(--ac)' })], { token: true }) : G('Access tokens',null,{ empty:1 }),
+        G('Example request',null,{ code:1 })]],
+      about: ['About','',[
+        G('',[R('Lumen',{ d:'Version 0.6.2 · Nov 2026', g:'flame', gc:'var(--ac)', tile:'#F2A93B', btn:'Check for updates' }),R('What\'s new',{ ch:1 }),R('Keyboard shortcuts',{ v:'?', ch:1 }),R('Open-source licences',{ ch:1 }),R('Report a problem',{ ch:1 })])]]
+    };
+    const s = S[sec] || S.ai;
+    const usedN = reached ? 10000 : near ? 8410 : 3120;
+    const pct = usedN/100;
+    const parts = reached ? [['Summarize',38],['Flashcards',27],['Voice',18],['Explain',11],['Other',6]] : near ? [['Summarize',30],['Flashcards',24],['Voice',16],['Explain',9],['Other',5]] : [['Summarize',12],['Flashcards',9],['Voice',5],['Explain',3],['Other',2]];
+    const PC = ['var(--ac)','var(--le)','var(--in)','var(--ln)','var(--mu)'];
+    const usage = parts.map(([l,v],i) => ({ l, n: Math.round(v*100).toLocaleString(), w: v+'%', c: PC[i] }));
+    const week = [['Th',30],['Fr',62],['Sa',10],['Su',0],['Mo',88],['Tu',100],['We',pct]].map(([l,v],i) => ({ l, h: Math.max(2, v*.4)+'px', c: i===6 ? (reached?'var(--da)':near?'var(--wa)':'var(--ac)') : v>=100 ? 'color-mix(in srgb,var(--da) 60%,transparent)' : 'var(--sf2)' }));
+    const codeTabs = ['curl','fetch','Python'].map((l,i) => ({ l, sh:i===0?'inset 0 -2px 0 var(--ac)':'none', c:i===0?'var(--tx)':'var(--mu)', w:i===0?600:450 }));
+    const on = (x) => tg(x);
+    const simGroups = [['Network',[['Offline',1],['Slow sync · 3 s',0],['Sync conflict',0]]],['Data',[['Big vault · 3,000 notes',1],['Empty vault',0],['Dummy: student, 2 courses',0]]],['Look',[['RTL · Arabic UI',0],['Paper theme',0],['Fake date','2 Mar 09:00',1]]],['Faults',[['AI limit reached',0],['AI error 500',0],['Upload fails at 60%',0]]]]
+      .map(([h,items]) => ({ h, items: items.map(([l,a,b]) => { const isOn = typeof a==='number' ? a : b; return { l, v: typeof a==='string'?a:'', ...on(!!isOn) }; }) }));
+    return { nav, title:s[0], sub:s[1], blocks:s[2], usage, week, codeTabs,
+      used: usedN.toLocaleString(), resetIn: '6 h 12 min', meterC: reached?'var(--da)':near?'var(--wa)':'var(--ac)', meterBd: reached?'color-mix(in srgb,var(--da) 40%,transparent)':'var(--bd)',
+      leftLine: reached ? 'Nothing left today. AI buttons are paused until the reset; search, review and everything else keep working.' : near ? 'About 13 summaries or 2 minutes of voice left today.' : 'About 55 summaries or 10 minutes of voice left today.',
+      warnS: reached||near?'flex':'none', warnT: reached ? 'Daily free AI limit reached. Try tomorrow. Nothing is charged.' : 'You\'ve used 84% of today\'s free AI. Long notes use more.',
+      code: 'curl https://lumen-notes.workingshady.workers.dev/api/notes/<id> \\\n  -H "Authorization: Bearer $LUMEN_TOKEN"',
+      dialog: !!this.props.dialog, sim: !!this.props.sim,
+      searchPh: 'Search settings', deskOnly: p?'none':'flex', phoneOnly: p?'flex':'none',
+      navShow: p&&!list?'none':'flex', paneShow: p&&list?'none':'flex', navW: p?'100%':'232px', navBd: p?'none':'1px solid var(--bd)', navPad: p?'44px 8px 8px':'20px 10px', navH: p?'24px':'18px', srchH: p?'42px':'32px', rowH: p?'48px':'34px', rowMin: p?'56px':'52px', pPad: p?'16px':'28px 40px',
+      dlgW: p?'92%':'460px', simL: p?'0':'56px', simH: p?'52%':'260px', simCols: p?'1fr 1fr':'repeat(4,1fr)' };
+  }
+}
+</script>
+</body>
+</html>

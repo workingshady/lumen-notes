@@ -7,7 +7,7 @@ import type { Env, Helpers } from "../index";
  * - /usage: real Cloudflare D1 usage for Settings › Storage.
  * - /public/blog-meta: blog license + RSS link setting for the public blog (stored on the Inbox space props).
  */
-type TokenRow = { id: string; name: string; last4: string; created_at: number; last_used_at: number | null; last_ip: string | null };
+type TokenRow = { id: string; name: string; last4: string; created_at: number; last_used_at: number | null; last_ip: string | null; access?: string | null; expires_at?: number | null };
 const enc = new TextEncoder();
 const hex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
 const sha256 = async (s: string) => hex(await crypto.subtle.digest("SHA-256", enc.encode(s)));
@@ -19,7 +19,14 @@ function newSecret() {
   return "lmn_" + s.slice(0, 32).padEnd(32, "x");
 }
 const maskIp = (ip: string | null) => (ip ? ip.replace(/^(\d+)\.\d+\.\d+\.\d+$/, "$1.x.x.x").replace(/^([0-9a-f]+:[0-9a-f]+):.*$/i, "$1:…") : null);
-const toJson = (r: TokenRow) => ({ id: r.id, name: r.name, last4: r.last4, createdAt: r.created_at, lastUsedAt: r.last_used_at, lastIp: maskIp(r.last_ip) });
+const toJson = (r: TokenRow) => ({ id: r.id, name: r.name, last4: r.last4, createdAt: r.created_at, lastUsedAt: r.last_used_at, lastIp: maskIp(r.last_ip), access: r.access === "r" ? "r" : "rw", expiresAt: r.expires_at ?? null });
+/** Round 6 (Lumen 29 · create token dialog): access (r = GET only, rw) + expiry. Columns added on first use (also migrations/0012). */
+const scoped = new WeakSet<D1Database>();
+async function ensureScopes(db: D1Database) {
+  if (scoped.has(db)) return;
+  for (const sql of ["ALTER TABLE api_tokens ADD COLUMN access TEXT NOT NULL DEFAULT 'rw'", "ALTER TABLE api_tokens ADD COLUMN expires_at INTEGER"]) await db.prepare(sql).run().catch(() => {});
+  scoped.add(db);
+}
 
 export default function register(api: Hono<Env>, h: Helpers) {
   /** Only the signed-in owner (passcode session) manages tokens; an API token can't mint or list others. */
@@ -44,20 +51,24 @@ export default function register(api: Hono<Env>, h: Helpers) {
   }
 
   api.get("/tokens", ownerOnly, async (c) => {
+    await ensureScopes(c.env.DB);
     const { results } = await c.env.DB.prepare("SELECT * FROM api_tokens ORDER BY created_at DESC").all<TokenRow>();
     return c.json({ tokens: results.map(toJson) });
   });
 
   api.post("/tokens", ownerOnly, async (c) => {
-    const { name, passcode } = await c.req.json<{ name?: string; passcode?: string }>().catch(() => ({} as { name?: string; passcode?: string }));
+    const { name, passcode, access, days } = await c.req.json<{ name?: string; passcode?: string; access?: string; days?: number }>().catch(() => ({} as { name?: string; passcode?: string; access?: string; days?: number }));
     const err = await checkPasscode(c, passcode);
     if (err) return c.json({ error: err }, err.startsWith("Too") ? 429 : 401);
     const n = (name ?? "").trim().slice(0, 60) || "API token";
     const count = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM api_tokens").first<{ n: number }>();
     if ((count?.n ?? 0) >= 20) return c.json({ error: "You already have 20 tokens. Revoke one first." }, 400);
     const token = newSecret();
-    const row: TokenRow = { id: crypto.randomUUID(), name: n, last4: token.slice(-4), created_at: Date.now(), last_used_at: null, last_ip: null };
-    await c.env.DB.prepare("INSERT INTO api_tokens (id, name, hash, last4, created_at) VALUES (?, ?, ?, ?, ?)").bind(row.id, row.name, await sha256(token), row.last4, row.created_at).run();
+    await ensureScopes(c.env.DB);
+    const now = Date.now();
+    const d = Number(days);
+    const row: TokenRow = { id: crypto.randomUUID(), name: n, last4: token.slice(-4), created_at: now, last_used_at: null, last_ip: null, access: access === "r" ? "r" : "rw", expires_at: Number.isFinite(d) && d > 0 ? now + Math.min(d, 3650) * 86_400_000 : null };
+    await c.env.DB.prepare("INSERT INTO api_tokens (id, name, hash, last4, created_at, access, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(row.id, row.name, await sha256(token), row.last4, row.created_at, row.access, row.expires_at).run();
     return c.json({ token, ...toJson(row) });
   });
 

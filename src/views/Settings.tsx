@@ -2,11 +2,11 @@ import { AvatarGlyph } from "../components/SpaceIcon";
 import { AVATAR_CHOICES, avatarGlyph } from "../lib/space-icon";
 import { useLiveQuery } from "dexie-react-hooks";
 import { fmtDate, fmtNum, fmtRelative, fmtTime, setDigits, setLang, t, tk, tx, useLang, type Digits, type LangPref } from "../lib/i18n";
-import { AppLockSetting } from "./Welcome";
+import { LangExtras } from "./settings-language";
 import {
-  ArrowLeft, Check, ChevronRight, CircleCheck, Clock, Code, Copy, Database, Eye, File, FileAudio, FileText, FileVideo, Globe, GraduationCap, HardDrive, Image, Info,
-  Layers, LayoutDashboard, Link2, Link2Off, Loader2, LogOut, Palette, PenTool, Pencil, Presentation, RefreshCw, Rss, Share, Sparkles, Trash2, type LucideIcon,
-  Waypoints, BookOpenText, CalendarCheck, FolderTree,
+  Check, ChevronRight, CircleCheck, Clock, Copy, Database, Eye, File, FileAudio, FileText, FileVideo, Globe, GraduationCap, Image,
+  Layers, LayoutDashboard, Link2, Link2Off, Loader2, LogOut, Pencil, Presentation, RefreshCw, Trash2, type LucideIcon,
+ 
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Note, Space } from "../../shared/types";
@@ -16,47 +16,20 @@ import { db, DEFAULT_SPACE, patch } from "../lib/db";
 import { exportBackup } from "../lib/io";
 import { render } from "../lib/markdown";
 import { activeTheme, setSettings, THEMES, useSettings, type Settings as S, type Theme } from "../lib/settings";
-import { setUI, toast, useUI, useVault } from "../lib/store";
-import { runNav, useNav, type NavKey } from "../components/Sidebar";
+import { setUI, toast, useVault } from "../lib/store";
 import { syncNow, useSync } from "../lib/sync";
-import { bareUrl, blogUrl, SETTINGS_SECTION_KEY, shareUrl, Toggle, turnOffLink } from "../components/ShareSheet";
-import { LumenMark, Wordmark } from "../components/LumenMark";
+import { bareUrl, blogUrl, shareUrl, Toggle, turnOffLink } from "../components/ShareSheet";
 import { Button, cx, inputCls } from "../components/ui";
 import { setAdvanced, useAdvanced, type Advanced } from "./settings-advanced";
-import { DeveloperSection } from "./settings-developer";
-import { AISection, BlogSection } from "./settings-blog-ai";
-import { DiagramsSection } from "./settings-diagrams";
 import { AccountSwitcher } from "../components/AccountSwitcher";
-import { ReadingSection } from "./settings-reading";
-import { ReviewSettings } from "./settings-review";
-import { StudyPlanSettings } from "./settings-plan";
 import { DevicesPanel } from "./settings-devices";
-import { UserRound } from "lucide-react";
-import { AccountSection } from "../components/auth/AccountSection"; // accounts (off: local profile + "coming soon")
 
-type SecId = "account" | "appearance" | "branding" | "reading" | "plan" | "diagrams" | "sync" | "sharing" | "blog" | "storage" | "ai" | "developer" | "about";
-// Round-3 settings nav (Lumen 09 / 11): Appearance · Branding · Sync · Sharing · Blog · Storage · AI · Developer · About.
-const SECTIONS: { id: SecId; label: string; icon: LucideIcon }[] = [
-  { id: "account", label: tk("Account"), icon: UserRound },
-  { id: "appearance", label: tk("Appearance"), icon: Palette },
-  { id: "branding", label: tk("Branding"), icon: PenTool },
-  { id: "reading", label: tk("Reading"), icon: BookOpenText },
-  { id: "plan", label: tk("Study plan"), icon: CalendarCheck },
-  { id: "diagrams", label: tk("Diagrams"), icon: Waypoints },
-  { id: "sync", label: tk("Sync"), icon: RefreshCw },
-  { id: "sharing", label: tk("Sharing"), icon: Share },
-  { id: "blog", label: tk("Blog"), icon: Rss },
-  { id: "storage", label: tk("Storage"), icon: HardDrive },
-  { id: "ai", label: tk("AI"), icon: Sparkles },
-  { id: "developer", label: tk("Developer"), icon: Code },
-  { id: "about", label: tk("About"), icon: Info },
-];
 /** Binary units, shown as MB/GB (as the design: 92 MB, 9.8 MB, 1.38 GB). */
 const KB = 1024, MB = KB * 1024, GB = MB * 1024;
 const mb = (b: number) => (b >= GB ? t("{n} GB", { n: +(b / GB).toFixed(b >= 10 * GB ? 0 : 2) }) : b >= MB ? t("{n} MB", { n: +(b / MB).toFixed(b >= 10 * MB ? 0 : 1) }) : t("{n} KB", { n: Math.max(0, Math.round(b / KB)) }));
 
 /** Branding also lives on the Inbox space so it syncs and the public blog can read it. */
-async function saveBranding(s: S) {
+export async function saveBranding(s: S) {
   const inbox = await db.spaces.get(DEFAULT_SPACE);
   if (!inbox) return;
   const props = { ...inbox.props, blogName: s.blogName, tagline: s.tagline, author: s.author, avatar: s.avatar };
@@ -94,136 +67,13 @@ function Slider({ value, min, max, onChange, track, knob, height }: { value: num
   );
 }
 
-function readStoredSection(): SecId | null {
-  try {
-    const v = sessionStorage.getItem(SETTINGS_SECTION_KEY);
-    sessionStorage.removeItem(SETTINGS_SECTION_KEY);
-    const id = v === "editor" ? "appearance" : v === "data" ? "storage" : v;
-    return SECTIONS.some((s) => s.id === id) ? (id as SecId) : null;
-  } catch { return null; }
-}
-
-export function SettingsView() {
-  const s = useSettings();
-  const vault = useVault();
-  const st = useSync();
-  const [initial] = useState(readStoredSection);
-  const [sec, setSec] = useState<SecId>(initial ?? "appearance");
-  const [phoneRoot, setPhoneRoot] = useState(!initial);
-  const [usage, setUsage] = useState<{ usage: number; quota: number } | null>(null);
-  useEffect(() => { navigator.storage?.estimate?.().then((e) => setUsage({ usage: e.usage ?? 0, quota: e.quota ?? 0 })).catch(() => {}); }, []);
-  useEffect(() => {
-    const tm = setTimeout(() => void saveBranding(s), 800);
-    return () => clearTimeout(tm);
-  }, [s.blogName, s.tagline, s.author, s.avatar]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Pull branding synced from another device the first time.
-  useEffect(() => {
-    const p = vault.spaceMap.get(DEFAULT_SPACE)?.props;
-    if (p?.blogName && !localStorage.getItem("lumen.brandingPulled")) {
-      setSettings({ blogName: p.blogName, tagline: p.tagline ?? s.tagline, author: p.author ?? s.author, avatar: p.avatar ?? s.avatar });
-      try { localStorage.setItem("lumen.brandingPulled", "1"); } catch { /* ignore */ }
-    }
-  }, [vault.spaceMap]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const links = vault.notes.filter((n) => n.shareId).length + vault.spaces.filter((x) => x.shareId).length;
-  const posts = vault.notes.filter((n) => n.published).length;
-  const tok = getToken();
-  const values: Partial<Record<SecId, string>> = {
-    appearance: s.theme === "auto" ? t("Auto") : t(activeTheme().name), sync: tok ? t("On") : t("Off"), sharing: links ? t("{n} link|{n} links", { n: links }) : "",
-    blog: t("{n} post|{n} posts", { n: posts }), storage: usage ? mb(usage.usage) : "", about: "v1.0",
-  };
-  const go = (id: SecId) => { setSec(id); setPhoneRoot(false); };
-  const cur = SECTIONS.find((x) => x.id === sec)!;
-
-  return (
-    <div className="flex h-full text-[14px] leading-[normal] text-ink md:text-[13px]">
-      {/* desktop nav */}
-      <nav className="hidden w-[240px] shrink-0 flex-col gap-0.5 border-e border-line px-2.5 py-5 md:flex">
-        <span className="px-2.5 pb-3 text-[18px] font-[650]">{t("Settings")}</span>
-        {SECTIONS.map((n) => (
-          <button key={n.id} onClick={() => setSec(n.id)} className={cx("flex h-[34px] items-center gap-2.5 rounded-[8px] px-2.5 text-start", sec === n.id ? "bg-surface-2 font-semibold text-ink" : "text-muted hover:text-ink")}>
-            <n.icon size={15} className={sec === n.id ? "text-accent" : "text-muted"} />{t(n.label)}
-          </button>
-        ))}
-      </nav>
-
-      {/* phone root list */}
-      <div className={cx("safe-t flex-1 overflow-y-auto pb-6 md:hidden", !phoneRoot && "hidden")}>
-        {/* design 20C: the phone "More" tab is this page: profile card, the pages that aren't tabs, then settings */}
-        <div className="px-5 pb-3 pt-4 text-[26px] font-[650] tracking-[-.02em]">{t("More")}</div>
-        <button onClick={() => go("branding")} className="mx-4 flex w-[calc(100%-32px)] items-center gap-3 rounded-[14px] bg-surface p-3.5 text-start">
-          <span className="flex size-11 items-center justify-center rounded-full bg-surface-2"><AvatarGlyph value={s.avatar} size={19} /></span>
-          <div className="flex flex-1 flex-col gap-0.5"><span className="font-semibold" dir="auto">{s.blogName}</span>
-            <span className="flex items-center gap-1.5 text-[12.5px] text-muted"><span className={cx("size-1.5 rounded-full", tok ? "bg-ok" : "bg-muted")} />{tok ? (st.last ? t("Synced {ago}", { ago: fmtRelative(st.last) }) : t("Sync on")) : t("Sync off · this device only")}</span>
-          </div>
-          <ChevronRight size={16} className="text-muted" />
-        </button>
-        <div className="flex flex-col gap-3 px-4 pt-4">
-          <PhoneMoreNav />
-          {[SECTIONS.filter((x) => ["account", "appearance", "sync", "sharing", "blog"].includes(x.id)), SECTIONS.filter((x) => ["storage", "ai", "developer", "about"].includes(x.id))].map((grp, g) => (
-            <div key={g} className="overflow-hidden rounded-[14px] bg-surface">
-              {grp.map((n, i) => (
-                <button key={n.id} onClick={() => go(n.id)} className={cx("flex h-[52px] w-full items-center gap-3.5 px-3.5 text-start", i > 0 && "border-t border-line")}>
-                  <n.icon size={19} className="text-muted" /><span className="flex-1">{t(n.label)}</span><span className="text-[13px] text-muted">{values[n.id]}</span><ChevronRight size={15} className="text-muted" />
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* section */}
-      <div className={cx("min-w-0 flex-1 overflow-y-auto", phoneRoot && "max-md:hidden")}>
-        <div className="safe-t flex h-14 items-center gap-1 px-1 md:hidden">
-          <button aria-label={t("Back")} onClick={() => setPhoneRoot(true)} className="flex size-12 items-center justify-center"><ArrowLeft size={20} /></button>
-          <span className="text-[17px] font-[650]">{t(cur.label)}</span>
-        </div>
-        <div className={cx("pb-10 md:px-10 md:py-7", sec === "appearance" ? "max-md:px-0" : "px-4")}>
-          {sec === "account" && <AccountSection />}
-          {sec === "appearance" && <Appearance />}
-          {sec === "branding" && <Branding />}
-          {sec === "reading" && <><ReadingSection /><ReviewSettings /></>}
-          {sec === "plan" && <StudyPlanSettings />}
-          {sec === "diagrams" && <DiagramsSection />}
-          {sec === "sync" && <><SyncSection /><div className="mt-6"><AppLockSetting /></div></>}
-          {sec === "sharing" && <SharingSection />}
-          {sec === "blog" && <BlogSection />}
-          {sec === "storage" && <StorageSection usage={usage} />}
-          {sec === "ai" && <AISection />}
-          {sec === "developer" && <DeveloperSection />}
-          {sec === "about" && <About />}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Phone "More" (design Lumen 06 · 20C): Daily note, Tasks, Calendar, Graph, Canvases (+ Today, Learning paths and the
- *  spaces / folders / tags drawer, which the design keeps elsewhere but the app still needs a way to). */
-function PhoneMoreNav() {
-  const ui = useUI();
-  const v = useVault();
-  const nav = useNav();
-  const canvases = v.notes.filter((n) => n.type === "canvas" || n.type === "whiteboard").length;
-  const keys: NavKey[] = ["today", "daily", "tasks", "calendar", "graph", "canvas", "paths"];
-  const rows = keys.map((k) => nav.find((n) => n.key === k)!).filter(Boolean);
-  const row = (key: string, icon: ReactNode, label: string, value: string | number | undefined, run: () => void, i: number) => (
-    <button key={key} onClick={run} className={cx("flex h-[52px] w-full items-center gap-3.5 px-3.5 text-start", i > 0 && "border-t border-line")}>
-      <span className="flex w-[19px] justify-center text-muted [&>svg]:size-[19px]">{icon}</span><span className="flex-1">{t(label)}</span>
-      {!!value && <span className="text-[13px] text-muted">{typeof value === "number" ? fmtNum(value) : value}</span>}<ChevronRight size={15} className="text-muted" />
-    </button>
-  );
-  return (
-    <div className="overflow-hidden rounded-[14px] bg-surface">
-      {rows.map((n, i) => row(n.key, n.icon, n.label, n.key === "canvas" ? canvases : n.count, () => void runNav(n.key, ui.spaceId), i))}
-      {row("spaces", <FolderTree size={19} />, tk("Spaces, folders & tags"), undefined, () => setUI({ sidebar: true }), rows.length)}
-    </div>
-  );
-}
+// Round 6: the Settings screen itself (nav, phone list, the 13 sections in one row pattern) is in settings-r6.tsx;
+// this file keeps the round-4 section bodies, shown inside each section's Advanced fold.
+export { SettingsView } from "./settings-r6";
 
 // ------------------------------------------------------------------ appearance
 /** sRGB hex → OKLCH hue in degrees (for showing the theme's own accent hue). */
-function hexHue(hex: string) {
+export function hexHue(hex: string) {
   const n = parseInt(hex.slice(1), 16);
   const lin = (c: number) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
   const [r, g, b] = [lin(n >> 16), lin((n >> 8) & 255), lin(n & 255)];
@@ -259,7 +109,7 @@ function usePreviewNote() {
   }, [v.notes, v.folderMap, v.spaceMap]);
 }
 
-function Appearance() {
+export function AppearanceClassic() {
   const s = useSettings();
   const adv = useAdvanced();
   const set = (p: Partial<S>) => setSettings(p);
@@ -359,8 +209,9 @@ function Appearance() {
           <Group label={t("Line width")} className="max-md:hidden">{widthSeg}</Group>
         </div>
         <Group label={t("Density")} className="max-md:hidden">{densitySeg}</Group>
-        <Group label={t("Language")}><LangSeg /></Group>
+        <Group label={t("Language")}><LangSeg /><span className="text-[12px] text-muted">{t("The direction follows the language. “Auto” uses the device language.")}</span></Group>
         <Group label={t("Numbers")}><DigitsSeg /></Group>
+        <LangExtras />
         <div className="flex flex-col gap-[18px] max-md:px-4">
           <button onClick={() => setOpen(!open)} aria-expanded={open}
             className="flex items-center gap-2 border-t border-line pt-3.5 text-start text-muted max-md:h-[52px] max-md:gap-2.5 max-md:rounded-[12px] max-md:border-0 max-md:bg-surface max-md:px-3.5 max-md:pt-0">
@@ -414,7 +265,7 @@ function AdvancedPanel({ adv, widthSeg, densitySeg }: { adv: Advanced; widthSeg:
 }
 
 // ------------------------------------------------------------------ branding / about
-function Branding() {
+export function Branding() {
   const s = useSettings();
   const set = (p: Partial<S>) => setSettings(p);
   const F = ({ label, children }: { label: string; children: ReactNode }) => <label className="flex flex-col gap-1.5"><span className="text-[12px] font-medium text-muted">{label}</span>{children}</label>;
@@ -434,20 +285,10 @@ function Branding() {
   );
 }
 
-function About() {
-  return (
-    <div className="flex max-w-[560px] flex-col gap-[22px]">
-      <Head title={t("About")} />
-      <div className="flex items-center gap-3"><LumenMark size={44} /><div className="flex flex-col gap-1"><Wordmark size={26} /><span className="text-muted">{t("v1.0 · local-first notes")}</span></div></div>
-      <p className="leading-[21px] text-muted">{t("JSON Canvas 1.0 · .excalidraw · Markdown in, Markdown out. Your notes live on this device first and sync to your own Cloudflare.")}</p>
-    </div>
-  );
-}
-
 // ------------------------------------------------------------------ sync
 const SYNC_STATUS: Record<string, string> = { local: tk("local"), idle: tk("idle"), syncing: tk("syncing"), offline: tk("offline"), error: tk("error") };
 const accountName = (a: string) => (a === "main" ? "Main" : a === "roadmap" ? "Road-map" : a);
-function SyncSection() {
+export function SyncSection() {
   const st = useSync();
   const [health, setHealth] = useState<{ r2: boolean; ai: boolean } | null>(null);
   const tok = getToken();
@@ -466,12 +307,12 @@ function SyncSection() {
           </div>
         </div>
       ) : (
-        <div className="rounded-[12px] border border-line bg-surface p-4 text-[13px] text-muted">Sync is locked on this device for <b className="text-ink">{accountName(getAccount())}</b>. Switch to a saved account below, or sign in again (“Unlock or add an account”).</div>
+        <div className="rounded-[12px] border border-line bg-surface p-4 text-[13px] text-muted">{tx("Sync is locked on this device for {name}. Switch to a saved account below, or sign in again (“Unlock or add an account”).", { name: <b className="text-ink">{accountName(getAccount())}</b> })}</div>
       )}
       <DevicesPanel />
       <div className="flex flex-col gap-2">
-        <div className="text-[12px] font-semibold uppercase tracking-[.06em] text-muted">Accounts on this device</div>
-        <div className="text-[12.5px] text-muted">Each passcode opens its own account with its own notes. Sign in once and switch here (or from the space menu) without typing the passcode again. Only the sign-in token is kept on this device, never the passcode.</div>
+        <div className="text-[12px] font-semibold uppercase tracking-[.06em] text-muted">{t("Accounts on this device")}</div>
+        <div className="text-[12.5px] text-muted">{t("Each passcode opens its own account with its own notes. Sign in once and switch here (or from the space menu) without typing the passcode again. Only the sign-in token is kept on this device, never the passcode.")}</div>
         <div className="rounded-[12px] border border-line bg-surface p-1.5"><AccountSwitcher /></div>
       </div>
     </div>
@@ -500,7 +341,7 @@ function CopyBtn({ text, className, size = 13 }: { text: string; className?: str
   );
 }
 
-function SharingSection() {
+export function SharingSection() {
   const v = useVault();
   const [tab, setTab] = useState<"links" | "published">("links");
   const counts = useMemo(() => { const m = new Map<string, number>(); v.notes.forEach((n) => m.set(n.spaceId, (m.get(n.spaceId) ?? 0) + 1)); return m; }, [v.notes]);
@@ -576,7 +417,7 @@ function fileIcon(mime: string): LucideIcon {
   return mime.startsWith("video/") ? FileVideo : mime.startsWith("audio/") ? FileAudio : mime.startsWith("image/") ? Image : mime === "application/pdf" ? FileText : File;
 }
 type ServerUsage = { at: number; dbBytes: number | null; limitBytes: number; notes: { count: number; bytes: number }; records: { bytes: number }; files: { count: number; parts: number; bytes: number }; r2: { n: number; bytes: number } | null };
-function StorageSection({ usage }: { usage: { usage: number; quota: number } | null }) {
+export function StorageSection({ usage }: { usage: { usage: number; quota: number } | null }) {
   const v = useVault();
   const st = useSync();
   const tok = getToken();

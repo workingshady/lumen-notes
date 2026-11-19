@@ -19,7 +19,7 @@ import { CustomizeHome } from "./home-customize";
 import { TodayCard } from "../components/today-card";
 import { Avatar } from "./Welcome";
 import { SpaceIcon } from "../components/SpaceIcon";
-import { digits, fmtDate, fmtNum, fmtRelative, getLang, t, tk } from "../lib/i18n";
+import { digits, fmtDate, fmtNum, fmtRelative, getLang, isRtl, t, tk } from "../lib/i18n";
 
 /** Compact "5m ago" in English, the Intl relative time in Arabic. */
 const relTime = (ts: number) => (getLang() === "ar" ? fmtRelative(ts) : relTimeEn(ts));
@@ -153,7 +153,8 @@ export function Home() {
 
   const progressBar = (h: number) => (
     <div className="flex overflow-hidden" style={{ height: h, borderRadius: h / 2, gap: 2 }}>
-      {byStatus.map(([st, c]) => c ? <span key={st} title={`${statusName(st)}: ${c}`} style={{ width: `${(c / totalStatus) * 100}%`, background: STATUS_COLOR[st], opacity: st === "todo" ? 0.55 : 1 }} /> : null)}
+      {/* Arabic (R5-25A): the bar fills from the right, mastered first. */}
+      {(isRtl() ? [...byStatus].reverse() : byStatus).map(([st, c]) => c ? <span key={st} title={`${statusName(st)}: ${c}`} style={{ width: `${(c / totalStatus) * 100}%`, background: STATUS_COLOR[st], opacity: st === "todo" ? 0.55 : 1 }} /> : null)}
     </div>
   );
 

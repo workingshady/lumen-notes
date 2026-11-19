@@ -4,6 +4,7 @@
 import type { ChatMessage, ChatThread } from "../../../shared/types";
 import { emptyVault, MIN, type Vault } from "./kit";
 import { seedR4Organize } from "./scenarios-r4-organize";
+import { seedR6Tabs } from "./scenarios-r6-tabs"; // round 6 part A: note tabs + Assistant demo note
 
 let seq = 0;
 const m = (role: ChatMessage["role"], text: string, at: number, p: Partial<ChatMessage> = {}): ChatMessage => ({ id: `r5c-m${++seq}`, role, text, at, ...p });
@@ -73,5 +74,6 @@ export async function seedR5Chat(v: Vault = emptyVault()): Promise<Vault> {
       m("assistant", "Fix the quoted parts and explain it again.", ago(1489), { tutor: { kind: "review", score: 62, reasons: [{ label: "Accuracy", score: 80, note: "Nothing contradicts your notes." }, { label: "Completeness", score: 45, note: "The chain rule isn't mentioned." }, { label: "Clarity", score: 60, note: "One undefined term." }], issues: [{ quote: "Jacobian", kind: "jargon", comment: "You use “Jacobian” without saying what it means." }, { quote: "push the loss backwards", kind: "gap", comment: "Say how: the chain rule multiplies local derivatives layer by layer [1]." }] } }),
     ], tutor: { v: 1, mode: "feynman", phase: "explain", steps: [], step: 0, retries: 0, checks: [], check: 0, q: null, asked: 0, hint: 0, tries: 0, reviews: [62], results: [], summary: null } }),
   ];
+  seedR6Tabs(v);
   return v;
 }

@@ -77,9 +77,26 @@ export function passwordProblem(pw: unknown): string | null {
 export const normEmail = (e: unknown) => String(e ?? "").trim().toLowerCase();
 export const validEmail = (e: string) => e.length <= 254 && /^[^\s@"<>()[\],;:\\]+@[^\s@"<>()[\],;:\\]+\.[^\s@"<>()[\],;:\\]{2,}$/.test(e);
 
+/** "amir@nightshift.dev" → "am••@nightshift.dev" (shown after renewing a link from an old one, never the full address). */
+export const maskEmail = (e: string) => {
+  const [local, domain] = e.split("@");
+  if (!domain) return "";
+  return (local.length <= 2 ? local.slice(0, 1) : local.slice(0, 2)) + "••@" + domain;
+};
+/**
+ * The phrase typed to delete an account: "delete " + the first word of the name (letters/digits, lower case), else
+ * the part of the email before @. Design 27N: "Type delete amir to confirm". The client builds the same phrase.
+ */
+export function deletePhrase(u: { name: string; email: string }) {
+  const first = (u.name ?? "").trim().split(/\s+/)[0]?.toLowerCase().replace(/[^\p{L}\p{N}._-]/gu, "") ?? "";
+  return "delete " + (first || (u.email ?? "").split("@")[0].toLowerCase());
+}
+
 // ------------------------------------------------------------------ one-time tokens
 export type TokenKind = "verify" | "magic" | "reset" | "handoff";
-export const TOKEN_TTL: Record<TokenKind, number> = { verify: 24 * 3600_000, magic: 15 * 60_000, reset: 30 * 60_000, handoff: 2 * 60_000 };
+export const TOKEN_TTL: Record<TokenKind, number> = { verify: 24 * 3600_000, magic: 15 * 60_000, reset: 60 * 60_000, handoff: 2 * 60_000 };
+/** Email-change confirmation links (table `email_changes`, sent to the NEW address). */
+export const EMAIL_CHANGE_TTL = 24 * 3600_000;
 export type TokenRow = { kind: TokenKind; expires_at: number; used_at: number | null };
 /** Why a stored one-time token can't be used (null = usable). */
 export function tokenProblem(row: TokenRow | null | undefined, kind: TokenKind, now: number): "missing" | "wrong-kind" | "used" | "expired" | null {

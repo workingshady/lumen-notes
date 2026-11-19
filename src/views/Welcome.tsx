@@ -17,6 +17,7 @@ import { activeTheme, setSettings, THEMES, useSettings } from "../lib/settings";
 import { syncNow } from "../lib/sync";
 import { LumenMark, Wordmark } from "../components/LumenMark";
 import { cx } from "../components/ui";
+import { t, useLang } from "../lib/i18n";
 import { AccountsComing, AuthWelcome } from "../components/auth/WelcomeAccounts"; // accounts (off: one quiet line)
 
 const WELCOMED = "lumen.welcomed";
@@ -99,11 +100,11 @@ function useUnlockError() {
     return () => clearInterval(i);
   }, [err]);
   const lockedFor = err?.until ? Math.max(0, Math.ceil((err.until - Date.now()) / 1000)) : 0;
-  const text = !err ? "" : lockedFor ? `Too many attempts · try again in ${Math.floor(lockedFor / 60)}:${String(lockedFor % 60).padStart(2, "0")}` : err.text;
+  const text = !err ? "" : lockedFor ? t("Too many attempts · try again in {time}", { time: `${Math.floor(lockedFor / 60)}:${String(lockedFor % 60).padStart(2, "0")}` }) : err.text;
   const show = (r: Extract<UnlockResult, { ok: false }>) => {
     if (r.retryAfterSec) setErr({ text: "", until: Date.now() + r.retryAfterSec * 1000 });
-    else if (typeof r.attemptsLeft === "number") setErr({ text: `Try again · ${r.attemptsLeft} left` });
-    else setErr({ text: r.error });
+    else if (typeof r.attemptsLeft === "number") setErr({ text: t("Try again · {n} left", { n: r.attemptsLeft }) });
+    else setErr({ text: t(r.error) });
   };
   return { text, locked: lockedFor > 0, show, clear: () => !lockedFor && setErr(null) };
 }
@@ -123,9 +124,9 @@ function PassField({ big, value, onChange, show, error, inputRef, right }: {
         : Array.from({ length: Math.min(value.length, 24) }, (_, i) => <span key={i} className="shrink-0 rounded-full bg-ink" style={{ width: dot, height: dot }} />)}
       {focus && <span className="shrink-0 bg-accent" style={{ width: 1.5, height: big ? 20 : 18, animation: "lumen-caret 1.06s step-end infinite" }} />}
       <span className="flex-1" />
-      <input id="lumen-pass" ref={inputRef} type={show ? "text" : "password"} autoComplete="current-password" value={value} aria-label="Passcode"
+      <input id="lumen-pass" ref={inputRef} type={show ? "text" : "password"} autoComplete="current-password" value={value} aria-label={t("Passcode")}
         onFocus={() => setFocus(true)} onBlur={() => setFocus(false)} onChange={(e) => onChange(e.target.value)}
-        className="absolute inset-0 w-full cursor-text rounded-[inherit] bg-transparent text-transparent caret-transparent selection:bg-transparent" style={{ paddingRight: big ? 52 : 40, outline: "none" }} />
+        className="absolute inset-0 w-full cursor-text rounded-[inherit] bg-transparent text-transparent caret-transparent selection:bg-transparent" style={{ paddingInlineEnd: big ? 52 : 40, outline: "none" }} />
       <span className="relative z-[1] flex">{right}</span>
     </div>
   );
@@ -134,6 +135,7 @@ function PassField({ big, value, onChange, show, error, inputRef, right }: {
 // ------------------------------------------------------------------ unlock (2A/2B desktop, 2C phone; also the app lock)
 
 function Unlock({ onNext, lock = false }: { onNext: () => void; lock?: boolean }) {
+  useLang();
   const s = useSettings();
   const phone = usePhone();
   const count = useLiveQuery(() => db.notes.filter((n) => !n.deleted).count(), []) ?? 0;
@@ -174,23 +176,23 @@ function Unlock({ onNext, lock = false }: { onNext: () => void; lock?: boolean }
   useEffect(() => { if (lock && fp) void device(true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const name = s.author ? s.author.split(" ")[0] : "";
-  const hello = name ? `Welcome back, ${name}` : "Welcome to Lumen";
-  const sub = [count ? `${count.toLocaleString()} notes on this device` : "Your notebook, synced across devices", last ? `last sync ${syncLabel(last)}` : ""].filter(Boolean).join(" · ");
-  const primary = busy ? "Unlocking…" : lock ? "Unlock" : "Unlock sync";
+  const hello = name ? t("Welcome back, {name}", { name }) : t("Welcome to Lumen");
+  const sub = [count ? t("{n} note on this device|{n} notes on this device", { n: count }) : t("Your notebook, synced across devices"), last ? t("last sync {when}", { when: syncLabel(last) }) : ""].filter(Boolean).join(" · ");
+  const primary = busy ? t("Unlocking…") : lock ? t("Unlock") : t("Unlock sync");
 
   if (offer) return <DeviceOffer phone={phone} onDone={onNext} />;
 
   const errLine = e.text && <div className="text-[12px] text-bad" role="alert">{e.text}</div>;
   const eye = (big: boolean) => (
-    <button type="button" aria-label={show ? "Hide passcode" : "Show passcode"} onClick={() => setShow(!show)} className="text-muted hover:text-ink">
+    <button type="button" aria-label={show ? t("Hide passcode") : t("Show passcode")} onClick={() => setShow(!show)} className="text-muted hover:text-ink">
       {show ? <EyeOff size={big ? 20 : 16} /> : <Eye size={big ? 20 : 16} />}
     </button>
   );
   const field = (big: boolean) => (
     <div className="flex flex-col" style={{ gap: big ? 8 : 6 }}>
-      <label htmlFor="lumen-pass" className={cx("font-medium text-muted", big ? "text-[13px]" : "text-[12px]")}>Passcode</label>
+      <label htmlFor="lumen-pass" className={cx("font-medium text-muted", big ? "text-[13px]" : "text-[12px]")}>{t("Passcode")}</label>
       <PassField big={big} value={pass} onChange={(v) => { setPass(v); e.clear(); }} show={show} error={!!e.text} inputRef={ref}
-        right={big && fp ? <button type="button" aria-label="Unlock with fingerprint" onClick={() => void device()} className="text-muted hover:text-ink"><Fingerprint size={20} /></button> : eye(big)} />
+        right={big && fp ? <button type="button" aria-label={t("Unlock with fingerprint")} onClick={() => void device()} className="text-muted hover:text-ink"><Fingerprint size={20} /></button> : eye(big)} />
       {errLine}
     </div>
   );
@@ -198,7 +200,7 @@ function Unlock({ onNext, lock = false }: { onNext: () => void; lock?: boolean }
   const themeToggle = (
     <div className="flex gap-[2px] rounded-[8px] border border-line bg-surface p-[3px]">
       {([["paper", <Sun key="s" size={14} />, false, "Light theme"], ["lamplight", <Moon key="m" size={14} />, true, "Dark theme"]] as const).map(([id, icon, d, label]) => (
-        <button key={id} type="button" aria-label={label} onClick={() => setSettings({ theme: id })}
+        <button key={id} type="button" aria-label={label === "Light theme" ? t("Light theme") : t("Dark theme")} onClick={() => setSettings({ theme: id })}
           className={cx("flex h-6 w-7 items-center justify-center rounded-[6px]", dark === d ? "bg-surface-2 text-ink" : "text-muted hover:text-ink")}>{icon}</button>
       ))}
     </div>
@@ -216,9 +218,9 @@ function Unlock({ onNext, lock = false }: { onNext: () => void; lock?: boolean }
           {field(true)}
           <button disabled={busy || !pass || e.locked} className="flex h-[52px] items-center justify-center rounded-[12px] bg-accent text-[15px] font-semibold text-accent-fg disabled:opacity-60">{primary}</button>
           {lock
-            ? <div className="flex h-12 items-center justify-center gap-2 text-[13px] text-muted"><Lock size={14} />Locked on this device</div>
+            ? <div className="flex h-12 items-center justify-center gap-2 text-[13px] text-muted"><Lock size={14} />{t("Locked on this device")}</div>
             : <button type="button" onClick={onNext} className="flex h-12 items-center justify-center gap-2 rounded-[12px] font-medium text-ink">
-                <CloudOff size={16} className="text-muted" />Continue offline <span className="font-normal text-muted">· local only</span>
+                <CloudOff size={16} className="text-muted" />{t("Continue offline")} <span className="font-normal text-muted">{t("· local only")}</span>
               </button>}
           {!lock && <AccountsComing />}
         </div>
@@ -232,7 +234,7 @@ function Unlock({ onNext, lock = false }: { onNext: () => void; lock?: boolean }
         <div className="flex flex-col items-center gap-[14px]">
           <LumenMark size={60} tile={dark ? "dark" : "light"} />
           <Wordmark size={30} />
-          <div className="text-[14px] text-muted">A quiet notebook for what you learn.</div>
+          <div className="text-[14px] text-muted">{t("A quiet notebook for what you learn.")}</div>
         </div>
         <div className="flex flex-col gap-4 rounded-[14px] border border-line bg-surface p-6" style={{ boxShadow: dark ? "none" : "0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .06)" }}>
           <div className="flex items-center gap-3">
@@ -243,26 +245,26 @@ function Unlock({ onNext, lock = false }: { onNext: () => void; lock?: boolean }
           <button disabled={busy || !pass || e.locked} className="flex h-10 items-center justify-center gap-[10px] rounded-[10px] bg-accent text-[14px] font-semibold text-accent-fg disabled:opacity-60">
             {primary} <span className="font-mono text-[11px] font-medium opacity-70">↵</span>
           </button>
-          <div className="flex items-start gap-2 text-[12px] leading-[18px] text-muted"><Lock size={13} className="mt-[2px] shrink-0" /><span>{lock ? "Locked on this device. Use your fingerprint or passcode to open Lumen." : "Hashed on this device. Lumen never stores your passcode."}</span></div>
+          <div className="flex items-start gap-2 text-[12px] leading-[18px] text-muted"><Lock size={13} className="mt-[2px] shrink-0" /><span>{lock ? t("Locked on this device. Use your fingerprint or passcode to open Lumen.") : t("Hashed on this device. Lumen never stores your passcode.")}</span></div>
         </div>
-        {(!lock || fp) && <div className="flex items-center gap-3 text-[12px] text-muted"><span className="h-px flex-1 bg-line" />or<span className="h-px flex-1 bg-line" /></div>}
+        {(!lock || fp) && <div className="flex items-center gap-3 text-[12px] text-muted"><span className="h-px flex-1 bg-line" />{t("or")}<span className="h-px flex-1 bg-line" /></div>}
         {lock ? fp && (
-          <button type="button" onClick={() => void device()} className="flex h-[50px] items-center gap-3 rounded-[10px] border border-line px-4 text-left hover:bg-surface">
+          <button type="button" onClick={() => void device()} className="flex h-[50px] items-center gap-3 rounded-[10px] border border-line px-4 text-start hover:bg-surface">
             <Fingerprint size={16} className="text-muted" />
-            <span className="flex-1 text-[14px] font-medium">Use fingerprint</span>
-            <span className="text-[12px] text-muted">This device</span>
+            <span className="flex-1 text-[14px] font-medium">{t("Use fingerprint")}</span>
+            <span className="text-[12px] text-muted">{t("This device")}</span>
           </button>
         ) : (
-          <button type="button" onClick={onNext} className="flex h-[50px] items-center gap-3 rounded-[10px] border border-line px-4 text-left hover:bg-surface">
+          <button type="button" onClick={onNext} className="flex h-[50px] items-center gap-3 rounded-[10px] border border-line px-4 text-start hover:bg-surface">
             <CloudOff size={16} className="text-muted" />
-            <span className="flex-1 text-[14px] font-medium">Continue offline</span>
-            <span className="text-[12px] text-muted">Local only</span>
+            <span className="flex-1 text-[14px] font-medium">{t("Continue offline")}</span>
+            <span className="text-[12px] text-muted">{t("Local only")}</span>
           </button>
         )}
-        {!lock && <AccountsComing className="-mt-3" />}
+        {!lock && <AccountsComing className="-mt-[14px]" />}
       </form>
       <div className="absolute inset-x-8 bottom-6 flex items-center justify-between text-[12px] text-muted">
-        <span>v{APP_VERSION} · Local-first · Works offline</span>
+        <span>{t("v{version} · Local-first · Works offline", { version: APP_VERSION })}</span>
         {themeToggle}
       </div>
     </div>
@@ -271,6 +273,7 @@ function Unlock({ onNext, lock = false }: { onNext: () => void; lock?: boolean }
 
 /** After the first successful passcode: offer fingerprint / face / device-PIN unlock for this device. */
 function DeviceOffer({ phone, onDone }: { phone: boolean; onDone: () => void }) {
+  useLang();
   const s = useSettings();
   const [lockOn, setLockOn] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -279,7 +282,7 @@ function DeviceOffer({ phone, onDone }: { phone: boolean; onDone: () => void }) 
   const yes = async () => {
     setBusy(true); setErr("");
     try { await enrollDeviceUnlock(s.author); setAppLock(lockOn); onDone(); }
-    catch (x) { setErr((x as Error).message === "Cancelled" ? "Cancelled · you can turn it on later from Home › ⋯" : (x as Error).message); setBusy(false); }
+    catch (x) { setErr((x as Error).message === "Cancelled" ? t("Cancelled · you can turn it on later from Home › ⋯") : t((x as Error).message)); setBusy(false); }
   };
   const no = () => { markDeviceUnlockOffered(); onDone(); };
   return (
@@ -287,17 +290,17 @@ function DeviceOffer({ phone, onDone }: { phone: boolean; onDone: () => void }) 
       <div className="flex w-[380px] max-w-full flex-col gap-4 rounded-[14px] border border-line bg-surface p-6" style={{ boxShadow: dark ? "none" : "0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .06)" }}>
         <span className="flex size-11 items-center justify-center rounded-[12px] text-accent" style={{ background: "color-mix(in srgb, var(--accent) 14%, transparent)" }}><Fingerprint size={22} /></span>
         <div className="flex flex-col gap-1.5">
-          <div className="text-[18px] font-[650] tracking-[-0.01em]">Use fingerprint next time?</div>
-          <div className="leading-[20px] text-muted">Unlock Lumen with this device's fingerprint, face or PIN. The key is created and kept on this device only; it never leaves it and isn't your sync passcode.</div>
+          <div className="text-[18px] font-[650] tracking-[-0.01em]">{t("Use fingerprint next time?")}</div>
+          <div className="leading-[20px] text-muted">{t("Unlock Lumen with this device's fingerprint, face or PIN. The key is created and kept on this device only; it never leaves it and isn't your sync passcode.")}</div>
         </div>
         <label className="flex cursor-pointer items-start gap-2.5 rounded-[10px] bg-surface-2 p-3">
           <input type="checkbox" checked={lockOn} onChange={(x) => setLockOn(x.target.checked)} className="mt-[3px] accent-[var(--accent)]" />
-          <span className="flex flex-col gap-0.5"><span className="font-medium">Lock Lumen when it opens</span><span className="text-[12px] text-muted">On this device only. Fingerprint or passcode to get in.</span></span>
+          <span className="flex flex-col gap-0.5"><span className="font-medium">{t("Lock Lumen when it opens")}</span><span className="text-[12px] text-muted">{t("On this device only. Fingerprint or passcode to get in.")}</span></span>
         </label>
         {err && <div className="text-[12px] text-bad">{err}</div>}
         <div className="flex gap-2">
-          <button onClick={no} className="flex h-10 flex-1 items-center justify-center rounded-[10px] border border-line font-medium hover:bg-surface-2">Not now</button>
-          <button onClick={yes} disabled={busy} className="flex h-10 flex-[1.4] items-center justify-center gap-2 rounded-[10px] bg-accent font-semibold text-accent-fg disabled:opacity-60"><Fingerprint size={15} />{busy ? "Waiting…" : "Use fingerprint"}</button>
+          <button onClick={no} className="flex h-10 flex-1 items-center justify-center rounded-[10px] border border-line font-medium hover:bg-surface-2">{t("Not now")}</button>
+          <button onClick={yes} disabled={busy} className="flex h-10 flex-[1.4] items-center justify-center gap-2 rounded-[10px] bg-accent font-semibold text-accent-fg disabled:opacity-60"><Fingerprint size={15} />{busy ? t("Waiting…") : t("Use fingerprint")}</button>
         </div>
       </div>
     </div>
@@ -314,14 +317,15 @@ const avatarRow = (cur: string, n: number) => { const c = cur ? `glyph:${avatarG
 function FirstRun({ step, setStep, onDone }: { step: number; setStep: (n: number) => void; onDone: () => void }) {
   const s = useSettings();
   const img = useAvatarImage();
-  const t = activeTheme();
+  useLang();
+  const theme = activeTheme();
   const next = () => (step >= 3 ? onDone() : setStep(step + 1));
   const big = "flex h-[52px] items-center justify-center rounded-[12px] font-semibold text-[15px]";
   const input = "h-12 w-full rounded-[10px] border border-line bg-surface px-[14px] text-[14px] text-ink outline-none focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_20%,transparent)]";
   const head = [
-    ["Choose a theme", "Pick what's easy on your eyes at 1 a.m."],
-    ["Your lamp colour", "It marks only what's current: the active note, the primary button, the cursor."],
-    ["Name your blog", "Only notes you publish appear there. You can leave this for later."],
+    [t("Choose a theme"), t("Pick what's easy on your eyes at 1 a.m.")],
+    [t("Your lamp colour"), t("It marks only what's current: the active note, the primary button, the cursor.")],
+    [t("Name your blog"), t("Only notes you publish appear there. You can leave this for later.")],
   ][step - 1];
   const hue = s.accentHue ?? 72;
 
@@ -330,10 +334,10 @@ function FirstRun({ step, setStep, onDone }: { step: number; setStep: (n: number
       <div className="flex min-h-full w-full max-w-[460px] flex-col">
         <div className="flex items-center gap-[6px] px-5 pt-4">
           {[1, 2, 3].map((i) => <span key={i} className={cx("h-1 flex-1 rounded-[2px]", i <= step ? "bg-accent" : "bg-line")} />)}
-          <button onClick={onDone} className="ml-[10px] text-[13px] text-muted hover:text-ink">Skip</button>
+          <button onClick={onDone} className="ms-[10px] text-[13px] text-muted hover:text-ink">{t("Skip")}</button>
         </div>
         <div className="flex flex-col gap-[6px] px-5 pb-5 pt-7">
-          <div className="text-[13px] text-muted">{step} of 3</div>
+          <div className="text-[13px] text-muted">{t("{step} of {total}", { step, total: 3 })}</div>
           <div className="text-[26px] font-[650] tracking-[-0.02em]">{head[0]}</div>
           <div className="leading-[22px] text-muted">{head[1]}</div>
         </div>
@@ -341,16 +345,16 @@ function FirstRun({ step, setStep, onDone }: { step: number; setStep: (n: number
         {step === 1 && (
           <div className="grid grid-cols-2 gap-3 px-5">
             {THEMES.map((th) => {
-              const on = s.theme === th.id || (s.theme === "auto" && t.id === th.id);
+              const on = s.theme === th.id || (s.theme === "auto" && theme.id === th.id);
               return (
-                <button key={th.id} onClick={() => setSettings({ theme: th.id })} className="flex flex-col gap-[10px] rounded-[14px] bg-surface p-2 text-left" style={{ border: `2px solid ${on ? "var(--accent)" : "var(--border)"}` }}>
+                <button key={th.id} onClick={() => setSettings({ theme: th.id })} className="flex flex-col gap-[10px] rounded-[14px] bg-surface p-2 text-start" style={{ border: `2px solid ${on ? "var(--accent)" : "var(--border)"}` }}>
                   <div className="flex h-[84px] w-full flex-col gap-[7px] rounded-[8px] p-3" style={{ background: th.vars.bg }}>
                     <div className="flex items-center gap-[6px]"><span className="size-2 rounded-full" style={{ background: th.vars.accent }} /><span className="h-[6px] w-[50px] rounded-[3px] opacity-90" style={{ background: th.vars.text }} /></div>
                     <span className="h-[5px] w-4/5 rounded-[3px] opacity-35" style={{ background: th.vars.text }} />
                     <span className="h-[5px] w-[62%] rounded-[3px] opacity-35" style={{ background: th.vars.text }} />
                     <span className="mt-[2px] h-[14px] w-11 shrink-0 rounded-[4px]" style={{ background: th.vars.accent }} />
                   </div>
-                  <div className="flex min-h-[18px] w-full items-center justify-between px-1 pb-[2px] text-[13px] font-medium"><span>{th.name}</span>{on && <CircleCheck size={16} className="text-accent" />}</div>
+                  <div className="flex min-h-[18px] w-full items-center justify-between px-1 pb-[2px] text-[13px] font-medium"><span>{t(th.name)}</span>{on && <CircleCheck size={16} className="text-accent" />}</div>
                 </button>
               );
             })}
@@ -360,31 +364,31 @@ function FirstRun({ step, setStep, onDone }: { step: number; setStep: (n: number
         {step === 2 && (
           <>
             <div className="mx-5 flex flex-col gap-3 rounded-[14px] border border-line bg-surface p-5">
-              <div className="text-[12px] text-muted">02 Optimization</div>
-              <div className="text-[20px] font-[650] tracking-[-0.01em]">Gradient descent</div>
+              <div className="text-[12px] text-muted">{t("02 Optimization")}</div>
+              <div className="text-[20px] font-[650] tracking-[-0.01em]">{t("Gradient descent")}</div>
               <div className="text-[16px] leading-[26px]" style={{ fontFamily: "'Source Serif 4', serif" }}>
-                Step against the gradient, scaled by a <span className="text-link underline underline-offset-[3px]">learning rate</span>
-                <span className="ml-px inline-block h-[18px] w-[2px] bg-accent align-[-3px]" />
+                {t("Step against the gradient, scaled by a")} <span className="text-link underline underline-offset-[3px]">{t("learning rate")}</span>
+                <span className="ms-px inline-block h-[18px] w-[2px] bg-accent align-[-3px]" />
               </div>
               <div className="flex items-start gap-2">
-                <span className="flex h-[34px] items-center rounded-[10px] bg-accent px-[14px] text-[13px] font-semibold text-accent-fg">Start review</span>
-                <span className="flex h-9 items-center rounded-[10px] border border-line px-[14px] text-[13px]">Later</span>
+                <span className="flex h-[34px] items-center rounded-[10px] bg-accent px-[14px] text-[13px] font-semibold text-accent-fg">{t("Start review")}</span>
+                <span className="flex h-9 items-center rounded-[10px] border border-line px-[14px] text-[13px]">{t("Later")}</span>
               </div>
             </div>
             <div className="flex flex-col gap-[14px] px-5 pt-7">
-              <div className="flex justify-between text-[13px]"><span className="font-medium">Hue</span><span className="font-mono text-muted">{hue}°</span></div>
+              <div className="flex justify-between text-[13px]"><span className="font-medium">{t("Hue")}</span><span className="font-mono text-muted">{hue}°</span></div>
               <div className="relative h-7 rounded-[14px]" style={{ background: "linear-gradient(90deg,oklch(.79 .15 0),oklch(.79 .15 60),oklch(.79 .15 120),oklch(.79 .15 180),oklch(.79 .15 240),oklch(.79 .15 300),oklch(.79 .15 360))" }}>
                 <div className="pointer-events-none absolute -top-1 size-9 rounded-full border-[3px] border-ink bg-accent" style={{ left: `calc(${(hue / 360) * 100}% - 18px)` }} />
-                <input type="range" min={0} max={360} value={hue} aria-label="Accent hue" onChange={(x) => setSettings({ accentHue: +x.target.value })} className="absolute inset-0 w-full cursor-pointer opacity-0" />
+                <input type="range" min={0} max={360} value={hue} aria-label={t("Accent hue")} onChange={(x) => setSettings({ accentHue: +x.target.value })} className="absolute inset-0 w-full cursor-pointer opacity-0" />
               </div>
               <div className="flex justify-between">
                 {SWATCHES.map((h) => {
                   const on = s.accentHue === h;
-                  const bg = h === null ? t.vars.accent : `oklch(.79 .15 ${h})`;
-                  return <button key={String(h)} aria-label={h === null ? "Theme default" : `Hue ${h}`} onClick={() => setSettings({ accentHue: h })} className="size-9 rounded-full" style={{ background: bg, boxShadow: on ? "0 0 0 2px var(--bg), 0 0 0 4px var(--text)" : undefined }} />;
+                  const bg = h === null ? theme.vars.accent : `oklch(.79 .15 ${h})`;
+                  return <button key={String(h)} aria-label={h === null ? t("Theme default") : t("Hue {h}", { h })} onClick={() => setSettings({ accentHue: h })} className="size-9 rounded-full" style={{ background: bg, boxShadow: on ? "0 0 0 2px var(--bg), 0 0 0 4px var(--text)" : undefined }} />;
                 })}
               </div>
-              <div className="flex items-center gap-2 text-[12px] text-muted"><CircleCheck size={14} className="text-ok" />Lightness and chroma are locked — contrast stays AA at every hue.</div>
+              <div className="flex items-center gap-2 text-[12px] text-muted"><CircleCheck size={14} className="text-ok" />{t("Lightness and chroma are locked — contrast stays AA at every hue.")}</div>
             </div>
           </>
         )}
@@ -392,24 +396,24 @@ function FirstRun({ step, setStep, onDone }: { step: number; setStep: (n: number
         {step === 3 && (
           <>
             <div className="flex flex-col gap-4 px-5">
-              <label className="flex flex-col gap-[6px]"><span className="text-[13px] font-medium text-muted">Blog name</span>
+              <label className="flex flex-col gap-[6px]"><span className="text-[13px] font-medium text-muted">{t("Blog name")}</span>
                 <input autoFocus className={input} style={{ outline: "none", caretColor: "var(--accent)" }} value={s.blogName} onChange={(x) => setSettings({ blogName: x.target.value })} /></label>
-              <label className="flex flex-col gap-[6px]"><span className="text-[13px] font-medium text-muted">Tagline</span>
+              <label className="flex flex-col gap-[6px]"><span className="text-[13px] font-medium text-muted">{t("Tagline")}</span>
                 <input className={input} style={{ outline: "none", caretColor: "var(--accent)" }} value={s.tagline} onChange={(x) => setSettings({ tagline: x.target.value })} /></label>
-              <div className="flex flex-col gap-[6px]"><span className="text-[13px] font-medium text-muted">Author &amp; avatar</span>
+              <div className="flex flex-col gap-[6px]"><span className="text-[13px] font-medium text-muted">{t("Author & avatar")}</span>
                 <div className="flex items-center gap-[10px]">
-                  <input className={cx(input, "min-w-0 flex-1")} style={{ outline: "none", caretColor: "var(--accent)" }} placeholder="Your name" aria-label="Author" value={s.author} onChange={(x) => setSettings({ author: x.target.value })} />
-                  <button aria-label="Current avatar" className="rounded-full"><Avatar size={44} ring /></button>
+                  <input className={cx(input, "min-w-0 flex-1")} style={{ outline: "none", caretColor: "var(--accent)" }} placeholder={t("Your name")} aria-label={t("Author")} value={s.author} onChange={(x) => setSettings({ author: x.target.value })} />
+                  <button aria-label={t("Current avatar")} className="rounded-full"><Avatar size={44} ring /></button>
                   {avatarRow(img ? "" : s.avatar, 2).slice(0, 1).map((a) => (
-                    <button key={a} aria-label={`Avatar ${a.replace("glyph:", "")}`} onClick={() => { setSettings({ avatar: a }); if (img) void setAvatarImage(""); }} className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2"><AvatarGlyph value={a} size={17} /></button>
+                    <button key={a} aria-label={t("Avatar {name}", { name: a.replace("glyph:", "") })} onClick={() => { setSettings({ avatar: a }); if (img) void setAvatarImage(""); }} className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2"><AvatarGlyph value={a} size={17} /></button>
                   ))}
-                  <button aria-label="Upload a photo" title="Upload a photo" onClick={() => pickAvatar()} className="flex size-[46px] shrink-0 items-center justify-center rounded-full border border-dashed border-line text-muted hover:text-ink"><ImagePlus size={18} /></button>
+                  <button aria-label={t("Upload a photo")} title={t("Upload a photo")} onClick={() => pickAvatar()} className="flex size-[46px] shrink-0 items-center justify-center rounded-full border border-dashed border-line text-muted hover:text-ink"><ImagePlus size={18} /></button>
                 </div>
               </div>
             </div>
             <div className="mx-5 mt-6 flex flex-col gap-[6px] rounded-[14px] bg-[#FAF8F3] p-4 text-[#1F1D1A]">
               <div className="font-mono text-[11px] font-medium text-[#6A655C]">PREVIEW · /blog</div>
-              <div className="text-[22px] font-bold tracking-[-0.01em]" style={{ fontFamily: "'Source Serif 4', serif" }}>{s.blogName || "Untitled blog"}</div>
+              <div className="text-[22px] font-bold tracking-[-0.01em]" style={{ fontFamily: "'Source Serif 4', serif" }}>{s.blogName || t("Untitled blog")}</div>
               <div className="text-[13px] text-[#6A655C]">{s.tagline}{s.author ? <> · {img ? <img src={img} alt="" className="inline size-[14px] rounded-full align-[-2px] object-cover" /> : <AvatarGlyph value={s.avatar} size={15} style={{ verticalAlign: "-3px" }} />} {s.author}</> : ""}</div>
             </div>
           </>
@@ -417,8 +421,8 @@ function FirstRun({ step, setStep, onDone }: { step: number; setStep: (n: number
 
         <div className="min-h-6 flex-1" />
         <div className="flex items-start gap-[10px] px-5 pb-4">
-          {step > 1 && <button aria-label="Back" onClick={() => setStep(step - 1)} className="flex size-[54px] items-center justify-center rounded-[12px] border border-line"><ArrowLeft size={18} /></button>}
-          <button onClick={next} className={cx(big, "flex-1 bg-accent text-accent-fg")}>{step === 3 ? "Start writing" : "Continue"}</button>
+          {step > 1 && <button aria-label={t("Back")} onClick={() => setStep(step - 1)} className="flex size-[54px] items-center justify-center rounded-[12px] border border-line"><ArrowLeft size={18} /></button>}
+          <button onClick={next} className={cx(big, "flex-1 bg-accent text-accent-fg")}>{step === 3 ? t("Start writing") : t("Continue")}</button>
         </div>
       </div>
     </div>
@@ -430,7 +434,8 @@ function FirstRun({ step, setStep, onDone }: { step: number; setStep: (n: number
 function NativeFirstRun({ onDone }: { onDone: () => void }) {
   const s = useSettings();
   const img = useAvatarImage();
-  const t = activeTheme();
+  useLang();
+  const theme = activeTheme();
   const [step, setStep] = useSteps(1);
   const [choice, setChoice] = useState<"sync" | "local">("sync");
   const passRef = useRef<HTMLInputElement>(null);
@@ -441,7 +446,7 @@ function NativeFirstRun({ onDone }: { onDone: () => void }) {
   const bars = (skip: boolean) => (
     <div className="flex items-center gap-[6px] px-5 pt-4">
       {[1, 2, 3].map((i) => <span key={i} className={cx("h-1 flex-1 rounded-[2px]", i <= step ? "bg-accent" : "bg-line")} />)}
-      {skip && <button onClick={() => setStep(step + 1)} className="ml-[10px] text-[13px] text-muted">Skip</button>}
+      {skip && <button onClick={() => setStep(step + 1)} className="ms-[10px] text-[13px] text-muted">{t("Skip")}</button>}
     </div>
   );
   const finish = async () => {
@@ -455,16 +460,16 @@ function NativeFirstRun({ onDone }: { onDone: () => void }) {
   };
   const themeCard = (id: "lamplight" | "paper") => {
     const th = THEMES.find((x) => x.id === id)!;
-    const on = t.id === id;
+    const on = theme.id === id;
     return (
-      <button onClick={() => setSettings({ theme: id })} className="flex flex-col gap-[10px] rounded-[16px] bg-surface p-[10px] text-left" style={{ border: `2px solid ${on ? "var(--accent)" : "var(--border)"}` }}>
+      <button onClick={() => setSettings({ theme: id })} className="flex flex-col gap-[10px] rounded-[16px] bg-surface p-[10px] text-start" style={{ border: `2px solid ${on ? "var(--accent)" : "var(--border)"}` }}>
         <div className="flex h-[150px] w-full flex-col gap-2 rounded-[10px] p-[14px]" style={{ background: th.vars.bg }}>
           <span className="size-[10px] rounded-full" style={{ background: th.vars.accent }} />
           <span className="h-[6px] w-[70%] rounded-[3px] opacity-80" style={{ background: th.vars.text }} />
           <span className="h-[5px] w-[90%] rounded-[3px] opacity-30" style={{ background: th.vars.text }} />
           <span className="h-[5px] w-[60%] rounded-[3px] opacity-30" style={{ background: th.vars.text }} />
         </div>
-        <span className="flex min-h-[19px] w-full items-center justify-between px-1 font-semibold">{th.name}{on && <CircleCheck size={18} className="text-accent" />}</span>
+        <span className="flex min-h-[19px] w-full items-center justify-between px-1 font-semibold">{t(th.name)}{on && <CircleCheck size={18} className="text-accent" />}</span>
       </button>
     );
   };
@@ -476,62 +481,62 @@ function NativeFirstRun({ onDone }: { onDone: () => void }) {
           <>
             {bars(false)}
             <div className="flex flex-col gap-[10px] px-6 pt-10">
-              <LumenMark size={48} tile={t.dark ? "dark" : "light"} />
-              <span className="mt-[10px] text-[28px] font-[650] tracking-[-0.02em]">Light or dark?</span>
-              <span className="leading-[22px] text-muted">You can switch any time — there are four more themes in Settings.</span>
+              <LumenMark size={48} tile={theme.dark ? "dark" : "light"} />
+              <span className="mt-[10px] text-[28px] font-[650] tracking-[-0.02em]">{t("Light or dark?")}</span>
+              <span className="leading-[22px] text-muted">{t("You can switch any time — there are four more themes in Settings.")}</span>
             </div>
             <div className="flex-1" />
             <div className="grid grid-cols-2 gap-3 px-4">{themeCard("lamplight")}{themeCard("paper")}</div>
-            <div className="px-4 pb-3 pt-5"><button onClick={() => setStep(2)} className={main}>Continue</button></div>
+            <div className="px-4 pb-3 pt-5"><button onClick={() => setStep(2)} className={main}>{t("Continue")}</button></div>
           </>
         )}
         {step === 2 && (
           <>
             {bars(true)}
             <div className="flex flex-col gap-[10px] px-6 pt-8">
-              <span className="text-[28px] font-[650] tracking-[-0.02em]">Name your blog</span>
-              <span className="leading-[22px] text-muted">Only notes you choose to publish appear there.</span>
+              <span className="text-[28px] font-[650] tracking-[-0.02em]">{t("Name your blog")}</span>
+              <span className="leading-[22px] text-muted">{t("Only notes you choose to publish appear there.")}</span>
             </div>
             <div className="flex flex-col gap-3 px-4 pt-6">
-              <input autoFocus aria-label="Blog name" value={s.blogName} onChange={(x) => setSettings({ blogName: x.target.value })}
+              <input autoFocus aria-label={t("Blog name")} value={s.blogName} onChange={(x) => setSettings({ blogName: x.target.value })}
                 className="h-14 w-full rounded-[12px] border-[1.5px] border-line bg-surface px-4 text-[17px] text-ink focus:border-accent" style={{ caretColor: "var(--accent)", outline: "none" }} />
               <div className="flex gap-[10px]">
-                <button aria-label="Current avatar" className="rounded-full"><Avatar size={52} ring /></button>
+                <button aria-label={t("Current avatar")} className="rounded-full"><Avatar size={52} ring /></button>
                 {avatarRow(img ? "" : s.avatar, 3).slice(0, 2).map((a) => (
-                  <button key={a} aria-label={`Avatar ${a.replace("glyph:", "")}`} onClick={() => { setSettings({ avatar: a }); if (img) void setAvatarImage(""); }} className="flex size-[52px] items-center justify-center rounded-full bg-surface-2"><AvatarGlyph value={a} size={20} /></button>
+                  <button key={a} aria-label={t("Avatar {name}", { name: a.replace("glyph:", "") })} onClick={() => { setSettings({ avatar: a }); if (img) void setAvatarImage(""); }} className="flex size-[52px] items-center justify-center rounded-full bg-surface-2"><AvatarGlyph value={a} size={20} /></button>
                 ))}
-                <button aria-label="Take or choose a photo" onClick={() => pickAvatar(true)} className="flex size-[54px] items-center justify-center rounded-full border border-dashed border-line text-muted"><Camera size={20} /></button>
+                <button aria-label={t("Take or choose a photo")} onClick={() => pickAvatar(true)} className="flex size-[54px] items-center justify-center rounded-full border border-dashed border-line text-muted"><Camera size={20} /></button>
               </div>
             </div>
             <div className="flex-1" />
-            <div className="px-4 pb-[10px]"><button onClick={() => setStep(3)} className={main}>Continue</button></div>
+            <div className="px-4 pb-[10px]"><button onClick={() => setStep(3)} className={main}>{t("Continue")}</button></div>
           </>
         )}
         {step === 3 && (
           <form onSubmit={(x) => { x.preventDefault(); void finish(); }} className="flex flex-1 flex-col">
             {bars(false)}
             <div className="flex flex-col gap-[10px] px-6 pt-8">
-              <span className="text-[28px] font-[650] tracking-[-0.02em]">Sync your notes?</span>
-              <span className="leading-[22px] text-muted">Sync uses your own free Cloudflare. Without it, everything stays on this phone.</span>
+              <span className="text-[28px] font-[650] tracking-[-0.02em]">{t("Sync your notes?")}</span>
+              <span className="leading-[22px] text-muted">{t("Sync uses your own free Cloudflare. Without it, everything stays on this phone.")}</span>
             </div>
             <div className="flex-1" />
             <div className="flex flex-col gap-3 px-4">
               <div onClick={() => setChoice("sync")} className="flex flex-col gap-3 rounded-[16px] bg-surface p-4" style={{ border: choice === "sync" ? "2px solid var(--accent)" : "1px solid var(--border)" }}>
-                <span className="flex items-center gap-[10px] font-semibold"><RefreshCw size={18} className="text-accent" />Unlock sync</span>
+                <span className="flex items-center gap-[10px] font-semibold"><RefreshCw size={18} className="text-accent" />{t("Unlock sync")}</span>
                 <label className={cx("flex h-[52px] items-center gap-2 rounded-[10px] border bg-bg px-[14px]", e.text ? "border-bad" : "border-line focus-within:border-accent")}>
                   <Lock size={16} className="shrink-0 text-muted" />
-                  <input ref={passRef} type="password" autoComplete="current-password" placeholder="Passcode" aria-label="Passcode" value={pass}
+                  <input ref={passRef} type="password" autoComplete="current-password" placeholder={t("Passcode")} aria-label={t("Passcode")} value={pass}
                     onChange={(x) => { setPass(x.target.value); setChoice("sync"); e.clear(); }} className="min-w-0 flex-1 bg-transparent text-ink placeholder:text-muted" style={{ outline: "none" }} />
                 </label>
                 {e.text && <div className="-mt-1 text-[13px] text-bad" role="alert">{e.text}</div>}
               </div>
-              <button type="button" onClick={() => { setChoice("local"); onDone(); }} className="flex items-center gap-3 rounded-[16px] border border-line p-4 text-left">
+              <button type="button" onClick={() => { setChoice("local"); onDone(); }} className="flex items-center gap-3 rounded-[16px] border border-line p-4 text-start">
                 <Smartphone size={18} className="text-muted" />
-                <span className="flex flex-1 flex-col gap-[2px]"><span className="font-semibold">Stay local</span><span className="text-[13px] text-muted">Turn on sync later in Settings</span></span>
+                <span className="flex flex-1 flex-col gap-[2px]"><span className="font-semibold">{t("Stay local")}</span><span className="text-[13px] text-muted">{t("Turn on sync later in Settings")}</span></span>
                 <ChevronRight size={18} className="text-muted" />
               </button>
             </div>
-            <div className="px-4 pb-3 pt-5"><button disabled={busy || e.locked} className={main}>{busy ? "Unlocking…" : "Unlock & start"}</button></div>
+            <div className="px-4 pb-3 pt-5"><button disabled={busy || e.locked} className={main}>{busy ? t("Unlocking…") : t("Unlock & start")}</button></div>
           </form>
         )}
       </div>
@@ -543,6 +548,7 @@ function NativeFirstRun({ onDone }: { onDone: () => void }) {
 
 /** "App lock" toggle: fingerprint / passcode on launch, on this device only. */
 export function AppLockSetting() {
+  useLang();
   const [on, setOn] = useState(appLockEnabled);
   const [fp, setFp] = useState(hasDeviceCredential);
   const [avail, setAvail] = useState(false);
@@ -554,9 +560,9 @@ export function AppLockSetting() {
     setErr("");
     if (on) { setAppLock(false); setOn(false); return; }
     if (!fp && avail) {
-      try { await enrollDeviceUnlock(s.author); setFp(true); } catch (x) { if (!getToken()) { setErr((x as Error).message); return; } }
+      try { await enrollDeviceUnlock(s.author); setFp(true); } catch (x) { if (!getToken()) { setErr(t((x as Error).message)); return; } }
     }
-    if (!hasDeviceCredential() && !getToken()) { setErr("Set up sync or fingerprint first, so there's a way back in."); return; }
+    if (!hasDeviceCredential() && !getToken()) { setErr(t("Set up sync or fingerprint first, so there's a way back in.")); return; }
     setAppLock(true); setOn(true);
   };
   return (
@@ -564,16 +570,16 @@ export function AppLockSetting() {
       <div className="flex items-center gap-3">
         <Fingerprint size={18} className="shrink-0 text-muted" />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="font-medium">App lock</span>
-          <span className="text-[12px] text-muted">Ask for {fp ? "fingerprint or passcode" : avail ? "fingerprint or passcode" : "the passcode"} when Lumen opens. This device only.</span>
+          <span className="font-medium">{t("App lock")}</span>
+          <span className="text-[12px] text-muted">{fp || avail ? t("Ask for fingerprint or passcode when Lumen opens. This device only.") : t("Ask for the passcode when Lumen opens. This device only.")}</span>
         </div>
-        <button role="switch" aria-checked={on} aria-label="App lock" onClick={toggle} disabled={!on && !canLock && !avail}
+        <button role="switch" aria-checked={on} aria-label={t("App lock")} onClick={toggle} disabled={!on && !canLock && !avail}
           className={cx("relative h-[22px] w-[38px] shrink-0 rounded-full transition-colors disabled:opacity-50", on ? "bg-accent" : "bg-line")}>
-          <span className="absolute top-[3px] size-4 rounded-full bg-white transition-all" style={{ left: on ? 19 : 3 }} />
+          <span className="absolute top-[3px] size-4 rounded-full bg-white transition-all" style={{ insetInlineStart: on ? 19 : 3 }} />
         </button>
       </div>
-      {fp && <button onClick={() => { forgetDeviceCredential(); setFp(false); }} className="self-start pl-[30px] text-[12px] text-link">Remove fingerprint from this device</button>}
-      {err && <div className="pl-[30px] text-[12px] text-bad">{err}</div>}
+      {fp && <button onClick={() => { forgetDeviceCredential(); setFp(false); }} className="self-start ps-[30px] text-[12px] text-link">{t("Remove fingerprint from this device")}</button>}
+      {err && <div className="ps-[30px] text-[12px] text-bad">{err}</div>}
     </div>
   );
 }

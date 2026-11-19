@@ -8,7 +8,7 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
-import { t } from "../lib/i18n";
+import { t, useLang } from "../lib/i18n";
 import { Decoration, EditorView, MatchDecorator, ViewPlugin, keymap, type DecorationSet, type ViewUpdate } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/state";
 import CodeMirror from "@uiw/react-codemirror";
@@ -173,6 +173,7 @@ const EMBEDDABLE = /youtu\.?be|vimeo\.com|\.(mp4|webm|mov|m4v|mp3|wav|ogg|m4a|aa
 const choiceKey = (url: string) => { try { return "lumen.pasteChoice." + new URL(url).hostname; } catch { return "lumen.pasteChoice.x"; } };
 
 export function Editor({ note, focus, live, page }: { note: Note; focus?: boolean; live?: boolean; page?: boolean }) {
+  const { rtl: uiRtl } = useLang();
   const vault = useVault();
   const [text, setText] = useState(note.body);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -439,10 +440,12 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
     { k: "plain", glyph: "wikilink", label: t("Plain link") },
   ];
 
+  // Arabic interface: the editor follows the note's own script (an English note keeps gutter/handles on the left).
+  const edDir = uiRtl ? (arabicDominant(text) ? "rtl" : "ltr") : undefined;
   return (
     <div ref={wrapRef} className={cx("relative flex h-full min-h-0 flex-col", focus && "focus-mode", live && !focus && "ed-live", page && !focus && "ed-page", slash && !wide && "slash-sheet-open")}>
       {!focus && <VideoNoteBar body={text} />}
-      <div className={cx("ed-pad min-h-0 flex-1 overflow-hidden", focus ? "px-6" : live ? "px-5" : "px-4 md:px-8")}>
+      <div dir={edDir} className={cx("ed-pad min-h-0 flex-1 overflow-hidden", focus ? "px-6" : live ? "px-5" : "px-4 md:px-8")}>
         <CodeMirror
           value={text}
           onChange={onChange}
@@ -554,3 +557,6 @@ const blockRefId = {
 
 /** Lets the note header's ⋯ menu (desktop, no toolbar) trigger image insert / voice note on the active editor. */
 export const editorBridge: { voice: (() => void) | null; image: (() => void) | null } = { voice: null, image: null };
+
+/** More Arabic than Latin letters in the first few thousand characters (front-matter included). */
+function arabicDominant(s: string) { const h = s.slice(0, 4000); return (h.match(/[؀-ۿ]/g)?.length ?? 0) > (h.match(/[A-Za-z]/g)?.length ?? 0); }

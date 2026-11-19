@@ -237,7 +237,7 @@ t("mock tutor answers every op with parseable JSON", () => {
   assert.equal(parseGrade(mockTutor("grade", { ...body, input: "each token weighs other tokens by relevance", extra: { expected: "Attention lets each token weigh other tokens by relevance" } }))!.verdict, "correct");
   assert.ok(parseSocratic(mockTutor("socratic", body))!.q);
   const fy = parseFeynman(mockTutor("feynman", { ...body, input: "Attention uses the Softmax to mix tokens." }))!;
-  assert.ok(fy.score > 0 && fy.reasons.length === 3);
+  assert.ok(fy.score > 0 && fy.reasons.length === 4) // Accuracy, Completeness, Plain words, Structure (R5-24E);
   assert.ok(parseSummary(mockTutor("summary", body))!.cards.length >= 3);
 });
 function parseJson(s: string) { try { return JSON.parse(s); } catch { return null; } }

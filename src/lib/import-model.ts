@@ -4,6 +4,7 @@
 // schedules and review-log rows. The plan is previewed (tree + counts + warnings), then written by import-write.ts as one
 // batch tagged with an import id, so the whole import can be undone.
 import type { NoteType } from "../../shared/types";
+import { fmtNum, t } from "./i18n";
 
 export type ImportSourceKind = "anki" | "notion" | "obsidian" | "markdown";
 
@@ -21,6 +22,8 @@ export interface PlanAttachment {
   name: string;
   mime: string;
   size: number;
+  /** Path inside the source (vaults): shown in the preview tree, where it can be unticked. */
+  path?: string;
   bytes(): Promise<Uint8Array>;
 }
 
@@ -40,6 +43,12 @@ export interface PlanNote {
   badge?: string;
   /** Number of flashcards in the note (Anki decks), for the preview. */
   cards?: number;
+  /** Unticked in the preview by default (e.g. notes in the vault's `.trash`). */
+  off?: boolean;
+  /** Audio attachments in the note (Anki decks), for the preview tag. */
+  audio?: number;
+  /** Notion databases: what the base needs to be rebuilt with another first view (`withBaseView`). */
+  baseSpec?: { folder: string; order: string[]; group?: string; date?: string };
 }
 
 /** Schedule of one flashcard, keyed by the note key and the Lumen card key (see docs/FLASHCARDS.md). */
@@ -78,10 +87,58 @@ export interface ImportPlan {
   warnings: string[];
   /** Folder paths (joined with "/") that must exist even if empty after deselection, e.g. database folders. */
   folders: string[];
+  /** Source-specific numbers for the preview (Notion: page links converted, embeds that can't come over). */
+  stats?: { pageLinks?: number; embeds?: number; embedProviders?: string[]; syncedBlocks?: number; total?: number; totalBytes?: number };
 }
 
 export const emptyPlan = (source: ImportSourceKind, name: string): ImportPlan =>
   ({ source, name, notes: [], attachments: new Map(), cards: [], reviews: [], warnings: [], folders: [] });
+
+/** An error the dialog shows with its own layout (`code`), e.g. a Notion HTML export. `message` is already translated. */
+export class ImportError extends Error {
+  constructor(public code: "notion-html" | "not-anki" | "generic", message: string, public file = "") { super(message); }
+}
+
+/** Which source a dropped file list most likely is (the source step's drop zone picks it automatically). */
+export function detectSource(paths: string[]): ImportSourceKind | null {
+  if (!paths.length) return null;
+  const p = paths.map((x) => x.replace(/\\/g, "/"));
+  if (p.some((x) => /\.(apkg|colpkg)$/i.test(x) || /(^|\/)collection\.anki2[1b]?$/i.test(x))) return "anki";
+  const hex = /\s[0-9a-f]{32}(\.(md|csv|html)|\/|$)/i;
+  if (p.some((x) => hex.test(x))) return "notion";
+  if (p.some((x) => /(^|\/)\.obsidian\//.test(x) || /\.(canvas|base)$/i.test(x))) return "obsidian";
+  if (p.length === 1 && /\.zip$/i.test(p[0])) return null; // look inside (detectSourceInZip)
+  if (p.some((x) => /\.(md|markdown|txt)$/i.test(x))) return p.some((x) => x.includes("/")) ? "obsidian" : "markdown";
+  return null;
+}
+/** A zip's entries: Anki package, Notion export (Markdown or the unsupported HTML one), or a vault. */
+export function detectSourceInZip(paths: string[]): ImportSourceKind | null {
+  const s = detectSource(paths.filter((x) => !/\.zip$/i.test(x)));
+  if (s) return s;
+  if (paths.some((x) => /\.zip$/i.test(x)) || paths.some((x) => /\.html?$/i.test(x))) return "notion";
+  return null;
+}
+/** Notion "HTML" exports have .html pages and no Markdown: Lumen needs "Markdown & CSV". */
+export const isNotionHtmlExport = (paths: string[]) => !paths.some((x) => /\.(md|csv)$/i.test(x)) && paths.some((x) => /\.html?$/i.test(x));
+
+/** `[[links]]` in a Markdown body (outside code). */
+export function wikiLinks(body: string): string[] {
+  const out: string[] = [];
+  for (const seg of body.split(/(```[\s\S]*?```|`[^`\n]*`)/g).filter((_s, i) => i % 2 === 0)) {
+    for (const m of seg.matchAll(/(?<!!)\[\[([^\]|#\n]+)(?:#[^\]|\n]*)?(?:\|[^\]\n]*)?\]\]/g)) out.push(m[1].trim());
+  }
+  return out;
+}
+
+/** "1.1 GB", "24.6 MB", "340 KB" (decimal units, like the OS file browsers). */
+export function fmtBytes(n: number): string {
+  if (n >= 1e9) return t("{size} GB", { size: fmtNum(+(n / 1e9).toFixed(1), { maximumFractionDigits: 1 }) });
+  if (n >= 1e6) return t("{size} MB", { size: fmtNum(+(n / 1e6).toFixed(1), { maximumFractionDigits: 1 }) });
+  if (n >= 1e3) return t("{size} KB", { size: fmtNum(Math.round(n / 1e3)) });
+  return t("{size} B", { size: fmtNum(n) });
+}
+/** Megabytes with one decimal ("14.2"), for "14.2 of 24.6 MB". */
+export const fmtMB = (n: number) => fmtNum(+(n / 1e6).toFixed(1), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 export type Progress = (done: number, total: number, current: string) => void;
 
@@ -276,9 +333,27 @@ export function imageSize(u: Uint8Array): { w: number; h: number } | null {
 }
 
 // ------------------------------------------------------------------ preview tree
-export interface TreeNode { id: string; name: string; kind: "folder" | "note"; badge?: string; cards?: number; children: TreeNode[]; noteKeys: string[] }
-/** Folder tree of the plan's notes (folders first, natural order). Folder ids are "f:<path>", note ids "n:<key>". */
-export function planTree(plan: ImportPlan): TreeNode {
+export interface TreeNode {
+  id: string; name: string; kind: "folder" | "note" | "file"; badge?: string; cards?: number; children: TreeNode[];
+  /** Selection keys under this node: note keys, and `att:<ref>` for attachment files. */
+  noteKeys: string[];
+  /** A Notion page / database whose sub-pages (or rows) are this folder: the page's own note key. */
+  self?: string;
+  /** Totals under a folder (filled by planTree). */
+  notes?: number; canvases?: number; files?: number; bytes?: number; audio?: number;
+  /** Flashcards under a folder (Anki parent decks), its own page included. */
+  allCards?: number;
+  /** Every note under it is unticked by default (the vault's `.trash`). */
+  off?: boolean;
+}
+/** Selection key of an attachment file in the preview tree. */
+export const attKey = (ref: string) => "att:" + ref;
+/**
+ * Folder tree of the plan's notes (folders first, natural order, dot-folders last). Folder ids are "f:<path>", note ids
+ * "n:<key>", files "a:<ref>". `files`: attachments with a source path are listed (vaults) and can be unticked.
+ * `pages`: a page and the folder of its sub-pages with the same name become one node (Notion).
+ */
+export function planTree(plan: ImportPlan, opts: { files?: boolean; pages?: boolean } = {}): TreeNode {
   const root: TreeNode = { id: "f:", name: plan.name, kind: "folder", children: [], noteKeys: [] };
   const folders = new Map<string, TreeNode>([["", root]]);
   const ensure = (parts: string[]): TreeNode => {
@@ -292,15 +367,50 @@ export function planTree(plan: ImportPlan): TreeNode {
     return f;
   };
   for (const p of plan.folders) ensure(p.split("/").filter(Boolean));
+  const offKeys = new Set<string>();
   for (const n of plan.notes) {
     const parent = ensure(n.folder);
-    parent.children.push({ id: "n:" + n.key, name: n.title, kind: "note", badge: n.badge, cards: n.cards, children: [], noteKeys: [n.key] });
+    if (n.off) offKeys.add(n.key);
+    parent.children.push({ id: "n:" + n.key, name: n.title, kind: "note", badge: n.badge, cards: n.cards, audio: n.audio, children: [], noteKeys: [n.key], off: n.off });
+  }
+  if (opts.files) {
+    for (const a of plan.attachments.values()) {
+      if (!a.path) continue;
+      const parent = ensure(dirName(a.path).split("/").filter(Boolean).map(cleanName));
+      parent.children.push({ id: "a:" + a.ref, name: a.name, kind: "file", children: [], noteKeys: [attKey(a.ref)], files: 1, bytes: a.size });
+    }
+  }
+  if (opts.pages) {
+    const fold = (t: TreeNode) => {
+      for (const f of t.children.filter((c) => c.kind === "folder")) {
+        const i = t.children.findIndex((c) => c.kind === "note" && c.name.toLowerCase() === f.name.toLowerCase());
+        if (i >= 0) {
+          const page = t.children[i];
+          t.children.splice(i, 1);
+          Object.assign(f, { self: page.noteKeys[0], badge: page.badge, cards: page.cards });
+        }
+        fold(f);
+      }
+    };
+    fold(root);
   }
   const coll = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
-  const fill = (t: TreeNode): string[] => {
-    t.children.sort((a, b) => (a.kind === b.kind ? coll.compare(a.name, b.name) : a.kind === "folder" ? -1 : 1));
-    if (t.kind === "folder") t.noteKeys = t.children.flatMap(fill);
-    return t.noteKeys;
+  const rank = (x: TreeNode) => (x.kind === "folder" ? (x.name.startsWith(".") ? 1 : 0) : x.kind === "note" ? 2 : 3);
+  const fill = (node: TreeNode): string[] => {
+    node.children.sort((a, b) => rank(a) - rank(b) || coll.compare(a.name, b.name));
+    if (node.kind === "folder") {
+      node.noteKeys = [...(node.self ? [node.self] : []), ...node.children.flatMap(fill)];
+      const kids = node.children;
+      node.notes = kids.reduce((s, c) => s + (c.kind === "note" ? 1 : c.kind === "folder" ? (c.notes ?? 0) + (c.self ? 1 : 0) : 0), 0);
+      node.canvases = kids.reduce((s, c) => s + (c.kind === "note" && (c.badge === "canvas" || c.badge === "whiteboard") ? 1 : c.canvases ?? 0), 0);
+      node.files = kids.reduce((s, c) => s + (c.kind === "folder" || c.kind === "file" ? c.files ?? 0 : 0), 0);
+      node.bytes = kids.reduce((s, c) => s + (c.kind === "folder" || c.kind === "file" ? c.bytes ?? 0 : 0), 0);
+      node.allCards = (node.self ? node.cards ?? 0 : 0) + kids.reduce((s, c) => s + (c.kind === "folder" ? c.allCards ?? 0 : c.cards ?? 0), 0);
+      node.audio = kids.reduce((s, c) => s + (c.audio ?? 0), 0);
+      const notes = node.noteKeys.filter((k) => !k.startsWith("att:"));
+      node.off = notes.length > 0 && notes.every((k) => offKeys.has(k));
+    }
+    return node.noteKeys;
   };
   fill(root);
   return root;

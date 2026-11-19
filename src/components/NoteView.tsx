@@ -1,11 +1,13 @@
 import { LayoutTemplate, Waypoints, Share2, Link2, Layers, ArrowLeft, BookOpen, Columns2, Copy, Download, FileCode2, Globe, ImagePlus, Info, ListTree, Map as MapIcon, Maximize2, Mic, MoreHorizontal, EllipsisVertical, Network, PanelRight, PanelLeft, PenLine, Pin, Presentation, Printer, Star, Trash2 } from "lucide-react";
+import { LongRead } from "./long-read"; // Lumen 22: long notes (progress, folding, Top)
+import { FolderGroups } from "./grouped-links"; // Lumen 22: backlinks over 20 group by folder
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { canvasToSkeleton } from "../lib/whiteboard";
 import { parseCanvas } from "../lib/canvas";
 import type { Note } from "../../shared/types";
 import { createNote, duplicateNote, restoreNote, snapshot, trashNote, updateNote } from "../lib/actions";
 import { exportNoteHtml, exportNoteMd, printNote } from "../lib/io";
-import { back, openNote, setUI, toast, useUI, useVault, type Mode } from "../lib/store";
+import { back, getUI, openNote, setUI, toast, useUI, useVault, type Mode } from "../lib/store";
 import { canGoBack } from "../lib/nav-history";
 import { NavButtons } from "./nav-buttons";
 import { openInsertGallery } from "./InsertGallery";
@@ -29,6 +31,8 @@ import { DirMenu, UiDirRow } from "./ws-bidi";
 import { ReadMenu, ReadRows } from "./ws-read";
 import { DiagramFile } from "./DiagramFile";
 import { DiagramsTab } from "./DiagramsTab";
+import { LinksTab, MediaTab, NoteTabBar } from "./NoteTabs"; // note tabs Diagrams · Media · Links (round 6)
+import { toggleAssistantPanel, toggleAssistantRail } from "./Assistant"; // in-note Assistant (round 6)
 import { FocusView } from "./FocusView";
 import { tr, useRtl } from "./ws-dir";
 import { fmtNum, fmtRelative, t, tk, tx } from "../lib/i18n";
@@ -87,6 +91,7 @@ export function NoteView({ note }: { note: Note }) {
       // Focus handles its own Esc (it may ask to save highlights first).
       if (e.key === "Escape" && (mode === "slides" || mode === "review")) setUI({ mode: wide ? "split" : "edit" });
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); void snapshot(note, "Manual save").then(() => toast(t("Version saved"))); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "j" && !e.shiftKey) { e.preventDefault(); toggleAssistantRail(getUI().panel === "ai"); }
       if ((e.ctrlKey || e.metaKey) && e.key === "e") { e.preventDefault(); if (isRoadmap) setRmEdit((x) => !x); else setUI({ mode: mode === "edit" ? "read" : "edit" }); }
     };
     addEventListener("keydown", k);
@@ -99,7 +104,8 @@ export function NoteView({ note }: { note: Note }) {
   const hdrRef = useRef<HTMLElement>(null);
   const crumbRef = useRef<HTMLDivElement>(null);
   const [tight, setTight] = useState(0);
-  useEffect(() => { setTight(0); }, [note.id]);
+  const [crumbsOpen, setCrumbsOpen] = useState(false);
+  useEffect(() => { setTight(0); setCrumbsOpen(false); }, [note.id]);
   useEffect(() => {
     const h = hdrRef.current;
     if (!h || !wide) return;
@@ -145,8 +151,7 @@ export function NoteView({ note }: { note: Note }) {
     { value: "focus" as Mode, icon: <Maximize2 size={13} />, l: t("Focus"), title: t("Focus (Esc to leave)") },
     { value: "slides" as Mode, icon: <Presentation size={13} />, l: t("Slides"), title: t("Present as slides") },
     { value: "review" as Mode, icon: <Layers size={13} />, l: t("Review"), title: t("Review flashcards") },
-    // Diagrams tab: only when the note has Mermaid diagrams (count in the label).
-    ...(diagramCount ? [{ value: "diagrams" as Mode, icon: <Waypoints size={13} />, l: t("Diagrams"), badge: diagramCount, title: t("{n} diagram in this note: zoom, export, canvas|{n} diagrams in this note: zoom, export, canvas", { n: diagramCount }) }] : []),
+    // Diagrams / Media / Links: the note tab row under the header (NoteTabs.tsx, round 6).
   ];
   const effMode: Mode = mode === "split" && !wide ? "read" : mode;
   const words = isCanvas ? 0 : (note.body.match(/[\p{L}\p{N}]+/gu) ?? []).length;
@@ -195,7 +200,9 @@ export function NoteView({ note }: { note: Note }) {
         {wide && <button className={item} onClick={() => setPublish(true)}><Globe size={15} /> {t("Share / publish…")}</button>}
         <button className={item} onClick={() => setUI({ panel: "properties" })}><Info size={15} /> {t("Properties")}</button>
         <button className={item} onClick={() => setLocalGraph(true)}><Network size={15} /> {t("Local graph")}</button>
-        {markdownNote && <button className={item} onClick={() => openTutorForNote(note, v)}><Glyph name="lesson" size={15} /> {t("Tutor")}</button>}
+        {markdownNote && <button className={item} onClick={() => openTutorForNote(note, v, "explain")}><Glyph name="lesson" size={15} color="var(--learn)" /> {t("Tutor · Explain")}</button>}
+        {markdownNote && <button className={item} onClick={() => openTutorForNote(note, v, "socratic")}><Glyph name="c-question" size={15} color="var(--learn)" /> {t("Tutor · Socratic")}</button>}
+        {markdownNote && <button className={item} onClick={() => openTutorForNote(note, v, "feynman")}><Glyph name="d-draft" size={15} color="var(--learn)" /> {t("Tutor · Feynman")}</button>}
         {!isCanvas && <button className={item} onClick={async () => { const c = await canvasFromNote(note, (p) => createNote(p)); if (c) openNote(c.id); }}><MapIcon size={15} /> {t("Make canvas from outline")}</button>}
         {markdownNote && note.type !== "slides" && <button className={item} onClick={() => setUI({ mode: "slides" })}><Presentation size={15} /> {t("Make a slide deck from this note")}</button>}
         {note.type === "canvas" && <button className={item} onClick={async () => { const { canvas } = parseCanvas(note.body); const w = await createNote({ type: "whiteboard", title: `${note.title} (whiteboard)`, spaceId: note.spaceId, folderId: note.folderId, body: JSON.stringify({ type: "excalidraw", version: 2, source: "lumen", elements: [], lumenPending: canvasToSkeleton(canvas) }) }); openNote(w.id); }}><MapIcon size={15} /> {t("Open as whiteboard")}</button>}
@@ -221,19 +228,21 @@ export function NoteView({ note }: { note: Note }) {
       {/* space → its page (course hub / project hub / space home); folder → that folder's note list */}
       <button title={t("Open {name}", { name: space?.name ?? t("Inbox") })} className={cx("hover:text-ink hover:underline", twoRows ? "truncate" : "line-clamp-2 max-w-[110px] text-start")}
         onClick={() => (note.spaceId === "inbox" ? setUI({ view: "notes", spaceId: "inbox", folderId: null, filter: null, tag: null, noteId: null }) : setUI({ view: "space", spaceId: note.spaceId, folderId: null, noteId: null }))}><span className="inline-flex items-center gap-1.5 align-middle"><SpaceIcon space={space} size={15} /><span dir="auto">{space?.name ?? t("Inbox")}</span></span></button>
-      {crumbs.map((c) => (
+      {/* Lumen 22 truncation: past three levels the middle folders collapse to "…" (click for the full path) */}
+      {crumbs.length > 2 && !crumbsOpen && <span className="flex shrink-0 items-center gap-1.5"><span aria-hidden>›</span><button onClick={() => setCrumbsOpen(true)} title={crumbs.slice(0, -1).map((c) => c.name).join(" › ")} aria-label={t("Show the full path")} className="hover:text-ink">…</button></span>}
+      {(crumbs.length > 2 && !crumbsOpen ? crumbs.slice(-1) : crumbs).map((c) => (
         <span key={c.id} className="flex min-w-0 items-center gap-1.5"><span aria-hidden className="shrink-0">›</span>
           <button dir="auto" title={t("Open folder {name}", { name: c.name })} onClick={() => setUI({ view: "notes", spaceId: note.spaceId, folderId: c.id, filter: null, tag: null, noteId: null, list: true })}
             className={cx("hover:text-ink hover:underline", twoRows ? "truncate" : "line-clamp-2 max-w-[100px] text-start")}>{c.name}</button>
         </span>
       ))}
-      <span aria-hidden className="shrink-0">›</span><span dir="auto" className={cx("font-medium text-ink", twoRows ? "truncate" : "line-clamp-2 max-w-[180px]")}>{note.title}</span>
+      <span aria-hidden className="shrink-0">›</span><span dir="auto" title={note.title} className={cx("font-medium text-ink", twoRows ? "truncate" : "line-clamp-2 max-w-[180px]")}>{note.title}</span>
     </div>
   );
   const switcher = (list: typeof modes) => (
     <div className="flex gap-0.5 rounded-[10px] border border-line bg-surface p-[3px]">
       {list.map((m) => (
-        <button key={m.value} title={m.title} onClick={() => setUI({ mode: m.value })} className={"flex h-[26px] items-center gap-1.5 whitespace-nowrap rounded-[7px] px-2.5 text-[12.5px] " + (mode === m.value ? "bg-surface-2 font-semibold text-ink" : "font-[450] text-muted hover:text-ink")}>{m.icon}{m.l}{"badge" in m && m.badge ? <span className="rounded-full bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] px-1.5 text-[10.5px] font-semibold leading-4 text-accent">{fmtNum(m.badge)}</span> : null}</button>
+        <button key={m.value} title={m.title} onClick={() => setUI({ mode: m.value })} className={"flex h-[26px] items-center gap-1.5 whitespace-nowrap rounded-[7px] px-2.5 text-[12.5px] " + (mode === m.value ? "bg-surface-2 font-semibold text-ink" : "font-[450] text-muted hover:text-ink")}>{m.icon}{m.l}{"badge" in m && m.badge ? <span className="rounded-full bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] px-1.5 text-[10.5px] font-semibold leading-4 text-accent">{fmtNum(Number(m.badge))}</span> : null}</button>
       ))}
     </div>
   );
@@ -251,6 +260,9 @@ export function NoteView({ note }: { note: Note }) {
       ))}
     </div>
   );
+  // Assistant (R6-31): opens / closes the in-note Assistant; Ctrl/⌘ J collapses it to the rail
+  const assistantBtn = <button aria-label={t("Assistant")} title={t("Assistant (Ctrl+J)")} aria-pressed={ui.panel === "ai"} onClick={() => toggleAssistantPanel(ui.panel !== "ai")} data-act="assistant"
+    className={"flex h-[30px] items-center gap-1.5 rounded-[8px] border px-2.5 font-semibold " + (ui.panel === "ai" ? "border-accent bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]" : "border-line hover:bg-surface-2")}><Glyph name="assistant" size={15} color="var(--accent)" />{t("Assistant")}</button>;
   const panelBtn = <button aria-label={t("Side panel")} title={t("Outline, links, history")} className={iconBtn + (ui.panel ? " !text-accent" : "")} onClick={() => setUI({ panel: ui.panel ? null : "outline" })}><PanelIcon size={16} /></button>;
 
   // Focus mode is a full-screen layer (7A / 7B): no chrome, Esc hint, saved state + word count in the corners.
@@ -273,6 +285,7 @@ export function NoteView({ note }: { note: Note }) {
                 {isRoadmap && <Segmented value={rmEdit ? "edit" : "map"} onChange={(x) => setRmEdit(x === "edit")} options={[{ value: "map", label: <><MapIcon size={13} /> {isPath ? t("Path") : t("Roadmap")}</> }, { value: "edit", label: <><PenLine size={13} /> {t("Edit")}</> }]} />}
                 {moreBtn}
                 {shareBtn}
+                {markdownNote && assistantBtn}
                 {panelBtn}
               </div>
               {markdownNote && (
@@ -299,13 +312,14 @@ export function NoteView({ note }: { note: Note }) {
               {markdownNote && <ReadMenu />}
               {markdownNote && <DirMenu note={note} />}
               {shareBtn}
+              {markdownNote && assistantBtn}
               {moreBtn}
               {panelBtn}
             </header>
           )
         ) : (
           <header className="safe-t flex h-14 shrink-0 items-center gap-0.5 border-b border-line bg-bg px-1">
-            <button aria-label={t("Back")} className="flex size-12 items-center justify-center" onClick={() => (canGoBack() ? history.back() : back())}><ArrowLeft size={20} className="rtl:rotate-180" /></button>
+            <button aria-label={t("Back")} className="flex size-12 items-center justify-center" onClick={() => (canGoBack() ? history.back() : back())}><ArrowLeft size={20} /></button>
             <div className="flex min-w-0 flex-1 flex-col">
               {saving ? <PhoneSyncLine saving /> : <span dir="auto" className="truncate text-[11.5px] leading-4 text-muted">{[space?.name ?? t("Inbox"), ...crumbs.map((c) => c.name)].join(" › ")}</span>}
               <span dir="auto" className="truncate text-[14px] font-semibold leading-5" style={{ textAlign: rtl ? "right" : "left" }}>{note.title}</span>
@@ -320,9 +334,12 @@ export function NoteView({ note }: { note: Note }) {
               <button aria-label={t("Edit")} className="flex size-12 items-center justify-center" onClick={() => setUI({ mode: "edit" })}><PenLine size={20} /></button>
             ) : null}
             {isRoadmap && <button onClick={() => setRmEdit((x) => !x)} className="rounded-[8px] border border-line px-2.5 py-1.5 text-[13px]">{rmEdit ? t("Roadmap") : t("Edit")}</button>}
+            {markdownNote && <button aria-label={t("Assistant")} onClick={() => toggleAssistantPanel(ui.panel !== "ai")} className="flex h-[30px] items-center rounded-[8px] border px-2.5" style={ui.panel === "ai" ? { borderColor: "var(--accent)", background: "color-mix(in srgb, var(--accent) 10%, transparent)" } : { borderColor: "var(--border)" }} data-act="assistant"><Glyph name="assistant" size={15} color="var(--accent)" /></button>}
             <div className="relative"><button aria-label={t("More")} className="flex h-12 w-11 items-center justify-center" onClick={() => setMenu((m) => !m)}><EllipsisVertical size={20} /></button>{menuEl}</div>
           </header>
         )}
+        {/* note tabs (R6-31): Note · Diagrams · Media · Links · Outline, only the ones this note has content for */}
+        {markdownNote && !isDiagram && !ownBar && !(isPath && !rmEdit) && effMode !== "focus" && effMode !== "slides" && effMode !== "review" && <NoteTabBar note={note} mode={effMode} wide={wide} />}
 
         {/* title fallback for notes without a "# H1" (the H1 in the body is the title) */}
         {markdownNote && effMode === "edit" && !firstH1(note.body) && (
@@ -355,7 +372,11 @@ export function NoteView({ note }: { note: Note }) {
           ) : effMode === "edit" ? (
             <Editor key={note.id} note={note} live={!wide} page={wide} />
           ) : effMode === "diagrams" ? (
-            diagramCount ? <DiagramsTab note={note} wide={wide} /> : <div className="flex h-full items-center justify-center text-muted">{t("No diagrams in this note.")}</div>
+            <DiagramsTab note={note} wide={wide} />
+          ) : effMode === "media" ? (
+            <MediaTab note={note} wide={wide} />
+          ) : effMode === "links" ? (
+            <LinksTab note={note} wide={wide} />
           ) : effMode === "review" ? (
             <ReviewSession key={note.id} notes={[note]} title={note.title} />
           ) : effMode === "split" ? (
@@ -371,6 +392,7 @@ export function NoteView({ note }: { note: Note }) {
             <div data-pw={pw} className={cx("read-pane h-full overflow-y-auto", wide ? (pw === "full" ? "px-[72px] pb-14 pt-9" : "px-8 pb-14 pt-9") : "px-5 py-5")} onDoubleClick={(e) => { if (!(e.target as HTMLElement).closest("a,button,input,.embed,.vthumb,.mermaid-card")) setUI({ mode: wide ? "split" : "edit" }); }}>
               <div className={cx("mx-auto flex w-full flex-col", wide ? "gap-[18px]" : "gap-3.5")} style={wide ? { maxWidth: PAGE_W[pw] || fixedW() } : undefined}>
                 {/* R4-16J…L / P4 (ReadDoc): the title opens the page; the "Type · status · N min read · Updated" row moves to the end of the note */}
+                {note.body.length > 15000 && <LongRead key={note.id} note={note} />}
                 {!firstH1(note.body) && <div className={cx("prose reading", wide ? "read-wide max-w-none" : "read-phone")}><h1 dir="auto">{note.title}</h1></div>}
                 {note.body.trim() ? <Preview note={note} className={cx("reading", wide ? "read-wide max-w-none" : "read-phone")} /> : <div className="prose text-muted">{tx("Empty note. Double-click or press {edit} to write.", { edit: <b>{t("Edit")}</b> })}</div>}
                 <div className="border-t border-line pt-3"><MetaRow note={note} kind={wide ? "read" : "phone"} words={words} /></div>
@@ -440,9 +462,7 @@ function Backlinks({ note }: { note: Note }) {
   return (
     <div className="mx-auto mt-12 max-w-[var(--measure)] border-t border-line pt-4">
       <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">{t("Linked from · {n}", { n: back.length })}</div>
-      <div className="flex flex-wrap gap-2">
-        {back.map((n) => <button key={n.id} onClick={() => openNote(n.id)} dir="auto" className="rounded-full border border-line px-3 py-1 text-[12.5px] hover:border-accent hover:text-accent">{n.title}</button>)}
-      </div>
+      <FolderGroups notes={back} wrap="flex flex-wrap gap-2" item={(n) => <button key={n.id} onClick={() => openNote(n.id)} dir="auto" title={n.title} className="max-w-[320px] truncate rounded-full border border-line px-3 py-1 text-[12.5px] hover:border-accent hover:text-accent">{n.title}</button>} />
     </div>
   );
 }

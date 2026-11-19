@@ -1,8 +1,8 @@
 # Ask as a chat + AI tutor
 
-Round 5 (design: `docs/design/CLAUDE_DESIGN_UPDATE_05.md` §1–§2). Logic, backend and AI are built; the screens use plain
-round-4 styling (glyphs, no sparkle) until the Claude Design handoff arrives. All UI strings live in one object each:
-`CHAT_STR` (`src/lib/chat.ts`) and `TUTOR_STR` (`src/lib/tutor.ts`).
+Round 5 logic; screens styled to the Claude Design handoff in round 6 (part A): Lumen 23 Ask Chat (`AskChat`), Lumen 24
+Tutor Modes (`TutorDesk`). UI strings go through `t()` (Arabic: `src/i18n/ar/chat-r6.ts` + `sweep.ts`). The in-note
+Assistant (Lumen 31) reuses the chat engine: see `docs/NOTE_TABS.md`.
 
 ## Files
 
@@ -114,3 +114,26 @@ not-in-notes, general knowledge, Arabic) and 3 tutor sessions on the AI Engineer
 - Tutor output depends on the model returning JSON; unreadable replies show "couldn't be read" with Retry.
 - Feynman dictation uses the browser's Web Speech API (not Whisper) and only shows where available.
 - Settings › AI has no separate toggles for chat / tutor yet (the Worker honours `ask`, `chat`, `tutor` in `aiOff`).
+
+## Round 6 (part A) additions
+
+- **Slots.** `src/lib/ask.ts` keeps two independent conversations: `ask` (Ask page / phone, `activeId` + `live`) and
+  `assistant` (note Assistant, `aActive` + `aLive` + `aDraft`). `sendChat(q, v, { slot, pinned, allowGeneral, extraNotes,
+  assistantFor })`, `stopChat(slot)`, `regenerate(id, v, general, slot)`, `openThread(id, slot)`, `newChat(slot)`.
+  - `pinned`: passages put first and numbered [1]… (the Assistant's "Selection" chip).
+  - `allowGeneral`: "Only from my notes" off: no passages, or the model says "Not in your notes" → a general-knowledge
+    answer (labelled, `general: 1`).
+  - `extraNotes`: notes added with "+ Add" (retrieval scope = `Scope.noteIds`, `ask-retrieve.ts`).
+  - Live status `limit` (HTTP 429 / quota) → "Daily free AI limit reached" banner with See usage.
+- **Record fields.** `ChatThread.assistant = 1` + `noteId` = an Assistant conversation about that note.
+  `ChatMessage.action` = the quick action that produced it (summarize, flashcards, explain, tags, quiz, diagram).
+  `TutorCard.how` = what produced an explanation card (`example`, `differently`, `ask`).
+- **Usage meter.** Every `/api/ai/chat` and `/api/ai/tutor` call (and the demo mock) dispatches the `lumen:ai` event the
+  meter in `src/lib/ai-usage.ts` (part B) listens to.
+- **Tutor.** New op `ask` (Explain: a question about the current step, `{text}`); Feynman reasons are Accuracy,
+  Completeness, Plain words, Structure. Sessions start on open (the entry point picked the mode); no notes → "Use general
+  knowledge" / "Write a lesson note first"; signed out / offline cards. Note ⋯ has Tutor · Explain / Socratic / Feynman.
+  The finished session shows the summary only ("Show the session" opens the transcript).
+- **Ask page.** Thread column with Search chats and Pinned / Today / Earlier; header with context line and ⋯ (rename, pin,
+  copy, save conversation as note, new chat, close, delete); composer with scope chip, Tutor mode switch, Send / Stop.
+  Phone: full screen, threads in a sheet. Simulator: Network › Offline and "unauthorized" drive the offline / locked states.

@@ -6,6 +6,7 @@ import { PasscodeHelp } from "../views/settings-devices";
 import { syncNow } from "../lib/sync";
 import { toast } from "../lib/store";
 import { Button, cx } from "./ui";
+import { t, useLang } from "../lib/i18n";
 
 /** Saved accounts on this device, live (updates when one is added, switched or forgotten, also from other tabs). */
 export function useSavedAccounts(): SavedAccount[] {
@@ -31,6 +32,7 @@ function Avatar({ id, size = 28 }: { id: string; size?: number }) {
  * sign-in token the server issued for that passcode.
  */
 export function AccountSwitcher({ compact, onDone }: { compact?: boolean; onDone?: () => void }) {
+  useLang();
   const list = useSavedAccounts();
   const cur = getAccount();
   const signedIn = !!getToken();
@@ -43,7 +45,7 @@ export function AccountSwitcher({ compact, onDone }: { compact?: boolean; onDone
   const [lockedUntil, setLockedUntil] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [help, setHelp] = useState(false);
-  useEffect(() => { if (lockedUntil <= Date.now()) return; const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, [lockedUntil]);
+  useEffect(() => { if (lockedUntil <= Date.now()) return; const iv = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(iv); }, [lockedUntil]);
   const lockLeft = Math.max(0, Math.ceil((lockedUntil - now) / 1000));
   const accounts = [...list].sort((a, b) => (a.id === cur ? -1 : b.id === cur ? 1 : b.lastUsed - a.lastUsed));
   if (!accounts.some((a) => a.id === cur)) accounts.unshift({ id: cur, token: "", savedAt: 0, lastUsed: 0 });
@@ -61,7 +63,7 @@ export function AccountSwitcher({ compact, onDone }: { compact?: boolean; onDone
       }
       if (!remember) forgetAccount(getAccount());
       setPass(""); setAdding(false); setWrong(null);
-      toast("Signed in");
+      toast(t("Signed in"));
       await syncNow();
       onDone?.();
     } finally { setBusy(false); }
@@ -77,18 +79,18 @@ export function AccountSwitcher({ compact, onDone }: { compact?: boolean; onDone
             <Avatar id={a.id} size={compact ? 22 : 28} />
             <div className="min-w-0 flex-1">
               <div className={cx("truncate font-medium", compact ? "text-[13px]" : "text-[13.5px]")}>{accountLabel(a.id)}</div>
-              {!compact && <div className="text-[11.5px] text-muted">{isCur ? (signedIn ? "Open on this device · syncing" : "Open on this device · locked") : a.token ? "Saved · switch without a passcode" : "Not saved"}</div>}
+              {!compact && <div className="text-[11.5px] text-muted">{isCur ? (signedIn ? t("Open on this device · syncing") : t("Open on this device · locked")) : a.token ? t("Saved · switch without a passcode") : t("Not saved")}</div>}
             </div>
             {isCur ? <Check size={15} className="shrink-0 text-ok" /> : (
-              <button className="shrink-0 rounded-[7px] border border-line px-2 py-1 text-[12px] font-medium hover:border-accent hover:text-accent" onClick={() => { onDone?.(); switchAccount(a.id); }}>Switch</button>
+              <button className="shrink-0 rounded-[7px] border border-line px-2 py-1 text-[12px] font-medium hover:border-accent hover:text-accent" onClick={() => { onDone?.(); switchAccount(a.id); }}>{t("Switch")}</button>
             )}
             {!compact && a.token && (
-              <button className="shrink-0 text-muted hover:text-bad" title={isCur ? "Sign out and forget this account on this device" : "Forget this account on this device"}
+              <button className="shrink-0 text-muted hover:text-bad" title={isCur ? t("Sign out and forget this account on this device") : t("Forget this account on this device")}
                 onClick={() => {
-                  if (!confirm(`Forget “${accountLabel(a.id)}” on this device? Its notes stay on the server; you'll need its passcode to open it here again.`)) return;
+                  if (!confirm(t("Forget “{name}” on this device? Its notes stay on the server; you'll need its passcode to open it here again.", { name: accountLabel(a.id) }))) return;
                   forgetAccount(a.id);
                   if (isCur) { localStorage.removeItem("lumen.token"); void syncNow(); }
-                  toast(`${accountLabel(a.id)} forgotten on this device`);
+                  toast(t("{name} forgotten on this device", { name: accountLabel(a.id) }));
                 }}><X size={15} /></button>
             )}
           </div>
@@ -96,27 +98,27 @@ export function AccountSwitcher({ compact, onDone }: { compact?: boolean; onDone
       })}
       {adding ? (
         <form onSubmit={(e) => void add(e)} className={cx("flex flex-col gap-2 rounded-[8px] border border-line", compact ? "p-2" : "p-3")}>
-          <div className="flex items-center gap-2 text-[12.5px] text-muted"><KeyRound size={13} />Passcode of the account to add (or of this one, to unlock)</div>
+          <div className="flex items-center gap-2 text-[12.5px] text-muted"><KeyRound size={13} />{t("Passcode of the account to add (or of this one, to unlock)")}</div>
           <div className="flex gap-2">
-            <input autoFocus type="password" autoComplete="current-password" value={pass} onChange={(e) => { setPass(e.target.value); setWrong(null); }} placeholder="Passcode" aria-invalid={!!wrong}
+            <input autoFocus type="password" autoComplete="current-password" value={pass} onChange={(e) => { setPass(e.target.value); setWrong(null); }} placeholder={t("Passcode")} aria-invalid={!!wrong}
               className="min-w-0 flex-1 rounded-[8px] bg-surface px-3 py-1.5 text-[13px] outline-none focus:border-accent" style={{ border: wrong ? "1.5px solid var(--danger)" : "1px solid var(--border)", letterSpacing: pass ? ".3em" : undefined }} />
-            <Button size="sm" variant="primary" disabled={!pass || busy || !!lockLeft}>{busy ? <Loader2 size={14} className="animate-spin" /> : "Sign in"}</Button>
+            <Button size="sm" variant="primary" disabled={!pass || busy || !!lockLeft}>{busy ? <Loader2 size={14} className="animate-spin" /> : t("Sign in")}</Button>
           </div>
-          {wrong && <span role="alert" className="text-[12.5px] text-bad">{wrong.left != null ? `Wrong passcode · ${wrong.left} ${wrong.left === 1 ? "try" : "tries"} left before a short lockout.` : wrong.error}</span>}
+          {wrong && <span role="alert" className="text-[12.5px] text-bad">{wrong.left != null ? t("Wrong passcode · {n} try left before a short lockout.|Wrong passcode · {n} tries left before a short lockout.", { n: wrong.left }) : t(wrong.error)}</span>}
           {lockLeft > 0 && (
             <div role="alert" className="flex items-center gap-3 rounded-[10px] p-3" style={{ background: "color-mix(in srgb, var(--warning) 9%, transparent)", border: "1px solid color-mix(in srgb, var(--warning) 30%, transparent)" }}>
               <b className="font-mono text-[22px] font-semibold tabular-nums">{String(Math.floor(lockLeft / 60)).padStart(2, "0")}:{String(lockLeft % 60).padStart(2, "0")}</b>
-              <span className="flex-1 text-[12.5px] leading-[18px]">Too many tries from this network. Try again when the timer ends. Next lockout doubles (max 24 h).</span>
+              <span className="flex-1 text-[12.5px] leading-[18px]">{t("Too many tries from this network. Try again when the timer ends. Next lockout doubles (max 24 h).")}</span>
             </div>
           )}
-          <button type="button" onClick={() => setHelp(true)} className="self-start text-[12.5px] text-link hover:underline">Forgot the passcode?</button>
+          <button type="button" onClick={() => setHelp(true)} className="self-start text-[12.5px] text-link hover:underline">{t("Forgot the passcode?")}</button>
           <PasscodeHelp open={help} onClose={() => setHelp(false)} />
-          <label className="flex items-center gap-2 text-[12px] text-muted"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="accent-[var(--accent)]" />Remember on this device (switch later without the passcode)</label>
+          <label className="flex items-center gap-2 text-[12px] text-muted"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="accent-[var(--accent)]" />{t("Remember on this device (switch later without the passcode)")}</label>
         </form>
       ) : (
         <button data-unlock-account className={cx(row, "text-[13px] text-muted hover:bg-surface-2 hover:text-ink")} onClick={() => setAdding(true)}>
           {compact ? <Plus size={15} /> : <span className="flex size-7 items-center justify-center rounded-full border border-dashed border-line"><UserRound size={14} /></span>}
-          {signedIn ? "Add another account" : "Unlock or add an account"}
+          {signedIn ? t("Add another account") : t("Unlock or add an account")}
         </button>
       )}
     </div>

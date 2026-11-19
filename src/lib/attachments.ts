@@ -32,10 +32,43 @@ const CHUNK = 1_500_000; // must match worker CHUNK
 export const MAX_FILE = 100 * 1024 * 1024;
 
 /** Upload queued files in 1.5 MB parts (free-tier D1 storage; idempotent, so a retry just re-sends). */
-export async function uploadPending() {
+/** Settings › Sync (round 6): "Sync files" Always / On Wi-Fi / On open and "Sync on mobile data". Notes always sync. */
+export function filesMayUpload(opening = false): boolean {
+  let x: { syncMobile?: boolean; syncFiles?: "always" | "wifi" | "open" } = {};
+  try { x = JSON.parse(localStorage.getItem("lumen.settings") ?? "{}"); } catch { /* defaults */ }
+  const mode = x.syncFiles ?? "wifi";
+  if (mode === "open" && !opening) return false;
+  const conn = (navigator as Navigator & { connection?: { type?: string; saveData?: boolean } }).connection;
+  const cellular = conn?.type === "cellular" || !!conn?.saveData;
+  if (cellular && (mode === "wifi" || !x.syncMobile)) return false;
+  return true;
+}
+/**
+ * Storage almost full (Lumen 22 §5): uploads pause at 98 % of the Cloudflare limit (4.9 of 5 GB); files stay queued on
+ * this device and go up once there is room again. Notes keep syncing (they are small). Usage is re-read every 10 min.
+ */
+let usage: { at: number; room: number } | null = null;
+let paused = false;
+export const uploadsPaused = () => paused;
+async function storageRoom(): Promise<number> {
+  if (usage && Date.now() - usage.at < 600_000) return usage.room;
+  try {
+    const u = await api<{ limitBytes: number; records: { bytes: number }; files: { bytes: number }; r2: { bytes: number } | null }>("/usage");
+    usage = { at: Date.now(), room: u.limitBytes * 0.98 - (u.records.bytes + u.files.bytes + (u.r2?.bytes ?? 0)) };
+  } catch { usage = { at: Date.now(), room: Infinity }; }
+  return usage.room;
+}
+export async function uploadPending(opening = false) {
   if (!getToken()) return;
-  for (const b of await db.blobs.where("uploaded").equals(0).toArray()) {
+  if (!filesMayUpload(opening)) return;
+  const queued = await db.blobs.where("uploaded").equals(0).toArray();
+  let room = queued.length ? await storageRoom() : Infinity;
+  paused = false;
+  for (const b of queued) {
     const size = b.blob.size;
+    if (size > room) { paused = true; continue; }
+    room -= size;
+    if (usage) usage.room = room;
     const parts = Math.max(1, Math.ceil(size / CHUNK));
     const mime = b.blob.type || "application/octet-stream";
     for (let i = 0; i < parts; i++) {

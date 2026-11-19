@@ -12,6 +12,7 @@ import { aiError, aiOff } from "./chat";
  *   grade     a free answer vs the expected answer (extra.question, extra.expected) → verdict + feedback
  *   socratic  next guiding question (+ 2 hints + answer); with `input`, first grades the reply to the current question
  *   feynman   review the learner's own explanation: clarity score, reasons, quoted gaps / wrong statements / jargon
+ *   ask       Explain: the learner's question about the current step (input, extra.step) → {text}
  *   summary   end of session: what was right, gaps, 3–5 flashcards
  * Off-switch: Settings › AI "all" or "tutor".
  */
@@ -46,13 +47,16 @@ Set "done": true only when the concept has been fully covered.`,
   feynman: `${BASE}
 Feynman technique: the learner explains the concept in their own words. Find: gaps (missing key ideas from the notes), wrong statements (contradict the notes), and jargon they used without explaining.
 For each issue quote the learner's exact words in "quote" (or the missing idea for a gap) and say what to fix in "comment" (with a citation).
-Output: {"score":0-100,"reasons":[{"label":"Accuracy","score":0-100,"note":"…"},{"label":"Completeness","score":0-100,"note":"…"},{"label":"Clarity","score":0-100,"note":"…"}],"issues":[{"quote":"…","kind":"gap"|"wrong"|"jargon","comment":"…"}],"ask":"one sentence asking them to fix the issues and explain again"}
-"score" is the overall clarity score: high only when accurate, complete and in plain words. Be honest and specific, not gushing.`,
+Output: {"score":0-100,"reasons":[{"label":"Accuracy","score":0-100,"note":"…"},{"label":"Completeness","score":0-100,"note":"…"},{"label":"Plain words","score":0-100,"note":"…"},{"label":"Structure","score":0-100,"note":"…"}],"issues":[{"quote":"…","kind":"gap"|"wrong"|"jargon","comment":"…"}],"ask":"one sentence asking them to fix the issues and explain again"}
+"score" is the overall clarity score: high only when accurate, complete, in plain words and well ordered. Each "note" is 2–5 words (e.g. "1 wrong claim", "chain rule missing"). Be honest and specific, not gushing.`,
+  ask: `${BASE}
+The learner is in the middle of a step and asks a question about it. Answer it directly and briefly, grounded in the notes, without moving on to the next step.
+Output: {"text":"…"} (30–120 words of Markdown, with citations).`,
   summary: `${BASE}
 The tutoring session is over. From the transcript, list what the learner got right and their gaps, and write flashcards for the gaps first.
 Output: {"right":["…"],"gaps":["…"],"cards":[{"q":"…","a":"…"}]} with 1–4 items each in right/gaps and 3–5 cards (short question, short answer, no citations).`,
 };
-const MAX_TOKENS: Record<string, number> = { plan: 1400, rephrase: 400, grade: 250, socratic: 450, feynman: 700, summary: 700 };
+const MAX_TOKENS: Record<string, number> = { ask: 450, plan: 1400, rephrase: 400, grade: 250, socratic: 450, feynman: 700, summary: 700 };
 
 interface Source { n: number; title: string; text: string }
 interface Body { op?: string; concept?: string; sources?: Source[]; input?: string; history?: { role: string; text: string }[]; extra?: Record<string, unknown> }
@@ -88,6 +92,7 @@ export default function register(api: Hono<Env>, h: Helpers) {
       op === "grade" ? `Question: ${String(extra.question ?? "").slice(0, 600)}\nExpected answer: ${String(extra.expected ?? "").slice(0, 800)}\nLearner's answer: ${input}` : "",
       op === "socratic" && input ? `Current question: ${String(extra.question ?? "").slice(0, 600)}\nIts answer: ${String(extra.expected ?? "").slice(0, 600)}\nLearner's reply: ${input}` : "",
       op === "feynman" ? `Learner's explanation:\n${input}` : "",
+      op === "ask" ? `Current step:\n${String(extra.step ?? "").slice(0, 1500)}\n\nLearner's question: ${input}` : "",
       `(Answer in ${lang}.)`,
     ].filter(Boolean).join("\n\n===\n");
 

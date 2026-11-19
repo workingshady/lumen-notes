@@ -45,7 +45,10 @@ export function DiagramView({ src, className, toolbar = true }: { src: string; c
     if (!svg) return;
     const max = p.diagramMaxPx || Infinity;
     const f = fitZoom();
-    fitted.current = Math.max(svg.w, svg.h) > max || f < 1;
+    // Settings › Diagrams › Default zoom (round 6): Fit = fitted when it doesn't fit at 100%; 100% = actual size unless
+    // beyond the max render size; Fill = always fitted to the view (may enlarge).
+    const zm = p.diagramZoom ?? "fit";
+    fitted.current = Math.max(svg.w, svg.h) > max || zm === "fill" || (zm === "fit" && f < 1);
     setZ(fitted.current ? f : 1);
     setPan({ x: 0, y: 0 });
   }, [svg]); // eslint-disable-line react-hooks/exhaustive-deps

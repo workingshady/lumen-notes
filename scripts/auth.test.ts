@@ -32,6 +32,10 @@ async function rejects(p: Promise<unknown>, reason: string, msg: string) {
   eq(core.passwordProblem("aaaaaaaaaaaa"), "Pick a less predictable password.", "repeated char");
   eq(core.passwordProblem("a fine long password"), null, "good password");
   ok(core.safeEqual("abc", "abc") && !core.safeEqual("abc", "abd") && !core.safeEqual("abc", "ab"), "safeEqual");
+  eq([core.deletePhrase({ name: "Amir Hakim", email: "amir@nightshift.dev" }), core.deletePhrase({ name: "", email: "Sara.K@uni.edu" }), core.deletePhrase({ name: "  Léa  M", email: "x@y.z" })],
+    ["delete amir", "delete sara.k", "delete léa"], "delete phrase (27N)");
+  eq([core.maskEmail("amir@nightshift.dev"), core.maskEmail("a@b.co")], ["am\u2022\u2022@nightshift.dev", "a\u2022\u2022@b.co"], "masked email");
+  eq(core.TOKEN_TTL.reset, 60 * 60_000, "reset link TTL 1 hour (27J copy)");
 }
 {
   const now = 1_000_000;
@@ -252,7 +256,18 @@ let S = "";
   await call("/auth/magic", { json: { email: "ana@example.com" } });
   const fresh = lastLink("magic");
   await DB.prepare("UPDATE email_tokens SET expires_at = 1 WHERE kind = 'magic' AND used_at IS NULL").run();
-  eq((await call("/auth/magic/confirm", { json: { token: fresh } })).body.error, "This link has expired. Ask for a new one.", "expired magic link");
+  const exp = await call("/auth/magic/confirm", { json: { token: fresh } });
+  eq([exp.body.error, exp.body.code], ["This link has expired. Ask for a new one.", "expired"], "expired magic link (code for the 27L screen)");
+  // 27L "Send a new link": renew from the expired link → a fresh one of the same kind to the same address
+  await DB.prepare("DELETE FROM auth_attempts").run();
+  const n0 = mails.length;
+  const ren = await call("/auth/link/renew", { json: { token: fresh } });
+  eq([ren.status, ren.body.kind, ren.body.email, mails.length], [200, "magic", "an\u2022\u2022@example.com", n0 + 1], "renew expired link");
+  ok(lastLink("magic") && lastLink("magic") !== fresh, "renewed link is new");
+  eq((await call("/auth/link/renew", { json: { token: fresh } })).body.code, "invalid", "an old link renews once");
+  eq((await call("/auth/link/renew", { json: { token: "x".repeat(43) } })).status, 400, "unknown link can't be renewed");
+  ok(core.isSessionToken((await call("/auth/magic/confirm", { json: { token: lastLink("magic") } })).body.token), "renewed link signs in");
+  eq((await call("/auth/magic/confirm", { json: { token: lastLink("magic") } })).body.code, "invalid", "used link → invalid code");
   await DB.prepare("DELETE FROM auth_attempts").run();
   await call("/auth/forgot", { json: { email: "ana@example.com" } });
   const reset = await call("/auth/reset", { json: { token: lastLink("reset"), password: "a brand new password" } });
@@ -275,6 +290,31 @@ let S = "";
   const e = await call("/auth/export", { token: S });
   eq([e.body.format, e.body.items.length, e.body.user.email], ["lumen-account-export", 1, "ana@example.com"], "export");
   ok(!JSON.stringify(e.body).includes("pbkdf2"), "export has no password hash");
+  // 27M "Sign out everywhere" = every other session; this one stays
+  const o1 = (await call("/auth/login", { json: { email: "ana@example.com", password: "another new password" } })).body.token as string;
+  const o2 = (await call("/auth/login", { json: { email: "ana@example.com", password: "another new password" } })).body.token as string;
+  const so = await call("/auth/signout-others", { json: {}, token: S });
+  eq([so.status, so.body.ended], [200, 2], "sign out other sessions");
+  eq([(await call("/auth/me", { token: o1 })).status, (await call("/auth/me", { token: o2 })).status, (await call("/auth/me", { token: S })).status], [401, 401, 200], "others out, this one stays");
+  // change email: link to the NEW address, nothing changes until it is opened
+  await DB.prepare("DELETE FROM auth_attempts").run();
+  eq((await call("/auth/email", { json: { email: "ana.new@example.com", password: "wrong password!!" }, token: S })).status, 401, "email change needs the password");
+  eq((await call("/auth/email", { json: { email: "bo@example.com", password: "another new password" }, token: S })).status, 409, "email taken");
+  eq((await call("/auth/email", { json: { email: "ana@example.com", password: "another new password" }, token: S })).status, 400, "same email refused");
+  const ch = await call("/auth/email", { json: { email: "Ana.New@example.com", password: "another new password" }, token: S });
+  eq([ch.status, ch.body.email], [200, "ana.new@example.com"], "email change requested");
+  ok(mails[mails.length - 1].includes("to ana.new@example.com"), "link goes to the new address");
+  const chTok = /auth=email&token=([\w-]{43})/.exec(mails[mails.length - 1])?.[1] ?? "";
+  eq((await call("/auth/me", { token: S })).body.user.email, "ana@example.com", "unchanged until confirmed");
+  const cf = await call("/auth/email/confirm", { json: { token: chTok } });
+  eq([cf.status, cf.body.user?.email, cf.body.user?.emailVerified], [200, "ana.new@example.com", true], "email changed");
+  eq((await call("/auth/email/confirm", { json: { token: chTok } })).body.code, "invalid", "email link single use");
+  eq((await call("/auth/login", { json: { email: "ana.new@example.com", password: "another new password" } })).status, 200, "sign in with the new email");
+  await call("/auth/email", { json: { email: "ana@example.com", password: "another new password" }, token: S });
+  const back = /auth=email&token=([\w-]{43})/.exec(mails[mails.length - 1])?.[1] ?? "";
+  await DB.prepare("UPDATE email_changes SET expires_at = 1 WHERE used_at IS NULL").run();
+  eq((await call("/auth/email/confirm", { json: { token: back } })).body.code, "expired", "expired email link");
+  await DB.prepare("UPDATE users SET email = 'ana@example.com' WHERE email = 'ana.new@example.com'").run();
   eq((await call("/auth/signout-all", { json: {}, token: S })).status, 200, "sign out everywhere");
   eq((await call("/auth/me", { token: S })).status, 401, "signed out");
 }
@@ -340,8 +380,9 @@ let S = "";
     eq([cy.body.user?.hasPassword, cy.body.user?.emailVerified], [false, true], "unverified password dropped when Google proves the email");
     // delete account
     const tok = ex.body.token as string;
-    eq((await call("/auth/delete", { json: { confirm: "wrong@example.com" }, token: tok })).status, 400, "delete needs typed email");
-    eq((await call("/auth/delete", { json: { confirm: "ana@example.com" }, token: tok })).status, 200, "delete");
+    eq((await call("/auth/delete", { json: { confirm: "ana@example.com" }, token: tok })).status, 400, "delete needs the typed phrase");
+    eq((await call("/auth/delete", { json: { confirm: "delete an" }, token: tok })).status, 400, "partial phrase refused (button stays disabled in the UI)");
+    eq((await call("/auth/delete", { json: { confirm: "Delete Ana" }, token: tok })).status, 200, "delete");
     eq((await DB.prepare("SELECT COUNT(*) n FROM user_items WHERE uid NOT IN (SELECT id FROM users)").first<{ n: number }>())!.n, 0, "user rows gone");
     ok(!(await DB.prepare("SELECT 1 FROM users WHERE email = 'ana@example.com'").first()), "user gone");
   } finally { globalThis.fetch = realFetch; }

@@ -41,7 +41,9 @@ const T = {
   linkExpired: "This link has expired. Ask for a new one.",
   wrongCurrent: "Your current password is wrong.",
   lastMethod: "Add a password first, so you can still sign in.",
-  confirmMismatch: "Type your email exactly to confirm.",
+  confirmMismatch: "Type the phrase exactly to confirm.",
+  emailTaken: "That email is already used by another account.",
+  sameEmail: "That's already your email.",
   badProfile: "Some profile fields aren't valid.",
 } as const;
 
@@ -136,7 +138,7 @@ async function createSession(c: C, userId: string, method: string, body: { devic
   const token = core.newSessionToken();
   const now = Date.now();
   await udb(c).prepare("INSERT INTO sessions (id, user_id, device, platform, method, created_at, last_seen, expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?7)")
-    .bind(await core.sha256hex(token), userId, clean(body.device) || "Browser", clean(body.platform, 20), method, now, now + core.SESSION_TTL).run();
+    .bind(await core.sha256hex(token), userId, clean(body.device) || "Browser", clean(body.platform, 40), method, now, now + core.SESSION_TTL).run();
   return token;
 }
 const bearer = (c: C) => { const h = c.req.header("authorization") ?? ""; return h.startsWith("Bearer ") ? h.slice(7) : ""; };
@@ -165,8 +167,11 @@ async function issueToken(c: C, kind: core.TokenKind, u: UserRow) {
   return raw;
 }
 /** Use a one-time token: checks kind/expiry/used, marks it used, returns the user. */
+const RAW_TOKEN = /^[A-Za-z0-9_-]{43}$/;
+/** Error body for a link that can't be used: `code` lets the app show the right screen (27L "This link has expired"). */
+const linkError = (c: C, err: string) => c.json({ error: err, code: err === T.linkExpired ? "expired" : "invalid" }, 400);
 async function consumeToken(c: C, kind: core.TokenKind, raw: unknown): Promise<{ u: UserRow } | { err: string }> {
-  if (typeof raw !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(raw)) return { err: T.linkInvalid };
+  if (typeof raw !== "string" || !RAW_TOKEN.test(raw)) return { err: T.linkInvalid };
   const db = udb(c);
   const id = await core.sha256hex(raw);
   const now = Date.now();
@@ -180,7 +185,7 @@ async function consumeToken(c: C, kind: core.TokenKind, raw: unknown): Promise<{
   if (!u || u.email !== row!.email) return { err: T.linkInvalid }; // email changed since the link was sent
   return { u };
 }
-async function sendMail(c: C, kind: MailKind, u: UserRow) {
+async function sendMail(c: C, kind: Exclude<MailKind, "email">, u: UserRow) {
   const mailer = pickMailer(env(c), c.req.url);
   if (!mailer) return "unavailable" as const;
   const raw = await issueToken(c, kind, u);
@@ -241,7 +246,7 @@ export function authGate() {
     if (c.req.method === "POST" && path === "/api/sync") return userSync(c, me.u.id);
     if (c.req.method === "POST" && path === "/api/access/seen") {
       const b = await c.req.json<{ name?: string; platform?: string }>().catch(() => ({} as { name?: string; platform?: string }));
-      await udb(c).prepare("UPDATE sessions SET device = ?1, platform = ?2, last_seen = ?3 WHERE id = ?4").bind(clean(b.name) || me.s.device, clean(b.platform, 20) || me.s.platform, Date.now(), me.s.id).run();
+      await udb(c).prepare("UPDATE sessions SET device = ?1, platform = ?2, last_seen = ?3 WHERE id = ?4").bind(clean(b.name) || me.s.device, clean(b.platform, 40) || me.s.platform, Date.now(), me.s.id).run();
       return c.json({ revoked: false });
     }
     if (c.req.method === "GET" && PUBLIC_GET.test(path)) return next();
@@ -335,7 +340,7 @@ export default function register(api: Hono<Env>, _h: Helpers) {
   });
 
   /** Ask for an email (verify again / magic link / reset). Always the same answer for known and unknown emails. */
-  const mailRoute = (kind: MailKind) => async (c: C) => {
+  const mailRoute = (kind: Exclude<MailKind, "email">) => async (c: C) => {
     const b = await body(c);
     const db = udb(c), now = Date.now();
     const email = core.normEmail(b.email);
@@ -358,7 +363,7 @@ export default function register(api: Hono<Env>, _h: Helpers) {
     api.post(`/auth/${kind}/confirm`, async (c) => {
       const b = await body(c);
       const r = await consumeToken(c, kind, b.token);
-      if ("err" in r) return c.json({ error: r.err }, 400);
+      if ("err" in r) return linkError(c, r.err);
       await udb(c).prepare("UPDATE users SET email_verified = 1, updated_at = ?1 WHERE id = ?2").bind(Date.now(), r.u.id).run();
       if (kind === "verify") await audit(c, r.u.id, "email-verified");
       return signedIn(c, { ...r.u, email_verified: 1 }, kind === "magic" ? "magic" : "email", b);
@@ -369,7 +374,7 @@ export default function register(api: Hono<Env>, _h: Helpers) {
     const pwErr = core.passwordProblem(b.password);
     if (pwErr) return c.json({ error: pwErr }, 400);
     const r = await consumeToken(c, "reset", b.token);
-    if ("err" in r) return c.json({ error: r.err }, 400);
+    if ("err" in r) return linkError(c, r.err);
     const db = udb(c), now = Date.now();
     // New password signs every device out (a reset usually means the old one leaked); the email is proven.
     await db.batch([
@@ -378,6 +383,35 @@ export default function register(api: Hono<Env>, _h: Helpers) {
     ]);
     await audit(c, r.u.id, "password-reset");
     return signedIn(c, { ...r.u, email_verified: 1, password_hash: "set" }, "password", b);
+  });
+
+  /**
+   * "Send a new link" from an expired email link (27L). The old link proves the mailbox received it, so a fresh one of
+   * the same kind goes to the same address. Only unused links whose account still has that email qualify; the old
+   * link is burnt (it can't be renewed twice). Answers with the kind and a masked address for the confirmation screen.
+   */
+  api.post("/auth/link/renew", async (c) => {
+    const b = await body(c);
+    const db = udb(c), now = Date.now();
+    if (typeof b.token !== "string" || !RAW_TOKEN.test(b.token)) return linkError(c, T.linkInvalid);
+    if (!pickMailer(env(c), c.req.url)) return c.json({ error: T.noMail, mail: "unavailable" }, 503);
+    const ipKey = await clientKey(c, "send-ip", ipOf(c));
+    const wait0 = await lockedFor(db, [ipKey], now);
+    if (wait0) return tooMany(c, wait0);
+    const id = await core.sha256hex(b.token);
+    const row = await db.prepare("SELECT kind, user_id, email, used_at FROM email_tokens WHERE id = ?1").bind(id).first<{ kind: core.TokenKind; user_id: string; email: string; used_at: number | null }>();
+    if (!row || row.used_at || !["verify", "magic", "reset"].includes(row.kind)) { await strike(db, [ipKey], now); return linkError(c, T.linkInvalid); }
+    const u = await userById(db, row.user_id);
+    if (!u || u.email !== row.email) return linkError(c, T.linkInvalid);
+    const keys = [ipKey, await clientKey(c, "send-email", u.email)];
+    const wait = await lockedFor(db, keys, now);
+    if (wait) return tooMany(c, wait);
+    await strike(db, keys, now);
+    const upd = await db.prepare("UPDATE email_tokens SET used_at = ?1 WHERE id = ?2 AND used_at IS NULL").bind(now, id).run();
+    if (!upd.meta.changes) return linkError(c, T.linkInvalid);
+    const kind = row.kind as "verify" | "magic" | "reset";
+    const mail = kind === "verify" && u.email_verified ? "sent" : await sendMail(c, kind, u);
+    return c.json({ ok: true, mail, kind, email: core.maskEmail(u.email) });
   });
 
   // ---- Google
@@ -470,7 +504,7 @@ export default function register(api: Hono<Env>, _h: Helpers) {
   api.post("/auth/exchange", async (c) => {
     const b = await body(c);
     const r = await consumeToken(c, "handoff", b.code);
-    if ("err" in r) return c.json({ error: r.err }, 400);
+    if ("err" in r) return linkError(c, r.err);
     return signedIn(c, r.u, "google", b);
   });
 
@@ -555,6 +589,71 @@ export default function register(api: Hono<Env>, _h: Helpers) {
     await audit(c, m.u.id, "signout-all");
     return c.json({ ok: true });
   });
+  /** "Sign out everywhere" on the profile (27M): every session of this user except the one making the request. */
+  api.post("/auth/signout-others", async (c) => {
+    const m = await me(c);
+    if (!m) return c.json({ error: T.signedOut }, 401);
+    const r = await udb(c).prepare("DELETE FROM sessions WHERE user_id = ?1 AND id != ?2").bind(m.u.id, m.s.id).run();
+    await audit(c, m.u.id, "signout-others");
+    return c.json({ ok: true, ended: r.meta.changes ?? 0 });
+  });
+
+  /**
+   * Change the account email (profile > Email > Change). POST {email, password?}: the current password is required
+   * when the account has one. A one-time link goes to the NEW address (/?auth=email&token=...); nothing changes until
+   * it is opened. POST /auth/email/confirm {token} moves the account (works on any device, no session needed).
+   */
+  api.post("/auth/email", async (c) => {
+    const m = await me(c);
+    if (!m) return c.json({ error: T.signedOut }, 401);
+    const b = await body(c);
+    const db = udb(c), now = Date.now();
+    const email = core.normEmail(b.email);
+    if (!core.validEmail(email)) return c.json({ error: T.badEmail }, 400);
+    if (email === m.u.email) return c.json({ error: T.sameEmail }, 400);
+    const mailer = pickMailer(env(c), c.req.url);
+    if (!mailer) return c.json({ error: T.noMail, mail: "unavailable" }, 503);
+    const keys = [await clientKey(c, "pw-user", m.u.id)];
+    const wait = await lockedFor(db, keys, now);
+    if (wait) return tooMany(c, wait);
+    if (m.u.password_hash && !(await core.verifyPassword(String(b.password ?? ""), m.u.password_hash)).ok) {
+      const r = await strike(db, keys, now);
+      return r.retryAfterSec ? tooMany(c, r.retryAfterSec) : c.json({ error: T.wrongCurrent, attemptsLeft: r.left }, 401);
+    }
+    const sendKey = [await clientKey(c, "send-email", email)];
+    const wait2 = await lockedFor(db, sendKey, now);
+    if (wait2) return tooMany(c, wait2);
+    await strike(db, sendKey, now); // emails to one address are limited too
+    if (await userByEmail(db, email)) return c.json({ error: T.emailTaken }, 409);
+    const raw = core.randomToken(32);
+    await db.batch([
+      db.prepare("DELETE FROM email_changes WHERE user_id = ?1 AND used_at IS NULL").bind(m.u.id), // only the latest request counts
+      db.prepare("INSERT INTO email_changes (id, user_id, old_email, new_email, created_at, expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
+        .bind(await core.sha256hex(raw), m.u.id, m.u.email, email, now, now + core.EMAIL_CHANGE_TTL),
+    ]);
+    await mailer.send(composeMail("email", email, `${origin(c)}/?auth=email&token=${raw}`));
+    await audit(c, m.u.id, "email-change-requested");
+    return c.json({ ok: true, mail: "sent", email });
+  });
+  api.post("/auth/email/confirm", async (c) => {
+    const b = await body(c);
+    if (typeof b.token !== "string" || !RAW_TOKEN.test(b.token)) return linkError(c, T.linkInvalid);
+    const db = udb(c), now = Date.now(), id = await core.sha256hex(b.token);
+    const row = await db.prepare("SELECT * FROM email_changes WHERE id = ?1").bind(id).first<{ user_id: string; old_email: string; new_email: string; expires_at: number; used_at: number | null }>();
+    if (!row || row.used_at) return linkError(c, T.linkInvalid);
+    if (row.expires_at <= now) return linkError(c, T.linkExpired);
+    const upd = await db.prepare("UPDATE email_changes SET used_at = ?1 WHERE id = ?2 AND used_at IS NULL").bind(now, id).run();
+    if (!upd.meta.changes) return linkError(c, T.linkInvalid);
+    const u = await userById(db, row.user_id);
+    if (!u || u.email !== row.old_email) return linkError(c, T.linkInvalid);
+    if (await userByEmail(db, row.new_email)) return c.json({ error: T.emailTaken }, 409);
+    await db.batch([
+      db.prepare("UPDATE users SET email = ?1, email_verified = 1, updated_at = ?2 WHERE id = ?3").bind(row.new_email, now, u.id),
+      db.prepare("UPDATE email_tokens SET used_at = ?1 WHERE user_id = ?2 AND used_at IS NULL").bind(now, u.id), // links sent to the old address die
+    ]);
+    await audit(c, u.id, "email-changed");
+    return c.json({ ok: true, user: await publicUser(db, { ...u, email: row.new_email, email_verified: 1 }) });
+  });
 
   /** Everything stored for this user, as one JSON file (profile, sign-in methods, devices, notes and other records). */
   api.get("/auth/export", async (c) => {
@@ -574,18 +673,19 @@ export default function register(api: Hono<Env>, _h: Helpers) {
     };
     return c.body(JSON.stringify(out, null, 2), 200, { "content-type": "application/json", "content-disposition": `attachment; filename="lumen-account-${new Date().toISOString().slice(0, 10)}.json"`, "cache-control": "no-store" });
   });
-  /** Delete the account and all of its data. The client offers the export first; {confirm} must equal the email. */
+  /** Delete the account and all of its data. The client offers the export first; {confirm} = "delete <first name>" (27N). */
   api.post("/auth/delete", async (c) => {
     const m = await me(c);
     if (!m) return c.json({ error: T.signedOut }, 401);
     const b = await body(c);
-    if (core.normEmail(b.confirm) !== m.u.email) return c.json({ error: T.confirmMismatch }, 400);
+    if (String(b.confirm ?? "").trim().toLowerCase().replace(/\s+/g, " ") !== core.deletePhrase(m.u)) return c.json({ error: T.confirmMismatch }, 400);
     const db = udb(c), id = m.u.id;
     await db.batch([
       db.prepare("DELETE FROM user_items WHERE uid = ?1").bind(id),
       db.prepare("DELETE FROM sessions WHERE user_id = ?1").bind(id),
       db.prepare("DELETE FROM identities WHERE user_id = ?1").bind(id),
       db.prepare("DELETE FROM email_tokens WHERE user_id = ?1").bind(id),
+      db.prepare("DELETE FROM email_changes WHERE user_id = ?1").bind(id),
       db.prepare("UPDATE audit SET user_id = NULL WHERE user_id = ?1").bind(id),
       db.prepare("DELETE FROM users WHERE id = ?1").bind(id),
     ]);

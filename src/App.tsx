@@ -1,4 +1,5 @@
 import { CircleAlert, CircleCheck, CloudOff, Copy, FileText, GitMerge, Globe, History, House, Info, LayoutGrid, Layers, Link2, Menu, Plus, Trash2 } from "lucide-react";
+import { FirstSyncCard } from "./components/first-sync"; // Lumen 22: first sync on a new device
 import { useEffect, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { ConflictSheet } from "./components/ws-conflict";
@@ -12,6 +13,7 @@ import { useAllPathMoments, useStreakMoment } from "./components/Moments";
 import { Sidebar } from "./components/Sidebar";
 import { Skeleton } from "./components/Skeleton";
 import { NoteList } from "./components/NoteList";
+import { TagMenuHost, TagPage } from "./components/TagPage";
 import { NoteView } from "./components/NoteView";
 import { Palette } from "./components/Palette";
 import { NewMenuHost, openNewMenu } from "./components/NewMenu";
@@ -35,6 +37,7 @@ const KanbanView = lazy(() => Productivity().then((m) => ({ default: m.KanbanVie
 const CalendarView = lazy(() => Productivity().then((m) => ({ default: m.CalendarView })));
 const TableView = lazy(() => Productivity().then((m) => ({ default: m.TableView })));
 const ReviewView = lazy(() => Productivity().then((m) => ({ default: m.ReviewView })));
+const FoldersView = lazy(() => import("./views/FoldersView").then((m) => ({ default: m.FoldersView })));
 const TrashView = lazy(() => Productivity().then((m) => ({ default: m.TrashView })));
 const PathsList = lazy(() => import("./views/path-list").then((m) => ({ default: m.PathsList })));
 const TodayView = lazy(() => import("./views/TodayView").then((m) => ({ default: m.TodayView })));
@@ -186,7 +189,8 @@ function Workspace() {
   }, []);
 
   const notesView = ui.view === "notes";
-  const showList = notesView && (wide ? ui.list : !note);
+  // the tag page (R6-30M) lists the tag's notes itself, so the list pane steps aside until a note is opened
+  const showList = notesView && (wide ? ui.list && !(ui.tag && !note && !ui.filter) : !note);
   const showNote = notesView && (wide || !!note);
 
   let main: React.ReactNode = null;
@@ -202,6 +206,7 @@ function Workspace() {
   else if (ui.view === "space") main = <SpaceView />;
   else if (ui.view === "settings") main = <SettingsView />;
   else if (ui.view === "trash") main = <TrashView />;
+  else if (ui.view === "folders") main = <FoldersView />;
 
   const inNote = notesView && !!note && !wide;
   setRailAuto(autoRail(ui, note, ui.view === "space" ? v.spaceMap.get(ui.spaceId) : undefined));
@@ -223,7 +228,7 @@ function Workspace() {
         <div className="flex min-h-0 flex-1">
           {showList && (
             // list pane: 320 px (ScreenWorkspace); smart-folder lists are drawn 360 px (Lumen 20b · D7), from 1200 px up so the note keeps room
-            <div className={cx("min-h-0 border-e border-line bg-bg", wide ? (ui.filter?.startsWith("smart:") && !tablet ? "w-[360px] shrink-0" : "w-[320px] shrink-0") : "flex-1")}>
+            <div className={cx("min-h-0 border-e border-line bg-bg", wide ? (ui.filter?.startsWith("smart:") && !tablet ? "w-[360px] shrink-0" : "w-[330px] shrink-0") : "flex-1")}>
               <NoteList />
             </div>
           )}
@@ -242,7 +247,9 @@ function Workspace() {
       </div>
 
       <Palette />
+      <FirstSyncCard />
       <NewMenuHost />
+      <TagMenuHost />
       <NewSpaceDialog />
       <ImportExportDialog />
       <DiagramExport />
@@ -264,6 +271,7 @@ function Workspace() {
 function PickNote() {
   const ui = useUI();
   if (ui.filter === "paths") return <Suspense fallback={null}><PathsList /></Suspense>;
+  if (ui.tag && !ui.filter) return <TagPage tag={ui.tag} />;
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2.5 px-10 text-center">
       <span className="text-[16px] font-semibold">{t("Pick a note")}</span>

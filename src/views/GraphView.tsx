@@ -15,6 +15,9 @@ import { cx, STATUS_COLOR } from "../components/ui";
 import { SpaceIcon } from "../components/SpaceIcon";
 import { EdgeSeg, isTidyKey, LineSample, Seg, Switch, TidyBanner, TidyButton, type EdgeShape, type TidyStats } from "../components/graph-display";
 import { fmtNum, t, tk } from "../lib/i18n";
+import { reduceEffects, reportDrawTime, setScale, useScale } from "../lib/scale-prefs";
+import { BigBar, BIG_PAL, expandFor, FilterFirst, GroupedGraph, HairDots, TooBigBanner, TreeGraph, buildGroups, type BigMode, type Drill } from "./graph-big";
+import { Glyph } from "../components/Glyph";
 
 /** Learning status / note type / colour-by labels (the ids are stored values). */
 const KEY_NAME: Record<string, string> = { todo: tk("Todo"), learning: tk("Learning"), review: tk("Review"), mastered: tk("Mastered"), none: tk("No status"), moc: tk("Map of content"), folder: tk("Folder"), type: tk("Type"), status: tk("Status"), compact: tk("Compact"), roomy: tk("Roomy") };
@@ -125,11 +128,39 @@ export function GraphView({ localTo }: { localTo?: string }) {
   const embedded = !!localTo;
   const viewKey = local ? `local:${center}:${depth}` : `global:${allSpaces || ui.spaceId === "all" ? "all" : ui.spaceId}`;
   const api = useRef<GraphApi | null>(null);
+  // Big graphs (Lumen 32 R6-32A–C): above `graphAsk` notes ask first; Full · Grouped · Tree · Local · Filter.
+  const scale = useScale();
+  const spaceKey = allSpaces || ui.spaceId === "all" ? "all" : ui.spaceId;
+  const [bigPick, setBigPick] = useState<BigMode | null>(null);
+  const [drill, setDrill] = useState<Drill>([]);
+  const [expand, setExpand] = useState<Set<string>>(() => new Set());
+  const [slowNote, setSlowNote] = useState(false);
 
   // Connection checks over the notes in scope (orphans, broken [[links]]).
   const scopeNotes = useMemo(() => v.notes.filter((n) => allSpaces || ui.spaceId === "all" || n.spaceId === ui.spaceId), [v, allSpaces, ui.spaceId]);
   const checks = useMemo(() => (open ? vaultChecks(scopeNotes, v.byTitle, v.outlinks, v.backlinks) : null), [open, scopeNotes, v]);
+  const big = !embedded && scopeNotes.length > scale.graphAsk;
+  const remembered = scale.graphChoice[spaceKey] ?? (scale.graphDefault !== "ask" ? scale.graphDefault : null);
+  const bigMode: BigMode = local ? "local" : bigPick && bigPick !== "local" ? bigPick : remembered ?? "full";
+  const asking = big && !local && !bigPick && !remembered;
+  useEffect(() => { setBigPick(null); setDrill([]); }, [spaceKey]);
+  const scopeLinks = useMemo(() => { if (!big) return 0; const ids = new Set(scopeNotes.map((n) => n.id)); let k = 0; for (const n of scopeNotes) for (const o of v.outlinks.get(n.id) ?? []) if (ids.has(o)) k++; return k; }, [big, scopeNotes, v.outlinks]);
+  const groupCount = useMemo(() => (big ? buildGroups(scopeNotes, v, [], spaceKey === "all").length : 0), [big, scopeNotes, v, spaceKey]);
+  const pickBig = (m: BigMode, remember = false) => {
+    setBigPick(m); setSelId(null);
+    if (remember && m !== "local" && m !== "filter") setScale({ graphChoice: { ...scale.graphChoice, [spaceKey]: m } });
+    if (m === "local") {
+      const deg = (id: string) => (v.outlinks.get(id)?.length ?? 0) + (v.backlinks.get(id)?.length ?? 0);
+      const id = selId ?? center ?? [...scopeNotes].sort((a, b) => deg(b.id) - deg(a.id))[0]?.id;
+      if (id) showLocal(id);
+      return;
+    }
+    setLocal(false); setFocusId(null);
+    if (m === "full") setShowAll(true);
+    if (m === "filter") { setShowAll(true); if (!q) setQ(""); }
+  };
 
+  const filterEmpty = big && bigMode === "filter" && !q.trim();
   const graph = useMemo(() => {
     const pq = parseQuery(q);
     const f = matcher(pq, v.folderMap, v.spaceMap);
@@ -145,7 +176,7 @@ export function GraphView({ localTo }: { localTo?: string }) {
     const keyOf = (n: Note) => colorBy === "type" ? n.type : colorBy === "status" ? n.status ?? "none"
       : n.type === "moc" ? "@moc" : n.type === "journal" ? "@journal" : top(n.folderId)?.id ?? "@root";
     const tagsOn = disp.tagNodes || disp.shared;
-    let notes = v.notes.filter((n) => (allSpaces || ui.spaceId === "all" || local || n.spaceId === ui.spaceId) && f(n) && (!text || n.title.toLowerCase().includes(text)) && (journal || n.type !== "journal"));
+    let notes = filterEmpty ? [] : v.notes.filter((n) => (allSpaces || ui.spaceId === "all" || local || n.spaceId === ui.spaceId) && f(n) && (!text || n.title.toLowerCase().includes(text)) && (journal || n.type !== "journal"));
     if (local && center) {
       const keep = new Set([center]);
       let frontier = [center];
@@ -166,7 +197,7 @@ export function GraphView({ localTo }: { localTo?: string }) {
       notes = v.notes.filter((n) => keep.has(n.id) && (journal || n.type !== "journal" || n.id === center));
     }
     // 700+ notes in the global graph: start with the 300 most linked (lib/big-vault.ts), the rest on "Show all".
-    const prog = local ? null : graphProgressive(notes.map((n) => n.id), (id) => (v.outlinks.get(id)?.length ?? 0) + (v.backlinks.get(id)?.length ?? 0), showAll);
+    const prog = local ? null : graphProgressive(notes.map((n) => n.id), (id) => (v.outlinks.get(id)?.length ?? 0) + (v.backlinks.get(id)?.length ?? 0), showAll || big);
     if (prog?.progressive) { const keep = new Set(prog.ids); notes = notes.filter((n) => keep.has(n.id)); }
     // Legend over the visible notes (before isolating, so every chip stays tappable).
     const count = new Map<string, number>();
@@ -210,8 +241,18 @@ export function GraphView({ localTo }: { localTo?: string }) {
     const fz = FROZEN.get(viewKey);
     if (fz) for (const n of final) { const p = fz.pos.get(n.id); if (p) { n.x = n.fx = p.x; n.y = n.fy = p.y; } }
     return { nodes: final, links: links.filter((l) => finalIds.has(l.source as string) && finalIds.has(l.target as string)), legend, notes: notes.length, tagEdges, sharedEdges, progress: prog?.progressive ? prog.label : null };
-  }, [v, q, disp.tagNodes, disp.shared, orphans, journal, colorBy, local, depth, center, ui.spaceId, allSpaces, iso, showAll]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [v, q, disp.tagNodes, disp.shared, orphans, journal, colorBy, local, depth, center, ui.spaceId, allSpaces, iso, showAll, filterEmpty, big]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const hairColor = useMemo(() => {
+    const tops = new Map<string, number>();
+    return (n: Note) => {
+      let f = n.folderId ? v.folderMap.get(n.folderId) : undefined;
+      for (let i = 0; f?.parentId && i < 64; i++) f = v.folderMap.get(f.parentId) ?? undefined;
+      if (!f) return "#9AA0AA";
+      if (!tops.has(f.id)) tops.set(f.id, tops.size);
+      return f.color ?? BIG_PAL[tops.get(f.id)! % BIG_PAL.length];
+    };
+  }, [v.folderMap]);
   const sel = selId ? graph.nodes.find((n) => n.id === selId) ?? null : null;
   const selNote = sel?.note;
   const folderOf = (n: Note) => (n.folderId ? v.folderMap.get(n.folderId)?.name : v.spaceMap.get(n.spaceId)?.name) ?? "";
@@ -435,9 +476,30 @@ export function GraphView({ localTo }: { localTo?: string }) {
   );
 
   return (
-    <div ref={host} className={cx("overflow-hidden bg-bg text-[13px]", phone && !embedded ? "fixed inset-0 z-30 flex flex-col" : "relative h-full")}>
+    <div ref={host} className={cx("overflow-hidden bg-bg text-[13px]", phone && !embedded ? "fixed inset-0 z-30 flex flex-col" : big ? "relative flex h-full flex-col" : "relative h-full")}>
+      {big && (
+        <BigBar mode={bigMode} onMode={(m) => pickBig(m)} phone={phone} glyph={bigMode === "grouped" ? "cluster" : bigMode === "tree" ? "tree" : "graph"}
+          title={bigMode === "grouped" ? t("Graph · grouped") : bigMode === "tree" ? t("Graph · tree") : t("Graph")}
+          sub={bigMode === "grouped" ? t("{n} notes in {g} groups", { n: scopeNotes.length, g: groupCount }) : bigMode === "tree" ? t("Folders → notes, branches fold")
+            : `${spaceKey === "all" ? t("All spaces") : space?.name ?? ""} · ${t("{n} note|{n} notes", { n: scopeNotes.length })} · ${t("{n} link|{n} links", { n: scopeLinks })}`}
+          lead={phone ? <button aria-label={t("Back")} onClick={leave} className="-ml-1 flex size-9 items-center justify-center"><ArrowLeft size={18} /></button> : undefined} />
+      )}
+      {big && (asking || bigMode === "grouped" || bigMode === "tree") ? (
+        asking ? (
+          <div className="relative min-h-0 flex-1 overflow-hidden" style={{ backgroundImage: "radial-gradient(color-mix(in srgb,var(--muted) 16%,transparent) 1px,transparent 1.2px)", backgroundSize: "22px 22px" }}>
+            <HairDots notes={scopeNotes} colorOf={hairColor} />
+            <TooBigBanner count={scopeNotes.length} groups={groupCount} phone={phone} onPick={(m, r) => pickBig(m, r)} />
+          </div>
+        ) : bigMode === "grouped" ? (
+          <GroupedGraph notes={scopeNotes} v={v} allScope={spaceKey === "all"} drill={drill} setDrill={setDrill} phone={phone}
+            onOpenLeaf={(g) => { setBigPick("filter"); setShowAll(true); setQ(g.kind === "folder" ? `in:"${g.name}"` : g.kind === "space" ? `space:"${g.name}"` : ""); }}
+            onAsTree={(g) => { setExpand((s) => new Set([...s, ...expandFor(g, v.folderMap, spaceKey === "all")])); setBigPick("tree"); }} />
+        ) : (
+          <TreeGraph notes={scopeNotes} v={v} allScope={spaceKey === "all"} rootName={spaceKey === "all" ? t("All spaces") : space?.name ?? t("Notes")} phone={phone} expand={expand} setExpand={setExpand} pageSize={scale.pageSize} />
+        )
+      ) : (<>
       {/* Phone header: back · Graph · Global / Local · display */}
-      {phone && !embedded && (
+      {phone && !embedded && !big && (
         <div className="safe-t relative z-20 flex h-14 shrink-0 items-center gap-2 px-2">
           <button aria-label={t("Back")} onClick={leave} className="flex size-11 items-center justify-center"><ArrowLeft size={20} /></button>
           <span className="flex-1 text-[17px] font-[650]">{t("Graph")}</span>
@@ -448,15 +510,24 @@ export function GraphView({ localTo }: { localTo?: string }) {
           <button aria-label={t("Graph display settings")} onClick={togglePanel} className={cx("flex size-11 items-center justify-center", open && "text-accent")}><SlidersHorizontal size={20} /></button>
         </div>
       )}
-      <div className={cx("relative overflow-hidden", phone && !embedded ? "min-h-0 flex-1" : "h-full")}>
-        <Canvas2D nodes={graph.nodes} links={graph.links} focus={local ? center : null} selected={selId} onSelect={(n) => setSelId(n?.id ?? null)} onSelectedPos={setSelPos}
+      <div className={cx("relative overflow-hidden", (phone && !embedded) || big ? "min-h-0 flex-1" : "h-full")}>
+        {big && bigMode === "filter" && <FilterFirst q={q} setQ={setQ} count={graph.notes} phone={phone} />}
+        {slowNote && (
+          <div role="status" className="absolute left-1/2 top-3 z-20 flex max-w-[calc(100%-24px)] -translate-x-1/2 flex-col gap-1 rounded-[10px] border border-line bg-surface-2 px-3 py-2 text-[12.5px] shadow-[0_12px_30px_rgba(0,0,0,.35)]">
+            <span className="flex items-center gap-2"><Glyph name="c-info" size={14} color="var(--info)" /><span className="flex-1">{t("Simple view: no animation, labels on zoom")}</span>
+              <button onClick={() => { setSlowNote(false); go("settings"); }} className="font-medium text-link">{t("Change")}</button>
+              <button aria-label={t("Close")} onClick={() => setSlowNote(false)} className="text-muted hover:text-ink"><X size={13} /></button></span>
+            <span className="text-[11.5px] text-muted">{t("Also in Settings › Appearance › Advanced · Reduce effects.")}</span>
+          </div>
+        )}
+        <Canvas2D onSlow={() => setSlowNote(true)} labelTop={big ? 30 : 0} nodes={graph.nodes} links={graph.links} focus={local ? center : null} selected={selId} onSelect={(n) => setSelId(n?.id ?? null)} onSelectedPos={setSelPos}
           controls={!embedded && open && !phone} fitKey={`${local}:${center}:${depth}:${iso}`} insetRight={open && !phone ? 300 : 0} insetBottom={phone && selId ? 250 : 0}
           edgeShape={disp.edges} showLinks={disp.links} dim={disp.dim} roomy={disp.spacing === "roomy"} api={api} onPin={onPin} pinned={(id) => !!FROZEN.get(viewKey)?.pinned.has(id)} />
 
         {/* Desktop / tablet header */}
         {!embedded && !phone && (
           <div className="absolute left-5 top-4 z-10 flex items-center gap-2.5">
-            <span className="text-[16px] font-[650]">{t("Graph")}</span>
+            {!big && <span className="text-[16px] font-[650]">{t("Graph")}</span>}
             {ui.spaceId !== "all" && !local && width >= 1100 && (
               <div className="relative">
                 <button onClick={() => setSpaceMenu((m) => !m)} className="flex h-7 items-center gap-1.5 rounded-[8px] border border-line bg-surface px-2.5 text-muted hover:text-ink">
@@ -477,9 +548,9 @@ export function GraphView({ localTo }: { localTo?: string }) {
               </div>
             )}
             {local && <button onClick={() => { setLocal(false); setFocusId(null); }} className="flex h-7 items-center gap-1.5 rounded-[8px] border border-line bg-surface px-2.5 text-muted hover:text-ink"><Locate size={12} /> {t("Local · {n}", { n: depth })}<X size={12} /></button>}
-            <span className="text-[12px] text-muted">{t("{n} note|{n} notes", { n: graph.notes })} · {t("{n} link|{n} links", { n: linkCount })}{tagsOn ? ` · ${t("{n} tag link|{n} tag links", { n: graph.tagEdges + graph.sharedEdges })}` : ""}</span>
+            <span className={cx("text-[12px] text-muted", big && !local && bigMode !== "filter" && "hidden")}>{t("{n} note|{n} notes", { n: graph.notes })} · {t("{n} link|{n} links", { n: linkCount })}{tagsOn ? ` · ${t("{n} tag link|{n} tag links", { n: graph.tagEdges + graph.sharedEdges })}` : ""}</span>
             {graph.progress && <span className="flex items-center gap-2 text-[12px] text-muted">· {graph.progress}<button onClick={() => setShowAll(true)} className="flex h-6 items-center rounded-[7px] border border-line px-2 text-ink hover:bg-surface-2">{t("Show all")}</button></span>}
-            {showAll && !local && <button onClick={() => setShowAll(false)} className="flex h-6 items-center rounded-[7px] border border-line px-2 text-[12px] text-muted hover:text-ink">{t("Most linked only")}</button>}
+            {showAll && !local && !big && <button onClick={() => setShowAll(false)} className="flex h-6 items-center rounded-[7px] border border-line px-2 text-[12px] text-muted hover:text-ink">{t("Most linked only")}</button>}
             {indexing && <span className="flex items-center gap-1.5 text-[12px] text-muted"><span className="size-[7px] rounded-full bg-info" />{indexing}</span>}
           </div>
         )}
@@ -562,6 +633,7 @@ export function GraphView({ localTo }: { localTo?: string }) {
           </div>
         )}
       </div>
+      </>)}
     </div>
   );
 }
@@ -596,7 +668,7 @@ function edgeD(x1: number, y1: number, x2: number, y2: number, shape: EdgeShape)
   return `M${f(x1)} ${f(y1)}V${f(my - sy * r)}Q${f(x1)} ${f(my)} ${f(x1 + sx * r)} ${f(my)}H${f(x2 - sx * r)}Q${f(x2)} ${f(my)} ${f(x2)} ${f(my + sy * r)}V${f(y2)}`;
 }
 
-export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSelectedPos, controls, fitKey, insetRight, insetBottom, edgeShape = "straight", showLinks = true, dim = true, roomy, api, onPin, pinned }: {
+export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSelectedPos, controls, fitKey, insetRight, insetBottom, edgeShape = "straight", showLinks = true, dim = true, roomy, api, onPin, pinned, onSlow, labelTop = 0 }: {
   nodes: GNode[]; links: GLink[]; focus: string | null; onOpen?: (id: string) => void;
   /** When given, a click selects (and double-click opens) instead of opening right away. */
   selected?: string | null; onSelect?: (n: GNode | null) => void;
@@ -615,6 +687,10 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
   /** A node dragged while the layout is tidied (fixed) stays where it is dropped: it gets a pin. */
   onPin?: (id: string, p: P) => void;
   pinned?: (id: string) => boolean;
+  /** Drawing was too slow twice: Reduce effects just switched on (lib/scale-prefs.ts reportDrawTime); say so once. */
+  onSlow?: () => void;
+  /** Big graphs (Lumen 22): labels only on the N most-linked notes; the rest appear on zoom. 0 = the usual rule. */
+  labelTop?: number;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [hover, setHover] = useState<GNode | null>(null);
@@ -622,8 +698,8 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
   st.current.selected = selected ?? null;
   const posCb = useRef(onSelectedPos);
   posCb.current = onSelectedPos;
-  const look = useRef({ edgeShape, showLinks, dim, pinned });
-  look.current = { edgeShape, showLinks, dim, pinned };
+  const look = useRef({ edgeShape, showLinks, dim, pinned, onSlow });
+  look.current = { edgeShape, showLinks, dim, pinned, onSlow };
   st.current.opts = `${edgeShape}|${showLinks}|${dim}`;
 
   // Export the graph as laid out on screen (vector SVG, or PNG/JPEG/WebP through the shared Export dialog).
@@ -722,6 +798,9 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
       (adj.get(b) ?? adj.set(b, new Set([b])).get(b)!).add(a);
     }
     const neighbors = (n: GNode | null) => (n ? adj.get(n.id) ?? new Set([n.id]) : null);
+    // Slow or old device (Lumen 22): simple mode = no easing animation, labels only on zoom.
+    let simple = reduceEffects();
+    const topIds = labelTop > 0 ? new Set([...nodes].sort((a, b) => b.deg - a.deg).slice(0, labelTop).map((n) => n.id)) : null;
     let raf = 0;
     let shown = ticked, shownAt = 0; // layout progress last drawn (big graphs redraw ~3×/s while settling)
     const draw = () => {
@@ -737,7 +816,7 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
       }
       // Tidy up / undo: ease every node to its target over 380 ms.
       if (s.anim) {
-        const a = s.anim, t = Math.min(1, (performance.now() - a.t0) / 380), e = 1 - (1 - t) ** 3;
+        const a = s.anim, t = simple ? 1 : Math.min(1, (performance.now() - a.t0) / 380), e = 1 - (1 - t) ** 3;
         for (const n of nodes) {
           const f = a.from.get(n.id), to = a.to.get(n.id);
           if (!f || !to) continue;
@@ -753,6 +832,7 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
       const sig = `${s.k}|${s.x}|${s.y}|${s.hover?.id ?? ""}|${s.selected ?? ""}|${shown}|${simTicks}|${s.animT}|${cv.width}x${cv.height}|${css("--accent")}|${css("--bg")}|${s.opts}`;
       if (sig === lastSig) return;
       lastSig = sig;
+      const drawT0 = performance.now();
       const w = cv.width, h = cv.height;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, w, h);
@@ -817,7 +897,7 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
           ctx.lineWidth = 3 * px; ctx.strokeStyle = bg; ctx.beginPath(); ctx.arc(n.x!, n.y!, r + 1.5 * px, 0, Math.PI * 2); ctx.stroke();
           ctx.lineWidth = 2 * px; ctx.strokeStyle = accent; ctx.beginPath(); ctx.arc(n.x!, n.y!, r + 4 * px, 0, Math.PI * 2); ctx.stroke();
         }
-        const showL = n.label && ((isTag ? n.deg >= 2 : n.deg >= 3) || (hl && hl.has(n.id)) || focus || s.k > 2.4);
+        const showL = n.label && (simple ? (hl && hl.has(n.id)) || s.k > 1.4 : topIds ? topIds.has(n.id) || (hl && hl.has(n.id)) || focus || s.k > 2.4 : (isTag ? n.deg >= 2 : n.deg >= 3) || (hl && hl.has(n.id)) || focus || s.k > 2.4);
         // Tidied (fixed) nodes keep labels inside their layout box: world-sized when zoomed out, hidden when tiny.
         const fixed = n.fx != null && s.k < 1;
         if (showL && !(fixed && s.k * 11.5 < 6.5)) {
@@ -831,6 +911,7 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
         }
       }
       ctx.globalAlpha = 1;
+      if (!simple && nodes.length > 300 && reportDrawTime(performance.now() - drawT0)) { simple = true; L.onSlow?.(); lastSig = ""; }
       if (posCb.current) {
         const p = selNode ? `${Math.round(s.x + selNode.x! * s.k)},${Math.round(s.y + selNode.y! * s.k)}` : "";
         if (p !== s.pos) { s.pos = p; const [x, y] = p.split(",").map(Number); posCb.current(p ? { x, y } : null); }
@@ -838,7 +919,7 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
     };
     raf = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(raf); sim.stop(); ro.disconnect(); if (api?.current?.nodes() === nodes) api.current = null; };
-  }, [nodes, links, focus, roomy]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [nodes, links, focus, roomy, labelTop]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toWorld = (e: { clientX: number; clientY: number }) => {
     const r = ref.current!.getBoundingClientRect();

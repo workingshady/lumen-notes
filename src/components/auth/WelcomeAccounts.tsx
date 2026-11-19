@@ -1,5 +1,6 @@
-// Welcome / unlock hooks for accounts. Off (now): the passcode screen as before, plus one quiet "Accounts are coming"
-// line. On: the sign-in screen first, with "Use a passcode instead" leading to the unchanged passcode screen.
+// Welcome / unlock hooks for accounts. Off (now, 27A/27C): the passcode screen as before, plus one quiet
+// "Accounts are coming" line. On (27E/27O): the sign-in screen first, "Use a passcode instead" opens the unchanged
+// passcode screen.
 import { useState, type ReactNode } from "react";
 import { peekAuthReturn, useAccountsConfig } from "../../lib/auth";
 import { AccountsComingLine } from "./auth-ui";

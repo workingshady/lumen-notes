@@ -333,7 +333,7 @@ export function Builder({ mods, ops }: { mods: Module[]; ops: TopicOps }) {
           </div>
           <div className={cx("mx-3 mb-3 flex h-[150px] flex-col items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed text-muted transition-colors", over === k ? "border-accent bg-accent/5" : "border-line")}>
             <span className="text-[14px] font-semibold text-ink">{tr("Drop notes here to make topics")}</span>
-            <span>or type a topic name and press Enter</span>
+            <span>{tr("or type a topic name and press Enter")}</span>
             <AddRow inputRef={k === 0 ? topicIn : undefined} placeholder={tr("+ Add topic")} label={tr("Add topic")} plus={false}
               className="h-[30px] w-[200px] rounded-[8px] border border-line px-3" inputCls="text-center text-ink placeholder:text-ink"
               onAdd={(t) => addTopicTo(m.i, t)} />

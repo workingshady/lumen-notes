@@ -1,32 +1,16 @@
-// Accounts: shared pieces (Google button, password meter, fields, the "coming soon" card). docs/ACCOUNTS.md
-import { Eye, EyeOff, Sparkles } from "lucide-react";
-import { useState, type InputHTMLAttributes, type ReactNode } from "react";
+// Accounts: shared pieces (Google button, fields, password meter, message box, buttons, the "coming soon" card and
+// the unlock-screen line). Sizes follow design/handoffs/2026-11-20-round-6/AccountDesk.dc.html. docs/ACCOUNTS.md
+import { Eye, EyeOff } from "lucide-react";
+import { useEffect, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import { passwordStrength } from "../../lib/auth";
-import { activeTheme } from "../../lib/settings";
+import { t, tk, useLang } from "../../lib/i18n";
+import { Glyph } from "../Glyph";
 import { cx } from "../ui";
-
-const T = {
-  google: "Continue with Google",
-  googleLink: "Connect Google",
-  show: "Show password",
-  hide: "Hide password",
-  comingTitle: "Sign-in and registration",
-  comingBadge: "Coming soon",
-  comingLead: "Today one passcode unlocks sync on each device. Accounts will add:",
-  comingItems: [
-    "Sign in with Google, email and password, or a magic link",
-    "Your own account, with email verification",
-    "Your devices in one list, and sign out everywhere",
-    "Export all your data, or delete your account",
-  ],
-  comingFoot: "Nothing changes for you until then.",
-  comingLine: "Accounts are coming: sign in with Google, email",
-} as const;
 
 /** Google's standard "G" mark (multicolour, unmodified), per the Sign in with Google branding guidelines. */
 export function GoogleG({ size = 18 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true" className="no-flip shrink-0">
       <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
       <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
       <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
@@ -35,80 +19,128 @@ export function GoogleG({ size = 18 }: { size?: number }) {
   );
 }
 
+/** Roboto Medium is the font Google's button spec asks for; loaded once, only when a Google button is on screen. */
+let robotoRequested = false;
+function useRoboto() {
+  useEffect(() => {
+    if (robotoRequested || typeof document === "undefined") return;
+    robotoRequested = true;
+    const l = document.createElement("link");
+    l.rel = "stylesheet";
+    l.href = "https://fonts.googleapis.com/css2?family=Roboto:wght@500&display=swap";
+    document.head.appendChild(l);
+  }, []);
+}
+export const GOOGLE_LABELS = { continue: tk("Continue with Google"), signIn: tk("Sign in with Google"), tryAgain: tk("Try Google again") } as const;
 /**
- * Google's button spec: light = white fill, #747775 1px stroke, #1F1F1F text; dark = #131314 fill, #8E918F stroke,
- * #E3E3E3 text; Roboto Medium 14/20, 12px side padding, 10px between logo and text, pill or rectangle. The logo is never
- * recoloured; the label is one of Google's ("Continue with Google").
+ * "Sign in with Google" button, per Google's branding guidelines: light = #FFFFFF fill, 1px #747775 stroke, #1F1F1F
+ * text; dark = #131314 fill, 1px #8E918F stroke, #E3E3E3 text; Roboto Medium 14/20; 12px side padding; 10px between
+ * the unmodified multicolour logo (20px) and the label; pill shape. The design draws the light variant on both
+ * themes (27E/27O), 44px tall, full width. Labels are Google's own wording.
  */
-export function GoogleButton({ onClick, busy, big, label = T.google, className }: { onClick: () => void; busy?: boolean; big?: boolean; label?: string; className?: string }) {
-  const dark = activeTheme().dark;
+export function GoogleButton({ onClick, busy, label = GOOGLE_LABELS.continue, variant = "light", className }: {
+  onClick: () => void; busy?: boolean; label?: string; variant?: "light" | "dark"; className?: string;
+}) {
+  useLang();
+  useRoboto();
+  const dark = variant === "dark";
   return (
-    <button type="button" onClick={onClick} disabled={busy}
-      className={cx("flex w-full items-center justify-center gap-[10px] rounded-full border px-3 disabled:opacity-60", big ? "h-12" : "h-10", className)}
-      style={{ background: dark ? "#131314" : "#FFFFFF", borderColor: dark ? "#8E918F" : "#747775", color: dark ? "#E3E3E3" : "#1F1F1F", fontFamily: "Roboto, 'Segoe UI', Arial, sans-serif", fontWeight: 500, fontSize: 14, lineHeight: "20px" }}>
-      <GoogleG size={20} /><span>{label}</span>
+    <button type="button" onClick={onClick} disabled={busy} data-google-button={variant}
+      className={cx("flex h-[46px] w-full shrink-0 items-center justify-center gap-[10px] rounded-full border px-3 transition-[filter] hover:brightness-[.97] disabled:opacity-60", className)}
+      style={{ background: dark ? "#131314" : "#FFFFFF", borderColor: dark ? "#8E918F" : "#747775", color: dark ? "#E3E3E3" : "#1F1F1F", fontFamily: "Roboto, Inter, system-ui, sans-serif", fontWeight: 500, fontSize: 14, lineHeight: "20px", letterSpacing: ".25px" }}>
+      <GoogleG size={20} /><span>{t(label)}</span>
     </button>
   );
 }
-export const GOOGLE_LINK_LABEL = T.googleLink;
 
-export function AuthField({ label, hint, error, children }: { label: string; hint?: ReactNode; error?: string; children: ReactNode }) {
+/** Label (12px muted) above a control, 6px gap (27E/27F). */
+export function AuthField({ label, right, children, htmlFor }: { label: string; right?: ReactNode; children: ReactNode; htmlFor?: string }) {
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="flex items-baseline justify-between gap-2 text-[12px] font-medium text-muted"><span>{label}</span>{hint}</span>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-baseline gap-2 text-[12px]"><label htmlFor={htmlFor} className="flex-1 text-muted">{label}</label>{right}</div>
       {children}
-      {error && <span className="text-[12px] text-bad" role="alert">{error}</span>}
-    </label>
+    </div>
   );
 }
-export const authInputCls = (big?: boolean) => cx(
-  "w-full border border-line bg-bg px-3 text-ink placeholder:text-muted focus:border-accent focus:outline-none focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_20%,transparent)] aria-[invalid=true]:border-bad",
-  big ? "h-12 rounded-[10px] text-[15px]" : "h-10 rounded-[8px] text-[14px]",
-);
-export function PasswordInput({ big, ...p }: InputHTMLAttributes<HTMLInputElement> & { big?: boolean }) {
+export const authInputCls = "h-[46px] w-full rounded-[9px] border border-line bg-surface px-3 text-[13px] text-ink outline-none placeholder:text-muted focus:border-accent aria-[invalid=true]:border-bad";
+export function PasswordInput({ className, ...p }: InputHTMLAttributes<HTMLInputElement>) {
   const [show, setShow] = useState(false);
   return (
     <span className="relative flex">
-      <input {...p} type={show ? "text" : "password"} className={cx(authInputCls(big), "pr-11")} />
-      <button type="button" aria-label={show ? T.hide : T.show} onClick={() => setShow(!show)} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted hover:text-ink">
-        {show ? <EyeOff size={16} /> : <Eye size={16} />}
+      <input {...p} type={show ? "text" : "password"} className={cx(authInputCls, "pe-10 [&::-ms-reveal]:hidden", !show && !!p.value && "tracking-[.2em]", className)} />
+      <button type="button" aria-label={show ? t("Hide password") : t("Show password")} onClick={() => setShow(!show)} className="absolute inset-y-0 end-0 flex w-10 items-center justify-center text-muted hover:text-ink">
+        {show ? <EyeOff size={15} /> : <Eye size={15} />}
       </button>
     </span>
   );
 }
-/** Four bars + a word; colours follow the app's status tokens. */
+/** 27F: four 4px segments (red weak, amber fair, green strong) and a hint that says how to improve. */
 export function PasswordMeter({ value }: { value: string }) {
+  useLang();
   const s = passwordStrength(value);
-  const color = ["var(--line)", "var(--danger)", "var(--warning)", "var(--info)", "var(--success)"][s.score];
+  const color = s.level === "strong" ? "var(--success)" : s.level === "fair" ? "var(--warning)" : "var(--danger)";
   return (
-    <div className="flex items-center gap-2" aria-live="polite">
-      <div className="flex flex-1 gap-1">{[1, 2, 3, 4].map((i) => <span key={i} className="h-1 flex-1 rounded-full" style={{ background: i <= s.score ? color : "var(--line)" }} />)}</div>
-      <span className="w-14 text-right text-[11.5px] text-muted">{s.label}</span>
-    </div>
+    <>
+      <div className="flex gap-1" aria-hidden="true">
+        {[1, 2, 3, 4].map((i) => <span key={i} className="h-1 flex-1 rounded-[2px]" style={{ background: i <= s.score ? color : "var(--surface-2)" }} />)}
+      </div>
+      <span className="min-h-[16px] text-[12px] leading-[16px]" style={{ color: s.level ? color : undefined }} aria-live="polite">
+        {s.level ? t("{level} · {hint}", { level: t(s.label), hint: t(s.hint) }) : ""}
+      </span>
+    </>
   );
 }
-export function OrRule({ label }: { label: string }) {
-  return <div className="flex items-center gap-3 text-[12px] text-muted"><span className="h-px flex-1 bg-line" />{label}<span className="h-px flex-1 bg-line" /></div>;
+export function OrRule() {
+  return <div className="flex items-center gap-2.5 text-[12px] text-muted"><span className="h-px flex-1 bg-line" />{t("or")}<span className="h-px flex-1 bg-line" /></div>;
+}
+export function PrimaryButton({ className, ...p }: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return <button {...p} className={cx("flex h-[44px] w-full shrink-0 items-center justify-center gap-2 rounded-[10px] bg-accent font-semibold text-accent-fg hover:brightness-105 disabled:opacity-60", className)} />;
+}
+export function SecondaryButton({ className, ...p }: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return <button type="button" {...p} className={cx("flex h-[42px] w-full shrink-0 items-center justify-center gap-2 rounded-[10px] border border-line text-ink hover:bg-surface disabled:cursor-default", className)} />;
+}
+/** The design's inline glyphs sit on the text baseline (a box ~6px taller than the glyph, glyph at its bottom). */
+const DROP = (size: number) => ({ height: size + 6, alignItems: "flex-end" }) as const;
+export type Tone = "info" | "ok" | "danger" | "warning";
+const TONE: Record<Tone, [string, string]> = { info: ["var(--info)", "c-info"], ok: ["var(--success)", "s-done"], danger: ["var(--danger)", "c-danger"], warning: ["var(--warning)", "c-warning"] };
+/** The tinted message card of the recovery / error screens (27G–27L). */
+export function MsgBox({ tone, title, children }: { tone: Tone; title: string; children?: ReactNode }) {
+  const [c, g] = TONE[tone];
+  return (
+    <div role={tone === "danger" || tone === "warning" ? "alert" : "status"} className="flex flex-col gap-2 rounded-[12px] p-[14px] leading-[20px]"
+      style={{ background: `color-mix(in srgb, ${c} 9%, transparent)`, border: `1px solid color-mix(in srgb, ${c} 30%, transparent)` }}>
+      <span className="flex items-center gap-2 font-semibold" style={{ color: c }}><Glyph name={g} size={16} style={DROP(16)} />{title}</span>
+      {children && <span>{children}</span>}
+    </div>
+  );
 }
 
-/** Settings › Account while accounts are off: a muted card that says what's coming (no buttons that do nothing). */
+/** Settings › Account while accounts are off (27B/27D): a dashed card that says what's coming, nothing to click. */
+const COMING: [string, string][] = [
+  ["owner", tk("Sign in with Google, email and password, or a magic link")],
+  ["date", tk("Email verification and a proper account")],
+  ["refresh-cw", tk("Sign out of every device at once")],
+  ["export", tk("Export all your data, delete your account")],
+];
 export function ComingSoonCard() {
+  useLang();
   return (
-    <div className="flex flex-col gap-3 rounded-[12px] border border-dashed border-line bg-surface/60 p-4 text-muted">
-      <div className="flex items-center gap-2">
-        <Sparkles size={15} />
-        <span className="font-semibold text-ink/80">{T.comingTitle}</span>
-        <span className="rounded-full border border-line px-2 py-[1px] text-[11px] font-medium">{T.comingBadge}</span>
+    <div className="flex flex-col gap-2.5 rounded-[12px] border border-dashed border-line p-4" style={{ background: "color-mix(in srgb, var(--surface) 50%, transparent)" }} data-accounts-coming>
+      <div className="flex items-center gap-2.5">
+        <span className="flex-1 font-semibold text-muted">{t("Sign-in and registration")}</span>
+        <span className="rounded-full bg-surface-2 px-2 text-[11.5px] font-semibold leading-[20px] text-muted">{t("Coming soon")}</span>
       </div>
-      <span className="text-[12.5px] leading-[19px]">{T.comingLead}</span>
-      <ul className="flex flex-col gap-1.5 text-[12.5px] leading-[18px]">
-        {T.comingItems.map((x) => <li key={x} className="flex gap-2"><span className="mt-[7px] size-1 shrink-0 rounded-full bg-muted" />{x}</li>)}
-      </ul>
-      <span className="text-[12px]">{T.comingFoot}</span>
+      {COMING.map(([g, x]) => <span key={x} className="flex items-center gap-2.5 leading-[19px] text-muted"><Glyph name={g} size={14} style={DROP(14)} />{t(x)}</span>)}
+      <span className="text-[12px] text-muted">{t("Today this device uses a passcode. Nothing changes until accounts launch.")}</span>
     </div>
   );
 }
-/** Unlock screen while accounts are off: one quiet line under the passcode flow. */
+/** Unlock screen while accounts are off (27A/27C): one muted line under the passcode flow, no links. */
 export function AccountsComingLine({ className }: { className?: string }) {
-  return <div className={cx("flex items-center justify-center gap-1.5 text-[12px] text-muted", className)}><GoogleG size={12} /><span>{T.comingLine}</span></div>;
+  useLang();
+  return (
+    <div className={cx("flex items-center gap-2.5 border-t border-line pt-[14px] text-[12.5px] leading-[18px] text-muted", className)} data-accounts-coming>
+      <Glyph name="owner" size={15} style={DROP(15)} /><span>{t("Accounts are coming: sign in with Google or email.")}</span>
+    </div>
+  );
 }

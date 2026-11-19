@@ -5,8 +5,8 @@ import { db, DEFAULT_SPACE } from "./db";
 import { wikiLinks } from "./parse";
 import { scheduleIndex } from "./search";
 
-export type View = "home" | "today" | "notes" | "tasks" | "kanban" | "calendar" | "review" | "graph" | "table" | "space" | "settings" | "trash";
-export type Mode = "edit" | "split" | "read" | "focus" | "slides" | "review" | "diagrams";
+export type View = "home" | "today" | "notes" | "tasks" | "kanban" | "calendar" | "review" | "graph" | "table" | "space" | "settings" | "trash" | "folders";
+export type Mode = "edit" | "split" | "read" | "focus" | "slides" | "review" | "diagrams" | "media" | "links";
 export type Panel = null | "outline" | "backlinks" | "properties" | "versions" | "ai";
 
 export interface UI {
@@ -206,7 +206,7 @@ function canvasFiles(body: string): string[] {
 
 /** Notes visible in the current scope (space / folder / tag). */
 export function scoped(v: Vault, u: Pick<UI, "spaceId" | "folderId" | "tag"> & { filter?: UI["filter"] }) {
-  return v.notes.filter((n) => (u.spaceId === "all" || n.spaceId === u.spaceId) && (!u.folderId || n.folderId === u.folderId) && (!u.tag || n.tags.includes(u.tag))
+  return v.notes.filter((n) => (u.spaceId === "all" || n.spaceId === u.spaceId) && (!u.folderId || n.folderId === u.folderId) && (!u.tag || n.tags.some((x) => x === u.tag || x.startsWith(u.tag + "/")))
     && (!u.filter || u.filter.startsWith("smart:") || (u.filter === "visual" ? n.type === "canvas" || n.type === "whiteboard" : u.filter === "paths" ? n.type === "path" : !!n.published)));
 }
 

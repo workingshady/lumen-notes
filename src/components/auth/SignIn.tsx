@@ -1,103 +1,74 @@
-// Accounts (active state): sign in · register · check your inbox · forgot / reset password · email-link and Google
-// returns. Only shown when the server switch is on (or in the demo preview). docs/ACCOUNTS.md
-import { ArrowLeft, CircleAlert, KeyRound, Loader2, Mail, MailCheck } from "lucide-react";
+// Accounts (active state), design 27E–27L / 27O–27Q / 27T: sign in · register (strength meter + terms) · check your
+// inbox · email verified · forgot password · reset link sent · choose a new password · Google error · link expired.
+// Only shown when the server switch is on (or in the demo preview). docs/ACCOUNTS.md
+import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
-  AuthError, authApi, completeSignIn, deviceInfo, startGoogle, takeAuthReturn, useAccountsConfig, type AuthReturn, type AuthUser,
+  accountsPreview, AuthError, authApi, authErrorText, completeSignIn, deviceInfo, emailAppUrl, previewScreen, startGoogle, takeAuthReturn,
+  useAccountsConfig, type AuthUser, type MailState,
 } from "../../lib/auth";
+import { t, tk, tx, useLang } from "../../lib/i18n";
 import { activeTheme } from "../../lib/settings";
-import { LumenMark, Wordmark } from "../LumenMark";
+import { localTimeZone } from "../../lib/profile-local";
+import { LumenMark } from "../LumenMark";
 import { cx } from "../ui";
-import { AuthField, authInputCls, GoogleButton, OrRule, PasswordInput, PasswordMeter } from "./auth-ui";
+import { AuthField, authInputCls, GoogleButton, GOOGLE_LABELS, MsgBox, OrRule, PasswordInput, PasswordMeter, PrimaryButton, SecondaryButton } from "./auth-ui";
 
-const T = {
-  signInTitle: "Sign in to Lumen",
-  signInSub: "Your notebook on every device.",
-  email: "Email",
-  emailPh: "you@example.com",
-  password: "Password",
-  forgot: "Forgot?",
-  signIn: "Sign in",
-  signingIn: "Signing in…",
-  magicInstead: "Email me a sign-in link instead",
-  passwordInstead: "Use my password instead",
-  sendLink: "Send sign-in link",
-  sending: "Sending…",
-  or: "or",
-  newHere: "New to Lumen?",
-  create: "Create an account",
-  passcode: "Use a passcode instead",
-  registerTitle: "Create your account",
-  registerSub: "Free, private, and yours to export any time.",
-  name: "Name",
-  namePh: "What should we call you?",
-  newPassword: "Password",
-  pwHint: "10+ characters",
-  termsA: "I agree to the ",
-  terms: "Terms",
-  termsAnd: " and ",
-  privacy: "Privacy policy",
-  creating: "Creating…",
-  haveAccount: "Already have an account?",
-  inboxTitle: "Check your inbox",
-  inboxVerify: (e: string) => `We sent a confirmation link to ${e}. Open it on this device to finish creating your account.`,
-  inboxMagic: (e: string) => `If ${e} has a Lumen account, a sign-in link is on its way. It works once, for 15 minutes.`,
-  inboxReset: (e: string) => `If ${e} has a Lumen account, a reset link is on its way. It works once, for 30 minutes.`,
-  inboxNoMail: "Email isn't set up on this server yet, so no link was sent.",
-  resend: "Send again",
-  resendIn: (s: number) => `Send again in ${s}s`,
-  otherEmail: "Use a different email",
-  backToSignIn: "Back to sign in",
-  needsVerify: "Confirm your email first.",
-  forgotTitle: "Reset your password",
-  forgotSub: "We'll email you a link to choose a new one.",
-  sendReset: "Send reset link",
-  resetTitle: "Choose a new password",
-  resetSub: "You'll be signed out on your other devices.",
-  saveSignIn: "Save and sign in",
-  working: "Signing you in…",
-  verifying: "Confirming your email…",
-  linkProblem: "That link didn't work",
-  googleErrTitle: "Google sign-in didn't finish",
-  googleErr: {
-    cancelled: "You closed the Google window before choosing an account.",
-    "email-unverified": "Your Google account's email isn't verified, so it can't be used to sign in.",
-    "already-linked": "That Google account is already connected to another Lumen account.",
-    "not-configured": "Google sign-in isn't set up on this server.",
-    default: "Something went wrong talking to Google. Please try again.",
-  } as Record<string, string>,
-  tryAgain: "Try again",
-  useEmail: "Use email instead",
-  tooMany: (s: number) => `Too many attempts · try again in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`,
-  left: (n: number) => `Wrong email or password · ${n} ${n === 1 ? "try" : "tries"} left`,
-} as const;
-
-type Inbox = { kind: "verify" | "magic" | "reset"; email: string; mail: "sent" | "unavailable" };
+type LinkKind = "verify" | "magic" | "reset";
+type SignedIn = { token: string; user: AuthUser };
 type Screen =
-  | { s: "signin"; magic?: boolean } | { s: "register" } | { s: "forgot" } | { s: "inbox"; inbox: Inbox }
-  | { s: "reset"; token: string } | { s: "working"; label: string } | { s: "problem"; title: string; text: string; google?: boolean };
+  | { s: "signin" } | { s: "register" } | { s: "forgot" }
+  | { s: "inbox"; kind: "verify" | "magic"; email: string; mail: MailState }
+  | { s: "verified"; result: SignedIn }
+  | { s: "reset-sent"; email: string; mail: MailState }
+  | { s: "reset"; token: string }
+  | { s: "working"; label: string }
+  | { s: "google-error"; reason: string }
+  | { s: "expired"; kind: LinkKind; token: string }
+  | { s: "invalid"; text: string };
+
+/** Google error reasons (worker/ext/auth.ts callback) → what happened, and what to do. */
+const GOOGLE_ERR: Record<string, [string, string]> = {
+  cancelled: [tk("You closed the Google window or denied access"), tk("Nothing was changed. Try again, or use email instead.")],
+  state: [tk("The sign-in took too long or started in another browser"), tk("Nothing was changed. Try again, or use email instead.")],
+  "email-unverified": [tk("Your Google account's email isn't verified"), tk("Nothing was changed. Verify it with Google, or use email instead.")],
+  "already-linked": [tk("That Google account belongs to another Lumen account"), tk("Nothing was changed. Sign in with that account, or use email instead.")],
+  "not-configured": [tk("Google sign-in isn't set up on this server"), tk("Nothing was changed. Use email instead.")],
+  default: [tk("Google couldn't confirm who you are"), tk("Nothing was changed. Try again, or use email instead.")],
+};
+const EXPIRED_TITLE: Record<LinkKind, string> = { verify: tk("Links work for 24 hours"), magic: tk("Sign-in links work for 15 minutes"), reset: tk("Reset links work for 1 hour") };
 
 function usePhone() {
   const [p, setP] = useState(() => innerWidth < 640);
   useEffect(() => { const f = () => setP(innerWidth < 640); addEventListener("resize", f); return () => removeEventListener("resize", f); }, []);
   return p;
 }
-const errText = (e: unknown) => {
-  if (e instanceof AuthError) {
-    const d = e.data as { retryAfterSec?: number; attemptsLeft?: number };
-    if (e.status === 429 && d.retryAfterSec) return T.tooMany(d.retryAfterSec);
-    if (e.status === 401 && typeof d.attemptsLeft === "number") return T.left(d.attemptsLeft);
-    return e.message;
+const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+/** Preview only (`&authScreen=`): open on one screen with the design's sample data. */
+function previewInitial(): Screen | null {
+  if (!accountsPreview || !previewScreen) return null;
+  const sara: AuthUser = { id: "u-preview", email: "sara@uni.edu", emailVerified: true, name: "Sara Kim", avatar: "glyph:owl", lang: "en", tz: "UTC", createdAt: 0, hasPassword: true, passwordChangedAt: null, identities: [] };
+  switch (previewScreen) {
+    case "register": return { s: "register" };
+    case "verify": return { s: "inbox", kind: "verify", email: "sara@uni.edu", mail: "sent" };
+    case "verified": return { s: "verified", result: { token: "", user: sara } };
+    case "forgot": return { s: "forgot" };
+    case "reset-sent": return { s: "reset-sent", email: "amir@nightshift.dev", mail: "sent" };
+    case "reset": return { s: "reset", token: "preview" };
+    case "google-error": return { s: "google-error", reason: "cancelled" };
+    case "expired": return { s: "expired", kind: "verify", token: "preview" };
+    default: return null;
   }
-  return String((e as Error)?.message ?? e);
-};
+}
 
 /** The whole signed-out flow. `onPasscode` shows the owner's passcode screen instead. */
 export function AuthFlow({ onPasscode, initial = "signin" }: { onPasscode?: () => void; initial?: "signin" | "register" }) {
+  useLang();
   const cfg = useAccountsConfig();
   const phone = usePhone();
-  const [screen, setScreen] = useState<Screen>(() => (initial === "register" ? { s: "register" } : { s: "signin" }));
-  const [email, setEmail] = useState("");
+  const [screen, setScreen] = useState<Screen>(() => previewInitial() ?? (initial === "register" ? { s: "register" } : { s: "signin" }));
+  const [email, setEmail] = useState(() => (previewScreen === "forgot" ? "amir@nightshift.dev" : ""));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const go = (s: Screen) => { setError(""); setScreen(s); };
@@ -105,195 +76,248 @@ export function AuthFlow({ onPasscode, initial = "signin" }: { onPasscode?: () =
   const run = async (fn: () => Promise<void>) => {
     if (busy) return;
     setBusy(true); setError("");
-    try { await fn(); } catch (e) { setError(errText(e)); } finally { setBusy(false); }
+    try { await fn(); } catch (e) { setError(authErrorText(e)); } finally { setBusy(false); }
   };
-  const finish = (r: { token: string; user: AuthUser }) => completeSignIn(r);
   const google = () => run(() => startGoogle(false));
+  const linkFailed = (kind: LinkKind, token: string, e: unknown) => {
+    if (e instanceof AuthError && e.data.code === "expired") go({ s: "expired", kind, token });
+    else go({ s: "invalid", text: authErrorText(e) });
+  };
 
   // Opened from an email link or the Google return.
   useEffect(() => {
-    const r: AuthReturn | null = takeAuthReturn();
+    const r = takeAuthReturn();
     if (!r || r.kind === "google-linked") return;
-    if (r.kind === "google-error") { go({ s: "problem", title: T.googleErrTitle, text: T.googleErr[r.reason] ?? T.googleErr.default, google: true }); return; }
+    if (r.kind === "google-error") { go({ s: "google-error", reason: r.reason }); return; }
     if (r.kind === "reset") { go({ s: "reset", token: r.token }); return; }
-    go({ s: "working", label: r.kind === "verify" ? T.verifying : T.working });
-    const path = r.kind === "google" ? "/auth/exchange" : `/auth/${r.kind}/confirm`;
-    const json = r.kind === "google" ? { code: r.code, ...deviceInfo() } : { token: r.token, ...deviceInfo() };
-    authApi<{ token: string; user: AuthUser }>(path, { json }).then(finish)
-      .catch((e) => go({ s: "problem", title: r.kind === "google" ? T.googleErrTitle : T.linkProblem, text: errText(e), google: r.kind === "google" }));
+    go({ s: "working", label: r.kind === "verify" ? tk("Confirming your email…") : tk("Signing you in…") });
+    if (r.kind === "google") {
+      authApi<SignedIn>("/auth/exchange", { json: { code: r.code, ...deviceInfo() } }).then(completeSignIn).catch(() => go({ s: "google-error", reason: "exchange" }));
+      return;
+    }
+    authApi<SignedIn>(`/auth/${r.kind}/confirm`, { json: { token: r.token, ...deviceInfo() } })
+      .then((res) => (r.kind === "verify" ? go({ s: "verified", result: res }) : completeSignIn(res)))
+      .catch((e) => linkFailed(r.kind, r.token, e));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dark = activeTheme().dark;
-  const big = phone;
-  const input = authInputCls(big);
-  const primary = cx("flex items-center justify-center gap-2 rounded-[10px] bg-accent font-semibold text-accent-fg disabled:opacity-60", big ? "h-12 rounded-[12px] text-[15px]" : "h-10 text-[14px]");
-  const link = "font-medium text-link hover:underline";
-  const errLine = error && <div className="flex items-start gap-1.5 text-[12.5px] text-bad" role="alert"><CircleAlert size={14} className="mt-[1px] shrink-0" />{error}</div>;
-  const passcodeLink = onPasscode && (
-    <button type="button" onClick={onPasscode} className="flex items-center justify-center gap-1.5 text-[13px] text-muted hover:text-ink"><KeyRound size={14} />{T.passcode}</button>
-  );
-  const googleBlock = cfg.providers.google && <><GoogleButton big={big} busy={busy} onClick={() => void google()} /><OrRule label={T.or} /></>;
+  const errLine = error && <div className="text-[12.5px] leading-[18px] text-bad" role="alert">{error}</div>;
+  const link = "text-link hover:underline";
+  const googleBlock = cfg.providers.google && <><GoogleButton busy={busy} onClick={() => void google()} /><OrRule /></>;
+  const sendMagic = () => run(async () => {
+    if (!email.trim()) { setError(t("Enter your email first.")); document.getElementById("auth-email")?.focus(); return; }
+    const r = await authApi<{ mail: MailState }>("/auth/magic", { json: { email } });
+    go({ s: "inbox", kind: "magic", email, mail: r.mail });
+  });
+  const renew = (token: string) => run(async () => {
+    const r = await authApi<{ mail: MailState; kind: LinkKind; email: string }>("/auth/link/renew", { json: { token } });
+    if (r.kind === "reset") go({ s: "reset-sent", email: r.email, mail: r.mail });
+    else go({ s: "inbox", kind: r.kind === "magic" ? "magic" : "verify", email: r.email, mail: r.mail });
+  });
 
-  let title = "", sub = "", body: ReactNode = null, foot: ReactNode = null, back: (() => void) | null = null;
+  let title = "", sub = "", body: ReactNode = null;
   switch (screen.s) {
-    case "signin": {
-      const magic = !!screen.magic && cfg.providers.magic;
-      title = T.signInTitle; sub = T.signInSub;
-      body = <SignInForm magic={magic} email={email} setEmail={setEmail} busy={busy} input={input} big={big} primary={primary} link={link} errLine={errLine}
-        onForgot={() => go({ s: "forgot" })} onToggleMagic={cfg.providers.magic ? () => go({ s: "signin", magic: !magic }) : undefined}
-        onSubmit={(pw) => run(async () => {
-          if (magic) { const r = await authApi<{ mail: "sent" | "unavailable" }>("/auth/magic", { json: { email } }); go({ s: "inbox", inbox: { kind: "magic", email, mail: r.mail } }); return; }
-          try { finish(await authApi("/auth/login", { json: { email, password: pw, ...deviceInfo() } })); }
-          catch (e) { if (e instanceof AuthError && e.data.needsVerification) { go({ s: "inbox", inbox: { kind: "verify", email, mail: "sent" } }); return; } throw e; }
+    case "signin":
+      title = t("Sign in to Lumen"); sub = t("Your notes, paths and cards on every device.");
+      body = <>
+        {googleBlock}
+        <SignInForm email={email} setEmail={setEmail} busy={busy} errLine={errLine} focus={!phone}
+          onForgot={() => go({ s: "forgot" })}
+          onSubmit={(pw) => run(async () => {
+            try { completeSignIn(await authApi<SignedIn>("/auth/login", { json: { email, password: pw, ...deviceInfo() } })); }
+            catch (e) {
+              if (!(e instanceof AuthError && e.data.needsVerification)) throw e;
+              const r = await authApi<{ mail: MailState }>("/auth/verify/resend", { json: { email } }).catch(() => ({ mail: "sent" as MailState }));
+              go({ s: "inbox", kind: "verify", email, mail: r.mail });
+            }
+          })} />
+        {cfg.providers.magic && <SecondaryButton disabled={busy} onClick={() => void sendMagic()}>{t("Email me a sign-in link")}</SecondaryButton>}
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-1 text-[12.5px]">
+          <span className="text-muted">{t("New here?")} <button type="button" className={link} onClick={() => go({ s: "register" })}>{t("Create an account")}</button></span>
+          {onPasscode && <button type="button" className="text-muted hover:text-ink" onClick={onPasscode}>{t("Use a passcode instead")}</button>}
+        </div>
+      </>;
+      break;
+    case "register":
+      title = t("Create your account"); sub = t("Free. Your notes stay in plain Markdown.");
+      body = <RegisterForm email={email} setEmail={setEmail} busy={busy} errLine={errLine} onSignIn={() => go({ s: "signin" })}
+        onSubmit={(f) => run(async () => {
+          const r = await authApi<{ mail: MailState }>("/auth/register", { json: { ...f, email, terms: true, lang: document.documentElement.lang || "en", tz: localTimeZone() } });
+          go({ s: "inbox", kind: "verify", email: email.trim(), mail: r.mail });
         })} />;
-      foot = <><span className="text-[13px] text-muted">{T.newHere} <button type="button" className={link} onClick={() => go({ s: "register" })}>{T.create}</button></span>{passcodeLink}</>;
-      body = <>{googleBlock}{body}</>;
+      break;
+    case "inbox":
+      title = t("Check your inbox"); sub = t("We sent a link to {email}.", { email: screen.email });
+      body = <InboxBody key={screen.email + screen.kind} screen={screen} busy={busy} errLine={errLine} onBack={() => go({ s: "signin" })}
+        onResend={() => run(async () => { await authApi(screen.kind === "verify" ? "/auth/verify/resend" : "/auth/magic", { json: { email: screen.email } }); })} />;
+      break;
+    case "verified": {
+      const first = screen.result.user.name.trim().split(/\s+/)[0];
+      title = t("Email verified"); sub = first ? t("Welcome, {name}.", { name: first }) : t("Welcome.");
+      body = <>
+        <MsgBox tone="ok" title={t("You're all set")}>{t("Your account is ready. Next: pick a theme and name your blog.")}</MsgBox>
+        <PrimaryButton onClick={() => completeSignIn(screen.result)}>{t("Continue")}</PrimaryButton>
+      </>;
       break;
     }
-    case "register":
-      title = T.registerTitle; sub = T.registerSub;
-      body = <>{googleBlock}<RegisterForm email={email} setEmail={setEmail} busy={busy} input={input} big={big} primary={primary} errLine={errLine}
-        onSubmit={(f) => run(async () => {
-          const r = await authApi<{ mail: "sent" | "unavailable" }>("/auth/register", { json: { ...f, email, terms: true, lang: document.documentElement.lang || "en", tz: Intl.DateTimeFormat().resolvedOptions().timeZone } });
-          go({ s: "inbox", inbox: { kind: "verify", email, mail: r.mail } });
-        })} /></>;
-      foot = <><span className="text-[13px] text-muted">{T.haveAccount} <button type="button" className={link} onClick={() => go({ s: "signin" })}>{T.signIn}</button></span>{passcodeLink}</>;
-      break;
     case "forgot":
-      title = T.forgotTitle; sub = T.forgotSub; back = () => go({ s: "signin" });
+      title = t("Reset your password"); sub = t("We'll email you a link to set a new one.");
       body = (
-        <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void run(async () => { const r = await authApi<{ mail: "sent" | "unavailable" }>("/auth/forgot", { json: { email } }); go({ s: "inbox", inbox: { kind: "reset", email, mail: r.mail } }); }); }}>
-          <AuthField label={T.email}><input className={input} type="email" autoComplete="email" required value={email} placeholder={T.emailPh} onChange={(e) => setEmail(e.target.value)} /></AuthField>
+        <form className="contents" onSubmit={(e) => { e.preventDefault(); void run(async () => { const r = await authApi<{ mail: MailState }>("/auth/forgot", { json: { email } }); go({ s: "reset-sent", email: email.trim(), mail: r.mail }); }); }}>
+          <MsgBox tone="info" title={t("Enter the email you signed up with")} />
+          <input id="auth-email" className={cx(authInputCls, "ltr")} type="email" autoComplete="email" required value={email} placeholder={t("you@example.com")} aria-label={t("Email")} onChange={(e) => setEmail(e.target.value)} autoFocus={!phone} />
           {errLine}
-          <button className={primary} disabled={busy || !email}>{busy ? T.sending : T.sendReset}</button>
+          <PrimaryButton disabled={busy || !email}>{busy ? t("Sending…") : t("Send reset link")}</PrimaryButton>
+          <SecondaryButton onClick={() => go({ s: "signin" })}>{t("Back to sign in")}</SecondaryButton>
         </form>
       );
       break;
-    case "inbox":
-      title = T.inboxTitle; back = () => go({ s: "signin" });
-      body = <InboxBody inbox={screen.inbox} primary={primary} errLine={errLine} onOther={() => go({ s: screen.inbox.kind === "verify" ? "register" : "signin" })}
-        onResend={() => run(async () => { await authApi(screen.inbox.kind === "verify" ? "/auth/verify/resend" : screen.inbox.kind === "magic" ? "/auth/magic" : "/auth/forgot", { json: { email: screen.inbox.email } }); })} />;
+    case "reset-sent":
+      title = t("Link sent"); sub = t("Check {email}.", { email: screen.email });
+      body = <>
+        {screen.mail === "sent"
+          ? <MsgBox tone="ok" title={t("Reset link sent")}>{t("It works once and expires in 1 hour.")}</MsgBox>
+          : <MsgBox tone="warning" title={t("Email isn't set up on this server yet")}>{t("No link was sent. Ask the person who runs this Lumen to set up email.")}</MsgBox>}
+        <PrimaryButton onClick={() => go({ s: "signin" })}>{t("Back to sign in")}</PrimaryButton>
+      </>;
       break;
     case "reset":
-      title = T.resetTitle; sub = T.resetSub;
-      body = <ResetForm busy={busy} big={big} primary={primary} errLine={errLine}
-        onSubmit={(pw) => run(async () => finish(await authApi("/auth/reset", { json: { token: screen.token, password: pw, ...deviceInfo() } })))} />;
+      title = t("Choose a new password"); sub = t("You'll be signed out on your other devices.");
+      body = <ResetForm busy={busy} errLine={errLine}
+        onSubmit={(pw) => run(async () => {
+          try { completeSignIn(await authApi<SignedIn>("/auth/reset", { json: { token: screen.token, password: pw, ...deviceInfo() } })); }
+          catch (e) { if (e instanceof AuthError && e.data.code) linkFailed("reset", screen.token, e); else throw e; }
+        })} />;
       break;
     case "working":
-      body = <div className="flex flex-col items-center gap-3 py-6 text-muted"><Loader2 size={22} className="animate-spin text-accent" />{screen.label}</div>;
+      body = <div className="flex flex-col items-center gap-3 py-6 text-muted"><Loader2 size={22} className="animate-spin text-accent" />{t(screen.label)}</div>;
       break;
-    case "problem":
-      title = screen.title;
-      body = (
-        <div className="flex flex-col gap-4">
-          <div className="flex items-start gap-2 rounded-[10px] border border-line bg-bg p-3 text-[13px] leading-[19px] text-muted"><CircleAlert size={16} className="mt-[1px] shrink-0 text-bad" />{screen.text}</div>
-          {screen.google && cfg.providers.google && <GoogleButton big={big} busy={busy} onClick={() => void google()} label={T.tryAgain} />}
-          <button type="button" className={cx(primary, screen.google && "border border-line bg-transparent text-ink")} onClick={() => go({ s: "signin" })}>{screen.google ? T.useEmail : T.backToSignIn}</button>
-        </div>
-      );
-      foot = passcodeLink;
+    case "google-error": {
+      const [what, next] = GOOGLE_ERR[screen.reason.startsWith("state-") ? "state" : screen.reason] ?? GOOGLE_ERR.default;
+      title = t("Google sign-in didn't finish");
+      body = <>
+        <MsgBox tone="danger" title={t(what)}>{t(next)}</MsgBox>
+        {errLine}
+        {cfg.providers.google && screen.reason !== "not-configured" && <PrimaryButton disabled={busy} onClick={() => void google()}>{t(GOOGLE_LABELS.tryAgain)}</PrimaryButton>}
+        <SecondaryButton onClick={() => go({ s: "signin" })}>{t("Use email instead")}</SecondaryButton>
+      </>;
+      break;
+    }
+    case "expired":
+      title = t("This link has expired");
+      body = <>
+        <MsgBox tone="warning" title={t(EXPIRED_TITLE[screen.kind])}>{t("Ask for a new one and we'll send it right away.")}</MsgBox>
+        {errLine}
+        <PrimaryButton disabled={busy} onClick={() => void renew(screen.token)}>{busy ? t("Sending…") : t("Send a new link")}</PrimaryButton>
+        <SecondaryButton onClick={() => go({ s: "signin" })}>{t("Back to sign in")}</SecondaryButton>
+      </>;
+      break;
+    case "invalid":
+      title = t("This link didn't work");
+      body = <>
+        <MsgBox tone="danger" title={t("It was already used or isn't complete")}>{t("Nothing was changed. Sign in, or ask for a new link.")}</MsgBox>
+        <PrimaryButton onClick={() => go({ s: "signin" })}>{t("Back to sign in")}</PrimaryButton>
+      </>;
       break;
   }
 
-  const card = (
-    <div className={cx("flex flex-col gap-5", !phone && "rounded-[14px] border border-line bg-surface p-6")} style={!phone && !dark ? { boxShadow: "0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .06)" } : undefined}>
-      {(title || back) && (
-        <div className="flex flex-col gap-1">
-          {back && <button type="button" onClick={back} className="-ml-1 mb-1 flex w-fit items-center gap-1 text-[12.5px] text-muted hover:text-ink"><ArrowLeft size={14} />{T.backToSignIn}</button>}
-          {title && <h1 className={cx("font-[650] tracking-[-.01em]", phone ? "text-[22px]" : "text-[18px]")}>{title}</h1>}
-          {sub && <p className="text-[13px] text-muted">{sub}</p>}
-        </div>
-      )}
-      {body}
-    </div>
-  );
-  const bg = { background: `radial-gradient(${phone ? "420px 320px at 50% -60px" : "720px 440px at 50% -90px"}, color-mix(in srgb, var(--accent) 9%, transparent), transparent 70%), var(--bg)` };
   return (
-    <div className={cx("flex h-full flex-col overflow-y-auto text-ink leading-[normal]", phone ? "safe-t safe-b text-[14px]" : "items-center justify-center text-[13px]")} style={bg} data-auth-screen={screen.s}>
-      <div className={cx("flex flex-col gap-6", phone ? "px-5 py-8" : "w-[400px] max-w-[calc(100%-32px)] py-10")}>
-        <div className="flex flex-col items-center gap-3"><LumenMark size={phone ? 52 : 48} tile={dark ? "dark" : "light"} /><Wordmark size={phone ? 28 : 26} /></div>
-        {card}
-        {foot && <div className="flex flex-col items-center gap-3">{foot}</div>}
+    <div className={cx("flex h-full overflow-y-auto bg-bg text-[13px] leading-[normal] text-ink", phone ? "safe-t safe-b items-start" : "items-center")} data-auth-screen={screen.s}>
+      <div className={cx("mx-auto flex flex-col gap-[14px]", phone ? "w-full px-5 pb-5 pt-[72px]" : "w-[400px] max-w-[calc(100%-32px)] py-10")}>
+        <div className="flex flex-col items-center gap-3 pb-1.5 text-center">
+          <LumenMark size={52} tile={dark ? "dark" : "light"} />
+          {title && <h1 className="text-[22px] font-[650] tracking-[-.02em]">{title}</h1>}
+          {title && <p className="max-w-[360px] leading-[20px] text-muted" dir="auto">{sub}</p>}
+        </div>
+        {body}
       </div>
     </div>
   );
 }
 
-function SignInForm({ magic, email, setEmail, busy, input, big, primary, link, errLine, onForgot, onToggleMagic, onSubmit }: {
-  magic: boolean; email: string; setEmail: (v: string) => void; busy: boolean; input: string; big: boolean; primary: string; link: string; errLine: ReactNode;
-  onForgot: () => void; onToggleMagic?: () => void; onSubmit: (pw: string) => void;
+function SignInForm({ email, setEmail, busy, errLine, focus, onForgot, onSubmit }: {
+  email: string; setEmail: (v: string) => void; busy: boolean; errLine: ReactNode; focus: boolean; onForgot: () => void; onSubmit: (pw: string) => void;
 }) {
   const [pw, setPw] = useState("");
   const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => { if (!big) ref.current?.focus(); }, [big]);
+  useEffect(() => { if (focus) ref.current?.focus(); }, [focus]);
   return (
-    <form className="flex flex-col gap-4" onSubmit={(e: FormEvent) => { e.preventDefault(); onSubmit(pw); }}>
-      <AuthField label={T.email}><input ref={ref} className={input} type="email" autoComplete="email" required value={email} placeholder={T.emailPh} onChange={(e) => setEmail(e.target.value)} /></AuthField>
-      {!magic && (
-        <AuthField label={T.password} hint={<button type="button" className={cx(link, "text-[12px]")} onClick={onForgot}>{T.forgot}</button>}>
-          <PasswordInput big={big} autoComplete="current-password" required value={pw} onChange={(e) => setPw(e.target.value)} />
-        </AuthField>
-      )}
+    <form className="contents" onSubmit={(e: FormEvent) => { e.preventDefault(); onSubmit(pw); }}>
+      <AuthField label={t("Email")} htmlFor="auth-email">
+        <input id="auth-email" ref={ref} className={cx(authInputCls, "ltr")} type="email" autoComplete="email" required value={email} placeholder={t("you@example.com")} onChange={(e) => setEmail(e.target.value)} />
+      </AuthField>
+      <AuthField label={t("Password")} htmlFor="auth-password" right={<button type="button" className="text-link hover:underline" onClick={onForgot}>{t("Forgot password?")}</button>}>
+        <PasswordInput id="auth-password" autoComplete="current-password" required value={pw} onChange={(e) => setPw(e.target.value)} />
+      </AuthField>
       {errLine}
-      <button className={primary} disabled={busy || !email || (!magic && !pw)}>
-        {magic ? <Mail size={15} /> : null}{busy ? (magic ? T.sending : T.signingIn) : magic ? T.sendLink : T.signIn}
-      </button>
-      {onToggleMagic && <button type="button" className="text-center text-[13px] text-muted hover:text-ink" onClick={onToggleMagic}>{magic ? T.passwordInstead : T.magicInstead}</button>}
+      <PrimaryButton disabled={busy || !email || !pw}>{busy ? t("Signing in…") : t("Sign in")}</PrimaryButton>
     </form>
   );
 }
 
-function RegisterForm({ email, setEmail, busy, input, big, primary, errLine, onSubmit }: {
-  email: string; setEmail: (v: string) => void; busy: boolean; input: string; big: boolean; primary: string; errLine: ReactNode; onSubmit: (f: { name: string; password: string }) => void;
+function RegisterForm({ email, setEmail, busy, errLine, onSignIn, onSubmit }: {
+  email: string; setEmail: (v: string) => void; busy: boolean; errLine: ReactNode; onSignIn: () => void; onSubmit: (f: { name: string; password: string }) => void;
 }) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(() => (previewScreen === "register" ? "Sara Kim" : ""));
   const [pw, setPw] = useState("");
-  const [terms, setTerms] = useState(false);
+  const [terms, setTerms] = useState(previewScreen === "register");
+  useEffect(() => { if (previewScreen === "register" && !email) setEmail("sara@uni.edu"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); if (terms) onSubmit({ name, password: pw }); }}>
-      <AuthField label={T.name}><input dir="auto" className={input} autoComplete="name" value={name} placeholder={T.namePh} onChange={(e) => setName(e.target.value)} /></AuthField>
-      <AuthField label={T.email}><input className={input} type="email" autoComplete="email" required value={email} placeholder={T.emailPh} onChange={(e) => setEmail(e.target.value)} /></AuthField>
-      <AuthField label={T.newPassword} hint={<span>{T.pwHint}</span>}>
-        <PasswordInput big={big} autoComplete="new-password" required minLength={10} value={pw} onChange={(e) => setPw(e.target.value)} />
+    <form className="contents" onSubmit={(e) => { e.preventDefault(); if (terms) onSubmit({ name, password: pw }); }}>
+      <AuthField label={t("Name")} htmlFor="auth-name"><input id="auth-name" dir="auto" className={authInputCls} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} /></AuthField>
+      <AuthField label={t("Email")} htmlFor="auth-email"><input id="auth-email" className={cx(authInputCls, "ltr")} type="email" autoComplete="email" required value={email} placeholder={t("you@example.com")} onChange={(e) => setEmail(e.target.value)} /></AuthField>
+      <AuthField label={t("Password")} htmlFor="auth-new-password">
+        <PasswordInput id="auth-new-password" autoComplete="new-password" required minLength={10} value={pw} onChange={(e) => setPw(e.target.value)} />
         <PasswordMeter value={pw} />
       </AuthField>
-      <label className="flex items-start gap-2.5 text-[13px] leading-[19px] text-muted">
-        <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} className="mt-[2px] size-4 accent-[var(--accent)]" />
-        <span>{T.termsA}<a href="/terms" target="_blank" className="text-link">{T.terms}</a>{T.termsAnd}<a href="/privacy" target="_blank" className="text-link">{T.privacy}</a></span>
+      <label className="flex cursor-pointer items-start gap-2.5 leading-[19px]">
+        <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} className="peer sr-only" />
+        <span aria-hidden="true" className={cx("mt-px flex size-[18px] shrink-0 items-center justify-center rounded-[5px] peer-focus-visible:ring-2 peer-focus-visible:ring-accent", terms ? "bg-accent text-accent-fg" : "border border-line bg-surface")}>
+          {terms && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>}
+        </span>
+        <span>{tx("I agree to the {terms} and {privacy}.", { terms: <a href="/terms" target="_blank" rel="noreferrer" className="text-link hover:underline">{t("Terms")}</a>, privacy: <a href="/privacy" target="_blank" rel="noreferrer" className="text-link hover:underline">{t("Privacy policy")}</a> })}</span>
       </label>
       {errLine}
-      <button className={primary} disabled={busy || !email || pw.length < 10 || !terms}>{busy ? T.creating : T.create}</button>
+      <PrimaryButton disabled={busy || !email || pw.length < 10 || !terms}>{busy ? t("Creating…") : t("Create account")}</PrimaryButton>
+      <span className="text-center text-[12.5px] text-muted">{t("Have an account?")} <button type="button" className="text-link hover:underline" onClick={onSignIn}>{t("Sign in")}</button></span>
     </form>
   );
 }
-
-function ResetForm({ busy, big, primary, errLine, onSubmit }: { busy: boolean; big: boolean; primary: string; errLine: ReactNode; onSubmit: (pw: string) => void }) {
+function ResetForm({ busy, errLine, onSubmit }: { busy: boolean; errLine: ReactNode; onSubmit: (pw: string) => void }) {
   const [pw, setPw] = useState("");
   return (
-    <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); onSubmit(pw); }}>
-      <AuthField label={T.newPassword} hint={<span>{T.pwHint}</span>}>
-        <PasswordInput big={big} autoComplete="new-password" required minLength={10} value={pw} onChange={(e) => setPw(e.target.value)} />
+    <form className="contents" onSubmit={(e) => { e.preventDefault(); onSubmit(pw); }}>
+      <AuthField label={t("New password")} htmlFor="auth-new-password">
+        <PasswordInput id="auth-new-password" autoComplete="new-password" required minLength={10} value={pw} onChange={(e) => setPw(e.target.value)} autoFocus />
         <PasswordMeter value={pw} />
       </AuthField>
       {errLine}
-      <button className={primary} disabled={busy || pw.length < 10}>{T.saveSignIn}</button>
+      <PrimaryButton disabled={busy || pw.length < 10}>{t("Save and sign in")}</PrimaryButton>
     </form>
   );
 }
 
-function InboxBody({ inbox, primary, errLine, onResend, onOther }: { inbox: Inbox; primary: string; errLine: ReactNode; onResend: () => Promise<void>; onOther: () => void }) {
-  const [wait, setWait] = useState(30);
-  useEffect(() => { if (wait <= 0) return; const t = setTimeout(() => setWait(wait - 1), 1000); return () => clearTimeout(t); }, [wait]);
-  const text = inbox.mail === "unavailable" ? T.inboxNoMail : inbox.kind === "verify" ? T.inboxVerify(inbox.email) : inbox.kind === "magic" ? T.inboxMagic(inbox.email) : T.inboxReset(inbox.email);
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-start gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-accent"><MailCheck size={18} /></span>
-        <p className="text-[13px] leading-[20px] text-muted">{text}</p>
-      </div>
-      {errLine}
-      {inbox.mail === "sent" && <button type="button" className={cx(primary, "border border-line bg-transparent text-ink")} disabled={wait > 0} onClick={() => void onResend().then(() => setWait(60))}>{wait > 0 ? T.resendIn(wait) : T.resend}</button>}
-      <button type="button" className="text-center text-[13px] text-muted hover:text-ink" onClick={onOther}>{T.otherEmail}</button>
-    </div>
-  );
+/** 27G: the link is on its way; "Open email app"; resend unlocks after a short countdown. */
+function InboxBody({ screen, busy, errLine, onResend, onBack }: {
+  screen: Extract<Screen, { s: "inbox" }>; busy: boolean; errLine: ReactNode; onResend: () => Promise<void>; onBack: () => void;
+}) {
+  const [wait, setWait] = useState(60);
+  const [sentAgain, setSentAgain] = useState(false);
+  useEffect(() => { if (wait <= 0) return; const tm = setTimeout(() => setWait(wait - 1), 1000); return () => clearTimeout(tm); }, [wait]);
+  if (screen.mail === "unavailable") {
+    return <>
+      <MsgBox tone="warning" title={t("Email isn't set up on this server yet")}>{t("No link was sent. Ask the person who runs this Lumen to set up email.")}</MsgBox>
+      <PrimaryButton onClick={onBack}>{t("Back to sign in")}</PrimaryButton>
+    </>;
+  }
+  const verify = screen.kind === "verify";
+  const lead = verify ? t("It expires in 24 hours.") : t("It works once, for 15 minutes.");
+  const tail = wait > 0 ? t("Didn't get it? Check spam, or resend in {time}.", { time: mmss(wait) }) : t("Didn't get it? Check spam, or resend it now.");
+  const app = emailAppUrl(screen.email);
+  return <>
+    <MsgBox tone="info" title={verify ? t("Open the link to finish") : t("Open the link to sign in")}>{sentAgain ? t("We sent a new link.") + " " : ""}{lead} {tail}</MsgBox>
+    {errLine}
+    <PrimaryButton onClick={() => { if (app.web) window.open(app.url, "_blank", "noopener"); else location.href = app.url; }}>{t("Open email app")}</PrimaryButton>
+    <SecondaryButton disabled={busy || wait > 0} aria-disabled={busy || wait > 0} onClick={() => void onResend().then(() => { setSentAgain(true); setWait(60); })}>{t("Resend link")}</SecondaryButton>
+  </>;
 }

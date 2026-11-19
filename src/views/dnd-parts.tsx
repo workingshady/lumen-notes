@@ -144,7 +144,7 @@ export function NotesTray({ spaceId, used, onPick, onClose, title, hint, classNa
               <GripVertical size={12} className="shrink-0 text-muted" />
               <FileText size={13} className="shrink-0 text-muted" />
               <span className="min-w-0 flex-1 truncate" dir="auto" title={n.title}>{n.title}</span>
-              {on ? <span className="text-[10.5px] text-muted">added</span>
+              {on ? <span className="text-[10.5px] text-muted">{t("added")}</span>
                 : onPick && <button aria-label={t("Add {title}", { title: n.title })} title={t("Add")} onClick={() => onPick(n)} className="flex size-6 shrink-0 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink"><Plus size={13} /></button>}
             </div>
           );

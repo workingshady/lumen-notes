@@ -93,7 +93,7 @@ function SheetBody({ mods, t, onSelect, ops, fresh, phone, onRename }: SheetProp
               {candidates.map((x) => <option key={x.line} value={x.name}>{x.name}</option>)}
             </select>
           ) : (
-            <button onClick={() => setAdding(true)} disabled={!candidates.length} className="flex h-[26px] items-center rounded-[6px] border border-dashed border-line px-2 text-muted hover:text-ink disabled:opacity-50">+ Add</button>
+            <button onClick={() => setAdding(true)} disabled={!candidates.length} className="flex h-[26px] items-center rounded-[6px] border border-dashed border-line px-2 text-muted hover:text-ink disabled:opacity-50">{tr("+ Add")}</button>
           )}
         </div>
         <span className="text-muted">{tr("Note")}</span>

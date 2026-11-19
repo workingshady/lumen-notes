@@ -57,6 +57,14 @@ export function switchAccount(id: string) {
 export class ApiError extends Error { constructor(msg: string, public status: number) { super(msg); } }
 
 export async function api<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
+  // AI usage meter (src/lib/ai-usage.ts) listens to "lumen:ai" after every Workers AI call.
+  if (/^\/(ai|transcribe)(\/|$|\?)/.test(path) && path !== "/ai/usage") {
+    const ev = (status: number, error?: string) => { try { window.dispatchEvent(new CustomEvent("lumen:ai", { detail: { path, status, error, action: (init.json as { action?: string } | undefined)?.action } })); } catch { /* no window */ } };
+    return apiCall<T>(path, init).then((r) => (ev(200), r), (e: unknown) => { ev(e instanceof ApiError ? e.status : 0, (e as Error)?.message); throw e; });
+  }
+  return apiCall<T>(path, init);
+}
+async function apiCall<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
   const sim = await simApi(path, init.method ?? "GET"); // Dev simulator fault injection (no-op outside demo mode)
   if (sim && "mock" in sim) return sim.mock as T;
   if (sim) {

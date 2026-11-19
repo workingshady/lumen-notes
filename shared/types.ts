@@ -70,6 +70,8 @@ export interface Version extends Synced {
   body: string;
   label: string;
   createdAt: number;
+  /** Device that saved it ("Pixel 8", "Windows PC"); shown in the history panel. Older versions have none. */
+  device?: string;
 }
 
 /** Spaced-repetition state of one flashcard (id = noteId:hash(question)). */
@@ -127,6 +129,8 @@ export interface ChatSource { n: number; noteId: string; title: string; heading?
 /** Tutor card on a message: what the tutor UI draws (step, question, feedback, hint, Feynman review, summary). */
 export interface TutorCard {
   kind: "step" | "question" | "feedback" | "hint" | "answer" | "review" | "summary" | "explanation";
+  /** explanation: what produced it (Example / Explain differently / a question about the step). */
+  how?: "example" | "differently" | "ask";
   verdict?: "correct" | "partly" | "not_yet";
   /** 1-based position + total (step 2 of 4, question 1 of 3). */
   i?: number; of?: number;
@@ -152,6 +156,8 @@ export interface ChatMessage {
   empty?: "none";
   followups?: string[];
   tutor?: TutorCard;
+  /** Note Assistant quick action that produced this answer (summarize, flashcards, explain, tags, quiz, diagram). */
+  action?: string;
 }
 export interface ChatThread extends Synced {
   title: string;
@@ -161,6 +167,8 @@ export interface ChatThread extends Synced {
   pathId?: string;
   conceptKey?: string;
   noteId?: string;
+  /** 1 = a note Assistant conversation (right panel, R6-31) about `noteId`. */
+  assistant?: 1;
   pinned: 0 | 1;
   messages: ChatMessage[];
   /** Running summary of turns older than the window (and of messages dropped by the cap). */
@@ -182,7 +190,7 @@ export interface SyncItem {
   updatedAt: number;
   deleted: 0 | 1;
 }
-export interface SyncRequest { since: number; items: SyncItem[] }
+export interface SyncRequest { since: number; items: SyncItem[]; /** First sync on a new device: pull only these kinds (notes first, then cards…). */ kinds?: Kind[] }
 export interface SyncResponse { cursor: number; items: SyncItem[] }
 
 // ---------- JSON Canvas 1.0 (https://jsoncanvas.org/spec/1.0/) ----------

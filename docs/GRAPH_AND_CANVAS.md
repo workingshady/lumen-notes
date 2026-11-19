@@ -18,6 +18,14 @@
 - Big vaults: the global graph shows the 300 most linked of 700+ notes first (`lib/big-vault.ts`), "Show all".
 - Export (SVG/PNG/…) uses the on-screen edge shape and tag styling.
 
+## Big graphs and big data (round 6 · Lumen 32 / 22)
+- **Ask first** (`src/views/graph-big.tsx`, hooked in `GraphView.tsx`): above `graphAsk` notes (Settings › Diagrams › Advanced › Big-data limits, `src/lib/scale-prefs.ts`, default 300) the graph shows a cheap dot backdrop and the “too big” card: Full graph (the original view, always first), Grouped by folder (pre-selected suggestion), Tree, Filter first. “Remember my choice for this space” stores `graphChoice[space]`; `graphDefault` (Full / Grouped / Tree / Ask) applies when nothing is remembered. The view switch (Full · Grouped · Tree · Local · Filter) stays in the top bar.
+- **Grouped**: one circle per group — spaces in an all-spaces scope, else top folders, else child folders after *Open group* (drill path shown top-left). Circle size ∝ √notes, line width ∝ links between groups, laid out once with d3-force. Click = summary card (top 3 most-linked notes, strongest neighbour “118 links to 04 NLP”), *Open group* drills in (a folder without sub-folders draws its notes with `in:"folder"`), *As tree* opens the tree there. Zoom bar + minimap.
+- **Tree**: space → folders → notes left to right, counts on every branch, a branch shows 8 notes (most-linked first) then “+ N more” (+`pageSize` per click); branches fold. Zoom bar + minimap (click to jump).
+- **Filter first**: nothing is drawn until a query (`tag:`, `in:`, `status:`, words) is typed.
+- **Full graph above the threshold**: labels only on the 30 most-linked notes, the rest on zoom. **Slow devices**: `reportDrawTime()` — two draws over 120 ms switch on Reduce effects once (no easing animation, labels on zoom) and the graph says so (“Simple view…” + Change).
+- Elsewhere: Folders view (`src/views/FoldersView.tsx`, palette › Folders), compact skill tree (`src/views/path-compact.tsx`, paths over 100 concepts), month headers + date scrubber (`src/components/date-scrubber.tsx`), palette “Showing 50 of N” + narrowing chips (`narrowingFilters` in `src/lib/search.ts`), backlinks grouped by folder (`grouped-links.tsx`), long notes (`long-read.tsx`), Read-mode table paging (`src/lib/table-pager.ts`), review backlog (`review-backlog.tsx`), Today over budget (`today-overplan.tsx`), first sync notes-first (`lib/sync.ts` `firstSync`, `/api/sync` accepts `kinds`), uploads pause at 98 % of storage (`lib/attachments.ts`), lazy Media tab (`lazy-more.tsx`).
+
 ## Layout engine (`src/lib/graph-layout.ts`)
 `tidy(nodes, edges, {mode: layered|radial|force, dir, spacing, center, keepPinned})` → positions + stats. Layered =
 DFS cycle breaking, longest-path layers, dummy nodes for ordering, barycenter sweeps (Fenwick crossing count), median

@@ -21,6 +21,7 @@ export const planSettingsOf = (s: Settings): PlanSettings => ({
   dailyMinutes: s.planDailyMinutes ?? PLAN_DEFAULTS.dailyMinutes,
   studyDays: s.planStudyDays ?? PLAN_DEFAULTS.studyDays,
   maxNew: s.planMaxNew ?? PLAN_DEFAULTS.maxNew,
+  reviewsFirst: (s as { planReviewsFirst?: boolean }).planReviewsFirst !== false, // Settings › Study plan (round 6)
   courseOrder: s.planCourseOrder ?? PLAN_DEFAULTS.courseOrder,
 });
 export const todayISO = () => localDay(Date.now());

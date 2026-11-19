@@ -2,6 +2,7 @@
 // dev-simulator mock. No app state or I/O here (unit-tested by scripts/chat.test.ts). Runtime: src/components/TutorSession.tsx;
 // prompts: worker/ext/tutor.ts. Docs: docs/CHAT_AND_TUTOR.md.
 import type { ChatSource } from "../../shared/types";
+import { t } from "./i18n";
 
 export type TutorMode = "explain" | "socratic" | "feynman";
 export const TUTOR_MODES: TutorMode[] = ["explain", "socratic", "feynman"];
@@ -15,67 +16,67 @@ export const CHECK_QUESTIONS = 3;
 export const HINT_COST = 0.25;
 
 export const TUTOR_STR = {
-  learnWithTutor: "Learn with tutor",
-  tutor: "Tutor",
-  explainName: "Explain",
-  explainWhat: "Step by step, then a 3-question check",
-  socraticName: "Socratic",
-  socraticWhat: "Guiding questions with hints; it won't give the answer straight away",
-  feynmanName: "Feynman",
-  feynmanWhat: "You explain it; the tutor finds gaps, wrong statements and unexplained jargon",
-  start: "Start",
-  gotIt: "Got it",
-  differently: "Explain differently",
-  example: "Example",
-  hint1: "Hint 1",
-  hint2: "Hint 2",
-  showAnswer: "Show answer",
-  answerPlaceholder: "Your answer…",
-  explainPlaceholder: "Explain it in your own words, as if to a friend…",
-  submit: "Check",
-  submitExplain: "Review my explanation",
-  endSession: "End session",
-  correct: "Correct",
-  partly: "Partly",
-  notYet: "Not yet",
-  clarity: "Clarity",
-  gap: "Gap",
-  wrong: "Not right",
-  jargon: "Unexplained jargon",
-  fixIt: "Fix it and explain again",
-  summaryTitle: "Session summary",
-  right: "What you got right",
-  gaps: "Gaps",
-  cards: "Suggested flashcards",
-  saveAll: "Save all",
-  saveCards: (n: number) => `Save ${n} card${n === 1 ? "" : "s"}`,
-  saved: "Saved",
-  markLearned: "Mark concept learned",
-  learned: "Learned",
-  schedule: "Schedule a review",
-  scheduled: (d: string) => `Review on ${d}`,
-  history: "Tutor sessions",
-  noHistory: "No tutor sessions yet.",
-  pickConcept: "What do you want to learn?",
-  pickHint: "Pick a concept from a learning path, or the note you're reading.",
-  fromNotes: (n: number) => `Grounded in ${n} note${n === 1 ? "" : "s"}`,
-  noNotes: "No notes linked to this concept yet: the tutor uses general knowledge and says so.",
-  loading: "Preparing from your notes…",
-  progressStep: (i: number, n: number) => `Step ${i} of ${n}`,
-  progressQ: (i: number, n: number) => `Question ${i} of ${n}`,
-  progressAttempt: (i: number) => `Attempt ${i}`,
-  score: (p: number) => `${Math.round(p * 100)}%`,
-  passed: "Passed",
-  notPassed: "Not passed yet",
-  next: "Next question",
-  finish: "See summary",
-  again: "Try again",
+  get learnWithTutor() { return t("Learn with tutor"); },
+  get tutor() { return t("Tutor"); },
+  get explainName() { return t("Explain"); },
+  get explainWhat() { return t("Step by step, then a 3-question check"); },
+  get socraticName() { return t("Socratic"); },
+  get socraticWhat() { return t("Guiding questions with hints; it won't give the answer straight away"); },
+  get feynmanName() { return t("Feynman"); },
+  get feynmanWhat() { return t("You explain it; the tutor finds gaps, wrong statements and unexplained jargon"); },
+  get start() { return t("Start"); },
+  get gotIt() { return t("Got it"); },
+  get differently() { return t("Explain differently"); },
+  get example() { return t("Example"); },
+  get hint1() { return t("Hint 1"); },
+  get hint2() { return t("Hint 2"); },
+  get showAnswer() { return t("Show answer"); },
+  get answerPlaceholder() { return t("Your answer…"); },
+  get explainPlaceholder() { return t("Explain it in your own words, as if to a friend…"); },
+  get submit() { return t("Check"); },
+  get submitExplain() { return t("Review my explanation"); },
+  get endSession() { return t("End session"); },
+  get correct() { return t("Correct"); },
+  get partly() { return t("Partly"); },
+  get notYet() { return t("Not yet"); },
+  get clarity() { return t("Clarity"); },
+  get gap() { return t("Gap"); },
+  get wrong() { return t("Not right"); },
+  get jargon() { return t("Unexplained jargon"); },
+  get fixIt() { return t("Fix it and explain again"); },
+  get summaryTitle() { return t("Session summary"); },
+  get right() { return t("What you got right"); },
+  get gaps() { return t("Gaps"); },
+  get cards() { return t("Suggested flashcards"); },
+  get saveAll() { return t("Save all"); },
+  saveCards: (n: number) => t("Save {n} card|Save {n} cards", { n }),
+  get saved() { return t("Saved"); },
+  get markLearned() { return t("Mark concept learned"); },
+  get learned() { return t("Learned"); },
+  get schedule() { return t("Schedule a review"); },
+  scheduled: (d: string) => t("Review on {d}", { d }),
+  get history() { return t("Tutor sessions"); },
+  get noHistory() { return t("No tutor sessions yet."); },
+  get pickConcept() { return t("What do you want to learn?"); },
+  get pickHint() { return t("Pick a concept from a learning path, or the note you're reading."); },
+  fromNotes: (n: number) => t("Grounded in {n} note|Grounded in {n} notes", { n }),
+  get noNotes() { return t("No notes linked to this concept yet: the tutor uses general knowledge and says so."); },
+  get loading() { return t("Preparing from your notes…"); },
+  progressStep: (i: number, n: number) => t("Step {i} of {n}", { i, n }),
+  progressQ: (i: number, n: number) => t("Question {i} of {n}", { i, n }),
+  progressAttempt: (i: number) => t("Attempt {i}", { i }),
+  score: (p: number) => t("{p}%", { p: Math.round(p * 100) }),
+  get passed() { return t("Passed"); },
+  get notPassed() { return t("Not passed yet"); },
+  get next() { return t("Next question"); },
+  get finish() { return t("See summary"); },
+  get again() { return t("Try again"); },
 } as const;
 
 export const MODE_INFO: Record<TutorMode, { name: string; what: string; glyph: string }> = {
-  explain: { name: TUTOR_STR.explainName, what: TUTOR_STR.explainWhat, glyph: "lesson" },
-  socratic: { name: TUTOR_STR.socraticName, what: TUTOR_STR.socraticWhat, glyph: "c-question" },
-  feynman: { name: TUTOR_STR.feynmanName, what: TUTOR_STR.feynmanWhat, glyph: "voice" },
+  explain: { get name() { return TUTOR_STR.explainName; }, get what() { return TUTOR_STR.explainWhat; }, glyph: "lesson" },
+  socratic: { get name() { return TUTOR_STR.socraticName; }, get what() { return TUTOR_STR.socraticWhat; }, glyph: "c-question" },
+  feynman: { get name() { return TUTOR_STR.feynmanName; }, get what() { return TUTOR_STR.feynmanWhat; }, glyph: "voice" },
 };
 
 // ------------------------------------------------------------------ session state
@@ -318,7 +319,11 @@ export function mockTutor(op: string, body: { concept: string; sources: Pick<Cha
         ...(comp < 80 ? [{ quote: first.slice(0, 120), kind: "gap", comment: `This skips how ${concept} actually works step by step${cite(1)}.` }] : []),
         ...(jargon ? [{ quote: jargon, kind: "jargon", comment: `You use “${jargon}” without saying what it means.` }] : []),
       ];
-      return JSON.stringify({ score: Math.round((acc + comp + clar) / 3), reasons: [{ label: "Accuracy", score: acc, note: "Nothing contradicts your notes (mock)." }, { label: "Completeness", score: comp, note: `${covered} key terms from your notes.` }, { label: "Clarity", score: clar, note: "Plain words, short sentences." }], issues, ask: issues.length ? "Fix the quoted parts and explain it again." : "Clear. Try explaining it to a 12-year-old in two sentences." });
+      return JSON.stringify({ score: Math.round((acc + comp + clar) / 3), reasons: [{ label: "Accuracy", score: acc, note: "Nothing contradicts your notes (mock)." }, { label: "Completeness", score: comp, note: `${covered} key terms from your notes.` }, { label: "Plain words", score: clar, note: jargon ? "1 unexplained term" : "plain words" }, { label: "Structure", score: Math.min(100, clar + 10), note: "clear order" }], issues, ask: issues.length ? "Fix the quoted parts and explain it again." : "Clear. Try explaining it to a 12-year-old in two sentences." });
+    }
+    case "ask": {
+      const p = pick(1 + (body.history?.length ?? 0));
+      return JSON.stringify({ text: `**Mock answer (simulator).** About “${String(body.input ?? "").slice(0, 60)}”: ${p.t}${cite(p.n)}` });
     }
     case "summary": {
       const cards = [0, 1, 2, 3].map((i) => { const p = pick(i); const w = p.t.split(" "); return { q: `${concept}: ${w.slice(0, 7).join(" ")}…?`, a: p.t.slice(0, 160) }; });

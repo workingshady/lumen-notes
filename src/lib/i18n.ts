@@ -70,6 +70,7 @@ export function applyLang() {
   h.lang = lang;
   h.dir = RTL[lang] ? "rtl" : "ltr";
   h.dataset.digits = state.digits;
+  try { h.dataset.arFont = (JSON.parse(localStorage.getItem(KEY) ?? "{}") as { arReadFont?: string }).arReadFont === "plex" ? "plex" : "naskh"; } catch { /* no storage */ }
 }
 if (typeof document !== "undefined") applyLang();
 if (typeof window !== "undefined") window.addEventListener("languagechange", () => { if (state.pref === "auto") commit(); });
@@ -87,7 +88,8 @@ function cached<T>(k: string, make: () => T): T { let v = fmtCache.get(k) as T |
 /** Number in the interface digits (Western by default, Arabic-Indic when chosen). */
 export function fmtNum(n: number, opts?: Intl.NumberFormatOptions) {
   if (!Number.isFinite(n)) return String(n);
-  return cached(`n|${lang}|${state.digits}|${JSON.stringify(opts ?? {})}`, () => new Intl.NumberFormat(locale(), { useGrouping: Math.abs(n) >= 10000 ? undefined : false, ...opts })).format(n);
+  // Grouping from 1,000 up (design: "3,142"), whatever the locale's minimum-grouping rule; pass { useGrouping: false } for ids/years.
+  return cached(`n|${lang}|${state.digits}|${JSON.stringify(opts ?? {})}`, () => new Intl.NumberFormat(locale(), { useGrouping: true, ...opts })).format(n);
 }
 /** Replace ASCII digits in an already-formatted string (times like 1:05, versions) with the interface digits. */
 export function digits(s: string | number) { const x = String(s); return state.digits === "arab" ? x.replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[Number(d)]) : x; }

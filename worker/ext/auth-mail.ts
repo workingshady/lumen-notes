@@ -23,16 +23,20 @@ const T = {
   magicBody: "Use this link to sign in to Lumen. It works once, for 15 minutes.",
   magicButton: "Sign in to Lumen",
   resetSubject: "Reset your Lumen password",
-  resetBody: "Someone asked to reset the password for this email. The link works once, for 30 minutes.",
+  resetBody: "Someone asked to reset the password for this email. The link works once and expires in 1 hour.",
   resetButton: "Choose a new password",
+  emailSubject: "Confirm your new email for Lumen",
+  emailBody: "Confirm this address to make it the email of your Lumen account. The link works once, for 24 hours.",
+  emailButton: "Use this email",
   ignore: "If you didn't ask for this, you can ignore this email.",
 } as const;
 
-export type MailKind = "verify" | "magic" | "reset";
+export type MailKind = "verify" | "magic" | "reset" | "email";
 const esc = (s: string) => s.replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]!);
 export function composeMail(kind: MailKind, to: string, link: string): Mail {
   const [subject, body, button] = kind === "verify" ? [T.verifySubject, T.verifyBody, T.verifyButton]
-    : kind === "magic" ? [T.magicSubject, T.magicBody, T.magicButton] : [T.resetSubject, T.resetBody, T.resetButton];
+    : kind === "magic" ? [T.magicSubject, T.magicBody, T.magicButton]
+    : kind === "email" ? [T.emailSubject, T.emailBody, T.emailButton] : [T.resetSubject, T.resetBody, T.resetButton];
   return {
     to, subject,
     text: `${body}\n\n${link}\n\n${T.ignore}\n`,

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#0F1115;-webkit-font-smoothing:antialiased}a{color:inherit;text-decoration:none}a:hover{color:#F2A93B}</style>
+</helmet>
+<div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ok:#6BCB8B;--in:#7AA2F7;--le:#B48EF0;--ln:#5CC8C2;padding:64px;display:flex;flex-direction:column;gap:56px;font-family:Inter,system-ui,sans-serif;color:var(--tx);width:max-content;min-height:100vh;background:var(--bg);font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 44 }}" hint-size="44px,44px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ Sitemap</span></div><div style="font-size:14px;color:var(--mu)">Every screen in the app and where it is designed. Click a box to open its design page.</div></div>
+    <span style="flex:1"></span>
+    <a href="Lumen%20Index.dc.html" style="height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center">← Index</a>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 12px 'JetBrains Mono',monospace;letter-spacing:.08em;color:#F25C9A">1 · APP</span><h2 style="margin:0;font-size:26px;font-weight:650;letter-spacing:-.02em">The app, after unlock</h2></div>
+    <div style="display:flex;align-items:flex-start;gap:28px">
+      <div style="width:220px;display:flex;flex-direction:column;gap:10px;padding-top:4px">
+        <div style="border-radius:12px;border:1.5px solid var(--ac);background:color-mix(in srgb,var(--ac) 8%,var(--sf));padding:12px;display:flex;flex-direction:column;gap:4px"><span style="display:flex;align-items:center;gap:8px;font-weight:650"><dc-import name="LumenGlyph" glyph="flame" size="{{ 16 }}" color="var(--ac)" hint-size="16px,16px"></dc-import>Launch</span><span style="font-size:12px;color:var(--mu);line-height:17px">Splash → Unlock or Continue offline → first-run (3 steps)</span><span style="font:500 11px 'JetBrains Mono',monospace;color:var(--ac)">00 · 01 · 12 · 28</span></div>
+        <span style="text-align:center;color:var(--mu)">↓</span>
+        <div style="border-radius:12px;border:1px solid var(--bd);background:var(--sf);padding:12px;display:flex;flex-direction:column;gap:8px"><b style="font-weight:650">Shell</b>
+          <sc-for list="{{ shell }}" as="s" hint-placeholder-count="5"><span style="display:flex;align-items:center;gap:8px;font-size:12.5px"><dc-import name="LumenGlyph" glyph="{{ s.g }}" size="{{ 14 }}" color="var(--mu)" hint-size="14px,14px"></dc-import><span style="flex:1">{{ s.l }}</span><span style="font:500 10.5px 'JetBrains Mono',monospace;color:var(--mu)">{{ s.p }}</span></span></sc-for>
+        </div>
+        <span style="font-size:12px;color:var(--mu);line-height:17px">Always reachable: ⌘K palette (04), Assistant panel ⌘J (31), Settings (29).</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,250px);gap:16px">
+        <sc-for list="{{ areas }}" as="a" hint-placeholder-count="12">
+          <div style="border-radius:14px;border:1px solid var(--bd);background:var(--sf);display:flex;flex-direction:column;overflow:hidden">
+            <a href="{{ a.href }}" style="padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd);background:var(--sf2)"><dc-import name="LumenGlyph" glyph="{{ a.g }}" size="{{ 18 }}" color="{{ a.c }}" tile="{{ a.c }}" hint-size="31px,31px"></dc-import><span style="flex:1;font-weight:650">{{ a.n }}</span><span style="font:500 11px 'JetBrains Mono',monospace;color:var(--ac)">{{ a.p }}</span></a>
+            <div style="padding:8px 14px 12px;display:flex;flex-direction:column;gap:4px">
+              <sc-for list="{{ a.items }}" as="i" hint-placeholder-count="5"><a href="{{ i.href }}" style="display:flex;align-items:center;gap:8px;min-height:24px;font-size:12.5px;padding-left:{{ i.ind }}"><span style="width:6px;height:6px;border-radius:50%;background:{{ i.dot }};flex-shrink:0"></span><span style="flex:1;color:{{ i.c }}">{{ i.l }}</span><span style="font:500 10.5px 'JetBrains Mono',monospace;color:var(--mu)">{{ i.p }}</span></a></sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 12px 'JetBrains Mono',monospace;letter-spacing:.08em;color:#F25C9A">2 · NOTE</span><h2 style="margin:0;font-size:26px;font-weight:650;letter-spacing:-.02em">Inside one note</h2></div>
+    <div style="display:flex;gap:16px;align-items:stretch">
+      <sc-for list="{{ note }}" as="n" hint-placeholder-count="5"><a href="{{ n.href }}" style="width:220px;border-radius:12px;border:1px solid var(--bd);background:var(--sf);padding:12px 14px;display:flex;flex-direction:column;gap:6px"><span style="display:flex;align-items:center;gap:8px;font-weight:650"><dc-import name="LumenGlyph" glyph="{{ n.g }}" size="{{ 16 }}" hint-size="16px,16px"></dc-import>{{ n.n }}<span style="flex:1"></span><span style="font:500 11px 'JetBrains Mono',monospace;color:var(--ac)">{{ n.p }}</span></span><span style="font-size:12px;color:var(--mu);line-height:17px">{{ n.d }}</span></a></sc-for>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 12px 'JetBrains Mono',monospace;letter-spacing:.08em;color:#F25C9A">3 · PUBLIC</span><h2 style="margin:0;font-size:26px;font-weight:650;letter-spacing:-.02em">What visitors see · no login</h2></div>
+    <div style="display:flex;gap:16px;align-items:center">
+      <sc-for list="{{ pub }}" as="n" hint-placeholder-count="6"><a href="{{ n.href }}" style="width:190px;border-radius:12px;border:1px solid var(--bd);background:#FAF8F3;color:#1F1D1A;padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style="font:500 11px 'JetBrains Mono',monospace;color:#0F7C78">{{ n.u }}</span><b style="font-weight:650">{{ n.n }}</b><span style="font-size:12px;color:#6A655C;line-height:17px">{{ n.d }}</span><span style="font:500 11px 'JetBrains Mono',monospace;color:#B45F0E">{{ n.p }}</span></a></sc-for>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 12px 'JetBrains Mono',monospace;letter-spacing:.08em;color:#F25C9A">4 · PHONE</span><h2 style="margin:0;font-size:26px;font-weight:650;letter-spacing:-.02em">Phone tab bar</h2></div>
+    <div style="display:flex;gap:16px">
+      <sc-for list="{{ phone }}" as="n" hint-placeholder-count="5"><div style="width:200px;border-radius:12px;border:1px solid var(--bd);background:var(--sf);padding:12px 14px;display:flex;flex-direction:column;gap:6px"><span style="display:flex;align-items:center;gap:8px;font-weight:650"><dc-import name="LumenGlyph" glyph="{{ n.g }}" size="{{ 16 }}" color="{{ n.c }}" hint-size="16px,16px"></dc-import>{{ n.n }}</span><span style="font-size:12px;color:var(--mu);line-height:17px">{{ n.d }}</span></div></sc-for>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:baseline;gap:12px"><span style="font:500 12px 'JetBrains Mono',monospace;letter-spacing:.08em;color:#F25C9A">5 · CROSS-CUTTING</span><h2 style="margin:0;font-size:26px;font-weight:650;letter-spacing:-.02em">States that appear everywhere</h2></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;max-width:1300px"><sc-for list="{{ cross }}" as="c" hint-placeholder-count="10"><a href="{{ c.href }}" style="height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--bd);background:var(--sf);display:flex;align-items:center;gap:8px"><span>{{ c.l }}</span><span style="font:500 11px 'JetBrains Mono',monospace;color:var(--ac)">{{ c.p }}</span></a></sc-for></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const FILES = { '00':'Lumen 00 Brand and Splash','01':'Lumen 01 Welcome and Home','02':'Lumen 02 Notes','03':'Lumen 03 Spaces','04':'Lumen 04 Navigate','05':'Lumen 05 Review and Slides','05b':'Lumen 05b Productivity','06':'Lumen 06 Settings and Data','06b':'Lumen 06b Blog and States','07':'Lumen 07 Visual Workspaces','07b':'Lumen 07b Code Script Mermaid API','08':'Lumen 08 Bidi and Embeds','09':'Lumen 09 Sharing','10':'Lumen 10 Public Shared Pages','10b':'Lumen 10b Visitor Types','11':'Lumen 11 Slides Media and Storage','12':'Lumen 12 Android Loading Sync','13':'Lumen 13 Icon System','14':'Lumen 14 Learning Paths','14b':'Lumen 14b Graph and Connections','15':'Lumen 15 Roadmaps and Project Hub','16':'Lumen 16 Editor and Read','20':'Lumen 20 Today Ask Review Nav','22':'Lumen 22 Scale and Long Content','23':'Lumen 23 Ask Chat','24':'Lumen 24 Tutor Modes','25':'Lumen 25 Arabic Interface','26':'Lumen 26 Imports','29':'Lumen 29 Settings','30':'Lumen 30 Sidebars Tags Spaces','31':'Lumen 31 Note Tabs and Assistant','32':'Lumen 32 Big Data and Customization' };
+    const href = p => { const k = String(p).split(/[ ·]/)[0]; return FILES[k] ? encodeURI(FILES[k] + '.dc.html') : '#'; };
+    const I = (l,p,o={}) => ({ l, p, href:href(p), ind:o.sub?'14px':'0', dot:o.dot||'var(--mu)', c:o.sub?'var(--mu)':'var(--tx)' });
+    const shell = [['home','Sidebar · rail','30'],['switch','Space switcher','30'],['tag','Folders · smart · tags','30'],['search','Command palette','04'],['assistant','Assistant panel','31']].map(([g,l,p]) => ({ g, l, p }));
+    const A = (n,g,c,p,items) => ({ n, g, c, p, href:href(p), items });
+    const areas = [
+      A('Home & Today','home','#F2A93B','01',[I('Dashboard','01'),I('Today plan','20'),I('Quick capture','01'),I('Inbox','30')]),
+      A('Notes','lesson','#E8E6E1','02',[I('3-pane workspace','02'),I('Edit · Split · Read · Focus','02'),I('Editor: slash, blocks','16'),I('Read-mode blocks','16'),I('Version history','04'),I('Note tabs','31',{dot:'#F2A93B'})]),
+      A('Spaces','project','#E8893A','03',[I('Course roadmap','15'),I('Outline · Skill tree · Timeline','15',{sub:1}),I('Project hub','15'),I('Board · Docs · Requirements','15',{sub:1}),I('New space dialog','03')]),
+      A('Learning paths','path','#A371F7','14',[I('Path stages','14'),I('Graph · Matrix · Timeline','14',{sub:1}),I('Connections & Tidy up','14b'),I('Too-big skill tree','32')]),
+      A('Review','flashcards','#B48EF0','05',[I('Flashcard session','05'),I('Cloze & occlusion','20'),I('Summary','05'),I('Big backlog','22')]),
+      A('Ask & Tutor','assistant','#F2A93B','23',[I('Ask chat','23'),I('Tutor · Explain/Socratic/Feynman','24'),I('Assistant sidebar','31'),I('AI usage & limit','29')]),
+      A('Graph','graph','#7AA2F7','04',[I('Global · Local','04'),I('Grouped · Tree','32'),I('Edge types · shapes','14b'),I('Display panel','14b')]),
+      A('Visual','canvas','#57AB5A','07',[I('Chooser','07'),I('Canvas','07'),I('Whiteboard','07'),I('Code · Script · Mermaid','07b')]),
+      A('Slides','slides','#E3B341','05',[I('Presenter','05'),I('Slides with media','11'),I('Visitor presenter','10b')]),
+      A('Tasks & data','task','#5CC8C2','05b',[I('Tasks · Kanban · Calendar','05b'),I('Bases · Dashboards','05b'),I('Imports','26'),I('Storage','11')]),
+      A('Blog & sharing','post','#6BCB8B','09',[I('Share sheet','09'),I('Publish','06b'),I('Settings › Sharing','29')]),
+      A('Settings','gear','#9AA0AA','29',[I('13 sections','29'),I('AI · usage meter','29',{sub:1,dot:'#F2A93B'}),I('Developer · simulator','29',{sub:1}),I('Arabic interface','25')])
+    ];
+    const note = [['lesson','Note','16','The writing: Edit, Split, Read, Focus.'],['diagrams-tab','Diagrams','31','Every diagram, zoom, Expand full screen.'],['media','Media','31','Detected videos & audio, timestamps.'],['links-tab','Links','31','Grouped links, website preview, broken links.'],['history','Right panel','31','Outline · Backlinks · Properties · Versions · Assistant.']].map(([g,n,p,d]) => ({ g, n, p, d, href:href(p) }));
+    const pub = [['/','Blog index','Posts, tags, RSS','06b'],['/blog/slug','Post','Read typography, TOC','06b'],['/s/token','Shared course','Overview + graph','10'],['/s/token/…','Shared note','Same reader','10'],['/s/token','Slides · cards · boards','Present, practise, view','10b'],['/s/…','Link unavailable','Turned off or wrong','10b']].map(([u,n,d,p]) => ({ u, n, d, p:p, href:href(p) }));
+    const phone = [['home','Home','Dashboard + Today','#F2A93B'],['lesson','Notes','Folders sheet, note list, note','#E8E6E1'],['plus','+ button','Note, task, capture, voice','#F2A93B'],['flashcards','Review','Due cards, tutor','#B48EF0'],['more','More','Graph, paths, canvases, settings','#9AA0AA']].map(([g,n,d,c]) => ({ g, n, d, c }));
+    const cross = [['Empty states','06b'],['Loading skeletons','12'],['Offline & sync','12'],['Sync conflict','06b'],['Long text & truncation','22'],['Too much data','32'],['Arabic / RTL','25'],['Paper theme','06'],['Icons','13'],['Components','—']].map(([l,p]) => ({ l, p, href: p==='—' ? 'Lumen%20Components.dc.html' : href(p) }));
+    return { shell, areas, note, pub, phone, cross };
+  }
+}
+</script>
+</body>
+</html>

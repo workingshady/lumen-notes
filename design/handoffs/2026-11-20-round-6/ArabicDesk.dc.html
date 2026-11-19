@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div dir="rtl" style="position:absolute;inset:0;display:flex;background:var(--bg);color:var(--tx);font-family:'IBM Plex Sans Arabic',Inter,sans-serif;font-size:14px;line-height:22px;overflow:hidden">
+  <div style="display:{{ deskOnly }};width:240px;flex-shrink:0;background:var(--sf);border-inline-end:1px solid var(--bd);flex-direction:column;padding:10px 8px;gap:2px">
+    <div style="display:flex;align-items:center;gap:10px;padding:6px 8px 10px"><dc-import name="LumenGlyph" glyph="neural" size="{{ 16 }}" color="#A371F7" tile="#A371F7" hint-size="28px,28px"></dc-import><div style="flex:1;display:flex;flex-direction:column;line-height:18px"><span style="font-weight:600">مهندس ذكاء اصطناعي</span><span style="font-size:12px;color:var(--mu)">مسار تعلّم · {{ pct }}</span></div><span style="color:var(--mu)">⌄</span></div>
+    <div style="height:34px;margin:0 2px 6px;border-radius:6px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--mu)"><dc-import name="LumenGlyph" glyph="query" size="{{ 14 }}" hint-size="14px,14px"></dc-import><span style="flex:1">بحث</span><span dir="ltr" style="font:500 11px 'JetBrains Mono',monospace;padding:1px 5px;border:1px solid var(--bd);border-radius:4px">⌘K</span></div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="8"><div style="height:34px;padding:0 8px;border-radius:6px;display:flex;align-items:center;gap:10px;background:{{ n.bg }};color:{{ n.c }};font-weight:{{ n.w }}"><dc-import name="LumenGlyph" glyph="{{ n.g }}" size="{{ 16 }}" color="{{ n.ic }}" hint-size="16px,16px"></dc-import><span style="flex:1">{{ n.l }}</span><span style="font-size:12px;color:var(--le)">{{ n.k }}</span></div></sc-for>
+    <div style="padding:12px 8px 4px;font-size:12px;font-weight:600;color:var(--mu)">المجلدات</div>
+    <sc-for list="{{ folders }}" as="f" hint-placeholder-count="4"><div style="height:32px;padding:0 8px;display:flex;align-items:center;gap:8px;border-radius:6px;background:{{ f.bg }}"><span style="color:var(--mu);font-size:11px">‹</span><span style="width:8px;height:8px;border-radius:3px;background:{{ f.c }}"></span><span style="flex:1">{{ f.n }}</span><span style="font-size:12px;color:var(--mu)">{{ f.k }}</span></div></sc-for>
+    <div style="flex:1"></div>
+    <div style="border-top:1px solid var(--bd);padding:10px 6px 0;display:flex;align-items:center;gap:10px"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></span><span style="flex:1;font-size:12px;color:var(--mu)">تمت المزامنة {{ syncT }}</span><dc-import name="LumenGlyph" glyph="owl" size="{{ 18 }}" hint-size="18px,18px"></dc-import></div>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;padding:{{ pad }};display:flex;flex-direction:column;gap:18px;overflow:hidden">
+        <div style="display:flex;flex-direction:column;gap:4px"><span style="color:var(--mu)">{{ date }}</span><span style="font-size:{{ h1 }};font-weight:700;line-height:1.3">مساء الخير، عامر</span></div>
+        <div style="height:48px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--mu)"><span style="flex:1">التقط فكرة… اضغط Enter للحفظ في صندوق الوارد</span><span dir="ltr" style="font:500 11px 'JetBrains Mono',monospace">⌘↵</span></div>
+        <div style="display:grid;grid-template-columns:{{ cards3 }};gap:12px"><sc-for list="{{ due }}" as="d" hint-placeholder-count="3"><div style="border-radius:12px;background:var(--sf);border:1px solid var(--bd);padding:14px;display:flex;flex-direction:column;gap:6px"><span style="display:flex;align-items:center;gap:8px;color:var(--mu)"><dc-import name="LumenGlyph" glyph="{{ d.g }}" size="{{ 16 }}" color="{{ d.c }}" hint-size="16px,16px"></dc-import>{{ d.l }}</span><span style="font-size:26px;font-weight:700;line-height:1.2">{{ d.n }}</span><span style="font-size:12.5px;color:var(--mu)">{{ d.s }}</span></div></sc-for></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font-weight:600">تابِع</span><sc-for list="{{ recent }}" as="r" hint-placeholder-count="4"><div style="min-height:44px;border-radius:10px;background:var(--sf);display:flex;align-items:center;gap:10px;padding:0 12px"><dc-import name="LumenGlyph" glyph="lesson" size="{{ 15 }}" color="var(--mu)" hint-size="15px,15px"></dc-import><span dir="{{ r.dir }}" style="flex:1;text-align:start;unicode-bidi:plaintext;font-family:{{ r.ff }}">{{ r.t }}</span><span style="font-size:12px;color:var(--mu)">{{ r.d }}</span></div></sc-for></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex"><span style="font-weight:600;flex:1">تقدّم التعلّم</span><span style="color:var(--mu);font-size:12.5px">٤١ من ١٠١</span></div><div style="height:10px;border-radius:5px;overflow:hidden;display:flex;gap:2px"><span style="width:41%;background:var(--ok)"></span><span style="width:14%;background:var(--in)"></span><span style="width:6%;background:var(--wa)"></span><span style="flex:1;background:var(--sf2)"></span></div><span style="font-size:12px;color:var(--mu)">الشريط يمتلئ من اليمين</span></div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isToday }}">
+      <div style="flex:1;padding:{{ pad }};display:flex;flex-direction:column;gap:14px;overflow:hidden">
+        <div style="display:flex;align-items:flex-end;gap:16px"><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="color:var(--mu)">{{ date }}</span><span style="font-size:{{ h1 }};font-weight:700">اليوم</span></div><div style="display:flex;flex-direction:column;gap:4px;width:180px"><span style="font-size:12px;color:var(--mu)">المخطط ٨٥ من ٩٠ دقيقة</span><span style="height:6px;border-radius:3px;background:var(--sf2);overflow:hidden;display:flex"><span style="width:33%;background:var(--ok)"></span><span style="width:61%;background:color-mix(in srgb,var(--tx) 30%,transparent)"></span></span></div></div>
+        <sc-for list="{{ plan }}" as="s" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600;color:var(--mu)">{{ s.h }}</span><div style="border-radius:12px;background:var(--sf);border:{{ s.b }};padding:12px 14px;display:flex;align-items:center;gap:12px;opacity:{{ s.op }}"><dc-import name="LumenGlyph" glyph="{{ s.g }}" size="{{ 18 }}" color="{{ s.gc }}" tile="{{ s.gc }}" hint-size="31px,31px"></dc-import><div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><span dir="auto" style="font-weight:600;text-align:start;unicode-bidi:plaintext;text-decoration:{{ s.dec }}">{{ s.t }}</span><span style="font-size:12.5px;color:var(--mu)">{{ s.why }}</span></div><span style="font-size:12.5px;color:var(--mu);white-space:nowrap">{{ s.min }}</span><span style="display:{{ s.btnS }};height:32px;padding:0 14px;border-radius:9px;background:{{ s.bbg }};color:{{ s.bc }};border:{{ s.bb }};align-items:center;font-weight:600">ابدأ</span></div></div></sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isWork }}">
+      <div style="flex:1;display:flex;min-height:0">
+        <div style="width:320px;border-inline-end:1px solid var(--bd);display:flex;flex-direction:column">
+          <div style="height:48px;padding:0 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd)"><span style="font-weight:600;flex:1">٠٣ التعلّم العميق</span><span style="color:var(--mu);font-size:12.5px">٣١</span></div>
+          <sc-for list="{{ notes }}" as="n" hint-placeholder-count="6"><div style="padding:10px 14px;border-bottom:1px solid var(--bd);display:flex;flex-direction:column;gap:3px;background:{{ n.bg }}"><div style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:{{ n.st }}"></span><span dir="auto" style="flex:1;font-weight:600;text-align:start;unicode-bidi:plaintext;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:{{ n.ff }}">{{ n.t }}</span><span style="font-size:11.5px;color:var(--mu)">{{ n.d }}</span></div><span dir="auto" style="font-size:12.5px;color:var(--mu);text-align:start;unicode-bidi:plaintext;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.e }}</span></div></sc-for>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+          <div style="height:48px;padding:0 20px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd)"><span style="color:var(--mu)">مهندس ذكاء اصطناعي</span><span style="color:var(--mu)">‹</span><span style="color:var(--mu)">٠٣ التعلّم العميق</span><span style="color:var(--mu)">‹</span><span dir="ltr" style="font-weight:500;font-family:Inter">Backprop, by hand</span><span style="flex:1"></span>
+            <div style="display:flex;gap:2px;padding:3px;border-radius:9px;background:var(--sf);border:1px solid var(--bd);font-size:12.5px"><span style="height:26px;padding:0 10px;display:flex;align-items:center;color:var(--mu)">تحرير</span><span style="height:26px;padding:0 10px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;font-weight:600">مقسوم</span><span style="height:26px;padding:0 10px;display:flex;align-items:center;color:var(--mu)">قراءة</span></div></div>
+          <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0">
+            <div dir="ltr" style="border-inline-end:1px solid var(--bd);padding:20px;font:13px/22px 'JetBrains Mono',monospace;white-space:pre-wrap;color:var(--tx)"><span style="color:var(--mu)"># Backprop, by hand</span>
+
+Backpropagation is the chain rule
+applied from the loss back to
+every weight.
+
+<span style="color:var(--le)">```python</span>
+dw = dz * x
+<span style="color:var(--le)">```</span></div>
+            <div dir="ltr" style="padding:20px 24px;font-family:'Source Serif 4',serif;font-size:16px;line-height:28px;display:flex;flex-direction:column;gap:10px"><span style="font-family:Inter;font-size:24px;font-weight:700">Backprop, by hand</span><span>Backpropagation is the chain rule applied from the loss back to every weight.</span><code style="font:13px 'JetBrains Mono',monospace;background:var(--sf);padding:10px;border-radius:8px">dw = dz * x</code><span style="font-family:'IBM Plex Sans Arabic';font-size:12px;color:var(--mu);direction:rtl">ملاحظة إنجليزية داخل واجهة عربية: النص والكود يبقيان من اليسار إلى اليمين.</span></div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isRead }}">
+      <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+        <div style="height:{{ barH }};padding:0 20px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd)"><span style="display:{{ phoneOnly }};font-size:18px">→</span><span style="color:var(--mu);display:{{ deskOnly }}">النحو العربي ‹</span><span style="font-weight:600;flex:1">الانتشار العكسي</span><span style="color:var(--mu);font-size:12.5px;display:{{ deskOnly }}">٦ دقائق قراءة</span></div>
+        <div style="flex:1;display:flex;justify-content:center;padding-top:{{ topR }};overflow:hidden"><article style="width:{{ cw }};font-family:'Noto Naskh Arabic',serif;font-size:{{ rfs }};line-height:1.9;display:flex;flex-direction:column;gap:14px">
+          <h1 style="margin:0;font-size:{{ rh1 }};line-height:1.4">الانتشار العكسي</h1>
+          <p style="margin:0">الانتشار العكسي (<span dir="ltr" style="font-family:'Source Serif 4',serif">backpropagation</span>) هو تطبيق قاعدة السلسلة من الخسارة رجوعًا إلى كل وزن. كل عقدة تحتاج فقط إلى تدرّجها المحلي والتدرّج القادم من الأعلى.</p>
+          <div style="font-family:'IBM Plex Sans Arabic';font-size:15px;line-height:1.7;border-radius:10px;background:color-mix(in srgb,var(--ok) 9%,transparent);border:1px solid color-mix(in srgb,var(--ok) 28%,transparent);padding:12px 16px;display:flex;gap:10px"><dc-import name="LumenGlyph" glyph="c-tip" size="{{ 18 }}" color="var(--ok)" hint-size="18px,18px"></dc-import><span><b style="color:var(--ok)">نصيحة</b> — خزّن التنشيطات في الانتشار الأمامي.</span></div>
+          <div dir="ltr" style="text-align:center;font-family:'Source Serif 4',serif;font-size:18px">∂L/∂w = ∂L/∂a · ∂a/∂z · ∂z/∂w</div>
+          <div style="font-family:'IBM Plex Sans Arabic';border-radius:10px;border:1px solid var(--bd);overflow:hidden;font-size:13.5px"><div style="display:grid;grid-template-columns:1.2fr 1fr 1fr;height:34px;align-items:center;background:var(--sf2);font-weight:600;color:var(--mu)"><span style="padding:0 12px">دالة التنشيط</span><span style="padding:0 12px">المشتقة</span><span style="padding:0 12px">النطاق</span></div><sc-for list="{{ tbl }}" as="r" hint-placeholder-count="3"><div style="display:grid;grid-template-columns:1.2fr 1fr 1fr;height:34px;align-items:center;border-top:1px solid var(--bd)"><span style="padding:0 12px">{{ r.a }}</span><span dir="ltr" style="padding:0 12px;font-family:'JetBrains Mono',monospace;text-align:right">{{ r.b }}</span><span dir="ltr" style="padding:0 12px;text-align:right">{{ r.c }}</span></div></sc-for></div>
+        </article></div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isPath }}">
+      <div style="flex:1;padding:{{ pad }};display:flex;flex-direction:column;gap:14px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:12px"><dc-import name="LumenGlyph" glyph="path" size="{{ 20 }}" color="#A371F7" tile="#A371F7" hint-size="35px,35px"></dc-import><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:20px;font-weight:700">مهندس ذكاء اصطناعي</span><span style="color:var(--mu)">٤١ من ١٠١ مُتقَن · ٢٨ دورة</span></div><span style="height:34px;padding:0 14px;border-radius:9px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">تابِع: الانتشار العكسي</span></div>
+        <div style="display:flex;gap:16px;border-bottom:1px solid var(--bd)"><sc-for list="{{ ptabs }}" as="t" hint-placeholder-count="5"><span style="padding-bottom:10px;box-shadow:{{ t.sh }};color:{{ t.c }};font-weight:{{ t.w }}">{{ t.l }}</span></sc-for></div>
+        <div style="flex:1;display:flex;gap:10px;min-height:0;overflow:hidden"><sc-for list="{{ stages }}" as="s" hint-placeholder-count="5"><div style="width:{{ s.w }};flex-shrink:0;border-radius:12px;background:var(--sf);padding:8px;display:flex;flex-direction:column;gap:6px;overflow:hidden"><div style="display:flex;align-items:center;gap:6px;padding:2px 4px;writing-mode:{{ s.wm }}"><span style="font-weight:600;white-space:nowrap">{{ s.n }}</span><span style="font-size:12px;color:var(--mu)">{{ s.k }}</span></div><span style="display:{{ s.barS }};height:4px;border-radius:2px;background:var(--sf2);overflow:hidden"><span style="display:block;height:100%;width:{{ s.p }};background:var(--ok)"></span></span><sc-for list="{{ s.items }}" as="i" hint-placeholder-count="5"><div style="border-radius:9px;background:var(--sf2);border:{{ i.b }};padding:8px 10px;display:flex;align-items:center;gap:8px"><dc-import name="LumenGlyph" glyph="{{ i.g }}" size="{{ 14 }}" color="{{ i.c }}" hint-size="14px,14px"></dc-import><span dir="auto" style="flex:1;text-align:start;unicode-bidi:plaintext;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px">{{ i.t }}</span></div></sc-for></div></sc-for></div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isReview }}">
+      <div style="flex:1;display:flex;flex-direction:column">
+        <div style="height:52px;padding:0 20px;display:flex;align-items:center;gap:14px"><span style="font-size:18px">×</span><span style="flex:1;height:4px;border-radius:2px;background:var(--sf2);overflow:hidden"><span style="display:block;width:30%;height:100%;background:var(--le)"></span></span><span style="font-weight:600">٧ / ٢٣</span></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:0 16px">
+          <div style="width:{{ cardW }};max-width:100%;min-height:{{ cardH }};box-sizing:border-box;border-radius:16px;background:var(--sf);border:1px solid var(--bd);padding:24px;display:flex;flex-direction:column;gap:16px;text-align:center"><span style="color:var(--mu);font-size:12.5px">الانتشار العكسي · بطاقة</span><span style="font-family:'Noto Naskh Arabic',serif;font-size:20px;line-height:1.8;color:var(--mu)">ماذا يحسب الانتشار العكسي؟</span><span style="height:1px;background:var(--bd);margin:0 30px"></span><span style="flex:1;display:flex;align-items:center;justify-content:center;font-family:'Noto Naskh Arabic',serif;font-size:24px;font-weight:700;line-height:1.7">تدرّجات الخسارة بالنسبة لكل وزن (<span dir="ltr" style="font-family:'Source Serif 4',serif;font-weight:600">∂L/∂w</span>)</span></div>
+          <div style="display:grid;grid-template-columns:repeat(4,{{ gradeW }});gap:8px"><sc-for list="{{ grades }}" as="g" hint-placeholder-count="4"><div style="height:64px;border-radius:12px;background:{{ g.bg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"><span style="font-weight:600;color:{{ g.c }}">{{ g.n }}</span><span style="font-size:12px;color:var(--mu)">{{ g.i }}</span></div></sc-for></div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isSettings }}">
+      <div style="flex:1;display:flex;min-height:0">
+        <div style="display:{{ deskOnly }};width:220px;border-inline-end:1px solid var(--bd);padding:20px 10px;flex-direction:column;gap:2px"><span style="padding:0 10px 12px;font-size:18px;font-weight:700">الإعدادات</span><sc-for list="{{ setNav }}" as="n" hint-placeholder-count="8"><div style="height:36px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:10px;background:{{ n.bg }};color:{{ n.c }};font-weight:{{ n.w }}"><dc-import name="LumenGlyph" glyph="{{ n.g }}" size="{{ 15 }}" color="{{ n.ic }}" hint-size="15px,15px"></dc-import>{{ n.l }}</div></sc-for></div>
+        <div style="flex:1;padding:{{ pad }};display:flex;flex-direction:column;gap:20px;max-width:620px">
+          <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:22px;font-weight:700">المظهر</span><span style="color:var(--mu)">تُطبَّق التغييرات فورًا على هذا الجهاز.</span></div>
+          <div style="display:flex;flex-direction:column;gap:10px"><span style="font-weight:600">اللغة</span><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="height:38px;display:flex;align-items:center;justify-content:center;color:var(--mu);font-family:Inter">English</span><span style="height:38px;border-radius:8px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:700">العربية</span><span style="height:38px;display:flex;align-items:center;justify-content:center;color:var(--mu)">تلقائي</span></div><span style="font-size:12.5px;color:var(--mu)">الاتجاه يتبع اللغة. «تلقائي» يستخدم لغة الجهاز.</span></div>
+          <div style="display:flex;flex-direction:column;gap:10px"><span style="font-weight:600">الأرقام</span><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="height:38px;border-radius:8px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:700">غربية <span dir="ltr" style="margin-inline-start:6px;font-family:Inter">1 2 3</span></span><span style="height:38px;display:flex;align-items:center;justify-content:center;color:var(--mu)">هندية ١ ٢ ٣</span></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="flex:1;font-weight:600">التاريخ</span><span style="color:var(--mu)">الأربعاء ١٩ نوفمبر ٢٠٢٦</span></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="flex:1;font-weight:600">خط القراءة</span><span style="height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;font-family:'Noto Naskh Arabic',serif">نوتو نسخ</span></div>
+          <div style="display:flex;align-items:center;gap:8px;color:var(--mu);border-top:1px solid var(--bd);padding-top:14px">‹ متقدّم · حجم خط الواجهة ١٤/٢٢ · تقليل الحركة</div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isPalette }}">
+      <div style="flex:1;position:relative;background:color-mix(in srgb,var(--sf) 40%,var(--bg))">
+        <div style="position:absolute;inset:0;background:rgba(5,6,8,.45)"></div>
+        <div style="position:absolute;left:50%;top:{{ palTop }};transform:translateX(-50%);width:{{ palW }};border-radius:14px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 24px 64px rgba(0,0,0,.45);display:flex;flex-direction:column;overflow:hidden">
+          <div style="height:54px;padding:0 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><dc-import name="LumenGlyph" glyph="query" size="{{ 18 }}" color="var(--mu)" hint-size="18px,18px"></dc-import><span style="font-size:16px">انتشار</span><span style="width:1.5px;height:20px;background:var(--ac)"></span><span style="flex:1"></span><span dir="ltr" style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu);padding:2px 6px;border:1px solid var(--bd);border-radius:4px">Esc</span></div>
+          <div style="padding:6px;display:flex;flex-direction:column">
+            <sc-for list="{{ pal }}" as="r" hint-placeholder-count="7"><div style="display:{{ r.hS }};padding:8px 10px 4px;font-size:12px;font-weight:600;color:var(--mu)">{{ r.h }}</div><div style="display:{{ r.rS }};min-height:44px;padding:0 10px;border-radius:8px;align-items:center;gap:12px;background:{{ r.bg }}"><dc-import name="LumenGlyph" glyph="{{ r.g }}" size="{{ 16 }}" color="{{ r.ic }}" hint-size="16px,16px"></dc-import><span dir="auto" style="flex:1;text-align:start;unicode-bidi:plaintext;font-family:{{ r.ff }}">{{ r.a }}<b style="color:var(--ac);font-weight:700">{{ r.hit }}</b>{{ r.b }}</span><span style="font-size:12px;color:var(--mu)">{{ r.p }}</span></div></sc-for>
+          </div>
+          <div style="padding:10px 16px;border-top:1px solid var(--bd);display:flex;gap:12px;font-size:12px;color:var(--mu)"><span>↑↓ تنقّل</span><span>↵ فتح</span><span dir="ltr" style="font-family:'JetBrains Mono',monospace">tag: type: in:</span></div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isMore }}">
+      <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+        <span style="font-size:26px;font-weight:700">المزيد</span>
+        <div style="border-radius:14px;background:var(--sf);padding:14px;display:flex;align-items:center;gap:12px"><dc-import name="LumenGlyph" glyph="owl" size="{{ 22 }}" tile="#E8E6E1" hint-size="44px,44px"></dc-import><div style="flex:1;display:flex;flex-direction:column"><span style="font-weight:600">ملاحظات الوردية الليلية</span><span style="font-size:12.5px;color:var(--mu)">تمت المزامنة قبل دقيقتين</span></div><span style="color:var(--mu)">‹</span></div>
+        <div style="border-radius:14px;background:var(--sf);overflow:hidden"><sc-for list="{{ more }}" as="m" hint-placeholder-count="7"><div style="height:52px;padding:0 14px;display:flex;align-items:center;gap:14px;border-top:{{ m.bt }}"><dc-import name="LumenGlyph" glyph="{{ m.g }}" size="{{ 19 }}" color="var(--mu)" hint-size="19px,19px"></dc-import><span style="flex:1">{{ m.l }}</span><span style="color:var(--mu);font-size:13px">{{ m.v }}</span><span style="color:var(--mu)">‹</span></div></sc-for></div>
+      </div>
+    </sc-if>
+    <div style="display:{{ tabShow }};height:84px;border-top:1px solid var(--bd);background:var(--sf);padding:6px 8px 20px;box-sizing:border-box;align-items:center;justify-content:space-around">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:64px;color:{{ t.c }};font-size:11.5px;font-weight:{{ t.w }}"><span style="width:{{ t.s }};height:{{ t.s }};border-radius:{{ t.r }};background:{{ t.bg }};display:flex;align-items:center;justify-content:center"><dc-import name="LumenGlyph" glyph="{{ t.g }}" size="{{ 20 }}" color="{{ t.ic }}" hint-size="20px,20px"></dc-import></span>{{ t.l }}</div></sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;today&quot;,&quot;workspace&quot;,&quot;read&quot;,&quot;path&quot;,&quot;review&quot;,&quot;settings&quot;,&quot;palette&quot;,&quot;more&quot;],&quot;default&quot;:&quot;home&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;hindi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const sc = this.props.screen ?? 'home', p = !!this.props.phone, hindi = !!this.props.hindi;
+    const N = s => hindi ? String(s).replace(/[0-9]/g, d => '٠١٢٣٤٥٦٧٨٩'[d]) : s;
+    const nav = [['home','الرئيسية','home'],['inbox','الوارد','inbox'],['date','اليوم','today'],['flashcards','المراجعة','review','٣٨'],['graph','الخريطة','graph'],['path','مسارات التعلّم','path'],['canvas','اللوحات','x'],['rss','المدونة','x']].map(([g,l,k,c]) => { const on = k===sc || (k==='path'&&sc==='path') || (k==='home'&&['workspace','read'].includes(sc)&&false); return { g, l, k:c||'', bg:on?'var(--sf2)':'transparent', c:on?'var(--tx)':'var(--mu)', ic:on?'var(--ac)':'var(--mu)', w:on?600:450 }; });
+    const folders = [['٠١ أسس الرياضيات','#39C5CF','١٨'],['٠٢ أساسيات التعلّم الآلي','#E8893A','٢٤'],['٠٣ التعلّم العميق','#A371F7','٣١',1],['٠٤ معالجة اللغة','#57AB5A','٢٢']].map(([n,c,k,a]) => ({ n, c, k, bg: a&&sc==='workspace'?'var(--sf2)':'transparent' }));
+    const due = [['flashcards','var(--le)','بطاقات مستحقة',N(38),'نحو ١٤ دقيقة'],['task','var(--in)','مهام اليوم',N(4),'اثنتان متأخرتان'],['s-revise','var(--wa)','للمراجعة',N(3),'دورات المراجعة']].map(([g,c,l,n,s]) => ({ g, c, l, n, s }));
+    const recent = [['الانتشار العكسي','rtl',"'IBM Plex Sans Arabic'",'قبل ساعة'],['Tokenization (BPE)','ltr','Inter','أمس'],['AdamW','ltr','Inter','الإثنين'],['الإضافة في اللغة العربية','rtl',"'IBM Plex Sans Arabic'",'الأحد']].map(([t,dir,ff,d]) => ({ t, dir, ff, d }));
+    const PL = (h,g,gc,t,why,min,o={}) => ({ h, g, gc, t, why, min, b:o.cur?'1.5px solid var(--ac)':'1px solid var(--bd)', op:o.done?.6:1, dec:o.done?'line-through':'none', btnS:o.done?'none':'flex', bbg:o.cur?'var(--ac)':'transparent', bc:o.cur?'var(--af)':'var(--tx)', bb:o.cur?'none':'1px solid var(--bd)' });
+    const plan = [PL('المراجعات · دائمًا أولًا','flashcards','var(--le)','٣٨ بطاقة مستحقة','حسب خوارزمية FSRS','١٤ د',{done:1}),PL('تابِع','lesson','#39C5CF','الانتشار العكسي · CS231n','شغّلت المؤقّت عليه أمس','٣٠ د',{cur:1}),PL('دروس جديدة','k-video','#E3B341','Tokenization (BPE) · Karpathy','فُتح بعد الانحدار التدريجي','٢٥ د'),PL('مراجعة وتدريب','s-revise','var(--wa)','التطبيع الدُفعي','المراجعة ٣ من ٧','٥ د')];
+    const notes = [['الانتشار العكسي','الانتشار العكسي هو قاعدة السلسلة…','var(--in)','قبل ساعة',"'IBM Plex Sans Arabic'"],['Backprop, by hand','Backpropagation is the chain rule…','var(--in)','أمس','Inter',1],['AdamW','Decoupled weight decay…','var(--ok)','الإثنين','Inter'],['التطبيع الدُفعي','يثبّت توزيع التنشيطات…','var(--wa)','الأحد',"'IBM Plex Sans Arabic'"],['Dropout in practice','Randomly zero activations…','var(--mu)','١٢ نوفمبر','Inter'],['تهيئة الأوزان','لماذا لا نبدأ بأصفار؟','var(--mu)','١٠ نوفمبر',"'IBM Plex Sans Arabic'"]].map(([t,e,st,d,ff,sel]) => ({ t, e, st, d, ff, bg: sel?'var(--sf)':'transparent' }));
+    const tbl = [['سيغمويد','σ(1−σ)','(0, 1)'],['ReLU','0 or 1','[0, ∞)'],['GELU','≈ smooth','≈[−0.17, ∞)']].map(([a,b,c]) => ({ a, b, c }));
+    const ptabs = ['المراحل','الخريطة','المصفوفة','الجدول الزمني','للمراجعة ٣'].map((l,i) => ({ l, sh:i===0?'inset 0 -2px 0 var(--ac)':'none', c:i===0?'var(--tx)':'var(--mu)', w:i===0?600:450 }));
+    const G = { d:['s-done','var(--ok)'], l:['s-learning','var(--in)'], t:['s-todo','var(--mu)'], k:['s-locked','var(--mu)'] };
+    const I = (t,s,cur) => ({ t, g:G[s][0], c:G[s][1], b: cur?'1.5px solid var(--ac)':'1px solid transparent' });
+    const stages = [['١ الرياضيات','١٢/١٢','100%',[],0],['٢ أساسيات التعلّم الآلي','١٤/١٤','100%',[],0],['٣ التعلّم العميق','٧/١٦','44%',[I('الانتشار العكسي','l',1),I('AdamW','d'),I('التطبيع الدُفعي','t'),I('Dropout','d'),I('تهيئة الأوزان','k')],1],['٤ الرؤية الحاسوبية','٢/٩','22%',[I('الالتفاف','t'),I('ResNet','k'),I('ViT','k')],1],['٥ معالجة اللغة','١/١٦','6%',[I('Tokenization (BPE)','l'),I('الانتباه','k'),I('RAG','k')],1]].slice(0, p?3:5)
+      .map(([n,k,pp,items,open]) => ({ n, k, p:pp, items, w: open?(p?'250px':'220px'):'40px', wm: open?'horizontal-tb':'vertical-rl', barS: open?'block':'none' }));
+    const grades = [['مجددًا','١ د','var(--da)'],['صعب','٦ د','var(--wa)'],['جيد','١ ي','var(--ok)'],['سهل','٤ أيام','var(--in)']].map(([n,i,c]) => ({ n, i, c, bg:`color-mix(in srgb, ${c} 10%, var(--sf))` }));
+    const setNav = [['palette','المظهر',1],['pen-tool','الهوية'],['refresh-cw','المزامنة'],['share','المشاركة'],['rss','المدونة'],['hard-drive','التخزين'],['flashcards','المراجعة'],['code','للمطوّرين']].map(([g,l,a]) => ({ g: a?'canvas':'note', l, bg:a?'var(--sf2)':'transparent', c:a?'var(--tx)':'var(--mu)', ic:a?'var(--ac)':'var(--mu)', w:a?600:450 }));
+    const pal = [{h:'الملاحظات'},['lesson','','انتشار',' عكسي','٠٣ التعلّم العميق',"'IBM Plex Sans Arabic'",1],['lesson','Backprop, by hand','','','CS231n','Inter'],['flashcards','بطاقات ال','انتشار',' العكسي','بطاقات',"'IBM Plex Sans Arabic'"],{h:'الأوامر'},['lesson','تعلّم «ال','انتشار','» مع المدرّس','',"'IBM Plex Sans Arabic'"],['graph','افتح الخريطة المحلية','','','',"'IBM Plex Sans Arabic'"]]
+      .map(r => r.h ? { hS:'block', rS:'none', h:r.h, g:'note', ic:'', a:'', hit:'', b:'', p:'', ff:'', bg:'' } : { hS:'none', rS:'flex', h:'', g:r[0], a:r[1], hit:r[2], b:r[3], p:r[4], ff:r[5], ic: r[6]?'var(--ac)':'var(--mu)', bg: r[6]?'var(--bg)':'transparent' });
+    const more = [['date','الملاحظة اليومية',''],['task','المهام','٥'],['graph','الخريطة',''],['canvas','اللوحات','٦'],['palette','المظهر','العربية'],['refresh-cw','المزامنة','مفعّلة'],['hard-drive','التخزين','١٫٤ غ.ب']].map(([g,l,v],i) => ({ g: ['date','task','graph','canvas'].includes(g)?g:'note', l, v, bt: i?'1px solid var(--bd)':'none' }));
+    const activeTab = { home:'home', today:'today', review:'review', more:'more' }[sc] || 'notes';
+    const tabs = [['home','الرئيسية','home'],['lesson','الملاحظات','notes'],['plus','','fab'],['flashcards','المراجعة','review'],['note','المزيد','more']].map(([g,l,k]) => { const fab = k==='fab', on = k===activeTab; return { g: fab?'note':g, l, c:on?'var(--tx)':'var(--mu)', ic: fab?'var(--af)':(on?'var(--ac)':'var(--mu)'), w:on?600:450, s: fab?'52px':'28px', r: fab?'16px':'0', bg: fab?'var(--ac)':'transparent' }; });
+    const on = k => sc===k;
+    return { nav, folders, due, recent, plan, notes, tbl, ptabs, stages, grades, setNav, pal, more, tabs,
+      isHome:on('home'), isToday:on('today'), isWork:on('workspace'), isRead:on('read'), isPath:on('path'), isReview:on('review'), isSettings:on('settings'), isPalette:on('palette'), isMore:on('more'),
+      pct: N('41%'), syncT:'قبل دقيقتين', date: hindi ? 'الأربعاء ١٩ نوفمبر' : 'الأربعاء 19 نوفمبر',
+      deskOnly: p?'none':'flex', phoneOnly: p?'block':'none', tabShow: p?'flex':'none',
+      pad: p?'16px':'28px 36px', h1: p?'24px':'28px', cards3: p?'1fr 1fr':'repeat(3,1fr)', barH: p?'56px':'48px', topR: p?'18px':'40px', cw: p?'372px':'680px', rfs: p?'17px':'19px', rh1: p?'28px':'38px',
+      cardW: p?'380px':'640px', cardH: p?'380px':'360px', gradeW: p?'88px':'150px', palTop: p?'60px':'110px', palW: p?'380px':'620px' };
+  }
+}
+</script>
+</body>
+</html>

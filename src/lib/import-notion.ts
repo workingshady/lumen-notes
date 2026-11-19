@@ -7,19 +7,45 @@
 // Mapping: pages → notes keeping the folder tree (ids stripped from names); databases → a Base note (type: base, table
 // view filtered to the database folder) whose rows are notes with front-matter properties; page links → [[Title]];
 // images and files → attachments; unsupported embeds are counted in warnings.
-import { serializeBase } from "./base";
+import { serializeBase, type BaseViewDef, type ViewType } from "./base";
+import { t } from "./i18n";
 import {
-  attLink, attRef, baseName, cleanName, dirName, emptyPlan, extOf, htmlToMd, mimeOf, stripCommonRoot, yieldUI,
+  attLink, attRef, baseName, cleanName, dirName, emptyPlan, extOf, htmlToMd, mimeOf, stripCommonRoot, yieldUI, ImportError, isNotionHtmlExport,
   type ImportPlan, type PlanNote, type Progress, type VFile,
 } from "./import-model";
 import { toFrontMatter } from "./parse";
 
 export const NOTION_TEXT = {
-  embeds: (n: number) => `${n} embed${n === 1 ? "" : "s"} (iframes, videos, synced blocks) can't be imported; ${n === 1 ? "it stays" : "they stay"} as text or a link.`,
-  outside: (n: number) => `${n} link${n === 1 ? "" : "s"} point${n === 1 ? "s" : ""} to Notion pages that aren't in this export; ${n === 1 ? "it stays" : "they stay"} as a web link.`,
-  missingFiles: (n: number) => `${n} image${n === 1 ? " or file is" : "s or files are"} referenced but missing from the export.`,
-  notNotion: "This zip doesn't look like a Notion export (no .md or .csv pages).",
+  embeds: (n: number, providers: string) => providers
+    ? t("{n} embed ({list}) can't be imported; it stays as a link.|{n} embeds ({list}) can't be imported; they stay as links.", { n, list: providers })
+    : t("{n} embed can't be imported; it stays as a link.|{n} embeds can't be imported; they stay as links.", { n }),
+  outside: (n: number) => t("{n} link points to a Notion page that isn't in this export; it stays as a web link.|{n} links point to Notion pages that aren't in this export; they stay as web links.", { n }),
+  missingFiles: (n: number) => t("{n} image or file is referenced but missing from the export.|{n} images or files are referenced but missing from the export.", { n }),
+  notNotion: () => t("This zip doesn't look like a Notion export (no .md or .csv pages)."),
+  html: () => t("This file looks like an HTML export. Lumen needs Markdown & CSV."),
 };
+/** Embeds Notion exports as a bare link line (`[url](url)`) or an iframe: provider names for the preview. */
+const PROVIDERS: [RegExp, string][] = [
+  [/figma\.com$/, "Figma"], [/loom\.com$/, "Loom"], [/(youtube\.com|youtu\.be)$/, "YouTube"], [/vimeo\.com$/, "Vimeo"], [/miro\.com$/, "Miro"],
+  [/codepen\.io$/, "CodePen"], [/(docs|drive)\.google\.com$/, "Google Drive"], [/(twitter|x)\.com$/, "X"], [/gist\.github\.com$/, "GitHub Gist"],
+  [/(maps\.google\.com|google\.com\/maps)$/, "Google Maps"], [/(open\.)?spotify\.com$/, "Spotify"], [/whimsical\.com$/, "Whimsical"], [/excalidraw\.com$/, "Excalidraw"],
+  [/airtable\.com$/, "Airtable"], [/typeform\.com$/, "Typeform"], [/(github\.com)$/, "GitHub"],
+];
+const providerOf = (url: string): string | null => {
+  try { const h = new URL(url).hostname.replace(/^www\./, ""); return PROVIDERS.find(([re]) => re.test(h))?.[1] ?? null; } catch { return null; }
+};
+
+/** A Notion database base note with another first view (the preview's "Base · Table / Board / Gallery…" choice). */
+export function withBaseView(n: PlanNote, view: ViewType): PlanNote {
+  if (!n.baseSpec) return n;
+  const { folder, order, group, date } = n.baseSpec;
+  const name = { table: t("Table"), board: t("Board"), cards: t("Gallery"), list: t("List"), calendar: t("Calendar") }[view];
+  const v: BaseViewDef = { type: view, name, order };
+  if (view === "board" && group) v.groupBy = { property: group, direction: "ASC" };
+  if (view === "calendar" && date) v.date = date;
+  const yaml = serializeBase({ filters: { and: [`file.inFolder("@@FOLDER:${folder}@@")`] }, views: [v] });
+  return { ...n, body: `---\ntype: base\n---\n# ${n.title}\n\n\`\`\`base\n${yaml}\`\`\`\n` };
+}
 
 const ID = /\s+[0-9a-f]{32}$/i;
 const ID_LOOSE = /\s*[0-9a-f]{32}$/i;
@@ -79,7 +105,10 @@ export async function notionPlan(input: VFile[], name: string, onProgress?: Prog
   const lower = new Map(files.map((f) => [f.path.toLowerCase(), f]));
   const mds = files.filter((f) => extOf(f.path) === "md");
   const csvs = files.filter((f) => extOf(f.path) === "csv");
-  if (!mds.length && !csvs.length) throw new Error(NOTION_TEXT.notNotion);
+  if (!mds.length && !csvs.length) {
+    if (isNotionHtmlExport(files.map((f) => f.path))) throw new ImportError("notion-html", NOTION_TEXT.html(), name);
+    throw new Error(NOTION_TEXT.notNotion());
+  }
   const folderOf = (path: string) => dirName(path).split("/").filter(Boolean).map(cleanSeg);
   const titleOfPath = new Map<string, string>(); // md/csv path → note title
 
@@ -108,7 +137,8 @@ export async function notionPlan(input: VFile[], name: string, onProgress?: Prog
     if (++i % 100 === 0) { onProgress?.(i, mds.length * 2, f.path); await yieldUI(); }
   }
 
-  const counts = { embeds: 0, outside: 0, missing: 0 };
+  const counts = { embeds: 0, outside: 0, missing: 0, links: 0 };
+  const providers = new Set<string>();
   const attByPath = new Map<string, string>();
   const attach = (path: string) => {
     const f = byPath.get(path) ?? lower.get(path.toLowerCase());
@@ -133,7 +163,9 @@ export async function notionPlan(input: VFile[], name: string, onProgress?: Prog
     let s = md;
     // <aside> callouts → Obsidian-style callouts
     s = s.replace(/<aside>([\s\S]*?)<\/aside>/gi, (_m, inner: string) => "> [!note]\n" + htmlToMd(inner).split("\n").map((l) => `> ${l}`).join("\n"));
-    s = s.replace(/<(iframe|video|embed|object)\b[^>]*>(?:[\s\S]*?<\/\1>)?/gi, (m) => { counts.embeds++; const src = /src="([^"]+)"/.exec(m)?.[1]; return src ? `<${src}>` : ""; });
+    s = s.replace(/<(iframe|video|embed|object)\b[^>]*>(?:[\s\S]*?<\/\1>)?/gi, (m) => { counts.embeds++; const src = /src="([^"]+)"/.exec(m)?.[1]; const pv = src && providerOf(src); if (pv) providers.add(pv); return src ? `<${src}>` : ""; });
+    // embed blocks export as a line with only `[url](url)`: count them (they stay links)
+    s = s.replace(/^\[(https?:[^\]\s]+)\]\((https?:[^)\s]+)\)\s*$/gm, (m, a: string, b: string) => { const pv = a === b ? providerOf(b) : null; if (pv) { counts.embeds++; providers.add(pv); } return m; });
     s = s.replace(/<\/?(span|div|br|p|details|summary|figure|figcaption)\b[^>]*>/gi, "\n");
     // images and links
     s = s.replace(/(!?)\[([^\]]*)\]\(([^)\s]+(?:\s[^)"]+)*)(?:\s+"[^"]*")?\)/g, (m, bang: string, text: string, href: string) => {
@@ -146,6 +178,7 @@ export async function notionPlan(input: VFile[], name: string, onProgress?: Prog
       if (ext === "md" || ext === "csv") {
         const title = titleOfPath.get(target) ?? titleOfPath.get([...titleOfPath.keys()].find((k) => k.toLowerCase() === target.toLowerCase()) ?? "");
         if (!title) return text || m;
+        counts.links++;
         return text && stripNotionId(text) !== title ? `[[${title}|${text}]]` : `[[${title}]]`;
       }
       const ref = attach(target);
@@ -218,11 +251,12 @@ export async function notionPlan(input: VFile[], name: string, onProgress?: Prog
       };
       plan.notes.push(n);
     });
-    const yaml = serializeBase({ filters: { and: [`file.inFolder("@@FOLDER:${rowFolder.join("/")}@@")`] }, views: [{ type: "table", name: "Table", order }] });
-    plan.notes.push({
-      key: db.csvPath, folder: db.folder, title: db.title, type: "base", badge: "database", tags: [], props: {},
-      body: `---\ntype: base\n---\n# ${db.title}\n\n\`\`\`base\n${yaml}\`\`\`\n`, cards: db.rows.length,
-    });
+    const group = keys.find((_k, ci) => ci !== titleCol && !tagCols.has(ci) && !dateCols.has(ci) && !boolCols.has(ci) && /status|stage|state|priority|category|type/i.test(db.header[ci]));
+    const date = keys.find((_k, ci) => dateCols.has(ci));
+    plan.notes.push(withBaseView({
+      key: db.csvPath, folder: db.folder, title: db.title, type: "base", badge: "database", tags: [], props: {}, body: "", cards: db.rows.length,
+      baseSpec: { folder: rowFolder.join("/"), order, group, date },
+    }, "table"));
   }
   i = 0;
   for (const f of mds) {
@@ -232,7 +266,8 @@ export async function notionPlan(input: VFile[], name: string, onProgress?: Prog
     const db = dbByFolder.get(dirName(f.path));
     plan.notes.push({ key: f.path, folder: db ? [...db.folder, db.title] : folderOf(f.path), title, type: "note", body: rewrite(f.path, withH1(title, texts.get(f.path)!)).trimEnd() + "\n", tags: [], props: {}, badge: db ? "row" : "page" });
   }
-  if (counts.embeds) plan.warnings.push(NOTION_TEXT.embeds(counts.embeds));
+  if (counts.embeds) plan.warnings.push(NOTION_TEXT.embeds(counts.embeds, [...providers].join(", ")));
+  plan.stats = { pageLinks: counts.links, embeds: counts.embeds, embedProviders: [...providers], syncedBlocks: 0, total: mds.length + dbs.length, totalBytes: files.reduce((a, f) => a + f.size, 0) };
   if (counts.outside) plan.warnings.push(NOTION_TEXT.outside(counts.outside));
   if (counts.missing) plan.warnings.push(NOTION_TEXT.missingFiles(counts.missing));
   onProgress?.(1, 1, "");

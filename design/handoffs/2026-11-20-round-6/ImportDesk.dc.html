@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:absolute;inset:0;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:13px;overflow:hidden;display:flex;flex-direction:column">
+  <div style="display:{{ backdropS }};position:absolute;inset:0;background:color-mix(in srgb,var(--sf) 40%,var(--bg))"><div style="position:absolute;inset:0;background:rgba(5,6,8,.5)"></div></div>
+  <div style="position:{{ pos }};left:50%;top:50%;transform:{{ tf }};width:{{ dw }};height:{{ dh }};border-radius:{{ dr }};background:var(--sf);border:{{ dbd }};display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:{{ hpad }};display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--bd)">
+      <span style="display:{{ backS }};font-size:18px;width:28px">←</span>
+      <span style="font-size:17px;font-weight:650;flex:1">{{ title }}</span>
+      <div style="display:{{ stepsS }};gap:10px;font-size:12px"><sc-for list="{{ steps }}" as="s" hint-placeholder-count="5"><span style="display:flex;align-items:center;gap:6px;color:{{ s.c }};font-weight:{{ s.w }}"><span style="width:18px;height:18px;border-radius:50%;background:{{ s.bg }};border:1.5px solid {{ s.c }};box-sizing:border-box;color:{{ s.nc }};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">{{ s.n }}</span>{{ s.l }}</span></sc-for></div>
+      <span style="display:{{ phoneOnly }};color:var(--mu);font-size:12px">{{ stepOf }}</span>
+      <span style="display:{{ xS }};color:var(--mu);font-size:16px">×</span>
+    </div>
+
+    <div style="flex:1;min-height:0;overflow:hidden;padding:{{ bpad }};display:flex;flex-direction:column;gap:14px">
+      <sc-if value="{{ isSource }}" hint-placeholder-val="{{ true }}">
+        <span style="color:var(--mu)">Where are your notes coming from?</span>
+        <div style="display:grid;grid-template-columns:{{ srcCols }};gap:12px"><sc-for list="{{ sources }}" as="s" hint-placeholder-count="4"><div style="border-radius:12px;border:{{ s.b }};background:{{ s.bg }};padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0"><div style="display:flex;align-items:center;gap:10px"><dc-import name="LumenGlyph" glyph="{{ s.g }}" size="{{ 18 }}" color="{{ s.gc }}" tile="{{ s.gc }}" hint-size="31px,31px"></dc-import><span style="font-weight:650;flex:1">{{ s.n }}</span></div><span style="color:var(--mu);line-height:18px;font-size:12.5px">{{ s.d }}</span><span style="font:11.5px 'JetBrains Mono',monospace;color:var(--mu)">{{ s.f }}</span></div></sc-for></div>
+        <div style="flex:1;min-height:110px;border-radius:12px;border:1.5px dashed {{ dropB }};background:{{ dropBg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--mu)"><dc-import name="LumenGlyph" glyph="export" size="{{ 22 }}" color="{{ dropIc }}" hint-size="22px,22px"></dc-import><span style="color:var(--tx);font-weight:500">{{ dropT }}</span><span style="font-size:12px">{{ dropS }}</span></div>
+      </sc-if>
+      <sc-if value="{{ isReading }}">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px"><dc-import name="LumenGlyph" glyph="{{ srcG }}" size="{{ 26 }}" color="{{ srcC }}" tile="{{ srcC }}" hint-size="46px,46px"></dc-import><span style="font-weight:600;font-size:15px">{{ readT }}</span><span style="width:{{ barW }};height:6px;border-radius:3px;background:var(--sf2);overflow:hidden"><span style="display:block;width:58%;height:100%;background:var(--tx)"></span></span><span style="color:var(--mu);font-family:'JetBrains Mono',monospace;font-size:12px">{{ readS }}</span><span style="color:var(--mu);font-size:12px">Nothing is written to your vault until you confirm.</span></div>
+      </sc-if>
+      <sc-if value="{{ isPreview }}">
+        <div style="display:grid;grid-template-columns:{{ prevCols }};gap:16px;flex:1;min-height:0">
+          <div style="display:flex;flex-direction:column;gap:8px;min-height:0">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;flex:1">{{ treeT }}</span><span style="color:var(--mu);font-size:12px">{{ treeK }}</span></div>
+            <div style="flex:1;border-radius:10px;border:1px solid var(--bd);background:var(--bg);padding:6px;overflow:hidden;display:flex;flex-direction:column">
+              <sc-for list="{{ tree }}" as="t" hint-placeholder-count="10"><div style="min-height:30px;padding:0 6px;padding-inline-start:{{ t.ind }};border-radius:6px;display:flex;align-items:center;gap:8px;background:{{ t.bg }}"><span style="width:15px;height:15px;border-radius:4px;flex-shrink:0;box-sizing:border-box;background:{{ t.cb }};border:{{ t.cbd }};display:flex;align-items:center;justify-content:center;color:var(--af);font-size:10px;font-weight:800">{{ t.ck }}</span><span style="color:var(--mu);width:10px;font-size:11px">{{ t.ch }}</span><dc-import name="LumenGlyph" glyph="{{ t.g }}" size="{{ 14 }}" color="{{ t.gc }}" hint-size="14px,14px"></dc-import><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.n }}</span><span style="display:{{ t.tagS }};padding:0 6px;line-height:18px;border-radius:5px;font-size:11px;background:{{ t.tagBg }};color:{{ t.tagC }};white-space:nowrap">{{ t.tag }}</span><span style="font-size:11.5px;color:var(--mu);white-space:nowrap">{{ t.k }}</span></div></sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+            <sc-for list="{{ panels }}" as="p" hint-placeholder-count="3"><div style="border-radius:10px;border:1px solid {{ p.b }};background:{{ p.bg }};padding:12px;display:flex;flex-direction:column;gap:8px"><span style="font-weight:600;display:flex;align-items:center;gap:8px;color:{{ p.tc }}"><dc-import name="LumenGlyph" glyph="{{ p.g }}" size="{{ 15 }}" hint-size="15px,15px"></dc-import>{{ p.t }}</span><sc-for list="{{ p.rows }}" as="r" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:8px;min-height:24px;font-size:12.5px"><span style="flex:1;color:{{ r.c }}">{{ r.a }}</span><span style="display:{{ r.arrS }};color:var(--mu)">→</span><span style="display:{{ r.bS }};height:24px;padding:0 8px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);align-items:center;white-space:nowrap">{{ r.b }}</span><span style="display:{{ r.togS }};width:28px;height:16px;border-radius:8px;background:{{ r.tb }};position:relative"><span style="position:absolute;top:2px;left:{{ r.tl }};width:12px;height:12px;border-radius:50%;background:{{ r.tk }}"></span></span></div></sc-for></div></sc-for>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isTarget }}">
+        <div style="display:flex;flex-direction:column;gap:14px;max-width:560px">
+          <span style="color:var(--mu)">Where should 1,284 notes go?</span>
+          <sc-for list="{{ targets }}" as="t" hint-placeholder-count="3"><div style="min-height:56px;border-radius:12px;border:{{ t.b }};background:{{ t.bg }};padding:0 14px;display:flex;align-items:center;gap:12px"><span style="width:18px;height:18px;border-radius:50%;border:{{ t.rb }};box-sizing:border-box;display:flex;align-items:center;justify-content:center"><span style="width:8px;height:8px;border-radius:50%;background:{{ t.rd }}"></span></span><dc-import name="LumenGlyph" glyph="{{ t.g }}" size="{{ 16 }}" color="{{ t.gc }}" hint-size="16px,16px"></dc-import><div style="flex:1;display:flex;flex-direction:column"><span style="font-weight:600">{{ t.n }}</span><span style="font-size:12px;color:var(--mu)">{{ t.d }}</span></div></div></sc-for>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--mu)">Folder inside the space</span><div style="height:38px;border-radius:8px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;padding:0 12px;gap:8px"><dc-import name="LumenGlyph" glyph="folder" size="{{ 14 }}" color="var(--mu)" hint-size="14px,14px"></dc-import>Imported / Obsidian 2026-11-19</div></div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isImporting }}">
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;max-width:560px;width:100%;align-self:center">
+          <div style="display:flex;align-items:baseline;gap:8px"><b style="font-size:24px">812</b><span style="color:var(--mu)">of 1,284 notes</span><span style="flex:1"></span><span style="color:var(--mu);font-size:12px">~40 s left</span></div>
+          <span style="height:8px;border-radius:4px;background:var(--sf2);overflow:hidden"><span style="display:block;width:63%;height:100%;background:var(--ac)"></span></span>
+          <sc-for list="{{ counts }}" as="c" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:10px"><dc-import name="LumenGlyph" glyph="{{ c.g }}" size="{{ 15 }}" color="{{ c.gc }}" hint-size="15px,15px"></dc-import><span style="flex:1">{{ c.l }}</span><span style="color:var(--mu);font-variant-numeric:tabular-nums">{{ c.v }}</span></div></sc-for>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--mu)">03 Deep learning/Attention variants.md</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isResult }}">
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;max-width:600px;width:100%;align-self:center">
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:44px;height:44px;border-radius:50%;background:color-mix(in srgb,var(--ok) 16%,transparent);display:flex;align-items:center;justify-content:center"><dc-import name="LumenGlyph" glyph="s-done" size="{{ 22 }}" color="var(--ok)" hint-size="22px,22px"></dc-import></span><div style="display:flex;flex-direction:column"><span style="font-size:17px;font-weight:650">{{ resT }}</span><span style="color:var(--mu)">{{ resS }}</span></div></div>
+          <div style="display:grid;grid-template-columns:repeat({{ resCols }},1fr);gap:10px"><sc-for list="{{ res }}" as="r" hint-placeholder-count="4"><div style="border-radius:10px;background:var(--bg);border:1px solid var(--bd);padding:10px 12px;display:flex;flex-direction:column;gap:2px"><b style="font-size:20px;color:{{ r.c }}">{{ r.v }}</b><span style="font-size:12px;color:var(--mu)">{{ r.l }}</span></div></sc-for></div>
+          <div style="border-radius:10px;background:color-mix(in srgb,var(--wa) 8%,transparent);border:1px solid color-mix(in srgb,var(--wa) 28%,transparent);padding:10px 12px;display:flex;flex-direction:column;gap:4px"><span style="font-weight:600;color:var(--wa)">{{ warnT }}</span><span style="font-size:12.5px;color:var(--mu);line-height:18px">{{ warnD }}</span></div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isError }}">
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:12px;max-width:520px;width:100%;align-self:center">
+          <dc-import name="LumenGlyph" glyph="c-danger" size="{{ 22 }}" color="var(--da)" tile="#EF6B6B" hint-size="38px,38px"></dc-import>
+          <span style="font-size:17px;font-weight:650">This file couldn't be read</span>
+          <span style="color:var(--mu);line-height:20px"><span style="font-family:'JetBrains Mono',monospace;color:var(--tx)">Notion-export.zip</span> looks like an HTML export. Lumen needs <b style="color:var(--tx);font-weight:600">Markdown &amp; CSV</b>.</span>
+          <div style="border-radius:10px;background:var(--bg);border:1px solid var(--bd);padding:12px;line-height:20px;font-size:12.5px">In Notion: ⋯ › Export › Export format <b style="font-weight:600">Markdown &amp; CSV</b> › Include subpages › Export.</div>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="display:{{ footS }};padding:{{ fpad }};border-top:1px solid var(--bd);align-items:center;gap:8px">
+      <span style="flex:1;color:var(--mu);font-size:12.5px;display:{{ deskOnly }}">{{ footNote }}</span>
+      <span style="display:{{ secS }};height:{{ bh }};padding:0 14px;border-radius:10px;border:1px solid var(--bd);align-items:center;justify-content:center;flex:{{ bflex }}">{{ secL }}</span>
+      <span style="height:{{ bh }};padding:0 16px;border-radius:10px;background:{{ priBg }};color:{{ priC }};display:flex;align-items:center;justify-content:center;font-weight:600;flex:{{ bflex }};opacity:{{ priOp }}">{{ priL }}</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;step&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;source&quot;,&quot;reading&quot;,&quot;preview&quot;,&quot;target&quot;,&quot;importing&quot;,&quot;result&quot;,&quot;error&quot;],&quot;default&quot;:&quot;source&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;source&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;anki&quot;,&quot;notion&quot;,&quot;obsidian&quot;,&quot;md&quot;],&quot;default&quot;:&quot;obsidian&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;drag&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const step = this.props.step ?? 'source', src = this.props.source ?? 'obsidian', p = !!this.props.phone, drag = !!this.props.drag;
+    const ST = ['source','reading','preview','target','importing','result'];
+    const si = Math.max(0, ST.indexOf(step === 'error' ? 'reading' : step));
+    const SL = [['1','Source'],['2','Preview'],['3','Target'],['4','Import']];
+    const map = [0,0,1,2,3,3];
+    const steps = SL.map(([n,l],i) => { const done = i < map[si], cur = i === map[si]; return { n: done?'✓':n, l, c: cur||done?'var(--tx)':'var(--mu)', w: cur?600:450, bg: cur?'var(--ac)':'transparent', nc: cur?'var(--af)':'var(--tx)' }; });
+    const S = { anki:['flashcards','var(--le)','Anki deck','Decks become flashcard notes. Review history becomes the FSRS start state. Media kept.','.apkg · .colpkg'], notion:['base','var(--tx)','Notion export','Pages become notes, databases become bases, page links become [[links]].','.zip (Markdown & CSV)'], obsidian:['note','#A371F7','Obsidian vault','Imported as is: folders, [[links]], tags, front matter, .canvas files.','folder or .zip'], md:['text','var(--mu)','Markdown files','Single files or a whole folder.','.md · folder'] };
+    const sources = Object.entries(S).map(([k,[g,gc,n,d,f]]) => { const on = k===src; return { g, gc, n, d, f, b: on?'1.5px solid var(--ac)':'1px solid var(--bd)', bg: on?'color-mix(in srgb,var(--ac) 6%,var(--sf))':'var(--bg)' }; });
+    const cb = (s) => s==='on' ? { cb:'var(--ac)', cbd:'none', ck:'✓' } : s==='part' ? { cb:'var(--ac)', cbd:'none', ck:'–' } : { cb:'transparent', cbd:'1.5px solid var(--mu)', ck:'' };
+    const T = (n,ind,g,gc,k,s,o={}) => ({ n, ind:(8+ind*18)+'px', g, gc, k, ch: o.ch||'', ...cb(s), tag:o.tag||'', tagS:o.tag?'inline':'none', tagBg: o.tagC?`color-mix(in srgb, ${o.tagC} 14%, transparent)`:'', tagC:o.tagC||'', bg: o.sel?'var(--sf)':'transparent' });
+    const TREES = {
+      anki: [T('ML Foundations',0,'flashcards','var(--le)','612 cards','on',{ch:'▾'}),T('Linear algebra',1,'flashcards','var(--le)','140','on'),T('Optimization',1,'flashcards','var(--le)','212','on'),T('Neural nets',1,'flashcards','var(--le)','260','on'),T('Arabic verbs I–X',0,'flashcards','var(--le)','400 cards','on',{ch:'▾'}),T('Forms',1,'flashcards','var(--le)','320','on'),T('Audio drills',1,'audio','var(--mu)','80 · 80 audio','part',{tag:'audio',tagC:'var(--in)'}),T('Old: GRE words',0,'flashcards','var(--mu)','1,200 cards','off',{ch:'▸'})],
+      notion: [T('Study Buddy',0,'project','#E8893A','24 pages','on',{ch:'▾'}),T('PRD v1',1,'note','var(--mu)','','on'),T('Tasks',1,'base','var(--tx)','CSV · 61 rows','on',{tag:'→ base',tagC:'var(--ok)'}),T('Meeting notes',1,'note','var(--mu)','9 pages','on',{ch:'▸'}),T('Reading list',0,'base','var(--tx)','CSV · 38 rows','on',{tag:'→ base',tagC:'var(--ok)'}),T('Journal 2024',0,'journal','var(--mu)','212 pages','off',{ch:'▸'}),T('Figma embed',1,'embed','var(--wa)','','off',{tag:'can\'t import',tagC:'var(--wa)'})],
+      obsidian: [T('AI Engineer',0,'folder','#A371F7','412','on',{ch:'▾'}),T('03 Deep learning',1,'folder','#A371F7','118','on',{ch:'▸'}),T('Attention.md',1,'note','var(--mu)','','on',{tag:'title exists',tagC:'var(--wa)',sel:1}),T('Transformer block.md',1,'note','var(--mu)','','on'),T('Boards',0,'folder','var(--mu)','6 .canvas','on',{ch:'▸'}),T('attachments',0,'folder','var(--mu)','312 files · 1.1 GB','on',{ch:'▸'}),T('.trash',0,'folder','var(--mu)','skipped','off',{ch:'▸'})],
+      md: [T('notes',0,'folder','var(--mu)','48 files','on',{ch:'▾'}),T('tcp-handshake.md',1,'note','var(--mu)','','on'),T('idafa.md',1,'note','var(--mu)','','on')]
+    };
+    const R = (a,b,o={}) => ({ a, b:b||'', bS:b?'flex':'none', arrS:b&&!o.tog?'inline':'none', c:o.c||'var(--tx)', togS:o.tog?'block':'none', tb: o.on?'var(--ac)':'var(--bd)', tl: o.on?'14px':'2px', tk: o.on?'var(--af)':'var(--mu)' });
+    const PANELS = {
+      anki: [{ g:'flashcards', t:'Note types found', rows:[R('Basic · 742','Front / Back'),R('Cloze · 238','{{c1::…}}'),R('Image Occlusion · 32','occlusion block')] },{ g:'columns-2', t:'Field mapping · Basic', rows:[R('Front','Front'),R('Back','Back'),R('Extra','Back · below a line')] },{ g:'s-revise', t:'Options', rows:[R('Keep review history',' ',{tog:1,on:1}),R('One note per sub-deck',' ',{tog:1,on:1}),R('Import 92 media files',' ',{tog:1,on:1})] }],
+      notion: [{ g:'base', t:'Databases → bases', rows:[R('Tasks.csv · 61 rows','Base · Table'),R('Reading list.csv · 38','Base · Gallery')] },{ g:'c-warning', t:'Can\'t be imported · 14', tc:'var(--wa)', rows:[R('12 embeds (Figma, Loom)','',{c:'var(--mu)'}),R('2 synced blocks','',{c:'var(--mu)'})] },{ g:'wikilink', t:'Links', rows:[R('318 page links','[[links]]')] }],
+      obsidian: [{ g:'c-warning', t:'Same title already in Lumen · 3', tc:'var(--wa)', rows:[R('Attention','Merge ▾'),R('Backpropagation','Rename ▾'),R('AdamW','Skip ▾')] },{ g:'note', t:'Counts', rows:[R('1,284 notes',''),R('6 canvases',''),R('312 attachments · 1.1 GB',''),R('4,019 links · 211 tags','')] }],
+      md: [{ g:'note', t:'Counts', rows:[R('48 notes',''),R('0 attachments','')] }]
+    };
+    const treeT = { anki:'Decks', notion:'Pages', obsidian:'Vault', md:'Files' }[src];
+    const treeK = { anki:'1,012 of 2,212 cards selected', notion:'62 of 274 pages', obsidian:'1,284 of 1,291 files', md:'48 files' }[src];
+    const targets = [['New space','“Obsidian vault” · Resource','project','var(--ac)',1],['Existing space','AI Engineer','neural','#A371F7'],['Inbox','Sort later','inbox','var(--mu)']].map(([n,d,g,gc,on]) => ({ n, d, g, gc, b: on?'1.5px solid var(--ac)':'1px solid var(--bd)', bg: on?'color-mix(in srgb,var(--ac) 6%,var(--sf))':'var(--bg)', rb: on?'2px solid var(--ac)':'1.5px solid var(--mu)', rd: on?'var(--ac)':'transparent' }));
+    const counts = [['note','Notes','812 / 1,284','var(--mu)'],['canvas','Canvases','6 / 6','var(--ok)'],['image','Attachments','140 / 312','var(--mu)'],['wikilink','Links resolved','2,410 / 4,019','var(--mu)']].map(([g,l,v,gc]) => ({ g, l, v, gc }));
+    const RES = { anki:[['1,012','cards','var(--tx)'],['3','flashcard notes','var(--tx)'],['92','media','var(--tx)'],['0','skipped','var(--mu)']], notion:[['62','notes','var(--tx)'],['2','bases','var(--tx)'],['318','links','var(--tx)'],['14','skipped','var(--wa)']], obsidian:[['1,281','notes','var(--tx)'],['6','canvases','var(--tx)'],['312','files','var(--tx)'],['3','merged/renamed','var(--wa)']], md:[['48','notes','var(--tx)'],['0','skipped','var(--mu)']] }[src];
+    const res = RES.map(([v,l,c]) => ({ v, l, c }));
+    const readT = { anki:'Reading ML-Foundations.apkg', notion:'Reading Notion-export.zip', obsidian:'Reading vault.zip', md:'Reading 48 files' }[src];
+    const ft = { source:['Choose a source or drop a file','Next','Cancel',src?1:.4], reading:['','Reading…','Cancel',.4], preview:['Nothing changes until you import','Next','Back',1], target:['','Import 1,284 notes','Back',1], importing:['You can close this; it continues in the background','Run in background','Cancel',1], result:['The whole import is one undo step','Open','Undo import',1], error:['','Try another file','Close',1] }[step];
+    const on = k => step===k;
+    return { steps, sources, tree: TREES[src], panels: (PANELS[src]||[]).map(pp => ({ ...pp, tc: pp.tc||'var(--tx)', b: pp.tc?'color-mix(in srgb,var(--wa) 30%,transparent)':'var(--bd)', bg: pp.tc?'color-mix(in srgb,var(--wa) 6%,var(--bg))':'var(--bg)' })),
+      treeT, treeK, targets, counts, res, resCols: p?2:Math.min(4,res.length), readT, readS: '58% · 14.2 of 24.6 MB', srcG: S[src][0], srcC: S[src][1],
+      resT: { anki:'1,012 cards imported', notion:'62 pages imported', obsidian:'1,281 notes imported', md:'48 notes imported' }[src], resS: 'Into the new space “Obsidian vault”', warnT: src==='notion'?'14 items skipped':'3 titles handled', warnD: src==='notion'?'12 embeds and 2 synced blocks — listed in “Import report”.':'Attention merged · Backpropagation renamed to “Backpropagation (2)” · AdamW skipped. Listed in “Import report”.',
+      isSource:on('source'), isReading:on('reading'), isPreview:on('preview'), isTarget:on('target'), isImporting:on('importing'), isResult:on('result'), isError:on('error'),
+      title: p ? ({ source:'Import', reading:'Reading', preview:'Preview', target:'Where to', importing:'Importing', result:'Done', error:'Import' }[step]) : 'Import', stepOf: 'Step '+(map[si]+1)+' of 4',
+      dropB: drag?'var(--ac)':'var(--bd)', dropBg: drag?'color-mix(in srgb,var(--ac) 8%,transparent)':'transparent', dropIc: drag?'var(--ac)':'var(--mu)', dropT: drag?'Drop to read vault.zip':'Drop a file or folder here', dropS: drag?'24.6 MB':'or choose a file',
+      footNote: ft[0], priL: ft[1], secL: ft[2], priOp: ft[3], priBg: step==='error'?'var(--sf2)':'var(--ac)', priC: step==='error'?'var(--tx)':'var(--af)', secS:'flex', footS:'flex',
+      backdropS: p?'none':'block', pos: p?'relative':'absolute', tf: p?'none':'translate(-50%,-50%)', dw: p?'100%':'960px', dh: p?'100%':'640px', dr: p?'0':'14px', dbd: p?'none':'1px solid var(--bd)',
+      hpad: p?'44px 16px 12px':'16px 20px', bpad: p?'16px':'18px 20px', fpad: p?'12px 16px 28px':'14px 20px', backS: p?'block':'none', xS: p?'none':'block', stepsS: p?'none':'flex', phoneOnly: p?'block':'none', deskOnly: p?'none':'block',
+      srcCols: p?'1fr 1fr':'repeat(4,1fr)', prevCols: p?'1fr':'1.2fr 1fr', barW: p?'280px':'360px', bh: p?'50px':'36px', bflex: p?'1':'0 0 auto' };
+  }
+}
+</script>
+</body>
+</html>

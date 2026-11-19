@@ -16,6 +16,8 @@ export interface PlanSettings {
   studyDays: number[];
   /** Max new lessons per day (Continue doesn't count). */
   maxNew: number;
+  /** Settings › Study plan › Reviews first (round 6): false = reviews only fill the time left after lessons. */
+  reviewsFirst?: boolean;
   /** Course titles, highest priority first. Unlisted courses follow in their natural order. */
   courseOrder: string[];
 }
@@ -350,7 +352,8 @@ export function buildPlan(inp: PlanInput): Plan {
     if (it.kind === "lesson") newCount++;
   };
   if (cont) place(cont.item, "always");
-  for (const r of reviews) place(r, "always");
+  const reviewsFirst = s.reviewsFirst !== false;
+  if (reviewsFirst) for (const r of reviews) place(r, "always");
   // one lesson per path concept a day: the same idea taught by two courses is learned once
   const taken = new Set<string>(cont?.concept ? [cont.concept] : []);
   for (const c of cands) {
@@ -359,6 +362,7 @@ export function buildPlan(inp: PlanInput): Plan {
     if (c.concept) taken.add(c.concept);
     place(c.item, "lesson");
   }
+  if (!reviewsFirst) for (const r of reviews) place(r, "fit");
   if (practice) place(practice, "fit");
   // done today but no longer generated (e.g. the topic is now marked done in its roadmap): keep showing it
   for (const e of todayLog) {

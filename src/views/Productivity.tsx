@@ -1,4 +1,5 @@
 import { Glyph } from "../components/Glyph";
+import { BacklogCard, BACKLOG } from "../components/review-backlog";
 import { SpaceIcon } from "../components/SpaceIcon";
 import { EmptyState } from "../components/EmptyState";
 import { ArrowDown, ArrowUp, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Columns3, FileText, GripVertical, Layers, ListChecks, NotebookPen, Plus, RotateCcw, Trash2, X } from "lucide-react";
@@ -705,10 +706,13 @@ export function ReviewView() {
   // Deck count at the start of the session (it would shrink as cards are graded).
   const [decks, setDecks] = useState<number | null>(null);
   useEffect(() => { if (due && decks === null) setDecks(new Set(due.map((d) => d.note.id)).size); }, [due, decks]);
-  if (decks === null) return null;
+  // Lumen 22 backlog: above BACKLOG due cards, offer "Do 50 now · Spread over 7 days · Review all" first.
+  const [chunk, setChunk] = useState<number | null>(null);
+  if (decks === null || !due) return null;
   const title = `${space ? space.name : t("All spaces")} · ${t("{n} deck|{n} decks", { n: decks })}`;
+  if (chunk === null && due.length > BACKLOG) return <div className="fixed inset-0 z-40 bg-bg"><BacklogCard cards={due.map((d) => d.card)} onChunk={setChunk} onAll={() => setChunk(0)} onExit={() => go("home")} /></div>;
   // Full-screen: one card, nothing else (no sidebar or tab bar).
-  return <div className="fixed inset-0 z-40 bg-bg"><ReviewSession notes={notes} title={title} onExit={() => go("home")} /></div>;
+  return <div className="fixed inset-0 z-40 bg-bg"><ReviewSession notes={notes} title={title} onExit={() => go("home")} limit={chunk || undefined} /></div>;
 }
 
 // ------------------------------------------------------------------ Trash

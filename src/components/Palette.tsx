@@ -3,7 +3,7 @@ import { MessagesSquare, Route, ArrowLeft, CornerDownLeft, FileText, Hash, Layou
 import { Fragment, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Note } from "../../shared/types";
 import { createNote, dailyNote } from "../lib/actions";
-import { around, matcher, normalize, parseQuery, search } from "../lib/search";
+import { around, matcher, narrowingFilters, normalize, parseQuery, search, searchCount } from "../lib/search";
 import { activeTheme, getSettings, setSettings } from "../lib/settings";
 import { go, openNote, setUI, toggleSidebar, useUI, useVault, type Mode } from "../lib/store";
 import { syncNow } from "../lib/sync";
@@ -28,12 +28,16 @@ const OP_RE = /^(tag|type|status|in|space|is):\S+$/;
 const MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 const MOD = MAC ? "⌘" : "Ctrl ";
 const kbd = "rounded-[4px] border border-line px-1.5 py-0.5 font-mono text-[11px] font-medium text-muted";
+/** Note results listed at once; above this the palette says "Showing 50 of N" and suggests narrowing filters (Lumen 22). */
+const SHOW_HITS = 50;
 
 /** Wraps every occurrence of the query terms in a <b> (amber by default). */
 function hl(text: string, terms: string[], cls = "font-bold text-accent"): ReactNode {
   if (!terms.length || !text) return text;
   let re: RegExp;
   try { re = new RegExp(`(${terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi"); } catch { return text; }
+  // Arabic (R5-25I): colour only, so a weight change doesn't break the letter joins inside a word.
+  if (/[؀-ۿ]/.test(text)) cls = cls.replace(/\bfont-(bold|semibold)\b/g, "font-[inherit]");
   return text.split(re).map((p, i) => (i % 2 ? <b key={i} className={cls}>{p}</b> : <Fragment key={i}>{p}</Fragment>));
 }
 /** Plain-text snippet around the first hit: no front-matter, no title line, no Markdown marks. */
@@ -122,6 +126,7 @@ export function Palette() {
       c("kanban", t("Go to Board (by status)"), () => go("kanban")),
       c("table", t("Go to Database table"), () => go("table")),
       c("graph", t("Open graph view"), () => go("graph")),
+      c("folder", t("Folders: browse and search every folder"), () => go("folders")),
       c("space", t("Open space overview / roadmap"), () => go("space")),
       c("trash", t("Open trash"), () => go("trash")),
       c("settings", t("Settings"), () => go("settings")),
@@ -150,8 +155,18 @@ export function Palette() {
     const dQuery = parseQuery(dq);
     dQuery.folders = dQuery.folders.filter((f) => f !== "all");
     const m = matcher(dQuery, v.folderMap, v.spaceMap);
-    return search(dQuery, v.byId, (n) => m(n) && (allScope || n.spaceId === ui.spaceId), 30);
+    return search(dQuery, v.byId, (n) => m(n) && (allScope || n.spaceId === ui.spaceId), SHOW_HITS);
   }, [dq, v, allScope, ui.spaceId]);
+  // Lumen 22 "Search with too many results": "Showing 50 of 1,240 for “attention”" + the filters that cut the most.
+  const many = useMemo(() => {
+    if (hits.length < SHOW_HITS || !dq.trim() || dq.startsWith(">") || (dq.startsWith("#") && !dq.includes(" "))) return null;
+    const dQuery = parseQuery(dq);
+    dQuery.folders = dQuery.folders.filter((f) => f !== "all");
+    const m = matcher(dQuery, v.folderMap, v.spaceMap);
+    const all = searchCount(dQuery, v.byId, (n) => m(n) && (allScope || n.spaceId === ui.spaceId));
+    if (all.length <= hits.length) return null;
+    return { total: all.length, text: dQuery.text.trim(), chips: narrowingFilters(all, v.folderMap, v.spaceMap, { allSpaces: allScope }) };
+  }, [hits, dq, v, allScope, ui.spaceId]);
 
   const [selKey, setSelKey] = useState<string | null>(null);
   const target: Note | undefined = (hits.find((h) => h.note.id === selKey) ?? hits[0])?.note;
@@ -270,6 +285,12 @@ export function Palette() {
               })}
             </div>
             <div ref={list} className="min-h-0 flex-1 overflow-y-auto md:max-h-[55vh] md:flex-none md:p-1.5">
+              {many && (
+                <div className="mx-0 mb-1 flex flex-wrap items-center gap-2 rounded-[8px] bg-bg px-3 py-2 md:mx-1" data-many-results>
+                  <span className="flex-1 text-[13px]">{many.text ? t("Showing {shown} of {total} for “{q}”", { shown: hits.length, total: many.total, q: many.text }) : t("Showing {shown} of {total}", { shown: hits.length, total: many.total })}</span>
+                  {many.chips.map((c) => <button key={c.op} onClick={() => addOp(c.op)} title={t("{n} note|{n} notes", { n: c.left })} className="flex h-[26px] items-center rounded-[6px] bg-surface px-2 text-[12.5px] hover:text-accent" dir="ltr">+ {c.op}</button>)}
+                </div>
+              )}
               {rows.map((r, i) => {
                 const on = i === sel;
                 const head = (i === 0 || rows[i - 1].group !== r.group) && (

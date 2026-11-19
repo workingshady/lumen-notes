@@ -43,7 +43,11 @@ if (forms) {
 }
 
 // ------------------------------------------------------------------ formatting (lang = en in Node unless navigator says otherwise)
-eq(fmtNum(1234), "1234", "small numbers ungrouped");
+eq(fmtNum(1234), "1,234", "grouped from 1,000");
+eq(fmtNum(3142), fmtNum(3142), "cached formatter is stable");
+eq(fmtNum(999), "999", "below 1,000 ungrouped");
+eq(fmtNum(2026, { useGrouping: false }), "2026", "years / ids opt out");
+eq(new Intl.NumberFormat(locale("ar", "arab"), { useGrouping: true }).format(3142), "٣٬١٤٢", "Arabic-Indic grouped");
 ok(/Nov/.test(fmtDate(new Date(2026, 10, 19))), "English date has the month name");
 eq(new Intl.DateTimeFormat(locale("ar", "latn"), { month: "long" }).format(new Date(2026, 10, 19)), "نوفمبر", "Arabic month name (Gregorian)");
 eq(new Intl.NumberFormat(locale("ar", "arab")).format(42), "٤٢", "Arabic-Indic digits");

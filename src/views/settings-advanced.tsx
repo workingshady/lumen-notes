@@ -10,6 +10,10 @@ export interface Advanced {
   reduceMotion: boolean;
   /** User CSS snippet appended to the page. */
   css: string;
+  /** Settings › AI › Advanced: keep the last 50 AI calls in localStorage "lumen.aiLog". */
+  aiLog?: boolean;
+  /** Settings › Appearance › Advanced: simpler graph/canvas drawing (no animation, labels on zoom). Set automatically on slow devices. */
+  reduceEffects?: boolean;
 }
 const KEY = "lumen.advanced";
 const DEF: Advanced = { uiScale: 100, reduceMotion: false, css: "" };

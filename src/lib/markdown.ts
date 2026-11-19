@@ -1,3 +1,5 @@
+import { edgeCurve } from "./reading-prefs"; // Settings › Diagrams › Edge style (round 6)
+import { pageTable, TABLE_PAGE_ABOVE } from "./table-pager";
 import MarkdownIt, { type StateInline, type Token } from "markdown-it";
 import footnote from "markdown-it-footnote";
 import mark from "markdown-it-mark";
@@ -533,7 +535,7 @@ async function renderMermaid(el: HTMLElement) {
   // Diagram colors come from the theme tokens (design 5A: surface-2 nodes, border strokes, muted edges, 12 px Inter).
   const css = getComputedStyle(document.documentElement);
   const tok = (k: string) => css.getPropertyValue(k).trim();
-  const theme = [tok("--surface-2"), tok("--border"), tok("--text"), tok("--muted"), tok("--surface")].join("|");
+  const theme = [tok("--surface-2"), tok("--border"), tok("--text"), tok("--muted"), tok("--surface"), edgeCurve()].join("|");
   if (theme !== mermaidTheme) {
     mermaid.initialize({
       startOnLoad: false, theme: "base", securityLevel: "strict", fontFamily: "Inter, system-ui, sans-serif",
@@ -542,7 +544,7 @@ async function renderMermaid(el: HTMLElement) {
         primaryColor: tok("--surface-2"), primaryBorderColor: tok("--border"), primaryTextColor: tok("--text"), secondaryColor: tok("--surface-2"), tertiaryColor: tok("--surface"),
         lineColor: tok("--muted"), textColor: tok("--text"), mainBkg: tok("--surface-2"), nodeBorder: tok("--border"), clusterBkg: tok("--surface"), edgeLabelBackground: tok("--surface"),
       },
-      flowchart: { curve: "basis", padding: 12, nodeSpacing: 24, rankSpacing: 28 },
+      flowchart: { curve: edgeCurve(), padding: 12, nodeSpacing: 24, rankSpacing: 28 },
     });
     mermaidTheme = theme;
   }
@@ -700,7 +702,7 @@ export async function renderMermaidForExport(src: string, theme: ExportTheme, sv
       lineColor: tok("--muted"), textColor: tok("--text"), mainBkg: tok("--surface-2"), nodeBorder: tok("--border"), clusterBkg: tok("--surface"), edgeLabelBackground: tok("--surface"),
     } : { fontFamily: font, fontSize: "14px" },
     htmlLabels: !svgText,
-    flowchart: { curve: "basis", padding: 12, nodeSpacing: 24, rankSpacing: 28, htmlLabels: !svgText },
+    flowchart: { curve: edgeCurve(), padding: 12, nodeSpacing: 24, rankSpacing: 28, htmlLabels: !svgText },
   });
   mermaidTheme = ""; // force the in-app theme back on the next in-app render
   const id = `mmx-${++seq}`;
@@ -752,7 +754,7 @@ function hydrateTables(root: HTMLElement) {
     const tools = document.createElement("div");
     tools.className = "tbl-tools";
     const caption = wrap.dataset.caption ?? "";
-    const nrows = (n: number, of?: number) => `${of != null ? `${n} of ${of}` : n} row${(of ?? n) === 1 ? "" : "s"}`;
+    const nrows = (n: number, of?: number) => (of != null ? tr("{shown} of {n} row|{shown} of {n} rows", { shown: n, n: of }) : tr("{n} row|{n} rows", { n }));
     tools.innerHTML = `<span class="tbl-count">${caption ? `${esc(caption)} · ` : ""}${nrows(rows.length)}</span>`
       + (rows.length >= 5 ? `<label class="tbl-filter">${glyphSvg("query", 12)}<span class="tbl-filter-l">${tr("Filter")}</span><input type="search" placeholder="${tr("Filter rows")}" aria-label="${tr("Filter rows")}"></label>` : "")
       + `<button type="button" class="tbl-full" title="${tr("Full screen")}" aria-label="${tr("Show table full screen")}">${glyphSvg("full", 12)}</button>`;
@@ -769,6 +771,8 @@ function hydrateTables(root: HTMLElement) {
       for (const r of rows) { const hit = !q || (r.textContent ?? "").toLowerCase().includes(q); r.hidden = !hit; if (hit) shown++; }
       count.textContent = (caption ? `${caption} · ` : "") + (q ? nrows(shown, rows.length) : nrows(rows.length));
     });
+    // Lumen 22: over 300 rows, Read mode pages the table and offers "Open as base" (lib/table-pager.ts).
+    if (body && rows.length > TABLE_PAGE_ABOVE) pageTable(wrap, tools, body, input);
     const full = tools.querySelector<HTMLButtonElement>(".tbl-full")!;
     full.addEventListener("click", () => { if (document.fullscreenElement === wrap) void document.exitFullscreen(); else void wrap.requestFullscreen?.(); });
     wrap.addEventListener("fullscreenchange", () => {

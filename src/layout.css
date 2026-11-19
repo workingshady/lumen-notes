@@ -809,3 +809,64 @@ div.callout.callout-inline > .callout-body { grid-row: 1; }
   .read-pane[data-pw="fixed"] .reading > .md-aside > .md-aside-box { position: absolute; top: 4px; inset-inline-start: calc(100% + 32px); width: 220px; }
 }
 /* end R4 features · write */
+
+/* ---- Round 6 · part B (settings, sidebar, scale) ---- */
+/* Simulator banner (DevPanel SimBanner): push the app below the 30px banner while anything is faked. */
+body.sim-on #root { height: calc(100% - 30px); margin-top: 30px; }
+
+/* R6 part A · Ask chat, tutor, note tabs, assistant (Lumen 23 / 24 / 31) */
+.ask-streaming > :last-child::after { width: 2px; height: 18px; vertical-align: -3px; margin-inline-start: 2px; animation: ask-caret 1s steps(2) infinite; }
+.ask-answer.prose p + p, .ask-answer.prose p + ul, .ask-answer.prose ul + p { margin-top: .6em; }
+.r6-dots { background-image: radial-gradient(color-mix(in srgb, var(--muted) 18%, transparent) 1px, transparent 1.2px); background-size: 16px 16px; }
+.r6-dots-lg { background-image: radial-gradient(color-mix(in srgb, var(--muted) 18%, transparent) 1px, transparent 1.2px); background-size: 22px 22px; }
+.r6-diagram svg { max-width: none !important; }
+.r6-media figcaption, .r6-media .vt-bottom, .r6-media .vt-dur { display: none !important; }
+.r6-media figure, .r6-media .embed.video, .r6-media .vt-frame { height: 100%; width: 100%; margin: 0 !important; border-radius: 0 !important; aspect-ratio: auto !important; }
+.r6-media .vt-img { object-fit: cover; }
+.r6-media .afile { padding: 14px; }
+.r6-assist .ask-answer { gap: 8px; }
+.r6-assist .ask-answer a.ask-cite { vertical-align: baseline; padding: 0 5px; margin: 0 1px; font: 500 11.5px Inter, system-ui, sans-serif; line-height: 17px; }
+/* full-page layers (Ask, diagram Expand, Assistant sheet) sit below the Dev simulator banner like #root does */
+body.sim-on [data-r6-layer] { top: 30px !important; }
+/* end R6 part A */
+
+/* R5 part C · Arabic interface (design R5-25). Arabic letters must never be tracked: letter-spacing breaks the joins.
+   Mono UI hints fall back to Plex Arabic for Arabic text. Settings › Appearance › Reading font (Arabic) = Plex. */
+:root[lang="ar"] body :where(:not(code, kbd, pre, .ltr, [dir="ltr"], .cm-content, .cm-content *)) { letter-spacing: 0 !important; }
+:root[lang="ar"] .font-mono:not(code, kbd, pre) { font-family: "JetBrains Mono", "IBM Plex Sans Arabic", ui-monospace, monospace; }
+:root[data-ar-font="plex"] .prose :is(h1, h2, h3)[dir="auto"]:lang(ar), :root[data-ar-font="plex"] .prose .ar { font-family: "IBM Plex Sans Arabic", var(--read-font); }
+:root[lang="ar"] .prose.reading :is(p, li, blockquote)[dir="rtl"] { line-height: 34px; }
+/* Mixed titles (R5-25A/D): an English title keeps LTR text but sits at the row start (the right) like the Arabic ones. */
+:where(:root[dir="rtl"] body [dir="auto"]:not(.prose, .prose *, .cm-editor *, input, textarea, [contenteditable], .ltr)) { text-align: match-parent; }
+/* Tables in the Arabic interface (R5-25E): columns run right to left; English and numeric cells stay LTR but align with their column. */
+.prose table:dir(rtl) :is(td, th):not([style*="text-align"]) { text-align: right; }
+/* end R5 part C · Arabic interface */
+/* Settings R6: the round-4 section bodies inside Advanced folds drop their own page title. */
+.r6-classic .text-\[22px\].font-\[650\], .r6-classic > div > .text-\[20px\].font-\[650\] { display: none !important; }
+/* Reading prefs (Settings › Reading, round 6). */
+:root[data-hyphenate] .prose { hyphens: auto; -webkit-hyphens: auto; }
+:root[data-code-wrap] .prose pre, :root[data-code-wrap] .prose pre code { white-space: pre-wrap; word-break: break-word; }
+.prose :dir(rtl) { font-family: var(--read-font-ar, inherit); }
+/* ------------------------------------------------------------------ Round 6 · big data (Lumen 22 / 32, agent B) */
+/* Long note lists: rows off screen skip layout/paint (cheap virtualisation); room for the date scrubber. */
+[data-note-list] > [data-note-row] { content-visibility: auto; contain-intrinsic-size: auto 72px; }
+[data-note-list]:has([data-scrubber]) > [data-note-row] { padding-inline-end: 32px; }
+/* Long notes in Read mode: section folding (components/long-read.tsx). */
+.prose .lr-caret { display: inline-flex; width: 18px; margin-inline-start: -22px; margin-inline-end: 4px; justify-content: center; font-size: .5em; vertical-align: middle; color: var(--muted); cursor: pointer; opacity: .55; }
+.prose :is(h2, h3, h4):hover > .lr-caret, .prose .lr-folded > .lr-caret { opacity: 1; }
+.prose .lr-folded { color: var(--muted); }
+.prose .lr-words { font: 400 12px Inter, system-ui, sans-serif; color: var(--muted); letter-spacing: 0; }
+.prose .lr-hidden { display: none !important; }
+/* Read-mode table paging (lib/table-pager.ts). */
+.tbl tr.tbl-off { display: none; }
+.tbl-pager { display: flex; align-items: center; gap: 10px; padding: 10px 2px 0; font-size: 12.5px; color: var(--muted); }
+.tbl-pager .tbl-range { flex: 1; }
+.tbl-pages { display: flex; align-items: center; gap: 2px; }
+.tbl-pages button { min-width: 26px; height: 26px; padding: 0 6px; border-radius: 6px; color: var(--text); }
+.tbl-pages button:first-child, .tbl-pages button:last-child { border: 1px solid var(--border); }
+.tbl-pages button[aria-current] { font-weight: 650; color: var(--accent); }
+.tbl-pages button:disabled { opacity: .4; cursor: default; }
+.tbl-pages button:not(:disabled):hover { background: var(--surface-2); }
+.tbl-base { height: 26px; padding: 0 9px; border: 1px solid var(--border); border-radius: 7px; color: var(--text); font-size: 12px; }
+.tbl-base:hover { background: var(--surface-2); }
+.tbl:fullscreen.tbl-paged { overflow: auto; background: var(--bg); padding: 16px; }

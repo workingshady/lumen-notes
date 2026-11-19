@@ -335,9 +335,9 @@ export function BaseView({ note }: { note: Note }) {
           {view.type === "calendar" && (
             <span className="flex items-center gap-1 text-[12.5px]">
               <span className="me-1 font-semibold">{fmtDay(month, { month: "long", year: "numeric" })}</span>
-              <button aria-label={t("Previous month")} className="base-icon rtl:rotate-180" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft size={15} /></button>
+              <button aria-label={t("Previous month")} className="base-icon" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft size={15} /></button>
               <button className="base-icon w-auto px-1.5 text-[12px]" onClick={() => { const d = new Date(); setMonth(new Date(d.getFullYear(), d.getMonth(), 1)); }}>{t("Today")}</button>
-              <button aria-label={t("Next month")} className="base-icon rtl:rotate-180" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight size={15} /></button>
+              <button aria-label={t("Next month")} className="base-icon" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight size={15} /></button>
             </span>
           )}
           <span className="text-[12px] text-muted" title={view.limit && total > rows.length ? t("Limited to {n}", { n: view.limit }) : undefined}>{count}</span>

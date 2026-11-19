@@ -244,7 +244,8 @@ function SmartEditor({ init }: { init: Draft }) {
 }
 
 // ------------------------------------------------------------------ sidebar section (row = Lumen 21 "smart folder row")
-export function SidebarSmartFolders() {
+/** `bare` (round-6 sidebar): no section header; the sidebar draws its own foldable one. */
+export function SidebarSmartFolders({ bare = false }: { bare?: boolean } = {}) {
   const v = useVault();
   const ui = useUI();
   const list = useSmartFolders();
@@ -267,8 +268,8 @@ export function SidebarSmartFolders() {
   /** Insertion line under display row `i` (or above row 0 when i = -1). */
   const lineAt = (i: number) => !!drag && drag.to !== from && (drag.to > from ? drag.to : drag.to - 1) === i;
   return (
-    <div className="px-2" data-smart-folders onDragEnd={() => setDrag(null)}>
-      <div className="flex items-center px-2 pb-1 pt-3.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">
+    <div className={bare ? "" : "px-2"} data-smart-folders onDragEnd={() => setDrag(null)}>
+      <div className={cx("flex items-center px-2 pb-1 pt-3.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted", bare && "hidden")}>
         <span className="flex-1">{t("Smart folders")}</span>
         <button title={t("New smart folder")} aria-label={t("New smart folder")} className="text-[14px] font-normal leading-none hover:text-ink" onClick={() => openSmartEditor({ query: scopeQuery(v, ui) })}>+</button>
       </div>

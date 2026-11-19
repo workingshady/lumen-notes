@@ -1,4 +1,5 @@
 import { useLiveQuery } from "dexie-react-hooks";
+import { riskOf } from "./review-risk";
 import { ArrowUpRight, Check, Layers, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Card, Note } from "../../shared/types";
@@ -8,7 +9,7 @@ import { clozeEnabled, clozeSides } from "../lib/cloze";
 import { OcclusionImage } from "./OcclusionEditor";
 import { inSteps, memoryOf, previewIntervals, schedule, userParams, type FsrsCard, type Grade } from "../lib/fsrs";
 import { getSettings, useSettings } from "../lib/settings";
-import { newCard } from "../lib/srs";
+import { newCard, schedule as sm2Schedule, previewIntervals as sm2Preview } from "../lib/srs";
 import { go, noteDerived, openNote, toast, useVault } from "../lib/store";
 import { Preview } from "./Preview";
 import { cardLine, openNoteAtLine } from "./study-nav";
@@ -112,7 +113,7 @@ function useStreak(tick: number) {
 
 type Step = { kind: "grade" | "suspend"; item: Item; prev: Card; log?: string; queue: Item[]; done: number; stats: number[]; again: [string, { n: number; q: string }][] };
 
-export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?: string; onExit?: () => void }) {
+export function ReviewSession({ notes, title, onExit, limit }: { notes: Note[]; title?: string; onExit?: () => void; /** Backlog: only the `limit` cards most likely forgotten (Lumen 22). */ limit?: number }) {
   const v = useVault();
   const due = useDueCards(notes);
   const [queue, setQueue] = useState<Item[] | null>(null);
@@ -126,7 +127,7 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
   const history = useRef<Step[]>([]);
   const touch = useRef<number | null>(null);
 
-  useEffect(() => { if (due && queue === null) { setQueue(due); setStarted(Date.now()); } }, [due, queue]);
+  useEffect(() => { if (due && queue === null) { const now = Date.now(); setQueue(limit ? [...due].sort((a, b) => riskOf(b.card, now) - riskOf(a.card, now)).slice(0, limit) : due); setStarted(Date.now()); } }, [due, queue]); // eslint-disable-line react-hooks/exhaustive-deps
   const streak = useStreak(done);
 
   // Cards from these notes due tomorrow (for the summary).
@@ -161,7 +162,7 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
     // FSRS-6 (lib/fsrs.ts); SM-2 cards migrate here on their first FSRS review.
     const at = Date.now();
     const prevMem = memoryOf(cur.card as FsrsCard, at);
-    const next = schedule(cur.card, g, at, userParams(getSettings()));
+    const next = (getSettings() as { srsAlgo?: string }).srsAlgo === "sm2" ? sm2Schedule(cur.card, g, at) : schedule(cur.card, g, at, userParams(getSettings())); // Settings › Study plan › Algorithm (round 6)
     await save("card", next);
     // Review log (synced as kind "review"): feeds Settings › Review › Optimize from history and the new-cards limit.
     const log = uid();
@@ -284,7 +285,7 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
       </div>
     );
   }
-  const iv = previewIntervals(cur.card, Date.now(), userParams(getSettings()));
+  const iv = (getSettings() as { srsAlgo?: string }).srsAlgo === "sm2" ? sm2Preview(cur.card) : previewIntervals(cur.card, Date.now(), userParams(getSettings()));
   const total = done + queue.length;
   const left = queue.length - 1;
   const pos = Math.min(done + 1, total);

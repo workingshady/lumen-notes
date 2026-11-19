@@ -9,13 +9,14 @@ import {
   attLink, attRef, baseName, cleanName, dirName, emptyPlan, extOf, isAttachmentFile, mimeOf, stripCommonRoot, yieldUI,
   type ImportPlan, type ImportSourceKind, type PlanNote, type Progress, type VFile,
 } from "./import-model";
+import { t } from "./i18n";
 
 export const OBSIDIAN_TEXT = {
-  compressedDrawing: (n: number) => `${n} Excalidraw drawing${n === 1 ? " is" : "s are"} compressed; imported as Markdown notes (turn off “Compress Excalidraw JSON” in the plugin and export again to get whiteboards).`,
-  unreferenced: (n: number) => `${n} file${n === 1 ? "" : "s"} in the vault ${n === 1 ? "isn't" : "aren't"} linked from any note and ${n === 1 ? "was" : "were"} left out.`,
-  missing: (n: number) => `${n} embedded file${n === 1 ? " was" : "s were"} not found in the vault; the links stay as they are.`,
-  canvasFiles: (n: number) => `${n} canvas card${n === 1 ? " points" : "s point"} to a vault file; ${n === 1 ? "it shows" : "they show"} as a file card.`,
-  nothing: "No Markdown, canvas or base files found.",
+  compressedDrawing: (n: number) => t("{n} Excalidraw drawing is compressed; imported as a Markdown note (turn off “Compress Excalidraw JSON” in the plugin and export again to get a whiteboard).|{n} Excalidraw drawings are compressed; imported as Markdown notes (turn off “Compress Excalidraw JSON” in the plugin and export again to get whiteboards).", { n }),
+  unreferenced: (n: number) => t("{n} file in the vault isn't linked from any note and was left out.|{n} files in the vault aren't linked from any note and were left out.", { n }),
+  missing: (n: number) => t("{n} embedded file was not found in the vault; the link stays as it is.|{n} embedded files were not found in the vault; the links stay as they are.", { n }),
+  canvasFiles: (n: number) => t("{n} canvas card points to a vault file; it shows as a file card.|{n} canvas cards point to a vault file; they show as file cards.", { n }),
+  nothing: () => t("No Markdown, canvas or base files found."),
 };
 
 /** Front matter with YAML block lists (`tags:\n  - a`) → flow lists (`tags: [a, b]`); `tag:`/`aliases` kept. */
@@ -48,14 +49,16 @@ export function ensureH1(md: string, title: string): string {
   return `${head}# ${title}\n\n${rest}`;
 }
 
-const skip = (p: string) => p.split("/").some((s) => s.startsWith(".") || s === "__MACOSX" || s === "node_modules");
+/** Dot-folders (`.obsidian`, `.git`) are skipped, except the vault's `.trash`, which is listed unticked. */
+const skip = (p: string) => p.split("/").some((s, i) => (s.startsWith(".") && !(i === 0 && s === ".trash")) || s === "__MACOSX" || s === "node_modules");
+const inTrash = (p: string) => p.startsWith(".trash/");
 
 export async function obsidianPlan(input: VFile[], name: string, onProgress?: Progress, source: ImportSourceKind = "obsidian"): Promise<ImportPlan> {
   const { files: all, root } = stripCommonRoot(input);
   const files = all.filter((f) => !skip(f.path));
   const plan = emptyPlan(source, root || name.replace(/\.zip$/i, ""));
   const notes = files.filter((f) => /\.(md|markdown|txt|canvas|base)$/i.test(f.path));
-  if (!notes.length) throw new Error(OBSIDIAN_TEXT.nothing);
+  if (!notes.length) throw new Error(OBSIDIAN_TEXT.nothing());
   const atts = files.filter((f) => isAttachmentFile(f.path) && !/\.(markdown|txt)$/i.test(f.path));
   const byFull = new Map(atts.map((f) => [f.path.toLowerCase(), f]));
   const byBase = new Map<string, VFile>();
@@ -68,7 +71,7 @@ export async function obsidianPlan(input: VFile[], name: string, onProgress?: Pr
     if (!ref) {
       ref = `o${refOf.size}`;
       refOf.set(f.path, ref);
-      plan.attachments.set(ref, { ref, name: baseName(f.path), mime: mimeOf(f.path), size: f.size, bytes: () => f.bytes() });
+      plan.attachments.set(ref, { ref, name: baseName(f.path), mime: mimeOf(f.path), size: f.size, path: f.path, bytes: () => f.bytes() });
     }
     return ref;
   };
@@ -146,21 +149,23 @@ export async function obsidianPlan(input: VFile[], name: string, onProgress?: Pr
       n = { key: f.path, folder, title, type: "base", body: `---\ntype: base\n---\n# ${title}\n\n\`\`\`base\n${raw.trimEnd()}\n\`\`\`\n`, tags: [], props: {}, badge: "base" };
     } else if (/\.excalidraw\.md$/i.test(f.path)) {
       const json = /```json\n([\s\S]*?)\n```/.exec(raw)?.[1];
-      const t = title.replace(/\.excalidraw$/i, "");
+      const dt = title.replace(/\.excalidraw$/i, "");
       let scene: string | null = null;
       if (json) { try { const o = JSON.parse(json) as { type?: string; elements?: unknown[] }; if (Array.isArray(o.elements)) scene = JSON.stringify({ type: "excalidraw", version: 2, source: "lumen-import", elements: o.elements, appState: {}, files: {} }); } catch { /* fall through */ } }
-      if (scene) n = { key: f.path, folder, title: t, type: "whiteboard", body: scene, tags: [], props: {}, badge: "whiteboard" };
+      if (scene) n = { key: f.path, folder, title: dt, type: "whiteboard", body: scene, tags: [], props: {}, badge: "whiteboard" };
       else {
         counts.compressed++;
-        n = { key: f.path, folder, title: t, type: "note", body: ensureH1(normalizeFrontMatter(raw.replace(/```compressed-json[\s\S]*?```/g, "")), t), tags: [], props: {}, badge: "note" };
+        n = { key: f.path, folder, title: dt, type: "note", body: ensureH1(normalizeFrontMatter(raw.replace(/```compressed-json[\s\S]*?```/g, "")), dt), tags: [], props: {}, badge: "note" };
       }
     } else {
       const body = ensureH1(rewrite(f.path, normalizeFrontMatter(raw)), title);
       const fmType = /^---\n[\s\S]*?^type:\s*([\w-]+)\s*$[\s\S]*?^---/m.exec(body)?.[1];
       n = { key: f.path, folder, title, type: (fmType as PlanNote["type"]) || "note", body: body.trimEnd() + "\n", tags: [], props: {}, badge: "note" };
     }
+    if (inTrash(f.path)) n.off = true;
     plan.notes.push(n);
   }
+  plan.stats = { total: files.length, totalBytes: files.reduce((a, f) => a + f.size, 0) };
   const unreferenced = atts.filter((f) => !refOf.has(f.path)).length;
   if (counts.compressed) plan.warnings.push(OBSIDIAN_TEXT.compressedDrawing(counts.compressed));
   if (counts.missing) plan.warnings.push(OBSIDIAN_TEXT.missing(counts.missing));

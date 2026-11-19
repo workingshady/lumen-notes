@@ -324,8 +324,8 @@ for (const modern of [false, true]) {
   const rec = await writePlan(plan, { spaceId: "s1", folderId: null, conflicts: { "Welcome.md": "merge", "Projects/Ideas.md": "rename", "Projects/Board.canvas": "skip" }, now: NOW }, m.store);
   const notes = m.live("note") as unknown as Note[];
   const merged = notes.find((n) => n.id === "e1")!;
-  ok(merged.body.startsWith("# Welcome\n\nOld text") && merged.body.includes("Hello [[Ideas 2]]") && merged.tags.includes("start") && merged.tags.includes("inline"), `merge appends + links follow rename (${merged.body})`);
-  ok(notes.some((n) => n.title === "Ideas 2" && n.body.startsWith("# Ideas 2")), "rename gives Title 2");
+  ok(merged.body.startsWith("# Welcome\n\nOld text") && merged.body.includes("Hello [[Ideas (2)]]") && merged.tags.includes("start") && merged.tags.includes("inline"), `merge appends + links follow rename (${merged.body})`);
+  ok(notes.some((n) => n.title === "Ideas (2)" && n.body.startsWith("# Ideas (2)")), "rename gives Title (2)");
   ok(rec.counts.skipped === 1 && rec.counts.merged === 1 && rec.counts.renamed === 1, `conflict counts ${JSON.stringify(rec.counts)}`);
   ok(notes.find((n) => n.title === "Sketch")?.type === "whiteboard", "whiteboard written");
   // selection: only Projects/Ideas
@@ -335,6 +335,120 @@ for (const modern of [false, true]) {
   await undoImport(rec.id, m.store);
   const after = m.live("note") as unknown as Note[];
   ok(after.length === 3 && after.find((n) => n.id === "e1")!.body === "# Welcome\n\nOld text\n", "undo restores the merged note and removes the rest");
+}
+
+// ------------------------------------------------------------------ round 5/6 design: detection, tree, target, report, options
+{
+  const { detectSource, detectSourceInZip, isNotionHtmlExport, wikiLinks, fmtBytes, ImportError, attKey } = await import("../src/lib/import-model");
+  const { renamedTitle, planCounts } = await import("../src/lib/import-write");
+  const { withBaseView } = await import("../src/lib/import-notion");
+  ok(detectSource(["Deck.apkg"]) === "anki" && detectSource(["x.colpkg"]) === "anki", "detect: anki package");
+  ok(detectSource(["Home 0123456789abcdef0123456789abcdef.md"]) === "notion", "detect: notion ids");
+  ok(detectSource(["Vault/.obsidian/app.json", "Vault/a.md"]) === "obsidian" && detectSource(["Vault/a.md", "Vault/b/c.md"]) === "obsidian", "detect: vault folder");
+  ok(detectSource(["a.md", "b.md"]) === "markdown" && detectSource(["vault.zip"]) === null, "detect: loose markdown, zip needs a look inside");
+  ok(detectSourceInZip(["collection.anki21", "media"]) === "anki" && detectSourceInZip(["Export/Page 0123456789abcdef0123456789abcdef.html"]) === "notion" && detectSourceInZip(["V/a.md", "V/x/b.md"]) === "obsidian", "detect: inside a zip");
+  ok(isNotionHtmlExport(["Page abc.html", "img.png"]) && !isNotionHtmlExport(["Page.md", "Page.html"]), "notion html export check");
+  ok(JSON.stringify(wikiLinks("[[A]] [[B|b]] ![[c.png]] `[[code]]`\n```\n[[D]]\n```\n[[E#h]]")) === '["A","B","E"]', "wikiLinks outside code");
+  ok(fmtBytes(1_100_000_000) === "1.1 GB" && fmtBytes(24_600_000) === "24.6 MB" && fmtBytes(2048) === "2 KB", `fmtBytes (${fmtBytes(1_100_000_000)})`);
+  ok(renamedTitle("Backpropagation", new Set(["backpropagation", "backpropagation (2)"])) === "Backpropagation (3)", "rename → Title (n)");
+
+  // Notion HTML export → the dedicated error
+  const htmlZip = new JSZip();
+  htmlZip.file("Export/Home 0123456789abcdef0123456789abcdef.html", "<html></html>");
+  let err: unknown = null;
+  try { await notionPlan(await zipFiles(await htmlZip.generateAsync({ type: "uint8array" })), "Notion-export.zip"); } catch (e) { err = e; }
+  ok(err instanceof ImportError && err.code === "notion-html" && err.file === "Notion-export.zip", "notion: HTML export → notion-html error");
+  if (process.env.FIXTURES) {
+    // own folder: on case-insensitive file systems it would overwrite the Markdown notion-export.zip
+    const fs = await import("node:fs");
+    fs.mkdirSync(`${process.env.FIXTURES}/html`, { recursive: true });
+    fs.writeFileSync(`${process.env.FIXTURES}/html/Notion-export.zip`, await htmlZip.generateAsync({ type: "uint8array" }));
+  }
+
+  // Notion: page tree, embeds by provider, page links, chosen first view
+  const H = "0123456789abcdef0123456789abcdef", H2 = "fedcba9876543210fedcba9876543210", H3 = "11112222333344445555666677778888";
+  const nz = new JSZip();
+  nz.file(`Study ${H}.md`, `# Study\n\nSee [Plan](Study%20${H}/Plan%20${H2}.md).\n\n[https://www.figma.com/file/abc](https://www.figma.com/file/abc)\n\n[https://www.loom.com/share/x](https://www.loom.com/share/x)\n`);
+  nz.file(`Study ${H}/Plan ${H2}.md`, `# Plan\n\nBack to [Study](../Study%20${H}.md).\n`);
+  nz.file(`Study ${H}/Tasks ${H3}.csv`, "Name,Status,Due\nA,Doing,\"November 19, 2026\"\nB,Done,\n");
+  const np = await notionPlan(await zipFiles(await nz.generateAsync({ type: "uint8array" })), "Notion.zip");
+  ok(np.stats?.embeds === 2 && np.stats.embedProviders?.join(",") === "Figma,Loom" && np.stats.pageLinks === 2, `notion: stats ${JSON.stringify(np.stats)}`);
+  const nt = planTree(np, { pages: true });
+  const study = nt.children.find((c) => c.name === "Study")!;
+  ok(study?.kind === "folder" && !!study.self && study.notes === 4 && study.children.some((c) => c.badge === "database" && c.self), `notion: page + sub-pages folded into one node (${JSON.stringify(study?.notes)})`);
+  const tasks = np.notes.find((n) => n.type === "base")!;
+  const board = withBaseView(tasks, "board"), cal = withBaseView(tasks, "calendar"), gal = withBaseView(tasks, "cards");
+  ok(parseBase(board.body).cfg.views[0].type === "board" && parseBase(board.body).cfg.views[0].groupBy?.property === "notion-status", `notion: first view board grouped by status (${board.body})`);
+  ok(parseBase(cal.body).cfg.views[0].date === "Due" && parseBase(gal.body).cfg.views[0].type === "cards", "notion: calendar on the date column, gallery");
+  ok(board.body.includes('file.inFolder("@@FOLDER:Study/Tasks@@")'), "notion: view change keeps the folder filter");
+
+  // Obsidian: .trash listed but unticked, attachments listed with their path, excluded files stay links
+  const vf = [
+    vfileFromBytes("V/AI/Attention.md", "# Attention\n\n![[pic.png]] [[Transformer]] #ml\n"),
+    vfileFromBytes("V/AI/Transformer.md", "Links to [[Attention]] and [[Missing]]. #ml #nlp\n"),
+    vfileFromBytes("V/Boards/Map.canvas", JSON.stringify({ nodes: [], edges: [] })),
+    vfileFromBytes("V/attachments/pic.png", png(3, 3)),
+    vfileFromBytes("V/.trash/Old.md", "# Old\n"),
+    vfileFromBytes("V/.obsidian/app.json", "{}"),
+  ];
+  const op = await obsidianPlan(vf, "V");
+  ok(op.notes.find((n) => n.title === "Old")?.off === true && op.notes.find((n) => n.title === "Old")!.folder.join("/") === ".trash", "obsidian: .trash note unticked by default");
+  ok(!op.notes.some((n) => n.key.includes(".obsidian")), "obsidian: .obsidian still skipped");
+  const att = [...op.attachments.values()][0];
+  ok(att.path === "attachments/pic.png", "obsidian: attachment keeps its path");
+  const ot = planTree(op, { files: true });
+  const names = ot.children.map((c) => c.name);
+  ok(JSON.stringify(names) === JSON.stringify(["AI", "attachments", "Boards", ".trash"]), `obsidian tree order, dot-folder last (${names})`);
+  const af = ot.children.find((c) => c.name === "attachments")!;
+  ok(af.files === 1 && af.bytes === 33 && af.noteKeys[0] === attKey(att.ref), "obsidian tree: attachments folder with file count + size");
+  ok(ot.children.find((c) => c.name === ".trash")!.off === true && ot.children.find((c) => c.name === "Boards")!.canvases === 1, "obsidian tree: trash off, canvas count");
+  const pc = planCounts(op, new Set(op.notes.filter((n) => !n.off).map((n) => n.key)));
+  ok(pc.notes === 3 && pc.links === 3 && pc.tags === 2 && pc.canvases === 1 && pc.bytes === 33, `planCounts links/tags/bytes ${JSON.stringify(pc)}`);
+  const m0 = memStore();
+  const r0 = await writePlan(op, { spaceId: "s1", folderId: null, selected: new Set(["AI/Attention.md"]), excludeAttachments: new Set([att.ref]), now: NOW }, m0.store);
+  ok(r0.counts.attachments === 0 && (m0.live("note") as unknown as Note[])[0].body.includes("att:@@"), "unticked attachment not imported");
+
+  // target: new space + dated nested folder + report + live counts + undo removes the space
+  const m = memStore([noteFix("e1", "Attention", "# Attention\n\nmine\n", "other-space")]);
+  (m.store as ImportStore).allNotes = async () => [...m.t("note").values()] as unknown as Note[];
+  const lives: string[] = [];
+  const rec = await writePlan(op, {
+    spaceId: "inbox", folderId: null, newSpace: { name: "V", kind: "resource" }, rootFolder: "Imported / Obsidian 2026-11-20", conflictsAcrossSpaces: true,
+    conflicts: { "AI/Attention.md": "rename" }, report: true, now: NOW, onCounts: (c) => lives.push(`${c.notes[0]}/${c.notes[1]} ${c.links[0]}/${c.links[1]} ${c.attachments[0]}/${c.attachments[1]}`),
+  }, m.store);
+  const sp = m.live("space")[0] as { id: string; name: string; kind: string; lumenImport: string };
+  ok(sp?.name === "V" && sp.kind === "resource" && sp.lumenImport === rec.id && rec.spaceId === sp.id && rec.newSpace, "new space created and tagged");
+  const fs = m.live("folder") as unknown as Folder[];
+  const imported = fs.find((f) => f.name === "Imported")!, dated = fs.find((f) => f.name === "Obsidian 2026-11-20")!;
+  ok(!!imported && dated?.parentId === imported.id && rec.folderId === dated.id, "dated folder nested under Imported");
+  ok(rec.handled?.length === 1 && rec.handled[0].to === "Attention (2)" && rec.counts.renamed === 1, `conflict across spaces → renamed (${JSON.stringify(rec.handled)})`);
+  const notes = m.live("note") as unknown as (Note & { lumenImport?: string })[];
+  const report = notes.find((n) => n.id === rec.reportId)!;
+  ok(!!report && report.title === "Import report" && report.folderId === dated.id && report.body.includes("[[Attention]]: imported as [[Attention (2)]]"), `report note (${report?.body})`);
+  ok(rec.counts.canvases === 1 && rec.counts.links === 2 && rec.counts.notes === 4, `result counts ${JSON.stringify(rec.counts)}`);
+  ok(lives.at(-1) === "4/4 2/3 1/1", `live counts per kind (${lives.at(-1)})`);
+  const { reportBody } = await import("../src/lib/import-write");
+  const rb = reportBody("Import report", { ...rec, warnings: ["3 embeds can't be imported"], handled: [{ title: "AdamW", action: "skip" }, { title: "Attention", action: "merge" }] }, op);
+  ok(rb.includes("## Not imported or changed\n\n- 3 embeds can't be imported") && rb.includes("[[AdamW]]: skipped") && rb.includes("[[Attention]]: merged"), "report: warnings + skip / merge lines");
+  await undoImport(rec.id, m.store);
+  ok(m.live("space").length === 0 && m.live("note").length === 1 && m.live("folder").length === 0, "undo removes the new space, notes, folders and the report");
+
+  // Anki options: one note per top-level deck, media off, extra field below a line
+  const col = await readAnki(await apkg(false), "Deck.apkg", deps);
+  const mapping = defaultMapping(col);
+  const one = await ankiPlan(col, { keepHistory: true, mapping, perSubdeck: false, now: NOW });
+  const lang = one.notes.find((n) => n.title === "Lang")!;
+  ok(!!lang && lang.folder.length === 0 && lang.body.includes("## Spanish") && lang.body.includes("perro :: dog") && !one.notes.some((n) => n.title === "Spanish"), "anki: one note per top-level deck with sub-deck sections");
+  ok(one.cards.some((c) => c.noteKey === lang.key) && one.cards.every((c) => flashcards(one.notes.find((n) => n.key === c.noteKey)!.body).some((x) => x.key === c.cardKey)), "anki: schedules follow the merged deck note");
+  const noMedia = await ankiPlan(col, { keepHistory: false, mapping, media: false, now: NOW });
+  ok(noMedia.attachments.size === 0 && !noMedia.warnings.some((w) => /missing/.test(w)), "anki: media off → no attachments, no missing warning");
+  const withExtra = await ankiPlan(col, { keepHistory: false, mapping: { ...mapping, "1005": { front: 1, back: 2, reverse: false, extra: [0] } }, now: NOW });
+  const sp2 = withExtra.notes.find((n) => n.title === "Spanish")!;
+  ok(/comer\n\?\nto eat\n\*\*\*\n.+/.test(sp2.body), `anki: extra field under the back, below a line (${sp2.body})`);
+  const audioPlan = await ankiPlan(col, { keepHistory: false, mapping, now: NOW });
+  ok(audioPlan.notes.find((n) => n.title === "Default")?.audio === 1, "anki: audio count per deck");
+  const at = planTree(audioPlan, { pages: true });
+  ok(at.children.find((c) => c.name === "Lang")?.allCards === audioPlan.notes.find((n) => n.title === "Spanish")!.cards, "anki tree: parent deck total cards");
 }
 
 if (process.env.FIXTURES) {

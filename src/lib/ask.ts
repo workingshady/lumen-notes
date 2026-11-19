@@ -11,6 +11,7 @@ import {
 } from "./chat";
 import { db, DEMO, save, uid } from "./db";
 import { getFaults, simApi } from "./sim/faults";
+import { isLimitError } from "./ai-usage";
 import { mockTutor } from "./tutor";
 import type { Vault } from "./store";
 
@@ -21,7 +22,7 @@ export { citedIn as citedNumbers } from "./chat";
 /** The answer being produced right now (saved into the thread only when it's done). */
 export interface Live {
   threadId: string;
-  status: "indexing" | "rewriting" | "asking" | "streaming" | "offline" | "signedout" | "error";
+  status: "indexing" | "rewriting" | "asking" | "streaming" | "offline" | "signedout" | "error" | "limit";
   text: string;
   sources: Retrieved[];
   rewrite?: string;
@@ -46,8 +47,17 @@ interface AskState {
   list: boolean;
   /** Ask page in Tutor mode without a session: the concept picker. */
   picking: boolean;
+  /** Note Assistant (right panel, R6-31): its own thread + answer in progress, scoped to the open note. */
+  aActive: string | null;
+  aLive: Live | null;
+  aDraft: string;
 }
-let state: AskState = { open: false, draft: "", scope: null, activeId: null, live: null, list: false, picking: false };
+let state: AskState = { open: false, draft: "", scope: null, activeId: null, live: null, list: false, picking: false, aActive: null, aLive: null, aDraft: "" };
+/** Which conversation a turn belongs to: the Ask page / phone sheet, or the note Assistant. */
+export type Slot = "ask" | "assistant";
+const ACT = { ask: "activeId", assistant: "aActive" } as const;
+const LIVE = { ask: "live", assistant: "aLive" } as const;
+const liveOf = (slot: Slot) => state[LIVE[slot]];
 const subs = new Set<() => void>();
 const set = (p: Partial<AskState>) => { state = { ...state, ...p }; subs.forEach((f) => f()); };
 export const useAsk = () => useSyncExternalStore((f) => (subs.add(f), () => { subs.delete(f); }), () => state);
@@ -76,18 +86,24 @@ async function streamWords(full: string, onDelta: ((t: string) => void) | undefi
   return out;
 }
 
+/** Tell the usage meter (lib/ai-usage.ts) an AI call happened ("lumen:ai", same event as api()). */
+const aiEvent = (path: string, status: number, error?: string) => { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("lumen:ai", { detail: { path, status, error } })); };
 /** POST to an /api/ai/* route: JSON {text} or an SSE stream (Workers AI), calling `onDelta` with the text so far. */
 async function postAi(path: string, body: unknown, onDelta?: (t: string) => void, signal?: AbortSignal): Promise<string> {
   const headers = new Headers({ "Content-Type": "application/json" });
   const tok = getToken();
   if (tok) headers.set("Authorization", `Bearer ${tok}`);
-  const res = await fetch(API_BASE + "/api" + path, { method: "POST", headers, body: JSON.stringify(body), signal });
+  let res: Response;
+  try { res = await fetch(API_BASE + "/api" + path, { method: "POST", headers, body: JSON.stringify(body), signal }); }
+  catch (e) { if ((e as Error).name !== "AbortError") aiEvent(path, 0, (e as Error).message); throw e; }
   const type = res.headers.get("content-type") ?? "";
   if (!res.ok) {
     const data = type.includes("json") ? ((await res.json()) as { error?: string }) : { error: await res.text() };
+    aiEvent(path, res.status, data?.error);
     if (res.status === 401) { setToken(null); forgetAccount(getAccount()); }
     throw new ApiError(data?.error || `HTTP ${res.status}`, res.status);
   }
+  aiEvent(path, res.status);
   if (type.includes("json")) { const t = ((await res.json()) as { text?: string }).text ?? ""; onDelta?.(t); return t; }
   if (!res.body) { const t = await res.text(); onDelta?.(t); return t; }
   const reader = res.body.getReader();
@@ -124,6 +140,7 @@ type ChatOp =
 export async function aiChat(body: ChatOp, onDelta?: (t: string) => void, signal?: AbortSignal): Promise<string> {
   if (await isDemoMock("/ai/chat")) {
     await sleep(body.op === "answer" ? 350 : 200);
+    aiEvent("/ai/chat", 200);
     if (body.op === "rewrite") return mockRewrite(body.question, body.history);
     if (body.op === "followups") return mockFollowups(body.question);
     if (body.op === "summarize") return localSummary(body.summary ?? "", body.history);
@@ -134,7 +151,7 @@ export async function aiChat(body: ChatOp, onDelta?: (t: string) => void, signal
 export interface TutorReq { op: string; concept: string; sources: ChatSourceIn[]; input?: string; history?: { role: string; text: string }[]; extra?: Record<string, unknown> }
 /** POST /api/ai/tutor (worker/ext/tutor.ts): one JSON object as text. */
 export async function aiTutor(body: TutorReq, signal?: AbortSignal): Promise<string> {
-  if (await isDemoMock("/ai/tutor")) { await sleep(450); return mockTutor(body.op, body); }
+  if (await isDemoMock("/ai/tutor")) { await sleep(450); aiEvent("/ai/tutor", 200); return mockTutor(body.op, body); }
   return postAi("/ai/tutor", body, undefined, signal);
 }
 /** Signed in (or demo) and online. */
@@ -170,9 +187,16 @@ export async function deleteThread(id: string) {
   await updateThread(id, (t) => { t.deleted = 1; t.messages = []; t.summary = ""; delete t.tutor; });
   if (state.activeId === id) set({ activeId: null, live: null });
 }
-export function openThread(id: string | null) { ctl?.abort(); set({ activeId: id, live: null, list: false, picking: false }); }
+export function openThread(id: string | null, slot: Slot = "ask") {
+  ctls[slot]?.abort();
+  if (slot === "assistant") set({ aActive: id, aLive: null }); else set({ activeId: id, live: null, list: false, picking: false });
+}
 /** "New chat": an empty thread (created on the first message). */
-export function newChat() { ctl?.abort(); pendingTutor = null; set({ activeId: null, live: null, draft: "", list: false, picking: false }); }
+export function newChat(slot: Slot = "ask") {
+  ctls[slot]?.abort();
+  if (slot === "assistant") { set({ aActive: null, aLive: null, aDraft: "" }); return; }
+  pendingTutor = null; set({ activeId: null, live: null, draft: "", list: false, picking: false });
+}
 export function setFeedback(threadId: string, msgId: string, f: 1 | -1 | undefined) {
   return updateThread(threadId, (t) => { const m = t.messages.find((x) => x.id === msgId); if (m) { if (f) m.feedback = f; else delete m.feedback; } });
 }
@@ -183,7 +207,7 @@ async function pruneThreads() {
 
 /** Start a tutor session (concept sheet "Learn with tutor", lesson note ⋯ › Tutor, Ask's mode switch). */
 export function openTutor(p: { title: string; pathId?: string; conceptKey?: string; noteId?: string; mode?: Exclude<ChatMode, "ask"> }) {
-  ctl?.abort();
+  ctls.ask?.abort();
   const scope: ChatScope = p.pathId ? { kind: "path", pathId: p.pathId } : p.noteId ? { kind: "note", noteId: p.noteId } : { kind: "vault" };
   const t = newThread({ title: p.title, mode: p.mode ?? "explain", scope, ...(p.pathId ? { pathId: p.pathId } : {}), ...(p.conceptKey ? { conceptKey: p.conceptKey } : {}), ...(p.noteId ? { noteId: p.noteId } : {}) });
   pendingTutor = t;
@@ -195,10 +219,10 @@ export function openTutor(p: { title: string; pathId?: string; conceptKey?: stri
 if (DEMO && typeof window !== "undefined") (window as unknown as Record<string, unknown>).__lumenAsk = { open: openAsk, set, get: () => state, openTutor };
 
 // ------------------------------------------------------------------ ask a turn
-let ctl: AbortController | null = null;
+const ctls: Record<Slot, AbortController | null> = { ask: null, assistant: null };
 /** Bumped by Stop / a new turn: an older turn that is still indexing or rewriting quietly ends. */
-let turnSeq = 0;
-const updLive = (threadId: string, p: Partial<Live>) => { if (state.live?.threadId === threadId) set({ live: { ...state.live, ...p } }); };
+const turnSeq: Record<Slot, number> = { ask: 0, assistant: 0 };
+const updLive = (slot: Slot, threadId: string, p: Partial<Live>) => { const l = liveOf(slot); if (l?.threadId === threadId) set({ [LIVE[slot]]: { ...l, ...p } }); };
 const toPayload = (s: Retrieved[]): ChatSourceIn[] => s.map((x) => ({ n: x.n, title: x.title, heading: x.heading || undefined, text: x.text }));
 const keepSources = (s: Retrieved[]) => s.map((x) => ({ n: x.n, noteId: x.noteId, title: x.title, ...(x.heading ? { heading: x.heading } : {}), text: x.text }));
 
@@ -206,17 +230,32 @@ const keepSources = (s: Retrieved[]) => s.map((x) => ({ n: x.n, noteId: x.noteId
  * Send a message in the active thread (or a new one). `regenerate` re-answers the last question (its old answer is
  * dropped first); `general` answers it from general knowledge (explicit choice after "Not in your notes").
  */
-export async function sendChat(text: string, v: Vault, opts: { scope?: Scope; regenerate?: boolean; general?: boolean } = {}) {
+export interface SendOpts {
+  scope?: Scope; regenerate?: boolean; general?: boolean;
+  /** Which conversation (default: the Ask page). */
+  slot?: Slot;
+  /** Passages put first (the Assistant's "Selection" chip), numbered before the retrieved ones. */
+  pinned?: { noteId: string; title: string; heading?: string; text: string }[];
+  /** Assistant with "Only from my notes" off: fall back to general knowledge (labelled) when the notes don't cover it. */
+  allowGeneral?: boolean;
+  /** Extra note ids the retrieval may use besides the scope (the Assistant's "+ Add" chips). */
+  extraNotes?: string[];
+  /** New thread: mark it as the Assistant's thread for this note. */
+  assistantFor?: string;
+}
+export async function sendChat(text: string, v: Vault, opts: SendOpts = {}) {
   const question = text.trim();
   if (!question) return;
-  ctl?.abort();
-  const my = ++turnSeq;
-  const alive = () => my === turnSeq && state.live?.threadId === id;
-  const up = (p: Partial<Live>) => { if (alive()) updLive(id, p); };
+  const slot = opts.slot ?? "ask";
+  ctls[slot]?.abort();
+  const my = ++turnSeq[slot];
+  const alive = () => my === turnSeq[slot] && liveOf(slot)?.threadId === id;
+  const up = (p: Partial<Live>) => { if (alive()) updLive(slot, id, p); };
   const scope = opts.scope ?? state.scope ?? { kind: "vault" };
-  let found = state.activeId ? await db.chats.get(state.activeId) : undefined;
+  const activeId = state[ACT[slot]];
+  let found = activeId ? await db.chats.get(activeId) : undefined;
   if (found && (found.deleted || found.mode !== "ask")) found = undefined;
-  let thread: ChatThread = found ? structuredClone(found) : newThread({ title: autoTitle(question), mode: "ask", scope: toScope(scope) });
+  let thread: ChatThread = found ? structuredClone(found) : newThread({ title: autoTitle(question), mode: "ask", scope: toScope(scope), ...(opts.assistantFor ? { noteId: opts.assistantFor, assistant: 1 as const } : {}) });
   if (opts.regenerate || opts.general) {
     while (thread.messages.length && thread.messages[thread.messages.length - 1].role === "assistant") thread.messages.pop();
   } else {
@@ -227,14 +266,17 @@ export async function sendChat(text: string, v: Vault, opts: { scope?: Scope; re
   const id = thread.id;
   const history = thread.messages.slice(0, -1); // everything before this question
   const allow = scopeNotes(scope, v);
+  if (allow && opts.extraNotes) for (const x of opts.extraNotes) allow.add(x);
+  const rscope: Scope = allow && opts.extraNotes?.length ? { ...scope, noteIds: [...allow] } : scope;
   const total = allow ? allow.size : v.notes.filter((n) => !n.deleted).length;
   const ctx = windowHistory({ messages: history, summary: thread.summary, summarized: thread.summarized });
-  set({ activeId: id, draft: "", live: { threadId: id, status: "indexing", text: "", sources: [], read: 0, total, question, general: opts.general, turns: ctx.usedTurns, summarized: !!ctx.summary } });
+  const live0: Live = { threadId: id, status: "indexing", text: "", sources: [], read: 0, total, question, general: opts.general, turns: ctx.usedTurns, summarized: !!ctx.summary };
+  if (slot === "assistant") set({ aActive: id, aDraft: "", aLive: live0 }); else set({ activeId: id, draft: "", live: live0 });
   void pruneThreads();
 
   const finish = async (m: ChatMessage | null, live: Partial<Live> | null) => {
     if (m) await updateThread(id, (t) => { t.messages.push(m); });
-    if (alive()) set({ live: live ? { ...state.live!, ...live } : null });
+    if (alive()) set({ [LIVE[slot]]: live ? { ...liveOf(slot)!, ...live } : null });
   };
 
   try {
@@ -253,24 +295,29 @@ export async function sendChat(text: string, v: Vault, opts: { scope?: Scope; re
         if (!alive()) return;
       }
       // retrieve with BOTH the raw turn and its rewrite, merged by reciprocal rank
-      sources = rewrite ? mergeRanked([retrieve(question, v, scope), retrieve(rewrite, v, scope)], 8) : retrieve(question, v, scope);
+      sources = rewrite ? mergeRanked([retrieve(question, v, rscope), retrieve(rewrite, v, rscope)], 8) : retrieve(question, v, rscope);
+      if (opts.pinned?.length) sources = pinFirst(opts.pinned, sources);
       up({ sources, rewrite });
-      if (!sources.length) return finish(msg("assistant", "", { empty: "none", ...(rewrite ? { rewrite } : {}) }), null);
+      if (!sources.length && !opts.allowGeneral) return finish(msg("assistant", "", { empty: "none", ...(rewrite ? { rewrite } : {}) }), null);
     }
     if (!getToken() && !DEMO) return finish(null, { status: "signedout", error: NEEDS_SIGNIN });
     if (typeof navigator !== "undefined" && navigator.onLine === false) return finish(null, { status: "offline" });
-    up({ status: "asking" });
-    ctl = new AbortController();
-    const answer = await aiChat({ op: "answer", question, rewrite, history: ctx.recent, summary: ctx.summary || undefined, sources: toPayload(sources), general: !!opts.general },
-      (t) => up({ text: t, status: "streaming" }), ctl.signal);
-    if (!opts.general && isNotInNotes(answer)) return finish(msg("assistant", "", { empty: "none", sources: keepSources(sources), ...(rewrite ? { rewrite } : {}) }), null);
-    const m = msg("assistant", answer.trim(), { ...(sources.length ? { sources: keepSources(sources) } : {}), ...(rewrite ? { rewrite } : {}), ...(opts.general ? { general: 1 as const } : {}) });
+    let general = !!opts.general || (!!opts.allowGeneral && !sources.length && !casual);
+    up({ status: "asking", general });
+    const c = (ctls[slot] = new AbortController());
+    const ask = (g: boolean) => aiChat({ op: "answer", question, rewrite, history: ctx.recent, summary: ctx.summary || undefined, sources: g ? [] : toPayload(sources), general: g },
+      (t) => up({ text: t, status: "streaming" }), c.signal);
+    let answer = await ask(general);
+    if (!general && isNotInNotes(answer) && opts.allowGeneral) { general = true; up({ text: "", general }); answer = await ask(true); }
+    if (!general && isNotInNotes(answer)) return finish(msg("assistant", "", { empty: "none", sources: keepSources(sources), ...(rewrite ? { rewrite } : {}) }), null);
+    const m = msg("assistant", answer.trim(), { ...(sources.length && !general ? { sources: keepSources(sources) } : {}), ...(rewrite ? { rewrite } : {}), ...(general ? { general: 1 as const } : {}) });
     await finish(m, null);
     void afterAnswer(id, m, question);
   } catch (e) {
     if ((e as Error).name === "AbortError") return;
     const err = e as ApiError;
     const offline = err.status === 0 || /fetch|network/i.test(err.message);
+    if (isLimitError(err.status ?? 0, err.message)) return finish(null, { status: "limit", error: err.message });
     await finish(null, offline ? { status: "offline" } : { status: err.status === 401 ? "signedout" : "error", error: err.status === 401 ? NEEDS_SIGNIN : err.message });
   }
 }
@@ -291,22 +338,28 @@ async function afterAnswer(id: string, m: ChatMessage, question: string) {
   await updateThread(id, (x) => { x.summary = summary; x.summarized = w.windowStart; });
 }
 
-export function stopChat() {
-  ctl?.abort();
-  turnSeq++;
-  const l = state.live;
+export function stopChat(slot: Slot = "ask") {
+  ctls[slot]?.abort();
+  turnSeq[slot]++;
+  const l = liveOf(slot);
   if (!l) return;
   if (l.text) {
-    const m = msg("assistant", l.text.trim(), { ...(l.sources.length ? { sources: keepSources(l.sources) } : {}), ...(l.rewrite ? { rewrite: l.rewrite } : {}), ...(l.general ? { general: 1 as const } : {}) });
+    const m = msg("assistant", l.text.trim(), { ...(l.sources.length && !l.general ? { sources: keepSources(l.sources) } : {}), ...(l.rewrite ? { rewrite: l.rewrite } : {}), ...(l.general ? { general: 1 as const } : {}) });
     void updateThread(l.threadId, (t) => { t.messages.push(m); });
-    set({ live: null });
-  } else set({ live: { ...l, status: "error", error: "Stopped before an answer." } }); // Retry re-asks
+    set({ [LIVE[slot]]: null });
+  } else set({ [LIVE[slot]]: { ...l, status: "error", error: "Stopped before an answer." } }); // Retry re-asks
 }
 /** Re-answer the last question of a thread (`general` = from general knowledge). */
-export async function regenerate(threadId: string, v: Vault, general = false) {
+export async function regenerate(threadId: string, v: Vault, general = false, slot: Slot = "ask", extra: Omit<SendOpts, "scope" | "regenerate" | "general" | "slot"> = {}) {
   const t = await db.chats.get(threadId);
   const q = [...(t?.messages ?? [])].reverse().find((m) => m.role === "user");
   if (!t || !q) return;
-  set({ activeId: threadId });
-  await sendChat(q.text, v, { scope: t.scope as Scope, regenerate: true, general });
+  set({ [ACT[slot]]: threadId });
+  await sendChat(q.text, v, { ...extra, scope: t.scope as Scope, regenerate: true, general, slot });
+}
+/** Pinned passages (selection) first, then the retrieved ones without duplicates, renumbered 1…n. */
+function pinFirst(pins: NonNullable<SendOpts["pinned"]>, rest: Retrieved[]): Retrieved[] {
+  const head: Retrieved[] = pins.map((p, i) => ({ id: `pin:${i}:${p.noteId}`, noteId: p.noteId, spaceId: "", title: p.title, heading: p.heading ?? "", text: p.text.slice(0, 1500), src: "", order: -1, n: 0, score: 999 }));
+  const seen = new Set(head.map((h) => h.text.slice(0, 60)));
+  return [...head, ...rest.filter((r) => !seen.has(r.text.slice(0, 60)))].slice(0, 8).map((r, i) => ({ ...r, n: i + 1 }));
 }

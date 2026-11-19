@@ -90,9 +90,15 @@ async function maybeSnapshot(n: Note) {
   await snapshot(n, "");
 }
 export async function snapshot(n: Note, label: string) {
-  const v: Version = { id: uid(), noteId: n.id, title: n.title, body: n.body, label, createdAt: now(), updatedAt: now(), deleted: 0 };
+  const v: Version = { id: uid(), noteId: n.id, title: n.title, body: n.body, label, createdAt: now(), updatedAt: now(), deleted: 0, device: thisDevice() };
   await save("version", v);
   return v;
+}
+/** This device's name for version rows (Settings › Devices name, else a guess from the browser; same rules as lib/devices). */
+function thisDevice(): string {
+  try { const n = localStorage.getItem("lumen.deviceName"); if (n) return n; } catch { /* ignore */ }
+  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  return /Android/i.test(ua) ? (/Mobile/i.test(ua) ? "Android phone" : "Android tablet") : /iPhone/i.test(ua) ? "iPhone" : /iPad/i.test(ua) ? "iPad" : /Mac OS X/i.test(ua) ? "Mac" : /Windows/i.test(ua) ? "Windows PC" : /Linux|CrOS/i.test(ua) ? "Linux PC" : "Browser";
 }
 /** Confluence-style: restoring creates a new current version; nothing is lost. */
 export async function restoreVersion(v: Version) {

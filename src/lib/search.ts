@@ -150,6 +150,33 @@ export function search(q: Query, notes: Map<string, Note>, filter: (n: Note) => 
     .map((note) => ({ note, score: 1, snippet: snippetFor(note.type === "canvas" ? canvasText(note.body) : note.type === "whiteboard" ? sceneText(note.body) : note.body, terms) }));
 }
 
+/** Every note matching the query (no snippets, no limit): totals for "Showing 50 of 1,240" (Lumen 22). */
+export function searchCount(q: Query, notes: Map<string, Note>, filter: (n: Note) => boolean): Note[] {
+  if (!q.text.trim()) return [...notes.values()].filter((n) => !n.deleted && filter(n));
+  if (!index) return [];
+  return index.search(q.text).map((r) => notes.get(r.id as string)).filter((n): n is Note => !!n && !n.deleted && filter(n));
+}
+
+/**
+ * Filters that would narrow a big result list the most (Lumen 22 "Search with too many results"): per facet (type,
+ * space or top folder) the most common value that still cuts at least a fifth; most-cutting first, at most `max`.
+ */
+export function narrowingFilters(hits: Note[], folders: Map<string, Folder>, spaces: Map<string, Space>, opts: { allSpaces: boolean; max?: number }): { op: string; left: number }[] {
+  const out: { op: string; left: number }[] = [];
+  const quote = (s: string) => (/\s/.test(s) ? `"${s.toLowerCase()}"` : s.toLowerCase());
+  const facet = (key: (n: Note) => string | null, op: (v: string) => string) => {
+    const c = new Map<string, number>();
+    for (const n of hits) { const k = key(n); if (k) c.set(k, (c.get(k) ?? 0) + 1); }
+    const best = [...c].filter(([, n]) => n <= hits.length * 0.8 && n > 0).sort((a, b) => b[1] - a[1])[0];
+    if (best) out.push({ op: op(best[0]), left: best[1] });
+  };
+  facet((n) => n.type, (v) => `type:${v}`);
+  if (opts.allSpaces) facet((n) => n.spaceId, (v) => `space:${quote(spaces.get(v)?.name ?? v)}`);
+  else facet((n) => { let f = n.folderId ? folders.get(n.folderId) : undefined; for (let i = 0; f?.parentId && i < 64; i++) f = folders.get(f.parentId) ?? undefined; return f?.id ?? null; }, (v) => `in:${quote(folders.get(v)?.name ?? v)}`);
+  facet((n) => n.status, (v) => `status:${v}`);
+  return out.sort((a, b) => a.left - b.left).slice(0, opts.max ?? 2);
+}
+
 function snippetFor(body: string, terms: string[]) {
   body = around(body, terms);
   const low = normalize(body);

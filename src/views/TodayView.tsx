@@ -1,6 +1,7 @@
 // Today: the rule-based daily study plan (design: handoffs/2026-11-19-round-4/TodayDesk.dc.html; rules: docs/TODAY.md).
 // Desktop: plan list + a 360px column (This week, How today was built). Phone: one column; the board button swaps
 // the plan for the week card.
+import { OverPlan } from "../components/today-overplan"; // Lumen 22: too much planned
 import { EmptyState } from "../components/EmptyState";
 import { BookOpen } from "lucide-react";
 import { useCallback, useState } from "react";
@@ -52,7 +53,7 @@ export function TodayView() {
     { id: "continue", name: t("Continue"), meta: "", items: plan.sections.continue },
     { id: "new", name: t("New lessons"), meta: `· ${t("{n} of max {max}", { n: newCount, max: input.settings.maxNew })}`, items: plan.sections.new },
     { id: "revise", name: t("Revise & practice"), meta: "", items: revise },
-    { id: "extra", name: t("If you have time"), meta: `· ${t("over today's budget")}`, items: plan.extra },
+    { id: "extra", name: plan.planned > goal ? t("Moved to tomorrow ({n})", { n: plan.extra.length }) : t("If you have time"), meta: `· ${t("over today's budget")}`, items: plan.extra },
   ];
   const all = groups.flatMap((g) => g.items);
   const settingsBtn = <button onClick={() => setSettingsOpen(true)} className="self-start text-[12.5px] text-link hover:underline">{t("Study plan settings")}</button>;
@@ -113,6 +114,7 @@ export function TodayView() {
                   {!all.length && (plan.studyDay
                     ? <EmptyState framed glyph="date" text={t("All caught up. Nothing else is planned today.")} action={{ label: t("Open learning paths"), onClick: () => go("notes", { spaceId: "all", filter: "paths", folderId: null, tag: null, noteId: null }) }} />
                     : <EmptyState framed glyph="date" text={t("Nothing planned. Today is a rest day.")} action={{ label: t("Plan anyway"), onClick: () => setForce(true) }} />)}
+                  <OverPlan planned={plan.planned} goal={goal} trimmed={plan.extra.length} />
                   {groups.map((g) => g.items.length > 0 && (
                     <Section key={g.id} name={g.name} meta={g.meta} items={g.items} h={h} kindOf={kindOf} />
                   ))}

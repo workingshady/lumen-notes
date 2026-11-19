@@ -249,7 +249,7 @@ export function PathHeaderPhone({ note, path, stats, ovCount, onOverlaps, onAuto
     <>
       {/* the path view's header is the only header on a path note (NoteView hides its toolbar), so it has Back */}
       <div className="safe-t flex h-14 shrink-0 items-center gap-1 ps-1 pe-1">
-        <button aria-label={t("Back")} onClick={() => (canGoBack() ? history.back() : back())} className="flex size-11 shrink-0 items-center justify-center"><ArrowLeft size={20} className="rtl:rotate-180" /></button>
+        <button aria-label={t("Back")} onClick={() => (canGoBack() ? history.back() : back())} className="flex size-11 shrink-0 items-center justify-center"><ArrowLeft size={20} /></button>
         <Glyph name="path" size={16} tile="#F2A93B" color="var(--accent)" />
         <div className="ms-1.5 flex min-w-0 flex-1 flex-col">
           <span className="truncate text-[16px] font-[650]" dir="auto">{note.title}</span>

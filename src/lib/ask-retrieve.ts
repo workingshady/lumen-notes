@@ -115,10 +115,11 @@ export async function ensureIndex(v: Vault, onProgress?: (done: number, total: n
 
 // ------------------------------------------------------------------ scope
 export type ScopeKind = "vault" | "space" | "note" | "path";
-export interface Scope { kind: ScopeKind; spaceId?: string; noteId?: string; pathId?: string }
+export interface Scope { kind: ScopeKind; spaceId?: string; noteId?: string; pathId?: string; /** Explicit note set (Assistant context chips); wins over the kind. */ noteIds?: string[] }
 
 /** Note ids the scope allows (null = whole vault). */
 export function scopeNotes(s: Scope, v: Vault): Set<string> | null {
+  if (s.noteIds?.length) return new Set(s.noteIds);
   if (s.kind === "vault") return null;
   if (s.kind === "space") return s.spaceId && s.spaceId !== "all" ? new Set(v.notes.filter((n) => n.spaceId === s.spaceId).map((n) => n.id)) : null;
   if (s.kind === "note") {
