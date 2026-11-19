@@ -9,9 +9,10 @@ import { Glyph } from "../components/Glyph";
 import { cx } from "../components/ui";
 import { openNoteAtLine } from "../components/study-nav";
 import { addTask, cardDay, menuRow, Popover, TaskGlyph, todayISO } from "./hub-parts";
+import { fmtDate, fmtNum, t as tr } from "../lib/i18n";
 
 const PRIO: Record<1 | 2 | 3, string> = { 1: "var(--danger)", 2: "var(--warning)", 3: "var(--muted)" };
-const fmtEst = (d: number) => `~${Math.round(d * 10) / 10}d`;
+const fmtEst = (d: number) => tr("~{n}d", { n: Math.round(d * 10) / 10 });
 
 /** Glyph chips: priority, estimate, due (red when late), requirement ids; then owner, #epic/…, source note. */
 export function TaskCardView({ c, drag, onDragStart, onDragEnd, dragging }: { c: TaskCard; drag?: boolean; onDragStart?: (e: DragEvent) => void; onDragEnd?: () => void; dragging?: boolean }) {
@@ -20,20 +21,20 @@ export function TaskCardView({ c, drag, onDragStart, onDragEnd, dragging }: { c:
   const chip = "inline-flex items-center gap-[3px] rounded-[5px] px-[5px] leading-[18px]";
   return (
     <div draggable={drag} onDragStart={onDragStart} onDragEnd={onDragEnd} onClick={() => openNoteAtLine(c.note.id, c.line)} data-card={c.key}
-      title={`${c.text}\nfrom ${c.note.title}`}
+      title={`${c.text}\n${tr("from {name}", { name: c.note.title })}`}
       className={cx("flex cursor-pointer flex-col gap-[7px] rounded-[10px] border border-transparent bg-surface-2 p-2.5 text-[13px] hover:border-line", dragging && "opacity-40")}>
       <span dir="auto" className={cx("font-medium leading-[18px]", c.status === "done" && "text-muted", c.status === "cancelled" && "text-muted line-through")}>{c.text}</span>
       {(c.priority || c.estimate || c.due || c.reqs.length > 0) && (
         <div className="flex flex-wrap gap-1 text-[11px]">
           {c.priority && <span className={chip} style={{ background: `color-mix(in srgb, ${PRIO[c.priority]} 14%, transparent)`, color: PRIO[c.priority] }}><Glyph name={`p${c.priority}` as "p1"} size={11} />p{c.priority}</span>}
-          {c.estimate && <span className={cx(chip, "bg-bg text-muted")}><Glyph name="estimate" size={11} />{c.estimate}</span>}
-          {c.due && <span className={cx(chip, "bg-bg")} style={{ color: late ? "var(--danger)" : "var(--muted)" }} title={`Due ${c.due}${c.start ? ` · start ${c.start}` : ""}`}><Glyph name="due" size={11} />{cardDay(c.due, today)}</span>}
+          {c.estimate && <span className={cx(chip, "bg-bg text-muted")} dir="ltr"><Glyph name="estimate" size={11} />{c.estimate}</span>}
+          {c.due && <span className={cx(chip, "bg-bg")} style={{ color: late ? "var(--danger)" : "var(--muted)" }} title={c.start ? tr("Due {date} · start {start}", { date: fmtDate(c.due + "T00:00:00"), start: fmtDate(c.start + "T00:00:00") }) : tr("Due {date}", { date: fmtDate(c.due + "T00:00:00") })}><Glyph name="due" size={11} />{cardDay(c.due, today)}</span>}
           {c.reqs.map((r) => <span key={r} className={cx(chip, "font-mono")} style={{ background: "color-mix(in srgb, var(--info) 14%, transparent)", color: "var(--info)" }}>{r}</span>)}
         </div>
       )}
       <div className="flex items-center gap-1.5 text-[11px] text-muted">
         {c.owner && <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-bg text-[9px] font-semibold text-ink" title={`@${c.owner}`}>{initials(c.owner)}</span>}
-        <span className="min-w-0 flex-1 truncate">{c.epic ? `#epic/${c.epic}` : ""}</span>
+        <span className="min-w-0 flex-1 truncate" dir="auto">{c.epic ? `#epic/${c.epic}` : ""}</span>
         <Glyph name="note" size={11} title={c.note.title} />
       </div>
     </div>
@@ -69,31 +70,31 @@ export function Board({ sp, cards, notes, phone }: { sp: Space; cards: TaskCard[
     const c = cards.find((x) => x.key === e.dataTransfer.getData("text/lumen-card"));
     if (c && c.status !== s) await updateNote(c.note.id, { body: setCardStatus(c.note.body, c.line, s) });
   }
-  const label = filter ? (filter.k === "epic" ? `Epic: ${filter.v}` : filter.k === "owner" ? `Owner: @${filter.v}` : `Priority: p${filter.v}`) : null;
+  const label = filter ? (filter.k === "epic" ? tr("Epic: {name}", { name: filter.v }) : filter.k === "owner" ? tr("Owner: @{name}", { name: filter.v }) : tr("Priority: p{n}", { n: filter.v })) : null;
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         {label && (
-          <span className="flex h-7 items-center gap-1.5 rounded-[6px] bg-surface-2 pl-2.5 pr-1.5">
+          <span className="flex h-7 items-center gap-1.5 rounded-[6px] bg-surface-2 ps-2.5 pe-1.5">
             <Glyph name={filter!.k === "epic" ? "epic" : filter!.k === "owner" ? "owner" : "p1"} size={14} color="var(--muted)" />{label}
-            <button aria-label="Clear filter" onClick={() => setF(null)} className="flex size-5 items-center justify-center rounded text-muted hover:text-ink"><Glyph name="x" size={12} /></button>
+            <button aria-label={tr("Clear filter")} onClick={() => setF(null)} className="flex size-5 items-center justify-center rounded text-muted hover:text-ink"><Glyph name="x" size={12} /></button>
           </span>
         )}
         <span className="relative">
-          <button onClick={() => setMenu((x) => !x)} className="flex h-7 items-center rounded-[6px] border border-dashed border-line px-2.5 text-muted hover:text-ink">+ Filter</button>
+          <button onClick={() => setMenu((x) => !x)} className="flex h-7 items-center rounded-[6px] border border-dashed border-line px-2.5 text-muted hover:text-ink">{tr("+ Filter")}</button>
           {menu && (
-            <Popover onClose={() => setMenu(false)} className="left-0 top-full mt-1 max-h-[340px] w-56 overflow-y-auto">
-              {epics.length > 0 && <span className="px-2.5 pb-0.5 pt-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Epic</span>}
+            <Popover onClose={() => setMenu(false)} className="start-0 top-full mt-1 max-h-[340px] w-56 overflow-y-auto">
+              {epics.length > 0 && <span className="px-2.5 pb-0.5 pt-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{tr("Epic")}</span>}
               {epics.map((e) => <button key={e} className={menuRow} onClick={() => setF({ k: "epic", v: e })}><Glyph name="epic" size={14} color="var(--muted)" />{e}</button>)}
-              {owners.length > 0 && <span className="px-2.5 pb-0.5 pt-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Owner</span>}
+              {owners.length > 0 && <span className="px-2.5 pb-0.5 pt-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{tr("Owner")}</span>}
               {owners.map((o) => <button key={o} className={menuRow} onClick={() => setF({ k: "owner", v: o })}><Glyph name="owner" size={14} color="var(--muted)" />@{o}</button>)}
-              <span className="px-2.5 pb-0.5 pt-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Priority</span>
+              <span className="px-2.5 pb-0.5 pt-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{tr("Priority")}</span>
               {(["1", "2", "3"] as const).map((p) => <button key={p} className={menuRow} onClick={() => setF({ k: "prio", v: p })}><Glyph name={`p${p}` as "p1"} size={14} color={PRIO[Number(p) as 1]} />p{p}</button>)}
             </Popover>
           )}
         </span>
         <span className="flex-1" />
-        <span className="text-muted">{shown.length} cards{est ? ` · ${fmtEst(est)}` : ""}</span>
+        <span className="text-muted">{tr("{n} card|{n} cards", { n: shown.length })}{est ? ` · ${fmtEst(est)}` : ""}</span>
       </div>
       <div className={cx("min-h-0 flex-1 gap-2.5", phone ? "flex snap-x snap-mandatory overflow-x-auto" : "grid grid-cols-6 overflow-hidden")}>
         {CARD_COLUMNS.map((col) => {
@@ -105,17 +106,17 @@ export function Board({ sp, cards, notes, phone }: { sp: Space; cards: TaskCard[
               className={cx("flex min-w-0 flex-col gap-2 overflow-y-auto rounded-[12px] bg-surface p-2", phone && "w-full shrink-0 snap-start")}
               style={{ boxShadow: over === col.s ? "inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 60%, transparent)" : undefined }}>
               <div className="flex items-center gap-1.5 whitespace-nowrap px-1 pb-0.5 pt-1 font-semibold">
-                <TaskGlyph s={col.s} />{col.label}<span className="font-normal text-muted">{items.length}</span>
+                <TaskGlyph s={col.s} />{tr(col.label)}<span className="font-normal text-muted">{fmtNum(items.length)}</span>
                 <span className="flex-1" /><span className="text-[11px] font-normal text-muted">{colEst && col.s !== "done" && col.s !== "cancelled" && col.s !== "backlog" ? fmtEst(colEst) : ""}</span>
               </div>
               {items.map((c) => <TaskCardView key={c.key} c={c} drag dragging={drag === c.key}
                 onDragStart={(e) => { e.dataTransfer.setData("text/lumen-card", c.key); e.dataTransfer.effectAllowed = "move"; cardGhost(e); setDrag(c.key); }} onDragEnd={() => { setDrag(null); setOver(null); }} />)}
               {adding === col.s ? (
                 <form className="px-1" onSubmit={(e) => { e.preventDefault(); const v = String(new FormData(e.currentTarget).get("t") ?? ""); void addTask(sp, notes, v, col.s); e.currentTarget.reset(); }}>
-                  <input name="t" autoFocus onBlur={(e) => !e.target.value && setAdding(null)} onKeyDown={(e) => e.key === "Escape" && setAdding(null)} placeholder="Task !p1 ~2d due:2026-12-01 #epic/x" aria-label={`Add to ${col.label}`}
+                  <input name="t" autoFocus onBlur={(e) => !e.target.value && setAdding(null)} onKeyDown={(e) => e.key === "Escape" && setAdding(null)} placeholder={tr("Task !p1 ~2d due:2026-12-01 #epic/x")} aria-label={tr("Add to {name}", { name: tr(col.label) })}
                     className="h-8 w-full rounded-[8px] border border-line bg-bg px-2 text-[12.5px] outline-none focus:border-accent" dir="auto" />
                 </form>
-              ) : <button onClick={() => setAdding(col.s)} className="self-start px-1.5 py-1 text-muted hover:text-ink">+ Add</button>}
+              ) : <button onClick={() => setAdding(col.s)} className="self-start px-1.5 py-1 text-muted hover:text-ink">{tr("+ Add")}</button>}
             </section>
           );
         })}

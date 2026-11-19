@@ -5,6 +5,7 @@ import { createNote, updateNote } from "../lib/actions";
 import { deckSlides, docToDeck, flatSlide, planSlide, slideChunks, splitNotes, type Dirs, type SplitAt } from "../lib/deck";
 import { DeckWorkspace, DocToDeckDialog, OverviewGrid, type DeckTab } from "./slides-deck";
 import { parseBlockInfo } from "../lib/markdown";
+import { digits, fmtNum, t, tx } from "../lib/i18n";
 import { openNote, toast } from "../lib/store";
 import { Preview } from "./Preview";
 import { cx, IconButton } from "./ui";
@@ -336,7 +337,7 @@ export function ImageZoom({ src, alt, onClose }: { src: string; alt: string; onC
     <div className="fixed inset-0 z-[60] flex flex-col bg-black/90 fade-in" onClick={onClose} onWheel={(e) => setZ((x) => Math.max(1, Math.min(5, x * (e.deltaY < 0 ? 1.15 : 1 / 1.15))))}>
       <div className="flex h-14 shrink-0 items-center gap-3 px-4 text-[13px] text-white/70">
         <span className="min-w-0 flex-1 truncate" dir="auto">{alt}</span>
-        <button aria-label="Close image" onClick={onClose} className="flex size-10 items-center justify-center rounded-full hover:bg-white/10"><X size={20} /></button>
+        <button aria-label={t("Close image")} onClick={onClose} className="flex size-10 items-center justify-center rounded-full hover:bg-white/10"><X size={20} /></button>
       </div>
       <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4" style={{ touchAction: "pinch-zoom" }}>
         <img src={src} alt={alt} onClick={(e) => { e.stopPropagation(); setZ((x) => (x > 1 ? 1 : 2)); }} className="max-h-full max-w-full rounded-[8px] object-contain transition-transform" style={{ transform: `scale(${z})`, cursor: z > 1 ? "zoom-out" : "zoom-in" }} />
@@ -362,15 +363,15 @@ function RemotePopover({ link, onClose }: { link: ReturnType<typeof useRemoteLin
   }, [onClose]);
   const dot = link.status === "synced" ? "var(--success)" : link.status === "waiting" ? "var(--accent)" : "var(--muted)";
   return (
-    <div ref={ref} className="absolute bottom-full right-0 z-40 mb-2 flex w-[280px] flex-col items-center gap-3.5 rounded-[14px] border border-line bg-surface-2 p-[18px] text-[13px] text-ink shadow-[0_16px_40px_rgba(0,0,0,.45)] fade-in">
-      <div className="flex w-full items-center justify-between text-[12px] text-muted"><span className="flex items-center gap-1.5"><Smartphone size={13} />Phone remote</span><button onClick={onClose} aria-label="Close" className="hover:text-ink"><X size={14} /></button></div>
-      {link.error ? <span className="text-center leading-5 text-muted">{link.error}</span> : !link.pair ? <span className="py-8 text-muted">Opening a room…</span> : <>
-        <div className="flex size-[168px] items-center justify-center rounded-[12px] bg-[#E8E6E1] p-3">{qr ? <img src={qr} alt="QR code for the phone remote" className="size-full [image-rendering:pixelated]" /> : null}</div>
-        <span className="font-mono text-[22px] font-medium tracking-[.08em]">{prettyCode(link.pair.code)}</span>
-        <span className="text-center text-[12px] leading-[18px] text-muted">Scan with your phone, or open <span className="break-all text-ink">{url.replace(/^https?:\/\//, "")}</span></span>
+    <div ref={ref} className="absolute bottom-full end-0 z-40 mb-2 flex w-[280px] flex-col items-center gap-3.5 rounded-[14px] border border-line bg-surface-2 p-[18px] text-[13px] text-ink shadow-[0_16px_40px_rgba(0,0,0,.45)] fade-in">
+      <div className="flex w-full items-center justify-between text-[12px] text-muted"><span className="flex items-center gap-1.5"><Smartphone size={13} />{t("Phone remote")}</span><button onClick={onClose} aria-label={t("Close")} className="hover:text-ink"><X size={14} /></button></div>
+      {link.error ? <span className="text-center leading-5 text-muted">{link.error}</span> : !link.pair ? <span className="py-8 text-muted">{t("Opening a room…")}</span> : <>
+        <div className="flex size-[168px] items-center justify-center rounded-[12px] bg-[#E8E6E1] p-3">{qr ? <img src={qr} alt={t("QR code for the phone remote")} className="size-full [image-rendering:pixelated]" /> : null}</div>
+        <span dir="ltr" className="font-mono text-[22px] font-medium tracking-[.08em]">{prettyCode(link.pair.code)}</span>
+        <span className="text-center text-[12px] leading-[18px] text-muted">{tx("Scan with your phone, or open {url}", { url: <span dir="ltr" className="break-all text-ink">{url.replace(/^https?:\/\//, "")}</span> })}</span>
         <div className="flex w-full items-center justify-between border-t border-line pt-3 text-[12px] text-muted">
-          <span className="flex items-center gap-1.5"><span className="size-1.5 rounded-full" style={{ background: dot }} />{link.status === "synced" ? "Phone connected" : link.status === "waiting" ? "Waiting for phone…" : "Connecting…"}</span>
-          <button onClick={() => { link.stop(); onClose(); }} className="hover:text-ink">Stop</button>
+          <span className="flex items-center gap-1.5"><span className="size-1.5 rounded-full" style={{ background: dot }} />{link.status === "synced" ? t("Phone connected") : link.status === "waiting" ? t("Waiting for phone…") : t("Connecting…")}</span>
+          <button onClick={() => { link.stop(); onClose(); }} className="hover:text-ink">{t("Stop")}</button>
         </div>
       </>}
     </div>
@@ -433,7 +434,7 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
   }
   async function saveAsDeck() {
     const d = await createNote({ type: "slides", title: `${note.title} (deck)`, spaceId: note.spaceId, folderId: note.folderId, body: deckMd });
-    toast("Saved as a deck: pick layouts and arrange, then present");
+    toast(t("Saved as a deck: pick layouts and arrange, then present"));
     try { sessionStorage.setItem("lumen.deckStage", d.id); } catch { /* ignore */ }
     openNote(d.id, "slides");
   }
@@ -472,7 +473,7 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
   const onCmdRef = useRef(onCmd);
   onCmdRef.current = onCmd;
 
-  useEffect(() => { const t = setInterval(() => tick((x) => x + 1), 1000); return () => clearInterval(t); }, []);
+  useEffect(() => { const iv = setInterval(() => tick((x) => x + 1), 1000); return () => clearInterval(iv); }, []);
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
@@ -501,18 +502,18 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
     return () => removeEventListener("keydown", k);
   });
 
-  if (!n) return <div className="p-10 text-muted">No slides. Separate slides with a line containing only <code>---</code>.</div>;
+  if (!n) return <div className="p-10 text-muted">{tx("No slides. Separate slides with a line containing only {rule}.", { rule: <code dir="ltr">---</code> })}</div>;
   if (preview && !written) return <DocToDeckDialog note={note} slides={slides} split={split} onSplit={setSplit} onPresent={() => setPreview(false)} onSave={() => void saveAsDeck()} onClose={onExit} />;
   if (deckTab && written) return <DeckWorkspace note={note} slides={slides} i={Math.min(i, n - 1)} setI={(k) => { setBlank(false); setI(k); }} tab={deckTab} setTab={setDeckTab} onPresent={() => setDeckTab(null)} writeBox={(l, p) => void writeBox(l, p)} addBox={() => void addBox()} />;
   const zoomer = (src: string, alt: string) => setZoom({ src, alt });
   const thumbs = (big: boolean) => (
     <div className={cx("hidden shrink-0 items-center gap-2.5 overflow-x-auto px-6 min-[1200px]:flex", big ? "h-[120px] py-4" : "h-[120px] border-t border-surface-2")}>
       {infos.map((s, k) => (
-        <button key={k} onClick={() => go(k - i)} className={cx("relative flex shrink-0 flex-col rounded-[6px] bg-bg text-left", big ? "h-20 w-[142px] gap-1.5 p-2.5" : "h-[68px] w-[120px] gap-[5px] p-2", k === i ? "border-2 border-accent" : "border border-line", k < i && (big ? "opacity-60" : "opacity-55"))}>
-          <span className={cx("truncate font-[650]", big ? "text-[10.5px]" : "text-[9.5px]")}>{s.title}</span>
+        <button key={k} onClick={() => go(k - i)} className={cx("relative flex shrink-0 flex-col rounded-[6px] bg-bg text-start", big ? "h-20 w-[142px] gap-1.5 p-2.5" : "h-[68px] w-[120px] gap-[5px] p-2", k === i ? "border-2 border-accent" : "border border-line", k < i && (big ? "opacity-60" : "opacity-55"))}>
+          <span className={cx("truncate font-[650]", big ? "text-[10.5px]" : "text-[9.5px]")} dir="auto">{s.title}</span>
           {big ? <><span className="h-[3px] w-[80%] rounded-[2px] bg-muted/40" /><span className="h-[3px] w-[60%] rounded-[2px] bg-muted/40" /></> : <span className="h-[3px] w-[70%] rounded-[2px] bg-muted/35" />}
-          {s.media && <span className="absolute bottom-[5px] left-1.5 rounded-[4px] bg-white/[.12] px-[5px] text-[9.5px] leading-[15px]">{s.media}</span>}
-          <span className={cx("absolute text-muted", big ? "bottom-1 right-1.5 text-[10px]" : "bottom-1 right-1.5 text-[9.5px]")}>{k + 1}</span>
+          {s.media && <span className="absolute bottom-[5px] start-1.5 rounded-[4px] bg-white/[.12] px-[5px] text-[9.5px] leading-[15px]">{s.media === "Image" ? t("Image") : t("Media")}</span>}
+          <span className={cx("absolute text-muted", big ? "bottom-1 end-1.5 text-[10px]" : "bottom-1 end-1.5 text-[9.5px]")}>{fmtNum(k + 1)}</span>
         </button>
       ))}
     </div>
@@ -523,7 +524,7 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
       {remoteOpen && <RemotePopover link={link} onClose={() => setRemoteOpen(false)} />}
     </span>
   );
-  const remoteLabel = link.status === "synced" ? "Synced to phone remote" : link.status === "off" ? "Phone remote" : link.status === "waiting" ? "Waiting for phone…" : "Connecting remote…";
+  const remoteLabel = link.status === "synced" ? t("Synced to phone remote") : link.status === "off" ? t("Phone remote") : link.status === "waiting" ? t("Waiting for phone…") : t("Connecting remote…");
   const el = timer.pausedAt ? timer.pausedAt - timer.t0 : Date.now() - timer.t0;
   const now = new Date();
   return (
@@ -542,27 +543,27 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
                 <SlideStage key={i} note={note} md={cur.md} dirs={cur.dirs} blank={blank} counter={{ i, n }} onZoom={zoomer} className="!justify-start" />
               </div>
               <div className="flex shrink-0 items-center gap-4 text-[12px] text-muted">
-                <span>← → / Space to move</span><span>O overview</span><span>1–9 Enter jump</span><span>F full screen</span><span>B blank</span><span>Esc exit</span>
+                <span>{t("← → / Space to move")}</span><span>{t("O overview")}</span><span>{t("1–9 Enter jump")}</span><span>{t("F full screen")}</span><span>{t("B blank")}</span><span>{t("Esc exit")}</span>
                 <span className="flex-1" />
-                <button onClick={openAudience} className="hover:text-ink">Audience window</button>
-                <button onClick={() => setPresenter(false)} className="hover:text-ink">P hide notes</button>
+                <button onClick={openAudience} className="hover:text-ink">{t("Audience window")}</button>
+                <button onClick={() => setPresenter(false)} className="hover:text-ink">{t("P hide notes")}</button>
                 {remoteBtn(<span className="flex items-center gap-1.5">{link.status !== "off" && <span className="size-1.5 rounded-full" style={{ background: link.status === "synced" ? "var(--success)" : "var(--accent)" }} />}{remoteLabel}</span>, "hover:text-ink")}
               </div>
             </div>
             <aside className="flex w-[312px] shrink-0 flex-col gap-4">
               <div className="flex items-baseline justify-between">
-                <button onClick={() => onCmd({ type: "cmd", cmd: "timer" })} title={timer.pausedAt ? "Resume timer" : "Pause timer"} className={cx("font-mono text-[36px] font-medium tracking-[-.02em] tabular-nums", !!timer.pausedAt && "text-muted")}>{clock(el)}</button>
-                <span className="text-[13px] text-muted">elapsed · {pad2(now.getHours())}:{pad2(now.getMinutes())}</span>
+                <button onClick={() => onCmd({ type: "cmd", cmd: "timer" })} title={timer.pausedAt ? t("Resume timer") : t("Pause timer")} className={cx("font-mono text-[36px] font-medium tracking-[-.02em] tabular-nums", !!timer.pausedAt && "text-muted")}>{clock(el)}</button>
+                <span className="text-[13px] text-muted">{t("elapsed · {time}", { time: digits(`${pad2(now.getHours())}:${pad2(now.getMinutes())}`) })}</span>
               </div>
               <div className="flex flex-col gap-2">
-                <span className="text-[12px] text-muted">Next</span>
-                <button onClick={() => next && go(1)} className="flex h-[170px] flex-col gap-2.5 rounded-[8px] border border-line bg-bg p-[18px] text-left">
-                  {next ? <><span className="text-[17px] font-bold">{next.title}</span>{[80, 64, 70].map((w) => <span key={w} className="h-[5px] rounded-[3px] bg-muted/40" style={{ width: `${w}%` }} />)}</> : <span className="text-[13px] text-muted">End of deck</span>}
+                <span className="text-[12px] text-muted">{t("Next")}</span>
+                <button onClick={() => next && go(1)} className="flex h-[170px] flex-col gap-2.5 rounded-[8px] border border-line bg-bg p-[18px] text-start">
+                  {next ? <><span className="text-[17px] font-bold" dir="auto">{next.title}</span>{[80, 64, 70].map((w) => <span key={w} className="h-[5px] rounded-[3px] bg-muted/40" style={{ width: `${w}%` }} />)}</> : <span className="text-[13px] text-muted">{t("End of deck")}</span>}
                 </button>
               </div>
               <div className="flex min-h-0 flex-1 flex-col gap-2">
-                <span className="text-[12px] text-muted">Speaker notes</span>
-                <div className="flex-1 overflow-y-auto whitespace-pre-wrap rounded-[10px] border border-line bg-surface p-3.5 text-[15px] leading-6" dir="auto">{cur.notes || <span className="text-muted">No notes. Add a line starting with <code>Note:</code> at the end of a slide.</span>}</div>
+                <span className="text-[12px] text-muted">{t("Speaker notes")}</span>
+                <div className="flex-1 overflow-y-auto whitespace-pre-wrap rounded-[10px] border border-line bg-surface p-3.5 text-[15px] leading-6" dir="auto">{cur.notes || <span className="text-muted">{tx("No notes. Add a line starting with {code} at the end of a slide.", { code: <code dir="ltr">Note:</code> })}</span>}</div>
               </div>
             </aside>
           </div>
@@ -580,31 +581,31 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
           {/* Desktop bar */}
           <div className="hidden h-[52px] shrink-0 items-center gap-3.5 border-t border-surface-2 px-6 text-[13px] text-muted md:flex">
             <span className="flex flex-1 items-center gap-2 truncate">
-              <span className="truncate">{note.title}</span>
-              {!written && <button onClick={() => setPreview(true)} title="This note is laid out automatically. Preview the deck, change where it splits, save it as a deck note you can edit." className="flex shrink-0 items-center gap-1.5 rounded-[7px] border border-line px-2 py-1 text-[12px] hover:text-ink"><Save size={13} />Auto layout · Save as deck</button>}
+              <span className="truncate" dir="auto">{note.title}</span>
+              {!written && <button onClick={() => setPreview(true)} title={t("This note is laid out automatically. Preview the deck, change where it splits, save it as a deck note you can edit.")} className="flex shrink-0 items-center gap-1.5 rounded-[7px] border border-line px-2 py-1 text-[12px] hover:text-ink"><Save size={13} />{t("Auto layout · Save as deck")}</button>}
             </span>
-            <button aria-label="Previous" onClick={() => go(-1)} disabled={i === 0} className="flex size-[34px] items-center justify-center rounded-[8px] border border-line text-ink disabled:opacity-40"><ChevronLeft size={16} /></button>
-            <span className="text-ink tabular-nums">{i + 1} / {n}</span>
-            <button aria-label="Next" onClick={() => go(1)} disabled={i === n - 1} className="flex size-[34px] items-center justify-center rounded-[8px] border border-line text-ink disabled:opacity-40"><ChevronRight size={16} /></button>
+            <button aria-label={t("Previous")} onClick={() => go(-1)} disabled={i === 0} className="flex size-[34px] items-center justify-center rounded-[8px] border border-line text-ink disabled:opacity-40"><ChevronLeft size={16} /></button>
+            <span className="text-ink tabular-nums">{t("{i} / {n}", { i: i + 1, n })}</span>
+            <button aria-label={t("Next")} onClick={() => go(1)} disabled={i === n - 1} className="flex size-[34px] items-center justify-center rounded-[8px] border border-line text-ink disabled:opacity-40"><ChevronRight size={16} /></button>
             <span className="flex flex-1 items-center justify-end gap-1">
-              <span className="mr-2 hidden xl:inline">O overview · F fullscreen · Esc exit</span>
-              <IconButton label="Overview (O)" onClick={() => setOverview(true)}><LayoutGrid size={16} /></IconButton>
-              {written && <IconButton label="Arrange (A): layouts, order, boxes" onClick={() => setDeckTab("arrange")}><Move size={16} /></IconButton>}
-              <IconButton label="Presenter view (P)" onClick={() => setPresenter(true)}><PanelRight size={16} /></IconButton>
+              <span className="me-2 hidden xl:inline">{t("O overview · F fullscreen · Esc exit")}</span>
+              <IconButton label={t("Overview (O)")} onClick={() => setOverview(true)}><LayoutGrid size={16} /></IconButton>
+              {written && <IconButton label={t("Arrange (A): layouts, order, boxes")} onClick={() => setDeckTab("arrange")}><Move size={16} /></IconButton>}
+              <IconButton label={t("Presenter view (P)")} onClick={() => setPresenter(true)}><PanelRight size={16} /></IconButton>
               {remoteBtn(<Smartphone size={16} style={{ color: link.status === "synced" ? "var(--success)" : undefined }} />, "flex size-8 items-center justify-center rounded-[8px] hover:bg-surface-2 hover:text-ink")}
-              <IconButton label="Exit slides" onClick={onExit}><X size={18} /></IconButton>
+              <IconButton label={t("Exit slides")} onClick={onExit}><X size={18} /></IconButton>
             </span>
           </div>
           {/* Phone controls */}
           <div className="safe-b shrink-0 md:hidden">
             <div className="flex items-center gap-3 px-4 pb-3">
-              <button aria-label="Previous" onClick={() => go(-1)} disabled={i === 0} className="flex h-[52px] flex-1 items-center justify-center rounded-[12px] border border-line disabled:opacity-40"><ChevronLeft size={20} /></button>
-              <span className="w-[60px] text-center text-[14px] tabular-nums">{i + 1} / {n}</span>
-              <button aria-label="Next" onClick={() => go(1)} disabled={i === n - 1} className="flex h-[52px] flex-1 items-center justify-center rounded-[12px] border border-line disabled:opacity-40"><ChevronRight size={20} /></button>
+              <button aria-label={t("Previous")} onClick={() => go(-1)} disabled={i === 0} className="flex h-[52px] flex-1 items-center justify-center rounded-[12px] border border-line disabled:opacity-40"><ChevronLeft size={20} /></button>
+              <span className="w-[60px] text-center text-[14px] tabular-nums">{t("{i} / {n}", { i: i + 1, n })}</span>
+              <button aria-label={t("Next")} onClick={() => go(1)} disabled={i === n - 1} className="flex h-[52px] flex-1 items-center justify-center rounded-[12px] border border-line disabled:opacity-40"><ChevronRight size={20} /></button>
             </div>
-            <div className="pb-1.5 text-center text-[12px] text-muted">Swipe ← → · tap image to zoom</div>
+            <div className="pb-1.5 text-center text-[12px] text-muted">{t("Swipe ← → · tap image to zoom")}</div>
           </div>
-          <button aria-label="Exit slides" onClick={onExit} className="safe-t absolute left-2 top-0 flex size-8 items-center justify-center text-muted md:hidden"><X size={18} /></button>
+          <button aria-label={t("Exit slides")} onClick={onExit} className="safe-t absolute start-2 top-0 flex size-8 items-center justify-center text-muted md:hidden"><X size={18} /></button>
         </>
       )}
       {overview && (
@@ -613,7 +614,7 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
           <OverviewGrid note={note} slides={slides} i={i} onPick={(k) => { setBlank(false); setI(k); setOverview(false); }} />
         </div>
       )}
-      {jump && <div className="pointer-events-none absolute left-1/2 top-6 z-[55] -translate-x-1/2 rounded-[10px] border border-line bg-surface px-4 py-2 text-[15px] shadow-xl">Go to slide <b className="tabular-nums">{jump}</b> · Enter</div>}
+      {jump && <div className="pointer-events-none absolute left-1/2 top-6 z-[55] -translate-x-1/2 rounded-[10px] border border-line bg-surface px-4 py-2 text-[15px] shadow-xl">{tx("Go to slide {n} · Enter", { n: <b className="tabular-nums">{digits(jump)}</b> })}</div>}
       {zoom && <ImageZoom src={zoom.src} alt={zoom.alt} onClose={() => setZoom(null)} />}
     </div>
   );

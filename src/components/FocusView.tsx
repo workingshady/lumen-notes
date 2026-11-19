@@ -9,9 +9,10 @@ import { openNote, setUI, toast, useVault } from "../lib/store";
 import { Editor } from "./Editor";
 import { Preview } from "./Preview";
 import { Button, cx, Sheet } from "./ui";
+import { fmtNum, t, tk, tx } from "../lib/i18n";
 
 const THEMES: { t: Settings["theme"]; label: string; icon: "sun" | "moon" | "auto" }[] = [
-  { t: "auto", label: "Auto", icon: "auto" }, { t: "paper", label: "Light", icon: "sun" }, { t: "sepia", label: "Sepia", icon: "sun" }, { t: "lamplight", label: "Dark", icon: "moon" }, { t: "midnight", label: "Midnight", icon: "moon" },
+  { t: "auto", label: tk("Auto"), icon: "auto" }, { t: "paper", label: tk("Light"), icon: "sun" }, { t: "sepia", label: tk("Sepia"), icon: "sun" }, { t: "lamplight", label: tk("Dark"), icon: "moon" }, { t: "midnight", label: tk("Midnight"), icon: "moon" },
 ];
 const WPM = 200;
 const SPEEDS = [0.8, 1, 1.2, 1.5, 2];
@@ -137,7 +138,7 @@ export function FocusView({ note, wide, onExit }: { note: Note; wide: boolean; o
   };
   const comment = (id?: string) => {
     const h = id ? list.find((x) => x.id === id) : undefined;
-    const text = prompt(h ? "Note on this highlight" : "Note (saved with the highlight)", h?.comment ?? "");
+    const text = prompt(h ? t("Note on this highlight") : t("Note (saved with the highlight)"), h?.comment ?? "");
     if (text === null) return;
     if (h) setList((l) => l.map((x) => (x.id === h.id ? { ...x, comment: text } : x)));
     else add(pen.color, text);
@@ -168,7 +169,7 @@ export function FocusView({ note, wide, onExit }: { note: Note; wide: boolean; o
     const line = `${card.trim()} ([[${note.title}]])`;
     if (deck) await updateNote(deck.id, { body: deck.body.replace(/\s*$/, "\n\n") + line + "\n" });
     else await createNote({ type: "flashcards", title, spaceId: note.spaceId, folderId: note.folderId, tags: ["cards"], body: `---\ntype: flashcards\ntags: [cards]\n---\n# ${title}\n\nCloze cards made from highlights in [[${note.title}]].\n\n${line}\n` });
-    toast(`Card added to “${title}”`, { label: "Open", run: () => { const d = v.notes.find((n) => n.title === title); if (d) openNote(d.id, "read"); } });
+    toast(t("Card added to “{title}”", { title }), { label: t("Open"), run: () => { const d = v.notes.find((n) => n.title === title); if (d) openNote(d.id, "read"); } });
   };
   const highlightParagraph = () => {
     // H with no selection: the paragraph closest to the middle of the screen (Readwise-style).
@@ -199,8 +200,8 @@ export function FocusView({ note, wide, onExit }: { note: Note; wide: boolean; o
     setPop({ x: r.left + r.width / 2, y: r.top, kind: "sel" });
   };
   const selectionText = () => getSelection()?.toString().trim() ?? "";
-  const copyQuote = async () => { const t = selectionText(); if (!t) return; await navigator.clipboard.writeText(`> ${t.replace(/\s+/g, " ")}\n> — [[${note.title}]]`); toast("Quote copied with a link to the note"); setPop(null); };
-  const searchSel = () => { const t = selectionText(); if (!t) return; setPop(null); leave(true); setUI({ palette: true }); setTimeout(() => { const i = document.querySelector<HTMLInputElement>("[role=dialog] input, .palette input"); if (i) { i.value = t; i.dispatchEvent(new Event("input", { bubbles: true })); } }, 120); };
+  const copyQuote = async () => { const sel = selectionText(); if (!sel) return; await navigator.clipboard.writeText(`> ${sel.replace(/\s+/g, " ")}\n> — [[${note.title}]]`); toast(t("Quote copied with a link to the note")); setPop(null); };
+  const searchSel = () => { const sel = selectionText(); if (!sel) return; setPop(null); leave(true); setUI({ palette: true }); setTimeout(() => { const i = document.querySelector<HTMLInputElement>("[role=dialog] input, .palette input"); if (i) { i.value = sel; i.dispatchEvent(new Event("input", { bubbles: true })); } }, 120); };
 
   // ---------------------------------------------------------------- read aloud (Web Speech API), sentence by sentence
   const q = useRef<{ blocks: HTMLElement[]; bi: number; sents: { s: number; e: number; text: string }[]; si: number; gen: number } | null>(null);
@@ -239,7 +240,7 @@ export function FocusView({ note, wide, onExit }: { note: Note; wide: boolean; o
     speechSynthesis.speak(u);
   }, []);
   const ttsStart = (fromEl?: HTMLElement) => {
-    if (!("speechSynthesis" in window)) { toast("Read aloud isn't available in this browser"); return; }
+    if (!("speechSynthesis" in window)) { toast(t("Read aloud isn't available in this browser")); return; }
     speechSynthesis.cancel();
     const blocks = [...(article.current?.querySelectorAll<HTMLElement>(BLOCKS) ?? [])].filter((b) => (b.textContent ?? "").trim());
     if (!blocks.length) return;
@@ -263,12 +264,12 @@ export function FocusView({ note, wide, onExit }: { note: Note; wide: boolean; o
     const r = applyToMarkdown(note.body, list);
     if (r.saved) await updateNote(note.id, { body: r.body });
     setList([]); saveSession(note.id, []);
-    toast(r.missed.length ? `Saved ${r.saved} highlight${r.saved === 1 ? "" : "s"}; ${r.missed.length} could not be matched to the text (kept nothing for those)` : `Saved ${r.saved} highlight${r.saved === 1 ? "" : "s"} into the note`);
+    toast(r.missed.length ? t("Saved {saved}; {n} could not be matched to the text (kept nothing for those)", { saved: t("{n} highlight|{n} highlights", { n: r.saved }), n: r.missed.length }) : t("Saved {n} highlight into the note|Saved {n} highlights into the note", { n: r.saved }));
   };
   const saveAsNote = async () => {
     const n = await createNote({ title: `Highlights · ${note.title}`, body: `# Highlights · ${note.title}\n\nFrom [[${note.title}]] · ${new Date().toLocaleDateString()}\n\n${highlightsMarkdown(list, note.title)}\n`, spaceId: note.spaceId, folderId: note.folderId, tags: ["highlights"] });
     setList([]); saveSession(note.id, []);
-    toast("Highlights note created", { label: "Open", run: () => openNote(n.id, "read") });
+    toast(t("Highlights note created"), { label: t("Open"), run: () => openNote(n.id, "read") });
   };
   const leave = (force = false) => {
     ttsStop();
@@ -331,32 +332,32 @@ export function FocusView({ note, wide, onExit }: { note: Note; wide: boolean; o
       <div className={cx("safe-t absolute inset-x-0 top-0 z-20 flex justify-center px-3 pt-3 transition-opacity duration-300", bar || panel || touch ? "opacity-100" : "pointer-events-none opacity-0")}>
         <div className="flex max-w-full flex-wrap items-center gap-0.5 rounded-[12px] border border-line bg-surface/95 p-1 shadow-lg backdrop-blur">
           <div className="flex rounded-[9px] bg-surface-2 p-0.5">
-            <button className={cx("flex h-7 items-center gap-1.5 rounded-[7px] px-2.5 text-[12.5px]", mode === "read" ? "bg-surface font-semibold text-ink shadow-sm" : "text-muted")} onClick={() => setSettings({ focusMode: "read" })}><BookOpen size={13} />Read</button>
-            <button className={cx("flex h-7 items-center gap-1.5 rounded-[7px] px-2.5 text-[12.5px]", mode === "write" ? "bg-surface font-semibold text-ink shadow-sm" : "text-muted")} onClick={() => { ttsStop(); setSettings({ focusMode: "write" }); }}><PenLine size={13} />Write</button>
+            <button className={cx("flex h-7 items-center gap-1.5 rounded-[7px] px-2.5 text-[12.5px]", mode === "read" ? "bg-surface font-semibold text-ink shadow-sm" : "text-muted")} onClick={() => setSettings({ focusMode: "read" })}><BookOpen size={13} />{t("Read")}</button>
+            <button className={cx("flex h-7 items-center gap-1.5 rounded-[7px] px-2.5 text-[12.5px]", mode === "write" ? "bg-surface font-semibold text-ink shadow-sm" : "text-muted")} onClick={() => { ttsStop(); setSettings({ focusMode: "write" }); }}><PenLine size={13} />{t("Write")}</button>
           </div>
           <span className="mx-1 h-5 w-px bg-line" />
-          <button className={tb} title="Smaller text (−)" onClick={() => setSettings({ fontSize: Math.max(12, (s.fontSize ?? 16) - 1) })}><Minus size={14} /></button>
-          <span className="w-9 text-center text-[12px] tabular-nums text-muted">{s.fontSize}px</span>
-          <button className={tb} title="Larger text (+)" onClick={() => setSettings({ fontSize: Math.min(26, (s.fontSize ?? 16) + 1) })}><Plus size={14} /></button>
-          <select title="Font" value={s.readingFont} onChange={(e) => setSettings({ readingFont: e.target.value as Settings["readingFont"] })} className="h-8 rounded-[8px] bg-transparent px-1 text-[12.5px] text-muted hover:text-ink">
-            <option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option>
+          <button className={tb} title={t("Smaller text (−)")} onClick={() => setSettings({ fontSize: Math.max(12, (s.fontSize ?? 16) - 1) })}><Minus size={14} /></button>
+          <span className="w-9 text-center text-[12px] tabular-nums text-muted">{t("{n}px", { n: s.fontSize })}</span>
+          <button className={tb} title={t("Larger text (+)")} onClick={() => setSettings({ fontSize: Math.min(26, (s.fontSize ?? 16) + 1) })}><Plus size={14} /></button>
+          <select title={t("Font")} value={s.readingFont} onChange={(e) => setSettings({ readingFont: e.target.value as Settings["readingFont"] })} className="h-8 rounded-[8px] bg-transparent px-1 text-[12.5px] text-muted hover:text-ink">
+            <option value="serif">{t("Serif")}</option><option value="sans">{t("Sans")}</option><option value="mono">{t("Mono")}</option>
           </select>
-          <div className="flex items-center">{THEMES.map((t) => <button key={t.t} title={`Theme: ${t.label}`} className={cx(tb, s.theme === t.t && on)} onClick={() => setSettings({ theme: t.t })}>{t.icon === "moon" ? <Moon size={13} /> : t.icon === "sun" ? <Sun size={13} /> : <span className="text-[11px] font-semibold">A</span>}<span className="hidden text-[11.5px] lg:inline">{t.label}</span></button>)}</div>
+          <div className="flex items-center">{THEMES.map((th) => <button key={th.t} title={t("Theme: {name}", { name: t(th.label) })} className={cx(tb, s.theme === th.t && on)} onClick={() => setSettings({ theme: th.t })}>{th.icon === "moon" ? <Moon size={13} /> : th.icon === "sun" ? <Sun size={13} /> : <span className="text-[11px] font-semibold">A</span>}<span className="hidden text-[11.5px] lg:inline">{t(th.label)}</span></button>)}</div>
           {mode === "read" && (
             <>
               <span className="mx-1 h-5 w-px bg-line" />
-              <button className={cx(tb, pen.on && !pen.eraser && on)} title="Highlighter pen: selecting text highlights it (H)" onClick={() => setPen((p) => ({ ...p, on: !p.on, eraser: false }))}><Highlighter size={14} /></button>
-              {HL_COLORS.map((c, i) => <button key={c.c} title={`${c.label} (${i + 1})`} onClick={() => setPen((p) => ({ ...p, color: c.c, eraser: false }))} className={cx("mx-0.5 size-[18px] rounded-[5px]", pen.color === c.c && !pen.eraser ? "shadow-[0_0_0_2px_var(--surface),0_0_0_3.5px_var(--text)]" : "")} style={{ background: SWATCH[c.c] }} />)}
-              <button className={cx(tb, pen.eraser && on)} title="Eraser: click a highlight to remove it (E)" onClick={() => setPen((p) => ({ ...p, eraser: !p.eraser }))}><Eraser size={14} /></button>
-              <button className={cx(tb, panel === "highlights" && on)} title="Highlights in this session" onClick={() => setPanel((p) => (p === "highlights" ? null : "highlights"))}><MessageSquare size={14} />{list.length > 0 && <span className="text-[11.5px] font-semibold text-ink">{list.length}</span>}</button>
+              <button className={cx(tb, pen.on && !pen.eraser && on)} title={t("Highlighter pen: selecting text highlights it (H)")} onClick={() => setPen((p) => ({ ...p, on: !p.on, eraser: false }))}><Highlighter size={14} /></button>
+              {HL_COLORS.map((c, i) => <button key={c.c} title={`${t(c.label)} (${i + 1})`} onClick={() => setPen((p) => ({ ...p, color: c.c, eraser: false }))} className={cx("mx-0.5 size-[18px] rounded-[5px]", pen.color === c.c && !pen.eraser ? "shadow-[0_0_0_2px_var(--surface),0_0_0_3.5px_var(--text)]" : "")} style={{ background: SWATCH[c.c] }} />)}
+              <button className={cx(tb, pen.eraser && on)} title={t("Eraser: click a highlight to remove it (E)")} onClick={() => setPen((p) => ({ ...p, eraser: !p.eraser }))}><Eraser size={14} /></button>
+              <button className={cx(tb, panel === "highlights" && on)} title={t("Highlights in this session")} onClick={() => setPanel((p) => (p === "highlights" ? null : "highlights"))}><MessageSquare size={14} />{list.length > 0 && <span className="text-[11.5px] font-semibold text-ink">{fmtNum(list.length)}</span>}</button>
               <span className="mx-1 h-5 w-px bg-line" />
-              <button className={cx(tb, outline && on)} title="Outline (O)" onClick={toggleOutline}><ListTree size={14} /></button>
-              <button className={cx(tb, tts !== "off" && on)} title={tts === "play" ? "Pause reading (Space)" : "Read aloud from here (R)"} onClick={ttsToggle}>{tts === "play" ? <Pause size={14} /> : tts === "pause" ? <Play size={14} /> : <Volume2 size={14} />}</button>
+              <button className={cx(tb, outline && on)} title={t("Outline (O)")} onClick={toggleOutline}><ListTree size={14} /></button>
+              <button className={cx(tb, tts !== "off" && on)} title={tts === "play" ? t("Pause reading (Space)") : t("Read aloud from here (R)")} onClick={ttsToggle}>{tts === "play" ? <Pause size={14} /> : tts === "pause" ? <Play size={14} /> : <Volume2 size={14} />}</button>
             </>
           )}
           <span className="mx-1 h-5 w-px bg-line" />
-          <button className={cx(tb, panel === "keys" && on)} title="Keyboard shortcuts (?)" onClick={() => setPanel((p) => (p === "keys" ? null : "keys"))}><Keyboard size={14} /></button>
-          <button className={tb} title="Leave focus (Esc)" onClick={() => leave()}><X size={15} /></button>
+          <button className={cx(tb, panel === "keys" && on)} title={t("Keyboard shortcuts (?)")} onClick={() => setPanel((p) => (p === "keys" ? null : "keys"))}><Keyboard size={14} /></button>
+          <button className={tb} title={t("Leave focus (Esc)")} onClick={() => leave()}><X size={15} /></button>
         </div>
       </div>
 
@@ -373,32 +374,32 @@ export function FocusView({ note, wide, onExit }: { note: Note; wide: boolean; o
 
       {/* outline drawer (R4-17E) */}
       {mode === "read" && outline && (
-        <div className="absolute bottom-0 left-0 top-0 z-10 box-content flex w-[260px] flex-col gap-2.5 border-r border-line bg-surface px-[18px] py-5 text-[13px]">
-          <span className="text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Outline</span>
+        <div className="absolute bottom-0 start-0 top-0 z-10 box-content flex w-[260px] flex-col gap-2.5 border-e border-line bg-surface px-[18px] py-5 text-[13px]">
+          <span className="text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("Outline")}</span>
           <div className="flex min-h-0 flex-col gap-2.5 overflow-y-auto">
             {outlineHeads.length ? outlineHeads.map((h) => (
-              <button key={h.id} className={cx("truncate text-left", h.id === Math.max(curHead, outlineHeads[0]?.id ?? 0) ? "font-semibold text-ink" : "text-muted hover:text-ink")} style={{ paddingInlineStart: Math.max(0, h.level - 2) * 12 }} dir="auto"
+              <button key={h.id} className={cx("truncate text-start", h.id === Math.max(curHead, outlineHeads[0]?.id ?? 0) ? "font-semibold text-ink" : "text-muted hover:text-ink")} style={{ paddingInlineStart: Math.max(0, h.level - 2) * 12 }} dir="auto"
                 onClick={() => article.current?.querySelectorAll("h1, h2, h3")[h.id]?.scrollIntoView({ behavior: "smooth", block: "start" })}>{h.text}</button>
-            )) : <span className="text-muted">No headings.</span>}
+            )) : <span className="text-muted">{t("No headings.")}</span>}
           </div>
-          <span className="mt-auto text-[12px] text-muted">O toggles · {list.length} highlight{list.length === 1 ? "" : "s"}</span>
+          <span className="mt-auto text-[12px] text-muted">{t("O toggles · {highlights}", { highlights: t("{n} highlight|{n} highlights", { n: list.length }) })}</span>
         </div>
       )}
 
       {/* footer: progress (read) and the status line */}
       {mode === "read" && <div className="pointer-events-none absolute inset-x-0 top-0 z-30 h-[3px]"><div className="h-full bg-accent transition-[width] duration-150" style={{ width: `${Math.round(progress * 100)}%` }} /></div>}
-      <div className="safe-b pointer-events-none absolute bottom-6 right-6 z-10 text-[12px] text-muted md:bottom-7">
-        {mode === "read" ? `${words.toLocaleString()} words · ${mins} min` : `Write · ${words.toLocaleString()} words · typewriter on · Esc`}
+      <div className="safe-b pointer-events-none absolute bottom-6 end-6 z-10 text-[12px] text-muted md:bottom-7">
+        {mode === "read" ? t("{words} words · {mins} min", { words, mins }) : t("Write · {words} words · typewriter on · Esc", { words })}
       </div>
 
       {/* read-aloud bar (R4-17E) */}
       {mode === "read" && tts !== "off" && (
-        <div className="safe-b absolute bottom-7 left-1/2 z-20 flex h-12 -translate-x-1/2 items-center gap-3.5 rounded-[12px] border border-line bg-surface pl-3.5 pr-2.5">
-          <button aria-label={tts === "play" ? "Pause" : "Resume"} onClick={ttsToggle} className="flex size-8 items-center justify-center rounded-full bg-accent text-accent-fg">{tts === "play" ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" className="ml-0.5" />}</button>
-          <span className="whitespace-nowrap text-[12px] text-muted">Reading paragraph {ttsAt.bi + 1} of {ttsAt.n}</span>
+        <div className="safe-b absolute bottom-7 left-1/2 z-20 flex h-12 -translate-x-1/2 items-center gap-3.5 rounded-[12px] border border-line bg-surface pe-2.5 ps-3.5">
+          <button aria-label={tts === "play" ? t("Pause") : t("Resume")} onClick={ttsToggle} className="flex size-8 items-center justify-center rounded-full bg-accent text-accent-fg">{tts === "play" ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" className="ml-0.5" />}</button>
+          <span className="whitespace-nowrap text-[12px] text-muted">{t("Reading paragraph {i} of {n}", { i: ttsAt.bi + 1, n: ttsAt.n })}</span>
           <span className="h-1 w-[160px] rounded-[2px] bg-surface-2"><span className="block h-full rounded-[2px] bg-ink transition-[width]" style={{ width: `${Math.round(((ttsAt.bi + ttsAt.f) / Math.max(1, ttsAt.n)) * 100)}%` }} /></span>
-          <button title="Reading speed" onClick={nextSpeed} className="text-[12px] tabular-nums hover:text-accent">{s.ttsRate ?? 1}×</button>
-          <button title="Stop reading (Esc)" onClick={ttsStop} className="text-[12px] text-muted hover:text-ink">Esc</button>
+          <button title={t("Reading speed")} onClick={nextSpeed} className="text-[12px] tabular-nums hover:text-accent">{fmtNum(s.ttsRate ?? 1)}×</button>
+          <button title={t("Stop reading (Esc)")} onClick={ttsStop} className="text-[12px] text-muted hover:text-ink">Esc</button>
         </div>
       )}
 
@@ -408,18 +409,18 @@ export function FocusView({ note, wide, onExit }: { note: Note; wide: boolean; o
           <div className="flex items-stretch gap-1 rounded-[10px] border border-line bg-surface-2 p-1 text-[13px] shadow-[0_12px_28px_rgba(0,0,0,.4)]" onMouseDown={(e) => e.preventDefault()}>
             {HL_COLORS.map((c) => {
               const cur = pop.kind === "mark" ? list.find((h) => h.id === pop.id)?.color === c.c : pen.color === c.c;
-              return <button key={c.c} title={c.label} onClick={() => { setPen((p) => ({ ...p, color: c.c, eraser: false })); if (pop.kind === "mark") recolor(pop.id!, c.c); else add(c.c); }} className="size-6 rounded-[6px]" style={{ background: SWATCH[c.c], boxShadow: cur ? "0 0 0 2px var(--surface-2), 0 0 0 3.5px var(--text)" : "none" }} />;
+              return <button key={c.c} title={t(c.label)} onClick={() => { setPen((p) => ({ ...p, color: c.c, eraser: false })); if (pop.kind === "mark") recolor(pop.id!, c.c); else add(c.c); }} className="size-6 rounded-[6px]" style={{ background: SWATCH[c.c], boxShadow: cur ? "0 0 0 2px var(--surface-2), 0 0 0 3.5px var(--text)" : "none" }} />;
             })}
             <span className="mx-1 my-0.5 w-px bg-line" />
-            <button className="flex h-6 items-center rounded-[6px] px-2 hover:bg-surface" title="Add a note to this highlight (C)" onClick={() => comment(pop.kind === "mark" ? pop.id : undefined)}>Note</button>
-            <button className="flex h-6 items-center rounded-[6px] px-2 hover:bg-surface" title="Make a flashcard (cloze) from it (K)" onClick={() => void makeCard(pop.kind === "mark" ? pop.id : undefined)}>Card</button>
-            <button className="flex h-6 w-6 items-center justify-center rounded-[6px] text-muted hover:bg-surface hover:text-ink" title="More" onClick={() => setPop((p) => p && { ...p, more: !p.more })}><Ellipsis size={14} /></button>
+            <button className="flex h-6 items-center rounded-[6px] px-2 hover:bg-surface" title={t("Add a note to this highlight (C)")} onClick={() => comment(pop.kind === "mark" ? pop.id : undefined)}>{t("Note")}</button>
+            <button className="flex h-6 items-center rounded-[6px] px-2 hover:bg-surface" title={t("Make a flashcard (cloze) from it (K)")} onClick={() => void makeCard(pop.kind === "mark" ? pop.id : undefined)}>{t("Card")}</button>
+            <button className="flex h-6 w-6 items-center justify-center rounded-[6px] text-muted hover:bg-surface hover:text-ink" title={t("More")} onClick={() => setPop((p) => p && { ...p, more: !p.more })}><Ellipsis size={14} /></button>
             {pop.more && <>
               <span className="mx-1 my-0.5 w-px bg-line" />
-              {pop.kind === "sel" && <button className="flex size-6 items-center justify-center rounded-[6px] text-muted hover:bg-surface hover:text-ink" title="Copy as quote with a link" onClick={() => void copyQuote()}><Copy size={13} /></button>}
-              {pop.kind === "sel" && <button className="flex size-6 items-center justify-center rounded-[6px] text-muted hover:bg-surface hover:text-ink" title="Search notes for this" onClick={searchSel}><Search size={13} /></button>}
-              {pop.kind === "sel" && <button className="flex size-6 items-center justify-center rounded-[6px] text-muted hover:bg-surface hover:text-ink" title="Read aloud from here" onClick={() => { const n = getSelection()?.anchorNode; ttsStart(n instanceof HTMLElement ? n : n?.parentElement ?? undefined); setPop(null); }}><Volume2 size={13} /></button>}
-              {pop.kind === "mark" && <button className="flex size-6 items-center justify-center rounded-[6px] text-muted hover:bg-surface hover:text-bad" title="Remove highlight" onClick={() => remove(pop.id!)}><Trash2 size={13} /></button>}
+              {pop.kind === "sel" && <button className="flex size-6 items-center justify-center rounded-[6px] text-muted hover:bg-surface hover:text-ink" title={t("Copy as quote with a link")} onClick={() => void copyQuote()}><Copy size={13} /></button>}
+              {pop.kind === "sel" && <button className="flex size-6 items-center justify-center rounded-[6px] text-muted hover:bg-surface hover:text-ink" title={t("Search notes for this")} onClick={searchSel}><Search size={13} /></button>}
+              {pop.kind === "sel" && <button className="flex size-6 items-center justify-center rounded-[6px] text-muted hover:bg-surface hover:text-ink" title={t("Read aloud from here")} onClick={() => { const n = getSelection()?.anchorNode; ttsStart(n instanceof HTMLElement ? n : n?.parentElement ?? undefined); setPop(null); }}><Volume2 size={13} /></button>}
+              {pop.kind === "mark" && <button className="flex size-6 items-center justify-center rounded-[6px] text-muted hover:bg-surface hover:text-bad" title={t("Remove highlight")} onClick={() => remove(pop.id!)}><Trash2 size={13} /></button>}
             </>}
           </div>
         </div>
@@ -427,10 +428,10 @@ export function FocusView({ note, wide, onExit }: { note: Note; wide: boolean; o
 
       {/* side panels */}
       {panel && (
-        <div className="absolute bottom-4 right-4 top-16 z-30 flex w-[min(340px,calc(100vw-32px))] flex-col overflow-hidden rounded-[12px] border border-line bg-surface shadow-xl">
+        <div className="absolute bottom-4 end-4 top-16 z-30 flex w-[min(340px,calc(100vw-32px))] flex-col overflow-hidden rounded-[12px] border border-line bg-surface shadow-xl">
           <div className="flex items-center border-b border-line px-3 py-2 text-[13px] font-semibold">
-            <span className="flex-1">{panel === "keys" ? "Keyboard shortcuts" : `Highlights · ${list.length}`}</span>
-            <button className="text-muted hover:text-ink" onClick={() => setPanel(null)}><X size={15} /></button>
+            <span className="flex-1">{panel === "keys" ? t("Keyboard shortcuts") : t("Highlights · {n}", { n: list.length })}</span>
+            <button aria-label={t("Close")} className="text-muted hover:text-ink" onClick={() => setPanel(null)}><X size={15} /></button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-2 text-[13px]">
             {panel === "highlights" && (list.length ? (
@@ -439,23 +440,23 @@ export function FocusView({ note, wide, onExit }: { note: Note; wide: boolean; o
                   <div key={h.id} className="rounded-[8px] border border-line p-2">
                     <div className="flex items-start gap-2">
                       <span className="mt-1 size-2.5 shrink-0 rounded-[3px]" style={{ background: SWATCH[h.color] }} />
-                      <button className="line-clamp-3 flex-1 text-left" onClick={() => article.current?.querySelector(`mark[data-hl="${CSS.escape(h.id)}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" })}>{h.exact}</button>
-                      <button className="text-muted hover:text-bad" title="Remove" onClick={() => remove(h.id)}><Trash2 size={13} /></button>
+                      <button dir="auto" className="line-clamp-3 flex-1 text-start" onClick={() => article.current?.querySelector(`mark[data-hl="${CSS.escape(h.id)}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" })}>{h.exact}</button>
+                      <button className="text-muted hover:text-bad" title={t("Remove")} onClick={() => remove(h.id)}><Trash2 size={13} /></button>
                     </div>
-                    <button className="mt-1 flex w-full items-center gap-1 text-left text-[12px] text-muted hover:text-ink" onClick={() => comment(h.id)}>{h.comment ? <><MessageSquare size={12} className="shrink-0" />{h.comment}</> : "+ Add note"}</button>
+                    <button className="mt-1 flex w-full items-center gap-1 text-start text-[12px] text-muted hover:text-ink" onClick={() => comment(h.id)}>{h.comment ? <><MessageSquare size={12} className="shrink-0" />{h.comment}</> : t("+ Add note")}</button>
                   </div>
                 ))}
                 <div className="mt-1 flex flex-wrap gap-1.5">
-                  <Button size="sm" variant="primary" onClick={() => void saveInto()}>Save into note</Button>
-                  <Button size="sm" onClick={() => void saveAsNote()}>As highlights note</Button>
-                  <Button size="sm" variant="ghost" onClick={() => void navigator.clipboard.writeText(highlightsMarkdown(list, note.title)).then(() => toast("Highlights copied as Markdown"))}>Copy</Button>
+                  <Button size="sm" variant="primary" onClick={() => void saveInto()}>{t("Save into note")}</Button>
+                  <Button size="sm" onClick={() => void saveAsNote()}>{t("As highlights note")}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => void navigator.clipboard.writeText(highlightsMarkdown(list, note.title)).then(() => toast(t("Highlights copied as Markdown")))}>{t("Copy")}</Button>
                 </div>
               </div>
-            ) : <div className="p-2 text-muted">Select text and pick a colour, or press H to highlight the paragraph in view.</div>)}
+            ) : <div className="p-2 text-muted">{t("Select text and pick a colour, or press H to highlight the paragraph in view.")}</div>)}
             {panel === "keys" && (
               <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 p-1">
-                {[["H", "Highlight selection (or the paragraph in view)"], ["1–5", "Pick colour (and highlight a selection)"], ["E", "Eraser on/off"], ["C", "Note on the selection"], ["K", "Card (cloze) from the selection"], ["O", "Outline drawer"], ["R", "Read aloud / pause"], ["+ / −", "Text size"], ["Space", "Pause / resume reading aloud"], ["?", "This list"], ["Esc", "Stop reading · close panel · leave focus"]].map(([k, d]) => (
-                  <Fragment key={k}><kbd className="rounded-[5px] border border-line px-1.5 py-0.5 text-center font-mono text-[11.5px]">{k}</kbd><span className="text-muted">{d}</span></Fragment>
+                {[["H", tk("Highlight selection (or the paragraph in view)")], ["1–5", tk("Pick colour (and highlight a selection)")], ["E", tk("Eraser on/off")], ["C", tk("Note on the selection")], ["K", tk("Card (cloze) from the selection")], ["O", tk("Outline drawer")], ["R", tk("Read aloud / pause")], ["+ / −", tk("Text size")], ["Space", tk("Pause / resume reading aloud")], ["?", tk("This list")], ["Esc", tk("Stop reading · close panel · leave focus")]].map(([k, d]) => (
+                  <Fragment key={k}><kbd dir="ltr" className="rounded-[5px] border border-line px-1.5 py-0.5 text-center font-mono text-[11.5px]">{k}</kbd><span className="text-muted">{t(d)}</span></Fragment>
                 ))}
               </div>
             )}
@@ -464,19 +465,19 @@ export function FocusView({ note, wide, onExit }: { note: Note; wide: boolean; o
       )}
 
       {/* leaving with highlights */}
-      <Sheet open={asking} onClose={() => setAsking(false)} title={`Save ${list.length} highlight${list.length === 1 ? "" : "s"}?`}>
+      <Sheet open={asking} onClose={() => setAsking(false)} title={t("Save {n} highlight?|Save {n} highlights?", { n: list.length })}>
         <div className="flex flex-col gap-3 text-[13.5px]">
           <div className="max-h-[200px] overflow-y-auto rounded-[8px] border border-line p-2 text-[12.5px]">
-            {list.map((h) => <div key={h.id} className="flex gap-2 py-1"><span className="mt-1.5 size-2 shrink-0 rounded-[2px]" style={{ background: SWATCH[h.color] }} /><span className="line-clamp-2">{h.exact}{h.comment && <span className="text-muted"> — {h.comment}</span>}</span></div>)}
+            {list.map((h) => <div key={h.id} className="flex gap-2 py-1"><span className="mt-1.5 size-2 shrink-0 rounded-[2px]" style={{ background: SWATCH[h.color] }} /><span dir="auto" className="line-clamp-2">{h.exact}{h.comment && <span className="text-muted"> — {h.comment}</span>}</span></div>)}
           </div>
-          <div className="text-muted">Save into the note as Markdown (<code>==highlight==</code>, colours and notes as footnotes), keep them in a separate note, or discard them.</div>
-          <label className="flex items-center gap-2 text-[12.5px] text-muted"><input type="checkbox" id="hl-remember" className="accent-[var(--accent)]" />Remember my choice (change it in Settings › Reading)</label>
+          <div className="text-muted">{tx("Save into the note as Markdown ({code}, colours and notes as footnotes), keep them in a separate note, or discard them.", { code: <code>==highlight==</code> })}</div>
+          <label className="flex items-center gap-2 text-[12.5px] text-muted"><input type="checkbox" id="hl-remember" className="accent-[var(--accent)]" />{t("Remember my choice (change it in Settings › Reading)")}</label>
           <div className="flex flex-wrap gap-2">
-            {([["Save into note", "save", () => saveInto()], ["Save as highlights note", "", () => saveAsNote()], ["Discard", "discard", async () => { setList([]); saveSession(note.id, []); }]] as const).map(([label, pref, run]) => (
+            {([[tk("Save into note"), "save", () => saveInto()], [tk("Save as highlights note"), "", () => saveAsNote()], [tk("Discard"), "discard", async () => { setList([]); saveSession(note.id, []); }]] as const).map(([label, pref, run]) => (
               <Button key={label} variant={pref === "save" ? "primary" : label === "Discard" ? "ghost" : undefined}
-                onClick={async () => { if (pref && (document.getElementById("hl-remember") as HTMLInputElement)?.checked) setSettings({ highlightOnExit: pref as "save" | "discard" }); await run(); setAsking(false); onExit(); }}>{label}</Button>
+                onClick={async () => { if (pref && (document.getElementById("hl-remember") as HTMLInputElement)?.checked) setSettings({ highlightOnExit: pref as "save" | "discard" }); await run(); setAsking(false); onExit(); }}>{t(label)}</Button>
             ))}
-            <Button variant="ghost" onClick={() => setAsking(false)}>Keep reading</Button>
+            <Button variant="ghost" onClick={() => setAsking(false)}>{t("Keep reading")}</Button>
           </div>
         </div>
       </Sheet>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="width:{{ w }};height:{{ h }};position:relative;flex-shrink:0;border-radius:{{ r }};overflow:hidden;box-shadow:{{ ring }}"><div style="position:absolute;left:0;top:0;width:320px;height:180px;transform:scale({{ s }});transform-origin:0 0;background:{{ bg }};color:{{ fg }};font-family:Inter,system-ui,sans-serif">
+  <sc-for list="{{ els }}" as="e" hint-placeholder-count="6"><div style="position:absolute;left:{{ e.x }};top:{{ e.y }};width:{{ e.w }};height:{{ e.h }};border-radius:{{ e.r }};background:{{ e.f }};border:{{ e.b }};box-sizing:border-box;font-size:{{ e.fs }};font-weight:{{ e.fw }};line-height:1.15;color:{{ e.c }};display:flex;align-items:{{ e.ai }};justify-content:{{ e.jc }};text-align:{{ e.ta }};letter-spacing:-.02em;overflow:hidden">{{ e.t }}</div></sc-for>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:200,&quot;height&quot;:120},&quot;layout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;title&quot;,&quot;section&quot;,&quot;default&quot;,&quot;center&quot;,&quot;two-cols&quot;,&quot;image-left&quot;,&quot;image-right&quot;,&quot;cards&quot;,&quot;stat&quot;,&quot;quote&quot;,&quot;full&quot;,&quot;blank&quot;],&quot;default&quot;:&quot;title&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;invert&quot;,&quot;accent&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;width&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:160,&quot;tsType&quot;:&quot;number&quot;},&quot;selected&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const k = this.props.layout ?? 'title', v = this.props.variant ?? 'normal', W = this.props.width ?? 160;
+    const s = W / 320;
+    const dark = v !== 'invert';
+    const bg = v === 'accent' ? '#F2A93B' : dark ? '#0F1115' : '#FAF8F3';
+    const fg = v === 'accent' ? '#1A1206' : dark ? '#E8E6E1' : '#1F1D1A';
+    const mu = v === 'accent' ? 'rgba(26,18,6,.55)' : dark ? 'rgba(154,160,170,.45)' : 'rgba(106,101,92,.4)';
+    const ph = v === 'accent' ? 'rgba(26,18,6,.14)' : dark ? '#1D222B' : '#ECE8DE';
+    const E = (x,y,w,h,o={}) => ({ x:x+'px', y:y+'px', w:w+'px', h:h+'px', r:(o.r??3)+'px', f:o.f||'transparent', b:o.b||'none', fs:(o.fs||12)+'px', fw:o.fw||400, c:o.c||fg, t:o.t||'', ai:o.ai||'flex-start', jc:o.jc||'flex-start', ta:o.ta||'left' });
+    const T = (x,y,w,t,fs=22,o={}) => E(x,y,w,fs*2.4,{t,fs,fw:700,...o});
+    const L = (x,y,w) => E(x,y,w,5,{f:mu,r:2.5});
+    const bullets = (x,y,w,n) => Array.from({length:n},(_,i) => L(x,y+i*16,i===n-1?w*.6:w));
+    const M = {
+      title: [T(28,62,264,'Backprop, from one neuron up',24), L(28,128,120)],
+      section: [E(28,74,6,32,{f:'#F2A93B',r:2}), T(44,72,240,'Part 2 · Neural networks',22), L(44,108,90)],
+      default: [T(24,20,272,'The chain rule',18), ...bullets(24,60,240,5)],
+      center: [T(30,64,260,'Cache every activation',20,{ta:'center',jc:'center'}), L(110,110,100)],
+      'two-cols': [T(24,20,272,'Sigmoid vs ReLU',16), ...bullets(24,58,124,4), ...bullets(172,58,124,4)],
+      'image-left': [E(0,0,140,180,{f:ph,r:0}), T(156,30,150,'Feature maps',16), ...bullets(156,70,140,4)],
+      'image-right': [T(20,30,150,'Loss curve',16), ...bullets(20,70,140,4), E(180,0,140,180,{f:ph,r:0})],
+      cards: [T(24,18,272,'Three steps',16), E(24,58,84,100,{f:ph,r:8}), E(118,58,84,100,{f:ph,r:8}), E(212,58,84,100,{f:ph,r:8}), L(32,70,60), L(126,70,60), L(220,70,60)],
+      stat: [E(30,40,260,70,{t:'93.4%',fs:56,fw:700,jc:'center',ai:'center'}), L(110,122,100)],
+      quote: [E(40,40,6,80,{f:'#F2A93B',r:2}), E(58,40,230,70,{t:'“Backprop is just the chain rule, organised.”',fs:17,fw:600}), L(58,128,80)],
+      full: [E(0,0,320,180,{f:ph,r:0}), E(20,130,200,30,{t:'Week 6 · study group',fs:16,fw:700,c:'#FFFFFF'})],
+      blank: [E(150,86,20,8,{f:mu,r:4})]
+    };
+    return { els: M[k] || M.title, s, bg, fg, w:W+'px', h:(W*9/16)+'px', r:Math.max(4, W/32)+'px', ring: this.props.selected ? '0 0 0 2px #F2A93B' : `0 0 0 1px ${dark?'#2A303B':'#E4DFD3'}` };
+  }
+}
+</script>
+</body>
+</html>

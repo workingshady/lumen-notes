@@ -12,11 +12,12 @@ import { AskSheet } from "./AskVault";
 import { openAsk } from "../lib/ask";
 import { NewPathDialog } from "./NewPathDialog";
 import { NewVisualChooser } from "./NewVisualChooser";
-import { runNew } from "./NewMenu";
+import { openImport, runNew } from "./NewMenu";
 import { cx } from "./ui";
 import { Glyph } from "./Glyph";
 import { glyphOf, openSmart, openSmartEditor, saveSmartAsBase, SmartEditorHost, useSmartFolders } from "./SmartFolders";
 import { suggestName } from "../lib/smart";
+import { t, tx, useLang } from "../lib/i18n";
 
 interface Cmd { id: string; label: ReactNode; text: string; hint?: string; icon?: ReactNode; run: () => void | Promise<void> }
 
@@ -38,7 +39,7 @@ function hl(text: string, terms: string[], cls = "font-bold text-accent"): React
 /** Plain-text snippet around the first hit: no front-matter, no title line, no Markdown marks. */
 function snippet(n: Note, terms: string[], fallback: string) {
   // boards: the hit text when searching; "Recent" (no terms) would show raw scene JSON, so name the kind instead
-  if (n.type === "canvas" || n.type === "whiteboard") return terms.length ? fallback : n.type === "canvas" ? "Canvas board" : "Whiteboard";
+  if (n.type === "canvas" || n.type === "whiteboard") return terms.length ? fallback : n.type === "canvas" ? t("Canvas board") : t("Whiteboard");
   const plain = plainText(around(n.body, terms));
   if (!plain) return fallback;
   const low = normalize(plain);
@@ -64,6 +65,7 @@ export function Palette() {
   const list = useRef<HTMLDivElement>(null);
   const spaceId = ui.spaceId === "all" ? "inbox" : ui.spaceId;
   const smart = useSmartFolders();
+  const lang = useLang().lang;
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
@@ -93,45 +95,46 @@ export function Palette() {
 
   const commands: Cmd[] = useMemo(() => {
     const c = (id: string, label: string, run: Cmd["run"], extra: Partial<Cmd> = {}): Cmd => ({ id, label, text: label, run, ...extra });
-    const mode = (m: Mode, label: string) => c(`mode-${m}`, `Mode: ${label}`, () => setUI({ mode: m, view: "notes" }));
+    const mode = (m: Mode, label: string) => c(`mode-${m}`, t("Mode: {mode}", { mode: label }), () => setUI({ mode: m, view: "notes" }));
     return [
-      c("ask", "Ask your notes…", () => openAsk(), { hint: "answers from your notes, with sources", icon: <MessagesSquare size={16} /> }),
-      c("new", "New note", async () => openNote((await createNote({ spaceId, folderId: ui.folderId })).id, "edit"), { hint: `${MOD}Alt N` }),
-      c("new-visual", "New visual…", () => setChooser(true), { hint: "canvas · whiteboard · graph", icon: <LayoutDashboard size={16} /> }),
-      c("new-path", "New learning path…", () => setPathDlg(true), { hint: "combine several courses into one roadmap", icon: <Route size={16} /> }),
-      c("new-dashboard", "New dashboard", () => runNew("dashboard"), { hint: "charts over sessions, cards and paths", icon: <Glyph name="dashboard" size={16} /> }),
-      c("new-base", "New base", () => runNew("base"), { hint: "table, board, gallery, calendar of notes", icon: <Glyph name="base" size={16} /> }),
-      c("new-pdf", "New PDF note", () => runNew("pdf"), { hint: "pick a PDF to read and highlight", icon: <Glyph name="pdf" size={16} /> }),
-      c("new-smart", "New smart folder", () => openSmartEditor({ query: "" }), { hint: "a saved search with a live count", icon: <Glyph name="smart-folder" size={16} /> }),
-      c("today", "Open Today", () => go("today"), { hint: "today's study plan", icon: <Glyph name="date" size={16} /> }),
-      c("paths", "Go to Learning paths", () => go("notes", { spaceId: "all", folderId: null, tag: null, filter: "paths" }), { icon: <Route size={16} /> }),
-      c("new-lesson", "New lesson", async () => openNote((await createNote({ template: "lesson", spaceId })).id, "edit")),
-      c("new-canvas", "New canvas", async () => openNote((await createNote({ template: "canvas", spaceId })).id)),
-      c("new-whiteboard", "New whiteboard", async () => openNote((await createNote({ template: "whiteboard", spaceId })).id)),
-      c("new-deck", "New flashcard deck", async () => openNote((await createNote({ template: "flashcards", spaceId })).id, "edit")),
-      c("new-slides", "New slide deck", async () => openNote((await createNote({ template: "slides", spaceId })).id, "edit")),
-      c("new-roadmap", "New roadmap", async () => openNote((await createNote({ template: "roadmap", spaceId })).id)),
-      c("new-space", "New space (project, course, area…)", () => setUI({ newSpace: true })),
-      c("daily", "Open today's journal", async () => openNote((await dailyNote(spaceId)).id, "edit")),
-      c("home", "Go to Home", () => go("home")),
-      c("tasks", "Go to Tasks", () => go("tasks")),
-      c("calendar", "Go to Calendar", () => go("calendar")),
-      c("review", "Review due flashcards", () => go("review")),
-      c("kanban", "Go to Board (by status)", () => go("kanban")),
-      c("table", "Go to Database table", () => go("table")),
-      c("graph", "Open graph view", () => go("graph")),
-      c("space", "Open space overview / roadmap", () => go("space")),
-      c("trash", "Open trash", () => go("trash")),
-      c("settings", "Settings", () => go("settings")),
-      c("io", "Import / export…", () => setUI({ io: true })),
-      c("sync", "Sync now", () => void syncNow()),
-      c("theme", "Toggle light / dark", () => setSettings({ theme: activeTheme().dark ? "paper" : "lamplight" })),
-      c("sidebar", "Toggle sidebar", toggleSidebar),
-      mode("edit", "Edit"), mode("split", "Split"), mode("read", "Read"), mode("focus", "Focus"), mode("slides", "Slides"), mode("review", "Review cards"),
-      ...smart.map((sf) => c(`sf-${sf.id}`, `Smart folder: ${sf.name}`, () => openSmart(sf), { icon: glyphOf(sf, 16), hint: sf.query })),
-      c("jd", `Johnny-Decimal sorting: ${getSettings().johnnyDecimal ? "on → off" : "off → on"}`, () => setSettings({ johnnyDecimal: !getSettings().johnnyDecimal })),
+      c("ask", t("Ask your notes…"), () => openAsk(), { hint: t("answers from your notes, with sources"), icon: <MessagesSquare size={16} /> }),
+      c("new", t("New note"), async () => openNote((await createNote({ spaceId, folderId: ui.folderId })).id, "edit"), { hint: `${MOD}Alt N` }),
+      c("new-visual", t("New visual…"), () => setChooser(true), { hint: t("canvas · whiteboard · graph"), icon: <LayoutDashboard size={16} /> }),
+      c("new-path", t("New learning path…"), () => setPathDlg(true), { hint: t("combine several courses into one roadmap"), icon: <Route size={16} /> }),
+      c("new-dashboard", t("New dashboard"), () => runNew("dashboard"), { hint: t("charts over sessions, cards and paths"), icon: <Glyph name="dashboard" size={16} /> }),
+      c("new-base", t("New base"), () => runNew("base"), { hint: t("table, board, gallery, calendar of notes"), icon: <Glyph name="base" size={16} /> }),
+      c("new-pdf", t("New PDF note"), () => runNew("pdf"), { hint: t("pick a PDF to read and highlight"), icon: <Glyph name="pdf" size={16} /> }),
+      c("new-smart", t("New smart folder"), () => openSmartEditor({ query: "" }), { hint: t("a saved search with a live count"), icon: <Glyph name="smart-folder" size={16} /> }),
+      c("today", t("Open Today"), () => go("today"), { hint: t("today's study plan"), icon: <Glyph name="date" size={16} /> }),
+      c("paths", t("Go to Learning paths"), () => go("notes", { spaceId: "all", folderId: null, tag: null, filter: "paths" }), { icon: <Route size={16} /> }),
+      c("new-lesson", t("New lesson"), async () => openNote((await createNote({ template: "lesson", spaceId })).id, "edit")),
+      c("new-canvas", t("New canvas"), async () => openNote((await createNote({ template: "canvas", spaceId })).id)),
+      c("new-whiteboard", t("New whiteboard"), async () => openNote((await createNote({ template: "whiteboard", spaceId })).id)),
+      c("new-deck", t("New flashcard deck"), async () => openNote((await createNote({ template: "flashcards", spaceId })).id, "edit")),
+      c("new-slides", t("New slide deck"), async () => openNote((await createNote({ template: "slides", spaceId })).id, "edit")),
+      c("new-roadmap", t("New roadmap"), async () => openNote((await createNote({ template: "roadmap", spaceId })).id)),
+      c("new-space", t("New space (project, course, area…)"), () => setUI({ newSpace: true })),
+      c("daily", t("Open today's journal"), async () => openNote((await dailyNote(spaceId)).id, "edit")),
+      c("home", t("Go to Home"), () => go("home")),
+      c("tasks", t("Go to Tasks"), () => go("tasks")),
+      c("calendar", t("Go to Calendar"), () => go("calendar")),
+      c("review", t("Review due flashcards"), () => go("review")),
+      c("kanban", t("Go to Board (by status)"), () => go("kanban")),
+      c("table", t("Go to Database table"), () => go("table")),
+      c("graph", t("Open graph view"), () => go("graph")),
+      c("space", t("Open space overview / roadmap"), () => go("space")),
+      c("trash", t("Open trash"), () => go("trash")),
+      c("settings", t("Settings"), () => go("settings")),
+      c("io", t("Import / export…"), () => setUI({ io: true })),
+      c("import", t("Import…"), () => openImport(), { hint: "Anki · Notion · Obsidian", icon: <Glyph name="export" size={16} /> }),
+      c("sync", t("Sync now"), () => void syncNow()),
+      c("theme", t("Toggle light / dark"), () => setSettings({ theme: activeTheme().dark ? "paper" : "lamplight" })),
+      c("sidebar", t("Toggle sidebar"), toggleSidebar),
+      mode("edit", t("Edit")), mode("split", t("Split")), mode("read", t("Read")), mode("focus", t("Focus")), mode("slides", t("Slides")), mode("review", t("Review cards")),
+      ...smart.map((sf) => c(`sf-${sf.id}`, t("Smart folder: {name}", { name: sf.name }), () => openSmart(sf), { icon: glyphOf(sf, 16), hint: sf.query })),
+      c("jd", getSettings().johnnyDecimal ? t("Johnny-Decimal sorting: on → off") : t("Johnny-Decimal sorting: off → on"), () => setSettings({ johnnyDecimal: !getSettings().johnnyDecimal })),
     ];
-  }, [spaceId, ui.folderId, smart]);
+  }, [spaceId, ui.folderId, smart, lang]);
 
   const isCmd = q.startsWith(">");
   const isTag = q.startsWith("#") && !q.includes(" ");
@@ -157,7 +160,7 @@ export function Palette() {
   const graphCmd = (n: Note) => { try { sessionStorage.setItem("lumen.graphLocal", n.id); } catch { /* ignore */ } go("graph"); };
   const askText = !isCmd && !isTag ? query.text.trim() : "";
   const askCmd = (qq: string) => { try { sessionStorage.setItem("lumen.askAuto", qq); } catch { /* ignore */ } openAsk(qq); };
-  const askRow: Cmd[] = askText.split(/\s+/).length >= 2 ? [{ id: "ask-q", text: "ask", label: <>Ask your notes: “{askText}”</>, hint: `${MOD}⇧A`, icon: <MessagesSquare size={16} />, run: () => askCmd(askText) }] : [];
+  const askRow: Cmd[] = askText.split(/\s+/).length >= 2 ? [{ id: "ask-q", text: "ask", label: tx("Ask your notes: “{q}”", { q: askText }), hint: `${MOD}⇧A`, icon: <MessagesSquare size={16} />, run: () => askCmd(askText) }] : [];
   // Save the current search (operators + text, plus the space scope when not searching everywhere) as a smart folder.
   const scopeSp = !allScope ? v.spaceMap.get(ui.spaceId) : null;
   const smartQuery = [q.replace(/(^|\s)in:all(?=\s|$)/g, " ").trim(), scopeSp ? `space:${/\s/.test(scopeSp.name) ? `"${scopeSp.name.toLowerCase()}"` : scopeSp.name.toLowerCase()}` : ""].filter(Boolean).join(" ");
@@ -165,12 +168,12 @@ export function Palette() {
   const saveSmart = () => openSmartEditor({ query: smartQuery });
   // 20b: "Save search as smart folder" (⌘S) + "Save as base" (a base note with the same filters).
   const saveRow: Cmd[] = canSave ? [
-    { id: "save-smart", text: "save smart folder", label: <>Save search as smart folder</>, hint: `${MOD}S`, icon: <Glyph name="smart-folder" size={16} color="var(--accent)" />, run: saveSmart },
-    { id: "save-base", text: "save as base", label: <>Save as base</>, icon: <Glyph name="base" size={16} />, run: () => void saveSmartAsBase({ name: suggestName(smartQuery), query: smartQuery }) },
+    { id: "save-smart", text: "save smart folder", label: t("Save search as smart folder"), hint: `${MOD}S`, icon: <Glyph name="smart-folder" size={16} color="var(--accent)" />, run: saveSmart },
+    { id: "save-base", text: "save as base", label: t("Save as base"), icon: <Glyph name="base" size={16} />, run: () => void saveSmartAsBase({ name: suggestName(smartQuery), query: smartQuery }) },
   ] : [];
   const noteCmds: Cmd[] = target && query.text.trim() && !isCmd && !isTag ? [
-    { id: "ai-cards", text: "flashcards", label: <>Generate flashcards from “{hl(short, terms)}”</>, hint: `${MOD}⇧G`, icon: <Sparkles size={16} />, run: () => aiCmd(target) },
-    { id: "local-graph", text: "graph", label: <><span className="md:hidden">Open local graph</span><span className="hidden md:inline">Open local graph for “{hl(short, terms)}”</span></>, hint: `${MOD}⇧L`, icon: <Waypoints size={16} />, run: () => graphCmd(target) },
+    { id: "ai-cards", text: "flashcards", label: tx("Generate flashcards from “{title}”", { title: hl(short, terms) }), hint: `${MOD}⇧G`, icon: <Sparkles size={16} />, run: () => aiCmd(target) },
+    { id: "local-graph", text: "graph", label: <><span className="md:hidden">{t("Open local graph")}</span><span className="hidden md:inline">{tx("Open local graph for “{title}”", { title: hl(short, terms) })}</span></>, hint: `${MOD}⇧L`, icon: <Waypoints size={16} />, run: () => graphCmd(target) },
   ] : [];
 
   const cmdHits = useMemo(() => {
@@ -189,15 +192,15 @@ export function Palette() {
     return s ? s.name : "";
   };
   const scopeSpace = query.spaces.length ? v.spaces.find((s) => s.name.toLowerCase().includes(query.spaces[0])) : allScope ? null : v.spaceMap.get(ui.spaceId);
-  const scope: ReactNode = scopeSpace ? <span className="inline-flex items-center gap-1">in <SpaceIcon space={scopeSpace} size={15} /> {scopeSpace.name}</span> : "in all spaces";
+  const scope: ReactNode = scopeSpace ? <span className="inline-flex items-center gap-1">{tx("in {space}", { space: <><SpaceIcon space={scopeSpace} size={15} /> <span dir="auto">{scopeSpace.name}</span></> })}</span> : t("in all spaces");
 
   type Row = { key: string; group: string; kind: "note" | "cmd" | "tag"; icon: ReactNode; label: ReactNode; path?: string; sub?: ReactNode; hint?: string; note?: Note; run: () => void | Promise<void> };
-  const noteGroup = q.trim() ? `Notes · ${hits.length}` : "Recent";
+  const noteGroup = q.trim() ? t("Notes · {n}", { n: hits.length }) : t("Recent");
   const rows: Row[] = [
     ...hits.map((h): Row => ({ key: h.note.id, group: noteGroup, kind: "note", note: h.note, icon: <FileText size={16} />, label: hl(h.note.title, terms), path: pathOf(h.note), sub: hl(snippet(h.note, terms, h.snippet), terms, "font-semibold text-ink"), run: () => openNote(h.note.id) })),
-    ...[...askRow, ...noteCmds, ...saveRow, ...cmdHits].map((c): Row => ({ key: c.id, group: q.trim() ? "Commands" : "Suggested", kind: "cmd", icon: c.icon ?? <Zap size={16} />, label: typeof c.label === "string" ? hl(c.label, terms) : c.label, hint: c.hint, run: c.run })),
-    ...tagHits.map(([t, c]): Row => ({ key: "t" + t, group: "Tags", kind: "tag", icon: <Hash size={16} />, label: hl(t, [tagTerm], "font-bold text-accent"), hint: `${c} notes`, run: () => go("notes", { tag: t, spaceId: "all", folderId: null }) })),
-    ...(createTitle ? [{ key: "create", group: "Create", kind: "cmd", icon: <CornerDownLeft size={16} />, label: <>Create note “{createTitle}”</>, run: async () => openNote((await createNote({ title: createTitle, spaceId })).id, "edit") } as Row] : []),
+    ...[...askRow, ...noteCmds, ...saveRow, ...cmdHits].map((c): Row => ({ key: c.id, group: q.trim() ? t("Commands") : t("Suggested"), kind: "cmd", icon: c.icon ?? <Zap size={16} />, label: typeof c.label === "string" ? hl(c.label, terms) : c.label, hint: c.hint, run: c.run })),
+    ...tagHits.map(([tag, c]): Row => ({ key: "t" + tag, group: t("Tags"), kind: "tag", icon: <Hash size={16} />, label: hl(tag, [tagTerm], "font-bold text-accent"), hint: t("{n} note|{n} notes", { n: c }), run: () => go("notes", { tag, spaceId: "all", folderId: null }) })),
+    ...(createTitle ? [{ key: "create", group: t("Create"), kind: "cmd", icon: <CornerDownLeft size={16} />, label: tx("Create note “{title}”", { title: <span dir="auto">{createTitle}</span> }), run: async () => openNote((await createNote({ title: createTitle, spaceId })).id, "edit") } as Row] : []),
   ];
   const cur = rows[Math.min(sel, rows.length - 1)];
   useEffect(() => { if (cur?.kind === "note") setSelKey(cur.key); }, [cur?.key, cur?.kind]);
@@ -224,11 +227,11 @@ export function Palette() {
           <div className="safe-t flex h-full w-full flex-col overflow-hidden bg-bg text-[14px] md:h-auto md:max-w-[660px] md:rounded-[14px] md:border md:border-line md:bg-surface-2 md:text-[13px] md:shadow-[0_24px_64px_rgba(0,0,0,.5)]">
             {/* Search field: phone = back arrow + bordered field, desktop = 56px header with chips inline */}
             <div className="flex items-center gap-1.5 px-3 py-2 md:h-14 md:gap-2.5 md:border-b md:border-line md:px-4 md:py-0">
-              <button aria-label="Close" onClick={close} className="flex size-11 shrink-0 items-center justify-center md:hidden"><ArrowLeft size={20} /></button>
+              <button aria-label={t("Close")} onClick={close} className="flex size-11 shrink-0 items-center justify-center md:hidden"><ArrowLeft size={20} /></button>
               <div className="flex h-12 min-w-0 flex-1 items-center gap-2 rounded-[12px] border border-accent bg-surface px-3 md:h-full md:gap-2.5 md:rounded-none md:border-0 md:bg-transparent md:px-0" onMouseDown={(e) => { if (e.target === e.currentTarget) { e.preventDefault(); input.current?.focus(); } }}>
                 <Search size={18} className="hidden shrink-0 text-muted md:block" />
                 {parts.map((p, i) => isChip(p) ? (
-                  <button key={i} onClick={() => editPart(i)} title="Edit" className="hidden shrink-0 rounded-[6px] bg-[color-mix(in_srgb,var(--link)_14%,transparent)] px-2 py-0.5 font-mono text-[13px] font-medium text-link md:inline">{p}</button>
+                  <button key={i} onClick={() => editPart(i)} title={t("Edit")} className="hidden shrink-0 rounded-[6px] bg-[color-mix(in_srgb,var(--link)_14%,transparent)] px-2 py-0.5 font-mono text-[13px] font-medium text-link md:inline">{p}</button>
                 ) : (
                   <span key={i} onClick={() => editPart(i)} className="shrink-0 cursor-text text-[16px]">{p}</span>
                 ))}
@@ -249,11 +252,11 @@ export function Palette() {
                     else if (mod && e.shiftKey && e.key.toLowerCase() === "a" && askText) { e.preventDefault(); close(); askCmd(askText); }
                     else if (mod && e.shiftKey && e.key.toLowerCase() === "l" && target) { e.preventDefault(); close(); graphCmd(target); }
                   }}
-                  placeholder={parts.length ? "" : "Search notes, > commands, # tags"}
+                  placeholder={parts.length ? "" : t("Search notes, > commands, # tags")}
                   className="h-full min-w-[40px] flex-1 bg-transparent text-[16px] caret-[var(--accent)] !outline-none placeholder:text-muted"
                 />
-                {(q) && <button aria-label="Clear" onClick={() => { setQ(""); input.current?.focus(); }} className="text-muted hover:text-ink md:hidden"><X size={16} /></button>}
-                <button onClick={() => setWide((w) => !w)} title={`Scope (${MOD}0 widens)`} className="hidden shrink-0 text-[12px] text-muted hover:text-ink md:inline">{scope}</button>
+                {(q) && <button aria-label={t("Clear")} onClick={() => { setQ(""); input.current?.focus(); }} className="text-muted hover:text-ink md:hidden"><X size={16} /></button>}
+                <button onClick={() => setWide((w) => !w)} title={t("Scope ({key} widens)", { key: `${MOD}0` })} className="hidden shrink-0 text-[12px] text-muted hover:text-ink md:inline">{scope}</button>
                 <span className={cx(kbd, "hidden md:inline")}>Esc</span>
               </div>
             </div>
@@ -262,8 +265,8 @@ export function Palette() {
               {OPERATORS.map((op) => {
                 const i = parts.findIndex((p) => p.startsWith(op));
                 return i >= 0
-                  ? <button key={op} onClick={() => editPart(i)} className="flex h-[34px] shrink-0 items-center rounded-full bg-[color-mix(in_srgb,var(--link)_14%,transparent)] px-3 font-mono text-[13px] font-medium text-link">{parts[i]}</button>
-                  : <button key={op} onClick={() => addOp(op)} className="flex h-[34px] shrink-0 items-center rounded-full border border-line px-3 font-mono text-[13px] font-medium text-muted">{op}</button>;
+                  ? <button key={op} dir="ltr" onClick={() => editPart(i)} className="flex h-[34px] shrink-0 items-center rounded-full bg-[color-mix(in_srgb,var(--link)_14%,transparent)] px-3 font-mono text-[13px] font-medium text-link">{parts[i]}</button>
+                  : <button key={op} dir="ltr" onClick={() => addOp(op)} className="flex h-[34px] shrink-0 items-center rounded-full border border-line px-3 font-mono text-[13px] font-medium text-muted">{op}</button>;
               })}
             </div>
             <div ref={list} className="min-h-0 flex-1 overflow-y-auto md:max-h-[55vh] md:flex-none md:p-1.5">
@@ -276,15 +279,15 @@ export function Palette() {
                   <Fragment key={r.key}>
                     {head}
                     <button data-i={i} onMouseMove={() => setSel(i)} onClick={(e) => choose(r, e.ctrlKey || e.metaKey)}
-                      className={cx("flex w-full items-center gap-3 border-b border-line px-5 py-3 text-left md:rounded-[8px] md:border-0 md:px-2.5 md:py-[9px]", on && "md:bg-surface")}>
+                      className={cx("flex w-full items-center gap-3 border-b border-line px-5 py-3 text-start md:rounded-[8px] md:border-0 md:px-2.5 md:py-[9px]", on && "md:bg-surface")}>
                       <span className={cx("hidden shrink-0 md:block", on ? "text-accent" : "text-muted")}>{r.icon}</span>
                       <span className="flex min-w-0 flex-1 flex-col gap-1 md:gap-0.5">
                         <span className="flex items-baseline gap-2">
                           <span dir="auto" className="truncate text-[15px] font-semibold md:text-[14px] md:font-medium">{r.label}</span>
-                          {r.path && <span className="hidden shrink-0 truncate text-[12px] text-muted md:inline">{r.path}</span>}
+                          {r.path && <span dir="auto" className="hidden shrink-0 truncate text-[12px] text-muted md:inline">{r.path}</span>}
                         </span>
                         <span dir="auto" className="line-clamp-2 text-[13px] leading-[19px] text-muted md:line-clamp-none md:truncate md:text-[12.5px] md:leading-normal">{r.sub}</span>
-                        {r.path && <span className="text-[12px] text-muted md:hidden">{r.path}</span>}
+                        {r.path && <span dir="auto" className="text-[12px] text-muted md:hidden">{r.path}</span>}
                       </span>
                       <span className={cx("hidden font-mono text-[11px] font-medium text-muted", on && "md:inline")}>↵</span>
                     </button>
@@ -294,7 +297,7 @@ export function Palette() {
                   <Fragment key={r.key}>
                     {head}
                     <button data-i={i} onMouseMove={() => setSel(i)} onClick={() => choose(r)}
-                      className={cx("flex h-[52px] w-full items-center gap-3.5 px-5 text-left md:h-[38px] md:gap-3 md:rounded-[8px] md:px-2.5", on && "md:bg-surface")}>
+                      className={cx("flex h-[52px] w-full items-center gap-3.5 px-5 text-start md:h-[38px] md:gap-3 md:rounded-[8px] md:px-2.5", on && "md:bg-surface")}>
                       <span className="shrink-0 text-muted [&>svg]:size-[18px] md:[&>svg]:size-4">{r.icon}</span>
                       <span className="min-w-0 flex-1 truncate">{r.label}</span>
                       {r.hint && <span className={cx("shrink-0 text-muted", r.kind === "tag" ? "text-[12px]" : "hidden font-mono text-[11px] font-medium md:inline")}>{r.hint}</span>}
@@ -302,12 +305,12 @@ export function Palette() {
                   </Fragment>
                 );
               })}
-              {!rows.length && <div className="p-6 text-center text-[13px] text-muted">Nothing found</div>}
+              {!rows.length && <div className="p-6 text-center text-[13px] text-muted">{t("Nothing found")}</div>}
             </div>
             <div className="hidden items-center gap-1.5 border-t border-line px-4 py-2.5 text-[12px] text-muted md:flex">
-              {OPERATORS.map((op) => <button key={op} onClick={() => addOp(op)} className="rounded-[4px] bg-bg px-1.5 py-px font-mono text-[11.5px] hover:text-ink">{op}</button>)}
+              {OPERATORS.map((op) => <button key={op} dir="ltr" onClick={() => addOp(op)} className="rounded-[4px] bg-bg px-1.5 py-px font-mono text-[11.5px] hover:text-ink">{op}</button>)}
               <span className="flex-1" />
-              <span>↑↓ move</span><span className="opacity-40">·</span><span>↵ open</span><span className="opacity-40">·</span><span>{MAC ? "⌘" : "Ctrl+"}↵ open in split</span><span className="opacity-40">·</span><span>&gt; commands only</span>
+              <span><span dir="ltr">↑↓</span> {t("move")}</span><span className="opacity-40">·</span><span>↵ {t("open")}</span><span className="opacity-40">·</span><span><span dir="ltr">{MAC ? "⌘" : "Ctrl+"}↵</span> {t("open in split")}</span><span className="opacity-40">·</span><span>&gt; {t("commands only")}</span>
             </div>
           </div>
         </div>

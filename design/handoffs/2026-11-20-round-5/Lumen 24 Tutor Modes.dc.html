@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 24 Tutor modes</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 5</span></div><div style="font-size:14px;color:#9A9890">Teaches one concept from your own notes. Explain (step by step), Socratic (hint ladder) and Feynman (you explain, it finds gaps). Violet = tutor/practice; green, amber, red carry the verdict.</div></div>
+  </div>
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="4">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ sec.k }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ sec.t }}</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">{{ sec.d }}</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+        <sc-for list="{{ sec.frames }}" as="f" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};--sh:{{ f.t.sh }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)">
+              <dc-import name="TutorDesk" mode="{{ f.m }}" state="{{ f.s }}" phone="{{ f.ph }}" arabic="{{ f.ar }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+            </div>
+            <div style="max-width:{{ f.w }};font-size:13px;line-height:20px;color:#CFCBC3;display:{{ f.nS }};gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+
+  <section style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;display:flex;flex-direction:column;gap:28px;color:var(--tx)">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R5 · 2 · ENTRY POINTS &amp; HISTORY</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Where the tutor starts, and what it remembers</h2></div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+      <div style="width:400px;border-radius:14px;background:var(--sf2);border:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:16px 18px 12px;display:flex;flex-direction:column;gap:4px;border-bottom:1px solid var(--bd)"><span style="color:var(--mu);font-size:12px">AI Engineer · Stage 3 · Deep learning</span><span style="font-size:19px;font-weight:650">Backpropagation</span></div>
+        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:8px"><span style="flex:1;height:38px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600"><dc-import name="LumenGlyph" glyph="lesson" size="{{ 15 }}" hint-size="15px,15px"></dc-import>Learn with tutor</span><span style="height:38px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center">Practice</span></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Tutor sessions · 3</span>
+            <sc-for list="{{ hist }}" as="h" hint-placeholder-count="3"><div style="min-height:42px;display:flex;align-items:center;gap:10px;border-top:1px solid var(--bd)"><span style="width:76px;font-size:12px;color:var(--mu)">{{ h.d }}</span><span style="height:22px;padding:0 8px;border-radius:999px;background:color-mix(in srgb,var(--le) 14%,transparent);color:var(--le);display:flex;align-items:center;font-size:11.5px;font-weight:600">{{ h.m }}</span><span style="flex:1"></span><span style="width:60px;height:5px;border-radius:3px;background:var(--sf);overflow:hidden"><span style="display:block;height:100%;width:{{ h.s }};background:{{ h.c }}"></span></span><span style="width:30px;text-align:right;font-weight:600">{{ h.v }}</span></div></sc-for>
+          </div>
+          <span style="font-size:12px;color:var(--mu);line-height:17px">Passing score (≥ 70 or 3/3 checks) adds to the concept's mastery. Sessions are notes in /Tutor, so they sync and are searchable.</span>
+        </div>
+      </div>
+      <div style="width:300px;border-radius:12px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 18px 44px rgba(0,0,0,.4);padding:4px;display:flex;flex-direction:column">
+        <span style="padding:6px 8px;font-size:11.5px;color:var(--mu)">Lesson note ⋯</span>
+        <sc-for list="{{ noteMenu }}" as="m" hint-placeholder-count="5"><div style="height:34px;padding:0 8px;border-radius:7px;display:flex;align-items:center;gap:10px;background:{{ m.bg }}"><dc-import name="LumenGlyph" glyph="{{ m.g }}" size="{{ 15 }}" color="{{ m.c }}" hint-size="15px,15px"></dc-import><span style="flex:1">{{ m.l }}</span><span style="font-size:12px;color:var(--mu)">{{ m.k }}</span></div></sc-for>
+      </div>
+      <div style="width:520px;border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">From the Ask page · mode switch</span>
+        <div style="display:flex;gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd);align-self:flex-start"><span style="height:30px;padding:0 12px;display:flex;align-items:center;color:var(--mu)">Ask</span><span style="height:30px;padding:0 12px;border-radius:8px;background:var(--sf2);display:flex;align-items:center;gap:6px;font-weight:600"><dc-import name="LumenGlyph" glyph="lesson" size="{{ 14 }}" color="var(--le)" hint-size="14px,14px"></dc-import>Tutor</span></div>
+        <div style="height:46px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:10px;padding:0 12px;color:var(--mu)">Which concept? <span style="color:var(--tx)">Backprop</span><span style="width:1.5px;height:16px;background:var(--ac)"></span></div>
+        <div style="display:flex;flex-direction:column;gap:2px"><sc-for list="{{ pick }}" as="c" hint-placeholder-count="3"><div style="height:40px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:10px;background:{{ c.bg }}"><dc-import name="LumenGlyph" glyph="{{ c.g }}" size="{{ 15 }}" color="{{ c.gc }}" hint-size="15px,15px"></dc-import><span style="flex:1">{{ c.n }}</span><span style="font-size:12px;color:var(--mu)">{{ c.k }}</span></div></sc-for></div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', inn:'#7AA2F7', le:'#B48EF0', sh:'none' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', inn:'#2F5BD3', le:'#7A4BD1', sh:'0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .08)' };
+    const F = (id,l,m,s,t,n,ph=false,ar=false) => ({ id, l, m, s, t, n, nS: n?'flex':'none', ph, ar, w: ph?'412px':'1440px', h: ph?'915px':'900px', r: ph?'28px':'12px' });
+    const sections = [
+      { k:'R5 · 2 · MODES', t:'Three ways to learn one concept', d:'Session header: concept, the courses it comes from, mode switch, progress, End session. The source note is cited under every tutor step.', frames:[
+        F('R5-24A','Explain · step card + Got it / Explain differently / Example · Lamplight','explain','chat',L,'Short steps. Each step ends with three choices; Example inserts a worked example and keeps the step. After the last step: a 3-question check.'),
+        F('R5-24B','Explain · Paper','explain','chat',P,''),
+        F('R5-24C','Socratic · question card, hint ladder, verdicts','socratic','chat',L,'Never gives the answer straight away. Hint 1 → Hint 2 → Show answer (muted until both hints are used). Each reply is marked correct / partly / not yet, in words and colour.'),
+        F('R5-24D','Socratic · Paper','socratic','chat',P,''),
+        F('R5-24E','Feynman · you explain, the tutor finds gaps','feynman','chat',L,'Quotes your own sentence for each problem: wrong claim (red), unexplained jargon (blue), missing idea (amber). Clarity score as four plain bars with reasons — no confetti.'),
+        F('R5-24F','Feynman · Paper','feynman','chat',P,'')
+      ]},
+      { k:'R5 · 2 · SUMMARY & STATES', t:'End of session and edge cases', d:'The summary is the only place that writes to your path: Mark learned, save cards, schedule a review.', frames:[
+        F('R5-24G','End-of-session summary','explain','summary',L,'Got / gaps, 3–5 suggested flashcards with checkboxes (Save all or pick), Mark concept learned (only if passed), Schedule a review.'),
+        F('R5-24H','Summary · Paper','explain','summary',P,''),
+        F('R5-24I','No notes for this concept','explain','nonotes',L,'General knowledge only when you choose it; answers then carry the “Not from your notes” label.'),
+        F('R5-24J','Signed out','explain','signedout',P,''),
+        F('R5-24K','Offline','explain','offline',L,'')
+      ]},
+      { k:'R5 · 2 · PHONE', t:'Phone', d:'Full-screen chat; the mode switch is a segmented control under the title, hints are chips.', frames:[
+        F('R5-24L','Explain','explain','chat',L,'',true),
+        F('R5-24M','Socratic · Paper','socratic','chat',P,'',true),
+        F('R5-24N','Feynman','feynman','chat',L,'',true),
+        F('R5-24O','Summary · Paper','explain','summary',P,'',true),
+        F('R5-24P','No notes','explain','nonotes',L,'',true)
+      ]},
+      { k:'R5 · 2 · ARABIC', t:'«الانتشار العكسي» in Arabic', d:'Whole session mirrors. Formulas and code stay LTR inside RTL text.', frames:[
+        F('R5-24Q','Explain · Arabic · desktop','explain','chat',L,'',false,true),
+        F('R5-24R','Feynman · Arabic · phone · Paper','feynman','chat',P,'',true,true),
+        F('R5-24S','Socratic · Arabic · phone','socratic','chat',L,'',true,true)
+      ]}
+    ];
+    const hist = [['Today','Explain','100%','var(--ok)','3/3'],['14 Nov','Feynman','72%','var(--wa)','72'],['9 Nov','Socratic','40%','var(--da)','2/5']].map(([d,m,s,c,v]) => ({ d, m, s, c, v }));
+    const noteMenu = [['lesson','Tutor · Explain','var(--le)','',1],['c-question','Tutor · Socratic','var(--le)',''],['d-draft','Tutor · Feynman','var(--le)',''],['flashcards','Make flashcards','var(--tx)',''],['slides','Make slides','var(--tx)','']].map(([g,l,c,k,s]) => ({ g, l, c, k, bg: s?'var(--bg)':'transparent' }));
+    const pick = [['s-learning','Backpropagation','Stage 3 · learning','var(--in)',1],['s-todo','Batch normalization','Stage 3 · todo','var(--mu)'],['s-done','AdamW','Stage 3 · done','var(--ok)']].map(([g,n,k,gc,s]) => ({ g, n, k, gc, bg: s?'var(--sf)':'transparent' }));
+    return { sections, hist, noteMenu, pick };
+  }
+}
+</script>
+</body>
+</html>

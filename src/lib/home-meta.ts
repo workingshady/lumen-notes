@@ -5,6 +5,7 @@ import { createNote, dailyNote, findOrCreateByTitle, updateNote } from "./action
 import { db, DEFAULT_SPACE, patch } from "./db";
 import { getSettings, setSettings, useSettings, type Settings } from "./settings";
 import { toast } from "./store";
+import { fmtDate, t } from "./i18n";
 
 export const APP_VERSION: string = (() => { try { return (JSON.parse(pkgRaw) as { version: string }).version; } catch { return "0.0.0"; } })();
 
@@ -16,12 +17,12 @@ db.meta.hook("creating", (_pk, obj) => { if ((obj as { k: string }).k === "curso
 db.meta.hook("updating", (_m, pk) => { if (pk === "cursor") stamp(); });
 export const lastSyncAt = () => { try { return Number(localStorage.getItem(LAST_SYNC)) || 0; } catch { return 0; } };
 /** "Tue 22:10", "today 09:12" style label for the unlock card. */
-export function syncLabel(t: number) {
-  const d = new Date(t), now = new Date();
-  const hm = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
-  if (d.toDateString() === now.toDateString()) return `today ${hm}`;
-  if (now.getTime() - t < 6 * 86_400_000) return `${d.toLocaleDateString(undefined, { weekday: "short" })} ${hm}`;
-  return `${d.toLocaleDateString(undefined, { day: "numeric", month: "short" })} ${hm}`;
+export function syncLabel(ts: number) {
+  const d = new Date(ts), now = new Date();
+  const hm = fmtDate(d, { hour: "2-digit", minute: "2-digit", hour12: false });
+  if (d.toDateString() === now.toDateString()) return t("today {time}", { time: hm });
+  if (now.getTime() - ts < 6 * 86_400_000) return `${fmtDate(d, { weekday: "short" })} ${hm}`;
+  return `${fmtDate(d, { day: "numeric", month: "short" })} ${hm}`;
 }
 
 // ------------------------------------------------------------------ avatar image (synced via Inbox props)
@@ -57,20 +58,21 @@ export function pickAvatar(capture = false) {
   inp.onchange = async () => {
     const f = inp.files?.[0];
     if (!f) return;
-    try { await setAvatarImage(await cropAvatar(f)); } catch { toast("Couldn't read that image."); }
+    try { await setAvatarImage(await cropAvatar(f)); } catch { toast(t("Couldn't read that image.")); }
   };
   inp.click();
 }
 
 // ------------------------------------------------------------------ dashboard layout (Customize home)
 export type SectionId = "today" | "due" | "progress" | "activity" | "continue" | "pinned";
+/** `name` / `hint` are getters: they read in the interface language. */
 export const SECTIONS: { id: SectionId; name: string; hint: string }[] = [
-  { id: "today", name: "Today", hint: "Your study plan for the day" },
-  { id: "due", name: "Due today", hint: "Flashcards, tasks, notes to revisit" },
-  { id: "progress", name: "Learning progress", hint: "Status of your notes and courses" },
-  { id: "activity", name: "Study activity", hint: "Heatmap, streak, time this week" },
-  { id: "continue", name: "Continue", hint: "Recently edited notes" },
-  { id: "pinned", name: "Pinned", hint: "Notes you pinned" },
+  { id: "today", get name() { return t("Today"); }, get hint() { return t("Your study plan for the day"); } },
+  { id: "due", get name() { return t("Due today"); }, get hint() { return t("Flashcards, tasks, notes to revisit"); } },
+  { id: "progress", get name() { return t("Learning progress"); }, get hint() { return t("Status of your notes and courses"); } },
+  { id: "activity", get name() { return t("Study activity"); }, get hint() { return t("Heatmap, streak, time this week"); } },
+  { id: "continue", get name() { return t("Continue"); }, get hint() { return t("Recently edited notes"); } },
+  { id: "pinned", get name() { return t("Pinned"); }, get hint() { return t("Notes you pinned"); } },
 ];
 /** `custom` = the user reordered; until then phones use the design's phone order (Due, Continue, Activity). */
 export type HomeLayout = { order: SectionId[]; hidden: SectionId[]; custom?: boolean };
@@ -106,31 +108,31 @@ const append = (body: string, line: string) => (body.replace(/\s+$/, "") + "\n" 
  * anything else becomes a new Inbox note (first line = title).
  */
 export async function capture(text: string, spaceId: string): Promise<string> {
-  const t = text.trim();
-  if (!t) return "";
+  const txt = text.trim();
+  if (!txt) return "";
   const space = spaceId === "all" ? DEFAULT_SPACE : spaceId;
-  if (t.startsWith(">")) {
+  if (txt.startsWith(">")) {
     const d = await dailyNote(space);
-    await updateNote(d.id, { body: append(d.body, `- ${hhmm()} ${t.slice(1).trim()}`) });
-    return "Added to today's daily note";
+    await updateNote(d.id, { body: append(d.body, `- ${hhmm()} ${txt.slice(1).trim()}`) });
+    return t("Added to today's daily note");
   }
-  const task = /^(?:[-*]\s*)?\[\s?\]\s*(.+)$/s.exec(t);
+  const task = /^(?:[-*]\s*)?\[\s?\]\s*(.+)$/s.exec(txt);
   if (task) {
     const n = await findOrCreateByTitle("Inbox tasks", space);
     const fresh = await db.notes.get(n.id);
     await updateNote(n.id, { body: append(fresh?.body ?? n.body, `- [ ] ${task[1].replace(/\n+/g, " ")}`) });
-    return "Task added to Inbox tasks";
+    return t("Task added to Inbox tasks");
   }
-  if (URL_RE.test(t)) {
-    let title = t;
-    try { const u = new URL(t); title = u.hostname.replace(/^www\./, "") + (u.pathname.length > 1 ? u.pathname : ""); } catch { /* keep */ }
-    const n = await createNote({ title: title.slice(0, 80), spaceId: space, body: `# ${title.slice(0, 80)}\n\n${t}\n` });
-    void import("./api").then(({ unfurl }) => unfurl(t)).then((m) => { if (m?.title) void updateNote(n.id, { title: m.title.slice(0, 120), body: `# ${m.title.slice(0, 120)}\n\n${t}\n` }); });
-    return "Link saved to Inbox";
+  if (URL_RE.test(txt)) {
+    let title = txt;
+    try { const u = new URL(txt); title = u.hostname.replace(/^www\./, "") + (u.pathname.length > 1 ? u.pathname : ""); } catch { /* keep */ }
+    const n = await createNote({ title: title.slice(0, 80), spaceId: space, body: `# ${title.slice(0, 80)}\n\n${txt}\n` });
+    void import("./api").then(({ unfurl }) => unfurl(txt)).then((m) => { if (m?.title) void updateNote(n.id, { title: m.title.slice(0, 120), body: `# ${m.title.slice(0, 120)}\n\n${txt}\n` }); });
+    return t("Link saved to Inbox");
   }
-  const [first, ...rest] = t.split("\n");
+  const [first, ...rest] = txt.split("\n");
   const title = first.slice(0, 80);
   const more = rest.join("\n").trim() || (first.length > 80 ? first : "");
   await createNote({ title, body: `# ${title}\n\n${more}${more ? "\n" : ""}`, spaceId: space });
-  return "Saved to Inbox";
+  return t("Saved to Inbox");
 }

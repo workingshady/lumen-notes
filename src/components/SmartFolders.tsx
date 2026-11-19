@@ -13,6 +13,7 @@ import {
   type SmartCtx, type SmartFolder,
 } from "../lib/smart";
 import { go, noteDerived, openNote, toast, useUI, useVault, type UI, type Vault } from "../lib/store";
+import { fmtDate, fmtNum, t } from "../lib/i18n";
 import { Glyph } from "./Glyph";
 import { cx } from "./ui";
 
@@ -31,7 +32,7 @@ export function useSmartFolders(): SmartFolder[] {
 /** Read-modify-write on the fresh Inbox record (the list syncs with the space). */
 async function updateSmart(fn: (list: SmartFolder[]) => SmartFolder[]) {
   const sp = await db.spaces.get(SMART_SPACE);
-  if (!sp) return toast("The Inbox space is missing: can't save smart folders", undefined, { icon: "error" });
+  if (!sp) return toast(t("The Inbox space is missing: can't save smart folders"), undefined, { icon: "error" });
   const next = fn(readSmart(sp.props?.[SMART_PROP]));
   await patch("space", SMART_SPACE, { props: { ...(sp.props ?? {}), [SMART_PROP]: serializeSmart(next) } });
 }
@@ -83,7 +84,7 @@ export async function saveSmartAsBase(sf: Pick<SmartFolder, "name" | "query" | "
   const { body, dropped } = toBaseNote(sf);
   const n = await createNote({ type: "base", title: sf.name, body, spaceId: SMART_SPACE });
   openNote(n.id, "read");
-  toast(`Created base “${sf.name}”`, undefined, { icon: "check", sub: dropped.length ? `Not carried over: ${dropped.join(", ")}` : undefined });
+  toast(t("Created base “{name}”", { name: sf.name }), undefined, { icon: "check", sub: dropped.length ? t("Not carried over: {list}", { list: dropped.join(", ") }) : undefined });
 }
 
 // ------------------------------------------------------------------ editor (one host, opened from anywhere)
@@ -107,7 +108,7 @@ export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boo
   return (
     <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)}
       className="relative h-[18px] w-[30px] shrink-0 rounded-[9px] transition-colors" style={{ background: on ? "var(--accent)" : "var(--border)" }}>
-      <span className="absolute top-[3px] size-3 rounded-full transition-all" style={on ? { right: 3, background: "var(--accent-fg)" } : { left: 3, background: "var(--muted)" }} />
+      <span className="absolute top-[3px] size-3 rounded-full transition-all" style={on ? { insetInlineEnd: 3, background: "var(--accent-fg)" } : { insetInlineStart: 3, background: "var(--muted)" }} />
     </button>
   );
 }
@@ -134,7 +135,7 @@ function SmartEditor({ init }: { init: Draft }) {
     const sf = value();
     await updateSmart((l) => upsertSmart(l, existing ? sf : { ...sf, sort: undefined }));
     closeEditor();
-    if (!existing) toast(`Saved smart folder “${sf.name}”`, { label: "Open", run: () => openSmart(sf) }, { icon: "check" });
+    if (!existing) toast(t("Saved smart folder “{name}”", { name: sf.name }), { label: t("Open"), run: () => openSmart(sf) }, { icon: "check" });
   }
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === "Escape") closeEditor(); if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !empty) void save(); };
@@ -148,7 +149,7 @@ function SmartEditor({ init }: { init: Draft }) {
     await updateSmart((l) => removeSmart(l, id));
     closeEditor();
     if (ui.filter === `smart:${id}`) go("notes", { filter: null });
-    if (old) toast(`Deleted smart folder “${old.name}”`, { label: "Undo", run: () => void updateSmart((l) => upsertSmart(l, old)) });
+    if (old) toast(t("Deleted smart folder “{name}”", { name: old.name }), { label: t("Undo"), run: () => void updateSmart((l) => upsertSmart(l, old)) });
   };
   /** Operator chip: append it; a placeholder value (`#x`, `folder`, `"exact words"`) is selected so typing replaces it. */
   const addOp = (op: string) => {
@@ -169,20 +170,20 @@ function SmartEditor({ init }: { init: Draft }) {
   const n = sample.length;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(5,6,8,.45)] md:items-center fade-in" onMouseDown={(e) => e.target === e.currentTarget && closeEditor()} data-smart-editor>
-      <div role="dialog" aria-label={existing ? "Edit smart folder" : "New smart folder"} className="sheet-in safe-b flex max-h-[92dvh] w-full flex-col overflow-y-auto rounded-t-[14px] border border-b-0 border-line bg-surface text-[13px] md:w-[560px] md:rounded-[14px] md:border-b">
+      <div role="dialog" aria-label={existing ? t("Edit smart folder") : t("New smart folder")} className="sheet-in safe-b flex max-h-[92dvh] w-full flex-col overflow-y-auto rounded-t-[14px] border border-b-0 border-line bg-surface text-[13px] md:w-[560px] md:rounded-[14px] md:border-b">
         <div className="flex justify-center pt-2.5 md:hidden"><span className="h-1 w-9 rounded-[2px] bg-line" /></div>
-        <div className="px-5 pb-1.5 pt-[18px] text-[17px] font-[650]">{existing ? "Edit smart folder" : "New smart folder"}</div>
+        <div className="px-5 pb-1.5 pt-[18px] text-[17px] font-[650]">{existing ? t("Edit smart folder") : t("New smart folder")}</div>
         <div className="flex flex-col gap-3.5 px-5 py-2.5">
           <div className="relative flex gap-2.5">
-            <button type="button" aria-label="Glyph" title="Glyph" onClick={() => setPicker((p) => !p)} className="flex size-10 shrink-0 items-center justify-center rounded-[8px] border border-line hover:bg-surface-2">
+            <button type="button" aria-label={t("Glyph")} title={t("Glyph")} onClick={() => setPicker((p) => !p)} className="flex size-10 shrink-0 items-center justify-center rounded-[8px] border border-line hover:bg-surface-2">
               <Glyph name={glyph as GlyphName} size={18} color={c ?? "var(--accent)"} />
             </button>
             {picker && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setPicker(false)} />
-                <div className="absolute left-0 top-11 z-20 grid grid-cols-8 gap-0.5 rounded-[10px] border border-line bg-surface-2 p-1.5 shadow-xl">
+                <div className="absolute start-0 top-11 z-20 grid grid-cols-8 gap-0.5 rounded-[10px] border border-line bg-surface-2 p-1.5 shadow-xl">
                   {GLYPHS.map((g) => (
-                    <button key={g} type="button" aria-label={`Glyph ${g}`} aria-pressed={glyph === g} onClick={() => { setGlyph(g); setPicker(false); }}
+                    <button key={g} type="button" aria-label={t("Glyph {name}", { name: g })} aria-pressed={glyph === g} onClick={() => { setGlyph(g); setPicker(false); }}
                       className={cx("flex size-9 items-center justify-center rounded-[7px]", glyph === g ? "bg-bg" : "hover:bg-bg")}>
                       <Glyph name={g} size={16} color={glyph === g ? c ?? "var(--accent)" : "var(--muted)"} />
                     </button>
@@ -190,52 +191,52 @@ function SmartEditor({ init }: { init: Draft }) {
                 </div>
               </>
             )}
-            <input autoFocus={!existing && !!query} dir="auto" aria-label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder={suggestName(query)}
+            <input autoFocus={!existing && !!query} dir="auto" aria-label={t("Name")} value={name} onChange={(e) => setName(e.target.value)} placeholder={suggestName(query)}
               className="h-10 min-w-0 flex-1 rounded-[7px] border border-line bg-bg px-3 text-ink outline-none placeholder:text-muted focus:border-accent" />
           </div>
           <label className="flex flex-col gap-1.5">
-            <span className="text-[12px] text-muted">Search</span>
-            <input ref={qRef} autoFocus={existing || !query} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="type:lesson due:this-week -status:done" spellCheck={false}
+            <span className="text-[12px] text-muted">{t("Search")}</span>
+            <input ref={qRef} dir="ltr" autoFocus={existing || !query} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="type:lesson due:this-week -status:done" spellCheck={false}
               className="min-h-10 rounded-[7px] border border-line bg-bg px-3 font-mono text-[13px] text-ink caret-[var(--accent)] outline-none placeholder:text-muted focus:border-accent" />
             <span className={cx("flex items-center gap-1 text-[12px]", !empty && n ? "text-ok" : "text-muted")} title={sample.slice(0, 8).map((x) => x.title).join("\n")}>
-              {empty ? "Type a search or pick an operator below" : n ? <><Glyph name="check" size={12} />{n} note{n === 1 ? "" : "s"} match right now</> : "No notes match right now"}
+              {empty ? t("Type a search or pick an operator below") : n ? <><Glyph name="check" size={12} />{t("{n} note matches right now|{n} notes match right now", { n })}</> : t("No notes match right now")}
             </span>
           </label>
           <div className="flex flex-wrap gap-1.5">
             {OPERATOR_CHIPS.map((o) => (
-              <button key={o} type="button" onClick={() => addOp(o)} title={`Add ${o}`} className="rounded-[5px] bg-surface-2 px-[7px] font-mono text-[12px] leading-[22px] text-muted hover:text-ink">{o === "space:" ? `space:${(ui.spaceId !== "all" && v.spaceMap.get(ui.spaceId)?.name) || "Inbox"}` : o}</button>
+              <button key={o} type="button" onClick={() => addOp(o)} title={t("Add {op}", { op: o })} dir="ltr" className="rounded-[5px] bg-surface-2 px-[7px] font-mono text-[12px] leading-[22px] text-muted hover:text-ink">{o === "space:" ? `space:${(ui.spaceId !== "all" && v.spaceMap.get(ui.spaceId)?.name) || "Inbox"}` : o}</button>
             ))}
           </div>
           {/* Filter rows (Bases expressions, round 3): folded under the operators */}
           {filters.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-2"><span className="flex-1 text-[12px] text-muted">Filter rows (Bases syntax)</span>
-                {rows.length > 1 && <div className="flex rounded-[6px] border border-line p-px text-[11.5px]">{(["and", "or"] as const).map((m) => <button key={m} type="button" onClick={() => setMatch(m)} className={cx("h-6 rounded-[5px] px-2", match === m ? "bg-surface-2 font-semibold" : "text-muted")}>{m === "and" ? "All" : "Any"}</button>)}</div>}
+              <div className="flex items-center gap-2"><span className="flex-1 text-[12px] text-muted">{t("Filter rows (Bases syntax)")}</span>
+                {rows.length > 1 && <div className="flex rounded-[6px] border border-line p-px text-[11.5px]">{(["and", "or"] as const).map((m) => <button key={m} type="button" onClick={() => setMatch(m)} className={cx("h-6 rounded-[5px] px-2", match === m ? "bg-surface-2 font-semibold" : "text-muted")}>{m === "and" ? t("All") : t("Any")}</button>)}</div>}
               </div>
               {filters.map((f, i) => (
                 <div key={i} className="flex items-center gap-1.5">
-                  <input value={f} onChange={(e) => setFilters((xs) => xs.map((x, j) => (j === i ? e.target.value : x)))} placeholder="due < today()" spellCheck={false} className="h-8 min-w-0 flex-1 rounded-[7px] border border-line bg-bg px-2.5 font-mono text-[12.5px] outline-none focus:border-accent" />
-                  <button type="button" aria-label="Remove filter row" onClick={() => setFilters((xs) => xs.filter((_, j) => j !== i))} className="flex size-8 shrink-0 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink"><X size={14} /></button>
+                  <input value={f} onChange={(e) => setFilters((xs) => xs.map((x, j) => (j === i ? e.target.value : x)))} placeholder="due < today()" spellCheck={false} dir="ltr" className="h-8 min-w-0 flex-1 rounded-[7px] border border-line bg-bg px-2.5 font-mono text-[12.5px] outline-none focus:border-accent" />
+                  <button type="button" aria-label={t("Remove filter row")} onClick={() => setFilters((xs) => xs.filter((_, j) => j !== i))} className="flex size-8 shrink-0 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink"><X size={14} /></button>
                 </div>
               ))}
-              <button type="button" onClick={() => setFilters((xs) => [...xs, ""])} className="self-start text-[12px] text-muted hover:text-ink">+ Filter row</button>
+              <button type="button" onClick={() => setFilters((xs) => [...xs, ""])} className="self-start text-[12px] text-muted hover:text-ink">{t("+ Filter row")}</button>
             </div>
           )}
           <div className="flex items-center gap-2.5">
-            <span className="flex-1">Colour</span>
+            <span className="flex-1">{t("Colour")}</span>
             {COLORS.map((k) => (
-              <button key={k} type="button" aria-label={`Colour ${k}`} aria-pressed={color === k} onClick={() => setColor(color === k ? null : k)} className="size-5 rounded-full"
+              <button key={k} type="button" aria-label={t("Colour {n}", { n: k })} aria-pressed={color === k} onClick={() => setColor(color === k ? null : k)} className="size-5 rounded-full"
                 style={{ background: PRESETS[k], boxShadow: color === k ? RING : "none" }} />
             ))}
           </div>
-          <div className="flex items-center gap-2.5"><span className="flex-1">Pin to top</span><Toggle on={pinned} onChange={setPinned} label="Pin to top" /></div>
-          {!filters.length && <button type="button" onClick={() => setFilters([""])} className="-mt-1 self-start text-[12px] text-muted hover:text-ink">+ Filter row (Bases syntax)</button>}
+          <div className="flex items-center gap-2.5"><span className="flex-1">{t("Pin to top")}</span><Toggle on={pinned} onChange={setPinned} label={t("Pin to top")} /></div>
+          {!filters.length && <button type="button" onClick={() => setFilters([""])} className="-mt-1 self-start text-[12px] text-muted hover:text-ink">{t("+ Filter row (Bases syntax)")}</button>}
         </div>
         <div className="flex items-center gap-2 border-t border-line px-5 py-3.5">
-          <button type="button" disabled={empty} onClick={() => void asBase()} title="Create a base note (database view) with the same filters" className="flex-1 text-start text-muted hover:text-ink disabled:opacity-50">Save as base…</button>
-          {existing ? <button type="button" onClick={() => void del()} className="px-2 text-bad hover:underline">Delete</button>
-            : <button type="button" onClick={closeEditor} className="px-2 text-muted hover:text-ink">Cancel</button>}
-          <button type="button" disabled={empty} onClick={() => void save()} className="flex h-[34px] items-center rounded-[10px] bg-accent px-4 font-semibold text-accent-fg disabled:opacity-50">Save</button>
+          <button type="button" disabled={empty} onClick={() => void asBase()} title={t("Create a base note (database view) with the same filters")} className="flex-1 text-start text-muted hover:text-ink disabled:opacity-50">{t("Save as base…")}</button>
+          {existing ? <button type="button" onClick={() => void del()} className="px-2 text-bad hover:underline">{t("Delete")}</button>
+            : <button type="button" onClick={closeEditor} className="px-2 text-muted hover:text-ink">{t("Cancel")}</button>}
+          <button type="button" disabled={empty} onClick={() => void save()} className="flex h-[34px] items-center rounded-[10px] bg-accent px-4 font-semibold text-accent-fg disabled:opacity-50">{t("Save")}</button>
         </div>
       </div>
     </div>
@@ -268,10 +269,10 @@ export function SidebarSmartFolders() {
   return (
     <div className="px-2" data-smart-folders onDragEnd={() => setDrag(null)}>
       <div className="flex items-center px-2 pb-1 pt-3.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">
-        <span className="flex-1">Smart folders</span>
-        <button title="New smart folder" aria-label="New smart folder" className="text-[14px] font-normal leading-none hover:text-ink" onClick={() => openSmartEditor({ query: scopeQuery(v, ui) })}>+</button>
+        <span className="flex-1">{t("Smart folders")}</span>
+        <button title={t("New smart folder")} aria-label={t("New smart folder")} className="text-[14px] font-normal leading-none hover:text-ink" onClick={() => openSmartEditor({ query: scopeQuery(v, ui) })}>+</button>
       </div>
-      {!list.length && <div className="px-2 py-1 text-[12px] text-muted">Save a search to keep it here.</div>}
+      {!list.length && <div className="px-2 py-1 text-[12px] text-muted">{t("Save a search to keep it here.")}</div>}
       {lineAt(-1) && <div className="mx-2 h-0.5 rounded-[1px] bg-accent" />}
       {list.map((sf, i) => {
         const on = active === sf.id;
@@ -292,30 +293,30 @@ export function SidebarSmartFolders() {
               ) : (
                 <button dir="auto" className="min-w-0 flex-1 truncate whitespace-nowrap text-start" title={sf.query} onClick={() => openSmart(sf)} onDoubleClick={() => setRename(sf.id)}>{sf.name}</button>
               )}
-              {sf.pinned && !on && <span className="text-[11px] text-muted group-hover:hidden">pinned</span>}
-              <span className="text-[11.5px] tabular-nums text-muted group-hover:hidden">{counts.get(sf.id) ?? 0}</span>
-              <button className="hidden text-muted hover:text-ink group-hover:block" onClick={() => setMenu(sf.id)} aria-label="Smart folder menu">⋯</button>
+              {sf.pinned && !on && <span className="text-[11px] text-muted group-hover:hidden">{t("pinned")}</span>}
+              <span className="text-[11.5px] tabular-nums text-muted group-hover:hidden">{fmtNum(counts.get(sf.id) ?? 0)}</span>
+              <button className="hidden text-muted hover:text-ink group-hover:block" onClick={() => setMenu(sf.id)} aria-label={t("Smart folder menu")}>⋯</button>
               {menu === sf.id && (
                 <>
                   <div className="fixed inset-0 z-30" onClick={() => setMenu(null)} />
-                  <div className="absolute left-6 top-full z-40 w-52 rounded-[10px] border border-line bg-surface p-1 shadow-xl fade-in" onClick={() => setMenu(null)}>
+                  <div className="absolute start-6 top-full z-40 w-52 rounded-[10px] border border-line bg-surface p-1 shadow-xl fade-in" onClick={() => setMenu(null)}>
                     {([
-                      [<Pencil size={13} key="e" />, "Edit…", () => openSmartEditor(sf)],
-                      [<Pencil size={13} key="r" />, "Rename", () => setRename(sf.id)],
-                      [sf.pinned ? <PinOff size={13} key="p" /> : <Pin size={13} key="p" />, sf.pinned ? "Unpin" : "Pin to top", () => void updateSmart((l) => upsertSmart(l, { ...sf, pinned: !sf.pinned }))],
-                      [<ChevronUp size={13} key="u" />, "Move up", () => void updateSmart((l) => moveSmart(l, sf.id, -1))],
-                      [<ChevronDown size={13} key="d" />, "Move down", () => void updateSmart((l) => moveSmart(l, sf.id, 1))],
-                      [<Table2 size={13} key="b" />, "Save as base", () => void saveSmartAsBase(sf)],
-                    ] as [ReactNode, string, () => void][]).map(([ic, l, fn]) => <button key={l} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[13px] hover:bg-surface-2" onClick={fn}><span className="text-muted">{ic}</span>{l}</button>)}
+                      [<Pencil size={13} key="e" />, t("Edit…"), () => openSmartEditor(sf)],
+                      [<Pencil size={13} key="r" />, t("Rename"), () => setRename(sf.id)],
+                      [sf.pinned ? <PinOff size={13} key="p" /> : <Pin size={13} key="p" />, sf.pinned ? t("Unpin") : t("Pin to top"), () => void updateSmart((l) => upsertSmart(l, { ...sf, pinned: !sf.pinned }))],
+                      [<ChevronUp size={13} key="u" />, t("Move up"), () => void updateSmart((l) => moveSmart(l, sf.id, -1))],
+                      [<ChevronDown size={13} key="d" />, t("Move down"), () => void updateSmart((l) => moveSmart(l, sf.id, 1))],
+                      [<Table2 size={13} key="b" />, t("Save as base"), () => void saveSmartAsBase(sf)],
+                    ] as [ReactNode, string, () => void][]).map(([ic, l, fn]) => <button key={l} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-start text-[13px] hover:bg-surface-2" onClick={fn}><span className="text-muted">{ic}</span>{l}</button>)}
                     <div className="flex gap-1.5 px-2 py-1.5">
-                      <button title="No colour" aria-label="No colour" className="size-5 rounded-full border border-line" onClick={() => void updateSmart((l) => upsertSmart(l, { ...sf, color: null }))} />
-                      {COLORS.map((k) => <button key={k} aria-label={`Colour ${k}`} className="size-5 rounded-full" style={{ background: PRESETS[k], boxShadow: sf.color === k ? RING : "none" }} onClick={() => void updateSmart((l) => upsertSmart(l, { ...sf, color: k }))} />)}
+                      <button title={t("No colour")} aria-label={t("No colour")} className="size-5 rounded-full border border-line" onClick={() => void updateSmart((l) => upsertSmart(l, { ...sf, color: null }))} />
+                      {COLORS.map((k) => <button key={k} aria-label={t("Colour {n}", { n: k })} className="size-5 rounded-full" style={{ background: PRESETS[k], boxShadow: sf.color === k ? RING : "none" }} onClick={() => void updateSmart((l) => upsertSmart(l, { ...sf, color: k }))} />)}
                     </div>
-                    <button className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[13px] text-bad hover:bg-surface-2" onClick={async () => {
+                    <button className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-start text-[13px] text-bad hover:bg-surface-2" onClick={async () => {
                       await updateSmart((l) => removeSmart(l, sf.id));
                       if (active === sf.id) go("notes", { filter: null });
-                      toast(`Deleted smart folder “${sf.name}”`, { label: "Undo", run: () => void updateSmart((l) => upsertSmart(l, sf)) });
-                    }}><Trash2 size={13} />Delete</button>
+                      toast(t("Deleted smart folder “{name}”", { name: sf.name }), { label: t("Undo"), run: () => void updateSmart((l) => upsertSmart(l, sf)) });
+                    }}><Trash2 size={13} />{t("Delete")}</button>
                   </div>
                 </>
               )}
@@ -338,13 +339,13 @@ export function NoteListQueryBar({ query, setQuery, count }: { query: string; se
     <div className="flex shrink-0 items-center gap-1.5 border-b border-line px-2.5 py-1.5" data-list-query>
       <label className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-[7px] border border-line bg-bg px-2 text-muted focus-within:border-accent">
         <Glyph name="query" size={14} />
-        <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setQuery("")} placeholder="Filter… tag:#llm status:learning" spellCheck={false}
+        <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setQuery("")} placeholder={t("Filter… tag:#llm status:learning")} spellCheck={false} dir="ltr"
           className="min-w-0 flex-1 bg-transparent font-mono text-[12px] text-ink outline-none placeholder:font-sans placeholder:text-muted" />
-        {query && <span className="shrink-0 text-[11px] tabular-nums">{count}</span>}
-        {query && <button aria-label="Clear search" onClick={() => setQuery("")} className="shrink-0 hover:text-ink"><X size={12} /></button>}
+        {query && <span className="shrink-0 text-[11px] tabular-nums">{fmtNum(count)}</span>}
+        {query && <button aria-label={t("Clear search")} onClick={() => setQuery("")} className="shrink-0 hover:text-ink"><X size={12} /></button>}
       </label>
       {query.trim() && (
-        <button title="Save search as smart folder" aria-label="Save search as smart folder" onClick={() => openSmartEditor({ query: [scopeQuery(v, ui), query.trim()].filter(Boolean).join(" ") })}
+        <button title={t("Save search as smart folder")} aria-label={t("Save search as smart folder")} onClick={() => openSmartEditor({ query: [scopeQuery(v, ui), query.trim()].filter(Boolean).join(" ") })}
           className="flex size-8 shrink-0 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink"><Glyph name="smart-folder" size={16} /></button>
       )}
     </div>
@@ -358,32 +359,31 @@ export function SmartListHeader({ sf, query, setQuery, count }: { sf: SmartFolde
     <div className="flex shrink-0 flex-col gap-2.5 border-b border-line p-3.5 text-[13px] leading-[1.25]" data-smart-header>
       <div className="flex items-center gap-2">
         {glyphOf(sf, 18, smartColor(sf.color) ?? "var(--accent)")}
-        <span dir="auto" className="min-w-0 flex-1 truncate text-[15px] font-[650]" title={`${count} note${count === 1 ? "" : "s"}`}>{sf.name}</span>
-        {query.trim() && <button className="text-muted hover:text-ink" title="Save the narrowed search as a new smart folder" onClick={() => openSmartEditor({ query: `${sf.query} ${query.trim()}`.trim(), filters: sf.filters, match: sf.match })}>Save as new</button>}
-        <button className="text-muted hover:text-ink" onClick={() => openSmartEditor(sf)}>Edit</button>
+        <span dir="auto" className="min-w-0 flex-1 truncate text-[15px] font-[650]" title={t("{n} note|{n} notes", { n: count })}>{sf.name}</span>
+        {query.trim() && <button className="text-muted hover:text-ink" title={t("Save the narrowed search as a new smart folder")} onClick={() => openSmartEditor({ query: `${sf.query} ${query.trim()}`.trim(), filters: sf.filters, match: sf.match })}>{t("Save as new")}</button>}
+        <button className="text-muted hover:text-ink" onClick={() => openSmartEditor(sf)}>{t("Edit")}</button>
       </div>
-      <div className="flex h-8 cursor-text items-center gap-1.5 overflow-x-auto whitespace-nowrap rounded-[7px] [scrollbar-width:none] border border-line bg-bg px-2 font-mono text-[12px] focus-within:border-accent" onClick={() => input.current?.focus()} title={sf.query}>
-        {smartTokens(sf.query).map((t, i) => <span key={i} className={CHIP}>{t}</span>)}
+      <div className="flex h-8 cursor-text items-center gap-1.5 overflow-x-auto whitespace-nowrap rounded-[7px] [scrollbar-width:none] border border-line bg-bg px-2 font-mono text-[12px] focus-within:border-accent" dir="ltr" onClick={() => input.current?.focus()} title={sf.query}>
+        {smartTokens(sf.query).map((tok, i) => <span key={i} className={CHIP}>{tok}</span>)}
         {sf.filters?.map((f, i) => <span key={"f" + i} className={CHIP}>{f}</span>)}
-        <input ref={input} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") setQuery(""); }} aria-label={`Narrow “${sf.name}”`} spellCheck={false}
+        <input ref={input} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") setQuery(""); }} aria-label={t("Narrow “{name}”", { name: sf.name })} spellCheck={false}
           className="min-w-[40px] flex-1 bg-transparent text-ink outline-none" />
       </div>
     </div>
   );
 }
 
-const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 /** "due Mon" (within a week), "due 3 Dec", "due today", "overdue". */
-function dueLabel(raw: string | undefined): string | null {
+function dueLabel(raw: string | undefined): { text: string; overdue: boolean } | null {
   const m = raw ? /^(\d{4})-(\d{2})-(\d{2})/.exec(raw.trim()) : null;
   if (!m) return null;
   const d = new Date(+m[1], +m[2] - 1, +m[3]);
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const days = Math.round((d.getTime() - today.getTime()) / 86400000);
-  if (days < 0) return "overdue";
-  if (days === 0) return "due today";
-  if (days < 7) return `due ${WD[d.getDay()]}`;
-  return `due ${d.getDate()} ${d.toLocaleDateString("en-GB", { month: "short" })}`;
+  if (days < 0) return { text: t("overdue"), overdue: true };
+  if (days === 0) return { text: t("due today"), overdue: false };
+  if (days < 7) return { text: t("due {date}", { date: fmtDate(d, { weekday: "short" }) }), overdue: false };
+  return { text: t("due {date}", { date: fmtDate(d, { day: "numeric", month: "short" }) }), overdue: false };
 }
 /** One note in a smart folder list (20b): type glyph + title, then "course · due Mon". */
 export function SmartRow({ n, active, onOpen }: { n: Note; active: boolean; onOpen: () => void }) {
@@ -391,11 +391,11 @@ export function SmartRow({ n, active, onOpen }: { n: Note; active: boolean; onOp
   const p = noteDerived("smartProps", n, propsOf);
   const where = p.course || p.source || (n.folderId ? v.folderMap.get(n.folderId)?.name : "") || v.spaceMap.get(n.spaceId)?.name || "";
   const due = dueLabel(p.due ?? p.deadline);
-  const sub = [where, due ?? new Date(n.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })].filter(Boolean).join(" · ");
-  const gc = active ? "var(--info)" : n.status === "review" || due === "overdue" ? "var(--warning)" : "var(--muted)";
+  const sub = [where, due?.text ?? fmtDate(n.updatedAt, { day: "numeric", month: "short" })].filter(Boolean).join(" · ");
+  const gc = active ? "var(--info)" : n.status === "review" || due?.overdue ? "var(--warning)" : "var(--muted)";
   return (
     <button onClick={onOpen} className={cx("flex w-full shrink-0 flex-col gap-[3px] border-b border-line px-3.5 py-2.5 text-start text-[13px]", active ? "bg-surface" : "hover:bg-surface")}>
-      <span className="flex w-full items-center gap-2 font-semibold leading-5"><Glyph name={n.type as GlyphName} size={14} color={gc} /><span dir="auto" className="min-w-0 flex-1 truncate">{n.title || "Untitled"}</span></span>
+      <span className="flex w-full items-center gap-2 font-semibold leading-5"><Glyph name={n.type as GlyphName} size={14} color={gc} /><span dir="auto" className="min-w-0 flex-1 truncate">{n.title || t("Untitled")}</span></span>
       <span dir="auto" className="truncate text-[12px] leading-[15px] text-muted">{sub}</span>
     </button>
   );
@@ -413,19 +413,19 @@ export function PhoneSmartRows({ onPick }: { onPick: () => void }) {
   return (
     <div className="flex flex-col gap-0.5 px-1 pt-1" data-phone-smart>
       <div className="flex items-center px-2 py-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">
-        <span className="flex-1">Smart folders</span>
-        <button aria-label="New smart folder" onClick={() => { onPick(); openSmartEditor({ query: scopeQuery(v, ui) }); }} className="-my-2 flex size-9 items-center justify-center text-[17px] font-normal">+</button>
+        <span className="flex-1">{t("Smart folders")}</span>
+        <button aria-label={t("New smart folder")} onClick={() => { onPick(); openSmartEditor({ query: scopeQuery(v, ui) }); }} className="-my-2 flex size-9 items-center justify-center text-[17px] font-normal">+</button>
       </div>
-      {!list.length && <div className="px-2 pb-2 text-[13px] text-muted">Save a search from the search screen to keep it here.</div>}
+      {!list.length && <div className="px-2 pb-2 text-[13px] text-muted">{t("Save a search from the search screen to keep it here.")}</div>}
       {list.map((sf) => {
         const on = active === sf.id;
         return (
-          <button key={sf.id} title="Long-press to edit" onClick={() => { openSmart(sf); onPick(); }} onContextMenu={(e) => { e.preventDefault(); edit(sf); }}
+          <button key={sf.id} title={t("Long-press to edit")} onClick={() => { openSmart(sf); onPick(); }} onContextMenu={(e) => { e.preventDefault(); edit(sf); }}
             onTouchStart={() => { press.current = setTimeout(() => edit(sf), 550); }} onTouchEnd={() => clearTimeout(press.current)} onTouchMove={() => clearTimeout(press.current)}
             className={cx("flex h-12 w-full items-center gap-3 rounded-[10px] px-2 text-start text-[13px]", on && "bg-surface-2")}>
             {glyphOf(sf, 18, smartColor(sf.color) ?? "var(--muted)")}
             <span dir="auto" className={cx("flex-1 truncate", on && "font-semibold")}>{sf.name}</span>
-            <span className="text-muted">{counts.get(sf.id) ?? 0}</span>
+            <span className="text-muted tabular-nums">{fmtNum(counts.get(sf.id) ?? 0)}</span>
           </button>
         );
       })}

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Noto+Naskh+Arabic:wght@400;700&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:100px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 23 Ask as a chat</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 5</span></div><div style="font-size:14px;color:#9A9890">Threads that remember earlier turns, with the rewritten search shown in muted text. Answers still come only from your notes unless you choose otherwise.</div></div>
+  </div>
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="2">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ sec.k }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ sec.t }}</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">{{ sec.d }}</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:44px;align-items:flex-start">
+        <sc-for list="{{ sec.frames }}" as="f" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};--sh:{{ f.t.sh }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)">
+              <dc-import name="AskChat" state="{{ f.s }}" phone="{{ f.ph }}" arabic="{{ f.ar }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+            </div>
+            <div style="max-width:{{ f.w }};font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', inn:'#7AA2F7', le:'#B48EF0', sh:'none' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', inn:'#2F5BD3', le:'#7A4BD1', sh:'0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .08)' };
+    const F = (id,l,s,t,n,ph=false,ar=false) => ({ id, l, s, t, n, ph, ar, w: ph?'412px':'1440px', h: ph?'915px':'900px', r: ph?'28px':'12px' });
+    const sections = [
+      { k:'R5 · 1 · DESKTOP', t:'Threads and messages', d:'Threads on the left (pin, rename, delete in ⋯; synced). Each answer: reading type, citation chips, collapsible sources, then Copy · Save as note · Make flashcards · Regenerate · 👍/👎 as glyphs.', frames:[
+        F('R5-23A','Thread · follow-up with rewrite note · Lamplight','thread',L,'The second question is rewritten into a standalone search (“Searched for: …”, muted). Context line in the header; “Earlier messages summarized” divider appears once a thread gets long. Three suggestion chips after the last answer.'),
+        F('R5-23B','Thread · Paper','thread',P,'Same layout in Paper. Your bubble uses surface-2, never the accent.'),
+        F('R5-23C','Streaming · Stop','streaming',L,'Caret shows where text is arriving. Sources and actions wait until the answer finishes. Send becomes Stop.'),
+        F('R5-23D','Empty thread · 3 starters','empty',P,'Starters come from the current note or path.')
+      ]},
+      { k:'R5 · 1 · STATES', t:'Not in your notes, offline, locked, error', d:'General knowledge is always an explicit choice and stays labelled on the answer.', frames:[
+        F('R5-23E','Not in your notes','notfound',L,'Two plain choices. Nothing is guessed.'),
+        F('R5-23F','Answer from general knowledge','general',P,'Amber label “Not from your notes”, no citations, no sources block.'),
+        F('R5-23G','Offline','offline',L,'Composer dimmed; points to Search, which works offline.'),
+        F('R5-23H','Locked (signed out)','signedout',L,'One action: Unlock.'),
+        F('R5-23I','Error · retry','error',P,'The question is kept; Retry re-sends it.')
+      ]},
+      { k:'R5 · 1 · PHONE & ARABIC', t:'Phone and Arabic', d:'Thread list is a sheet from the list icon. Arabic answers are RTL with English terms kept LTR inline.', frames:[
+        F('R5-23J','Phone · thread','thread',L,'Full-screen chat; actions are icon-only; sources stack.',true),
+        F('R5-23K','Phone · streaming · Paper','streaming',P,'',true),
+        F('R5-23L','Phone · not in your notes','notfound',L,'',true),
+        F('R5-23M','Phone · Arabic answer','thread',L,'«الانتشار العكسي» with mixed English terms and sources.',true,true),
+        F('R5-23N','Desktop · Arabic · Paper','thread',P,'Whole layout mirrors: threads on the right, bubbles on the left.',false,true)
+      ]}
+    ];
+    return { sections };
+  }
+}
+</script>
+</body>
+</html>

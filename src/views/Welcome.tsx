@@ -17,6 +17,7 @@ import { activeTheme, setSettings, THEMES, useSettings } from "../lib/settings";
 import { syncNow } from "../lib/sync";
 import { LumenMark, Wordmark } from "../components/LumenMark";
 import { cx } from "../components/ui";
+import { AccountsComing, AuthWelcome } from "../components/auth/WelcomeAccounts"; // accounts (off: one quiet line)
 
 const WELCOMED = "lumen.welcomed";
 const NATIVE_FLAG = "lumen.launchAndroid";
@@ -71,7 +72,7 @@ export function Welcome({ onDone }: { onDone: () => void }) {
 function WebWelcome({ onDone }: { onDone: () => void }) {
   const [step, setStep] = useSteps(0); // 0 = unlock, 1..3 = first run
   const finish = () => { markWelcomed(); onDone(); };
-  if (step === 0) return <Unlock onNext={() => { markWelcomed(); setStep(1); }} />;
+  if (step === 0) return <AuthWelcome><Unlock onNext={() => { markWelcomed(); setStep(1); }} /></AuthWelcome>;
   return <FirstRun step={step} setStep={setStep} onDone={finish} />;
 }
 
@@ -219,6 +220,7 @@ function Unlock({ onNext, lock = false }: { onNext: () => void; lock?: boolean }
             : <button type="button" onClick={onNext} className="flex h-12 items-center justify-center gap-2 rounded-[12px] font-medium text-ink">
                 <CloudOff size={16} className="text-muted" />Continue offline <span className="font-normal text-muted">· local only</span>
               </button>}
+          {!lock && <AccountsComing />}
         </div>
       </form>
     );
@@ -257,6 +259,7 @@ function Unlock({ onNext, lock = false }: { onNext: () => void; lock?: boolean }
             <span className="text-[12px] text-muted">Local only</span>
           </button>
         )}
+        {!lock && <AccountsComing className="-mt-3" />}
       </form>
       <div className="absolute inset-x-8 bottom-6 flex items-center justify-between text-[12px] text-muted">
         <span>v{APP_VERSION} · Local-first · Works offline</span>

@@ -24,6 +24,7 @@
 import type { Note } from "../../shared/types";
 import { roadmap, splitFrontMatter, type Topic, type TopicStatus } from "./parse";
 import { depths, untangle } from "./prereq-graph";
+import { t } from "./i18n";
 
 export const REVIEW_LADDER = [1, 3, 7, 14, 30, 60, 120];
 export const UNPLACED = "Not placed yet";
@@ -530,10 +531,10 @@ export function overlapSuggestions(p: BuiltPath, dismissed: string[] = []): [Bui
 export function overlapReason(a: BuiltConcept, b: BuiltConcept): string {
   const na = new Set([...a.def.notes, ...a.coverage.map((x) => x.topic.note).filter((x): x is string => !!x)].map((x) => x.toLowerCase()));
   const shared = [...b.def.notes, ...b.coverage.map((x) => x.topic.note).filter((x): x is string => !!x)].filter((x) => na.has(x.toLowerCase())).length;
-  if (shared > 1) return `${shared} shared lessons`;
-  if (shared === 1) return "same notes cited";
+  if (shared > 1) return t("{n} shared lessons", { n: shared });
+  if (shared === 1) return t("same notes cited");
   const sa = stems(a.def.name).join(" "), sb = stems(b.def.name).join(" ");
-  return sa === sb ? "same name" : "similar names";
+  return sa === sb ? t("same name") : t("similar names");
 }
 
 // ------------------------------------------------------------------ view helpers (filters, focus chain, graph layout)

@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { useEffect, type ButtonHTMLAttributes, type ReactNode } from "react";
 import type { Status } from "../../shared/types";
+import { fmtDate, t, tk } from "../lib/i18n";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 export { cx };
@@ -56,16 +57,18 @@ export function Segmented<T extends string>({ value, options, onChange, classNam
   );
 }
 
+/** Status display labels (the stored values stay English ids). */
+export const STATUS_LABEL: Record<Status, string> = { todo: tk("todo"), learning: tk("learning"), review: tk("review"), mastered: tk("mastered") };
 export const STATUS_COLOR: Record<Status, string> = { todo: "var(--muted)", learning: "var(--info)", review: "var(--warning)", mastered: "var(--success)" };
 export function StatusDot({ status, className }: { status: Status | null; className?: string }) {
   if (!status) return null;
-  return <span title={status} className={cx("inline-block size-2 rounded-full shrink-0", className)} style={{ background: STATUS_COLOR[status] }} />;
+  return <span title={t(STATUS_LABEL[status] ?? status)} className={cx("inline-block size-2 rounded-full shrink-0", className)} style={{ background: STATUS_COLOR[status] }} />;
 }
 export function StatusPill({ status }: { status: Status }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full px-[9px] text-[12px] font-medium capitalize leading-[22px]" style={{ color: STATUS_COLOR[status], background: `color-mix(in srgb, ${STATUS_COLOR[status]} 14%, transparent)` }}>
       <span className="size-1.5 rounded-full" style={{ background: STATUS_COLOR[status] }} />
-      {status}
+      {t(STATUS_LABEL[status] ?? status)}
     </span>
   );
 }
@@ -74,7 +77,7 @@ export function StatusPill({ status }: { status: Status }) {
 export function Chip({ children, onClick, active, tone, onRemove }: { children: ReactNode; onClick?: () => void; active?: boolean; tone?: "link" | "info"; onRemove?: () => void }) {
   const c = tone === "link" ? "var(--link)" : tone === "info" ? "var(--info)" : null;
   return (
-    <button onClick={onClick} className={cx("inline-flex items-center gap-1 rounded-[6px] py-0.5 text-[12px] leading-[18px] transition-colors", onRemove ? "pl-2 pr-1.5" : "px-2", active ? "bg-accent text-accent-fg" : c ? "" : "bg-surface-2 text-muted hover:text-ink")} style={!active && c ? { color: c, background: `color-mix(in srgb, ${c} 14%, transparent)` } : undefined}>
+    <button onClick={onClick} className={cx("inline-flex items-center gap-1 rounded-[6px] py-0.5 text-[12px] leading-[18px] transition-colors", onRemove ? "ps-2 pe-1.5" : "px-2", active ? "bg-accent text-accent-fg" : c ? "" : "bg-surface-2 text-muted hover:text-ink")} style={!active && c ? { color: c, background: `color-mix(in srgb, ${c} 14%, transparent)` } : undefined}>
       {children}
       {onRemove && <X size={11} onClick={(e) => { e.stopPropagation(); onRemove(); }} />}
     </button>
@@ -97,7 +100,7 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
         {title && (
           <div className="flex items-center justify-between px-4 pb-1 pt-2.5 md:px-[22px] md:pt-[18px]">
             <div className="text-[15px] font-[650] md:text-[17px]">{title}</div>
-            <button aria-label="Close" onClick={onClose} className="text-muted hover:text-ink"><X size={17} /></button>
+            <button aria-label={t("Close")} onClick={onClose} className="text-muted hover:text-ink"><X size={17} /></button>
           </div>
         )}
         <div className={cx("overflow-y-auto", title ? "px-4 pb-4 pt-3 md:px-[22px]" : "p-4")}>{children}</div>
@@ -119,13 +122,14 @@ export function Empty({ title, hint, action, foot }: { icon?: ReactNode; title: 
   );
 }
 
-export function relTime(t: number) {
-  const s = (Date.now() - t) / 1000;
-  if (s < 60) return "just now";
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  if (s < 86400 * 7) return `${Math.floor(s / 86400)}d ago`;
-  return new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: new Date(t).getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
+/** Compact relative time ("5m ago"); in the interface language. */
+export function relTime(ts: number) {
+  const s = (Date.now() - ts) / 1000;
+  if (s < 60) return t("just now");
+  if (s < 3600) return t("{n}m ago", { n: Math.floor(s / 60) });
+  if (s < 86400) return t("{n}h ago", { n: Math.floor(s / 3600) });
+  if (s < 86400 * 7) return t("{n}d ago", { n: Math.floor(s / 86400) });
+  return fmtDate(ts, { month: "short", day: "numeric", year: new Date(ts).getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
 }
 
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {

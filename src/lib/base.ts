@@ -29,6 +29,7 @@
 import type { Note, NoteType, Status } from "../../shared/types";
 import { NOTE_TYPES, STATUSES } from "../../shared/types";
 import { natural, splitFrontMatter } from "./parse";
+import { fmtDate as fmtDateI, t, tk } from "./i18n";
 
 // ------------------------------------------------------------------ tiny YAML (the subset .base files use)
 type Y = string | number | boolean | null | Y[] | { [k: string]: Y };
@@ -238,15 +239,15 @@ export function parseBase(body: string): { cfg: BaseConfig; error: string | null
   let raw: Y = null, error: string | null = null;
   if (loc) { try { raw = parseYaml(loc.yaml); } catch (e) { error = String(e); } }
   const o: YMap = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
-  if (loc && raw !== null && (typeof raw !== "object" || Array.isArray(raw))) error = "The base block should be a YAML map (filters:, views:)";
+  if (loc && raw !== null && (typeof raw !== "object" || Array.isArray(raw))) error = t("The base block should be a YAML map (filters:, views:)");
   const views = (Array.isArray(o.views) ? o.views : []).filter((v): v is YMap => !!v && typeof v === "object" && !Array.isArray(v)).map((v, i): BaseViewDef => {
-    const t = asStr(v.type) as ViewType | undefined;
+    const vt = asStr(v.type) as ViewType | undefined;
     const sort = Array.isArray(v.sort) ? v.sort.map(asSort).filter((x): x is SortRule => !!x) : v.sort ? [asSort(v.sort)].filter((x): x is SortRule => !!x) : undefined;
     const cs = v.columnSize && typeof v.columnSize === "object" && !Array.isArray(v.columnSize) ? Object.fromEntries(Object.entries(v.columnSize).map(([k, n]) => [k, Number(n)]).filter(([, n]) => Number(n) > 0)) : undefined;
     return {
       ...v,
-      type: t && (VIEW_TYPES as string[]).includes(t) ? t : t === "gallery" as string ? "cards" : t === "kanban" as string ? "board" : "table",
-      name: asStr(v.name) ?? `View ${i + 1}`,
+      type: vt && (VIEW_TYPES as string[]).includes(vt) ? vt : vt === "gallery" as string ? "cards" : vt === "kanban" as string ? "board" : "table",
+      name: asStr(v.name) ?? t("View {n}", { n: i + 1 }),
       filters: (v.filters ?? undefined) as FilterNode | undefined,
       order: Array.isArray(v.order) ? v.order.map(asStr).filter((x): x is string => !!x) : undefined,
       sort, groupBy: asSort(v.groupBy), limit: Number(v.limit) > 0 ? Number(v.limit) : undefined,
@@ -254,7 +255,7 @@ export function parseBase(body: string): { cfg: BaseConfig; error: string | null
       groupMulti: asStr(v.groupMulti) === "first" ? "first" : asStr(v.groupMulti) === "each" ? "each" : undefined,
     };
   });
-  return { cfg: { ...o, filters: (o.filters ?? undefined) as FilterNode | undefined, views: views.length ? views : [{ type: "table", name: "Table" }] }, error, found: !!loc };
+  return { cfg: { ...o, filters: (o.filters ?? undefined) as FilterNode | undefined, views: views.length ? views : [{ type: "table", name: t("Table") }] }, error, found: !!loc };
 }
 
 /** Plain YAML object for a config (drops undefined / empty optional keys). */
@@ -297,8 +298,8 @@ export const BUILTIN = ["title", "type", "status", "tags", "space", "folder", "c
 export const yamlName = (k: string) => ({ title: "file.name", created: "file.ctime", updated: "file.mtime", tags: "file.tags", folder: "file.folder" } as Record<string, string>)[k] ?? k;
 export function label(p: string) {
   const k = canon(p);
-  const L: Record<string, string> = { title: "Title", type: "Type", status: "Status", tags: "Tags", space: "Space", folder: "Folder", created: "Created", updated: "Updated" };
-  return L[k] ?? k.charAt(0).toUpperCase() + k.slice(1);
+  const L: Record<string, string> = { title: tk("Title"), type: tk("Type"), status: tk("Status"), tags: tk("Tags"), space: tk("Space"), folder: tk("Folder"), created: tk("Created"), updated: tk("Updated"), cards: tk("Cards") };
+  return L[k] ? t(L[k]) : k.charAt(0).toUpperCase() + k.slice(1);
 }
 /** Which cells can be edited inline (and dragged to on a board / calendar). */
 export const editable = (p: string) => !["title", "folder", "created", "updated", "cards"].includes(canon(p));
@@ -334,7 +335,7 @@ export function show(v: Val, p: string): string {
   if (typeof v === "number" && ["created", "updated"].includes(canon(p))) return fmtDate(v);
   return String(v);
 }
-export const fmtDate = (t: number) => new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+export const fmtDate = (ts: number) => fmtDateI(ts, { day: "numeric", month: "short", year: "numeric" });
 export const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 /** Epoch ms for a date-ish value (number or YYYY-MM-DD…), else null. */
@@ -559,7 +560,7 @@ export function groupRows(rows: Row[], by: SortRule, ctx: Ctx, opts: { allStatus
   if (opts.allStatuses && k === "status") for (const s of STATUSES) m.set(s, { key: s, label: s, rows: [] });
   for (const r of rows) {
     for (const key of groupKeysOf(r, by, ctx, opts.multi)) {
-      if (!m.has(key)) m.set(key, { key, label: key === NONE ? `No ${label(k).toLowerCase()}` : key, rows: [] });
+      if (!m.has(key)) m.set(key, { key, label: key === NONE ? t("No {prop}", { prop: label(k).toLowerCase() }) : key, rows: [] });
       m.get(key)!.rows.push(r);
     }
   }
@@ -584,12 +585,12 @@ export function swapValue(cur: string[], from: string, to: string): string[] {
 /** Toast text for a drag between groups: "Moved from #cv to #nlp, still in #llm". `cur` = values before the move. */
 export function moveMessage(prop: string, from: string, to: string, cur: string[] = []): string {
   const k = canon(prop);
-  const f = (x: string) => (x === NONE ? `no ${label(k).toLowerCase()}` : k === "tags" ? `#${x}` : x);
+  const f = (x: string) => (x === NONE ? t("no {prop}", { prop: label(k).toLowerCase() }) : k === "tags" ? `#${x}` : x);
   const next = swapValue(cur, from, to);
   const still = next.filter((x) => x !== to);
-  const head = to === NONE || cur.includes(to) ? `Removed from ${f(from)}` : `Moved from ${f(from)} to ${f(to)}`;
+  const head = to === NONE || cur.includes(to) ? t("Removed from {from}", { from: f(from) }) : t("Moved from {from} to {to}", { from: f(from), to: f(to) });
   const keep = cur.includes(to) ? next : still;
-  return keep.length ? `${head}, still in ${keep.map(f).join(", ")}` : head;
+  return keep.length ? t("{head}, still in {list}", { head, list: keep.map(f).join(t(", ")) }) : head;
 }
 
 /** All property names seen on the notes (front-matter keys), for the column / filter pickers. */
@@ -606,7 +607,7 @@ export const isType = (s: string): s is NoteType => (NOTE_TYPES as string[]).inc
 
 /** Default view for a new base / an added view. */
 export const newView = (type: ViewType, name?: string): BaseViewDef => ({
-  type, name: name ?? ({ table: "Table", board: "Board", cards: "Gallery", list: "List", calendar: "Calendar" } as Record<ViewType, string>)[type],
+  type, name: name ?? t(({ table: tk("Table"), board: tk("Board"), cards: tk("Gallery"), list: tk("List"), calendar: tk("Calendar") } as Record<ViewType, string>)[type]),
   order: type === "board" ? ["file.name", "file.tags"] : type === "cards" ? ["file.name", "status", "file.tags"] : type === "list" ? ["file.name", "status"] : ["file.name", "status", "file.tags", "file.mtime"],
   ...(type === "board" ? { groupBy: { property: "status", direction: "ASC" as const } } : {}),
 });
@@ -674,17 +675,17 @@ export const filterCount = (f: FilterNode | undefined) => filterRows(f).rows.red
 // ------------------------------------------------------------------ templates (New base · template picker)
 export interface BaseTemplate { id: string; glyph: string; name: string; desc: string; type: "base" | "dashboard"; title: string; yaml: string }
 export const BASE_TEMPLATES: BaseTemplate[] = [
-  { id: "all", glyph: "base", name: "Base (database view)", desc: "Empty table of all notes", type: "base", title: "New base",
+  { id: "all", glyph: "base", name: tk("Base (database view)"), desc: tk("Empty table of all notes"), type: "base", title: tk("New base"),
     yaml: "views:\n  - type: table\n    name: All notes\n    order:\n      - file.name\n      - type\n      - status\n      - space\n      - file.tags\n      - file.mtime\n    sort:\n      - property: file.mtime\n        direction: DESC\n" },
-  { id: "lessons", glyph: "v-board", name: "Lessons by status × course", desc: "Board grouped by status, filtered to lessons", type: "base", title: "Lessons by status × course",
+  { id: "lessons", glyph: "v-board", name: tk("Lessons by status × course"), desc: tk("Board grouped by status, filtered to lessons"), type: "base", title: "Lessons by status × course",
     yaml: "filters:\n  and:\n    - type == \"lesson\"\nviews:\n  - type: board\n    name: By status\n    groupBy:\n      property: status\n      direction: ASC\n    order:\n      - file.name\n      - course\n  - type: table\n    name: Table\n    order:\n      - file.name\n      - status\n      - course\n      - file.tags\n      - due\n      - cards\n    sort:\n      - property: due\n        direction: ASC\n  - type: cards\n    name: Gallery\n    order:\n      - file.name\n      - status\n      - course\n  - type: list\n    name: List\n    groupBy:\n      property: status\n      direction: ASC\n    order:\n      - file.name\n      - course\n      - due\n  - type: calendar\n    name: Calendar\n    date: due\n" },
-  { id: "due", glyph: "v-calendar", name: "Due this month", desc: "Calendar by due date", type: "base", title: "Due this month",
+  { id: "due", glyph: "v-calendar", name: tk("Due this month"), desc: tk("Calendar by due date"), type: "base", title: "Due this month",
     yaml: "filters:\n  and:\n    - '!due.isEmpty()'\nviews:\n  - type: calendar\n    name: Due\n    date: due\n    order:\n      - file.name\n      - course\n" },
-  { id: "cards", glyph: "flashcards", name: "Cards by deck", desc: "Table of flashcard notes", type: "base", title: "Cards by deck",
+  { id: "cards", glyph: "flashcards", name: tk("Cards by deck"), desc: tk("Table of flashcard notes"), type: "base", title: "Cards by deck",
     yaml: "filters:\n  and:\n    - type == \"flashcards\"\nviews:\n  - type: table\n    name: By deck\n    groupBy:\n      property: space\n      direction: ASC\n    order:\n      - file.name\n      - space\n      - cards\n      - file.mtime\n" },
-  { id: "reading", glyph: "pdf", name: "Reading list", desc: "PDFs with progress", type: "base", title: "Reading list",
+  { id: "reading", glyph: "pdf", name: tk("Reading list"), desc: tk("PDFs with progress"), type: "base", title: "Reading list",
     yaml: "filters:\n  and:\n    - type == \"pdf\"\nviews:\n  - type: table\n    name: Reading list\n    order:\n      - file.name\n      - status\n      - progress\n      - space\n      - file.mtime\n    sort:\n      - property: file.mtime\n        direction: DESC\n" },
-  { id: "dashboard", glyph: "dashboard", name: "Dashboard", desc: "Tiles over sessions and cards", type: "dashboard", title: "Study dashboard",
+  { id: "dashboard", glyph: "dashboard", name: tk("Dashboard"), desc: tk("Tiles over sessions and cards"), type: "dashboard", title: tk("Study dashboard"),
     yaml: "tiles:\n  - id: minutes\n    title: Minutes studied\n    type: number\n    source: sessions\n    y: minutes\n    aggregate: sum\n    range: 7d\n    layout: { x: 0, y: 0, w: 3, h: 2 }\n  - id: due\n    title: Cards due\n    type: number\n    source: cards\n    range: next 1d\n    layout: { x: 3, y: 0, w: 3, h: 2 }\n  - id: week\n    title: Minutes per week by course\n    type: stackedBar\n    source: sessions\n    x: at\n    bucket: week\n    y: minutes\n    aggregate: sum\n    series: course\n    range: 8w\n    layout: { x: 6, y: 0, w: 6, h: 4 }\n  - id: days\n    title: Study days\n    type: heatmap\n    source: sessions\n    y: minutes\n    aggregate: sum\n    range: 20w\n    layout: { x: 0, y: 2, w: 6, h: 4 }\n" },
 ];
 /** Body for a note created from a template: an intro line + the fenced YAML block. */

@@ -19,12 +19,13 @@ import { presetVar, SERIES_ORDER } from "../lib/dashboard";
 import { db } from "../lib/db";
 import { splitFrontMatter, setFrontMatter, inlineTags } from "../lib/parse";
 import { noteDerived, openNote, setUI, useVault } from "../lib/store";
+import { fmtDate as fmtDay, fmtNum, t, tk } from "../lib/i18n";
 import { Glyph } from "../components/Glyph";
 import { cx, Sheet } from "../components/ui";
 
 const useWide = () => { const [w, setW] = useState(() => innerWidth >= 900); useEffect(() => { const f = () => setW(innerWidth >= 900); addEventListener("resize", f); return () => removeEventListener("resize", f); }, []); return w; };
 const VIEW_GLYPH: Record<ViewType, string> = { table: "v-table", board: "v-board", cards: "v-gallery", list: "v-list", calendar: "v-calendar" };
-const VIEW_LABEL: Record<ViewType, string> = { table: "Table", board: "Board", cards: "Gallery", list: "List", calendar: "Calendar" };
+const VIEW_LABEL: Record<ViewType, string> = { table: tk("Table"), board: tk("Board"), cards: tk("Gallery"), list: tk("List"), calendar: tk("Calendar") };
 const PAGE = 200;
 const propsFor = (n: Note) => noteDerived("baseProps", n, propsOf);
 const isMd = (n: Note) => !["canvas", "whiteboard", "diagram"].includes(n.type);
@@ -33,8 +34,8 @@ type Spaces = { id: string; name: string; color: string | null }[];
 
 // ------------------------------------------------------------------ status + colour helpers (design: glyph pills, course bars)
 export const STATUS_META: Record<Status, { g: string; c: string; l: string }> = {
-  todo: { g: "s-todo", c: "var(--muted)", l: "Todo" }, learning: { g: "s-learning", c: "var(--info)", l: "Learning" },
-  review: { g: "s-revise", c: "var(--warning)", l: "To revise" }, mastered: { g: "s-mastered", c: "var(--success)", l: "Mastered" },
+  todo: { g: "s-todo", c: "var(--muted)", l: tk("Todo") }, learning: { g: "s-learning", c: "var(--info)", l: tk("Learning") },
+  review: { g: "s-revise", c: "var(--warning)", l: tk("To revise") }, mastered: { g: "s-mastered", c: "var(--success)", l: tk("Mastered") },
 };
 const hash = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
 /** Course / space colour: the space's own canvas preset, else a stable preset from the name. */
@@ -45,7 +46,7 @@ function useColorOf(spaces: Spaces) {
   }, [spaces]);
 }
 const isCourse = (p: string) => ["space", "course", "courses"].includes(canon(p));
-const fmtShort = (t: number) => new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const fmtShort = (ts: number) => fmtDay(ts, { day: "numeric", month: "short" });
 
 // ------------------------------------------------------------------ writes to listed notes
 async function writeValue(n: Note, prop: string, value: string | null, spaces: Spaces) {
@@ -76,12 +77,12 @@ function rawOf(r: Row, prop: string, ctx: Ctx): string | null {
   return v === null ? null : Array.isArray(v) ? `[${v.join(", ")}]` : String(v);
 }
 
-interface Moved { text: string; undo: () => void; t: number }
+interface Moved { text: string; undo: () => void; t: number; undoable?: boolean }
 /** Move a note from one group to another (board columns, calendar days). Multi-value properties swap the one value. */
 async function moveTo(r: Row, prop: string, from: string, to: string, ctx: Ctx, spaces: Spaces, say: (m: Moved | null) => void) {
   if (from === to) return;
   const k = canon(prop);
-  if (!editable(k)) { say({ text: `${label(k)} can't be changed by dragging`, undo: () => {}, t: Date.now() }); return; }
+  if (!editable(k)) { say({ text: t("{prop} can't be changed by dragging", { prop: label(k) }), undo: () => {}, t: Date.now() }); return; }
   const before = rawOf(r, prop, ctx);
   const undo = () => { void writeValue(r.n, prop, before, spaces); say(null); };
   const cur = getValue(r.n, prop, ctx, r.props);
@@ -90,12 +91,12 @@ async function moveTo(r: Row, prop: string, from: string, to: string, ctx: Ctx, 
     const vals = cur.map(String);
     const next = swapValue(vals, from, to);
     await writeValue(r.n, prop, k === "tags" ? next.join(", ") : next.length ? `[${next.join(", ")}]` : null, spaces);
-    say({ text: moveMessage(prop, from, to, vals), undo, t: Date.now() });
+    say({ text: moveMessage(prop, from, to, vals), undo, t: Date.now(), undoable: true });
     return;
   }
   await writeValue(r.n, prop, to === NONE ? null : to, spaces);
-  const f = (x: string) => (x === NONE ? `no ${label(k).toLowerCase()}` : k === "status" && isStatus(x) ? STATUS_META[x].l : /^\d{4}-\d{2}-\d{2}$/.test(x) ? fmtShort(asTime(x)!) : x);
-  say({ text: `Moved from ${f(from)} to ${f(to)}`, undo, t: Date.now() });
+  const f = (x: string) => (x === NONE ? t("no {prop}", { prop: label(k).toLowerCase() }) : k === "status" && isStatus(x) ? t(STATUS_META[x].l) : /^\d{4}-\d{2}-\d{2}$/.test(x) ? fmtShort(asTime(x)!) : x);
+  say({ text: t("Moved from {from} to {to}", { from: f(from), to: f(to) }), undo, t: Date.now(), undoable: true });
 }
 
 // ------------------------------------------------------------------ pointer drag (mouse: move 5px; touch: long-press)
@@ -150,7 +151,7 @@ function useDragCards(onDrop: (id: string, from: string, to: string) => void, sc
   };
   const ghost = drag && (
     <div className="base-ghost" style={{ left: drag.x - drag.dx, top: drag.y - drag.dy, width: Math.min(drag.w, 320) }} dir="auto">
-      <span className="font-medium">{drag.title || "Untitled"}</span>{drag.meta}
+      <span className="font-medium">{drag.title || t("Untitled")}</span>{drag.meta}
     </div>
   );
   return { drag, start, ghost, wasDrag: () => dragged.current };
@@ -245,8 +246,8 @@ export function BaseView({ note }: { note: Note }) {
   const visible = rows.slice(0, shown);
   const groups = useMemo(() => (groupBy ? groupRows(rows, groupBy, ctx, { multi: view.groupMulti, allStatuses: view.type === "board" }) : null), [rows, groupBy, ctx, view.groupMulti, view.type]);
   const copies = useMemo(() => (groups ? copiesOf(groups) : new Map<string, string[]>()), [groups]);
-  const more = rows.length > shown && <div className="flex justify-center py-3"><button className="base-tool" onClick={() => setShown((s) => s + PAGE)}>Show {Math.min(PAGE, rows.length - shown)} more</button></div>;
-  const count = copies.size ? `${rows.length} notes · ${copies.size} shown in several groups` : `${total} note${total === 1 ? "" : "s"}${nFilter || search ? " · filtered" : ""}`;
+  const more = rows.length > shown && <div className="flex justify-center py-3"><button className="base-tool" onClick={() => setShown((s) => s + PAGE)}>{t("Show {n} more", { n: Math.min(PAGE, rows.length - shown) })}</button></div>;
+  const count = copies.size ? t("{n} notes · {copies} shown in several groups", { n: rows.length, copies: copies.size }) : nFilter || search ? t("{n} note · filtered|{n} notes · filtered", { n: total }) : t("{n} note|{n} notes", { n: total });
 
   // popover anchoring: below the clicked control, inside the view
   const open = (kind: PopKind, el?: HTMLElement | null) => {
@@ -263,10 +264,10 @@ export function BaseView({ note }: { note: Note }) {
   const newType = implied.type && isType(implied.type) ? implied.type : null;
   const tpl = useTemplateOffer(note, found);
   const tools: { k: PopKind; l: string; n?: number }[] = [
-    { k: "filter", l: "Filter", n: nFilter },
-    { k: "sort", l: "Sort", n: view.sort?.length ?? 0 },
-    ...(view.type !== "calendar" ? [{ k: "group" as const, l: groupBy ? `Group: ${label(groupBy.property).toLowerCase()}` : "Group" }] : []),
-    ...(wide ? [{ k: "props" as const, l: "Properties", n: order.length }] : []),
+    { k: "filter", l: t("Filter"), n: nFilter },
+    { k: "sort", l: t("Sort"), n: view.sort?.length ?? 0 },
+    ...(view.type !== "calendar" ? [{ k: "group" as const, l: groupBy ? t("Group: {prop}", { prop: label(groupBy.property).toLowerCase() }) : t("Group") }] : []),
+    ...(wide ? [{ k: "props" as const, l: t("Properties"), n: order.length }] : []),
   ];
 
   const popBody = (kind: PopKind) => {
@@ -277,24 +278,24 @@ export function BaseView({ note }: { note: Note }) {
       case "props": return <PropsEditor order={order} props={allProps} onChange={(o) => edit((_c, w) => { w.order = o; })} />;
       case "add": return (
         <div className="flex flex-col gap-0.5">
-          <span className="px-1 pb-1 font-semibold">Add a view</span>
-          {(["table", "board", "cards", "list", "calendar"] as ViewType[]).map((t) => (
-            <button key={t} className="base-menu-item" onClick={() => { setPop(null); edit((c) => { c.views.push({ ...newView(t), filters: view.filters }); }); pick(cfg.views.length); }}>
-              <Glyph name={VIEW_GLYPH[t]} size={15} />{VIEW_LABEL[t]}
+          <span className="px-1 pb-1 font-semibold">{t("Add a view")}</span>
+          {(["table", "board", "cards", "list", "calendar"] as ViewType[]).map((vt) => (
+            <button key={vt} className="base-menu-item" onClick={() => { setPop(null); edit((c) => { c.views.push({ ...newView(vt), filters: view.filters }); }); pick(cfg.views.length); }}>
+              <Glyph name={VIEW_GLYPH[vt]} size={15} />{t(VIEW_LABEL[vt])}
             </button>
           ))}
         </div>
       );
       case "view": return (
-        <ViewSettings key={idx} view={view} props={allProps} canDelete={cfg.views.length > 1} edit={edit} phone={!wide} onProps={() => setPop({ kind: "props", x: 16, y: 120 })} onSearch={() => setPop({ kind: "search", x: 0, y: 0 })} onNew={() => { setPop(null); void newNote(); }} newLabel={`New ${newType ?? "note"}`}
-          onDuplicate={() => { setPop(null); edit((c, w) => { c.views.splice(idx + 1, 0, { ...structuredClone(w), name: `${w.name} copy` }); }); pick(idx + 1); }}
+        <ViewSettings key={idx} view={view} props={allProps} canDelete={cfg.views.length > 1} edit={edit} phone={!wide} onProps={() => setPop({ kind: "props", x: 16, y: 120 })} onSearch={() => setPop({ kind: "search", x: 0, y: 0 })} onNew={() => { setPop(null); void newNote(); }} newLabel={newType ? t("New {type}", { type: newType }) : t("New note")}
+          onDuplicate={() => { setPop(null); edit((c, w) => { c.views.splice(idx + 1, 0, { ...structuredClone(w), name: t("{name} copy", { name: w.name }) }); }); pick(idx + 1); }}
           onDelete={() => { setPop(null); edit((c) => { c.views.splice(idx, 1); }); pick(Math.max(0, idx - 1)); }}
           onSource={() => { setPop(null); setUI({ mode: "edit" }); }} onDownload={download} />
       );
       case "search": return null;
     }
   };
-  const POP_TITLE: Record<PopKind, string> = { filter: "Filter", sort: "Sort", group: view.type === "board" ? "Board columns" : "Group", props: view.type === "table" ? "Columns" : "Properties", view: "View settings", add: "Add a view", search: "Search" };
+  const POP_TITLE: Record<PopKind, string> = { filter: t("Filter"), sort: t("Sort"), group: view.type === "board" ? t("Board columns") : t("Group"), props: view.type === "table" ? t("Columns") : t("Properties"), view: t("View settings"), add: t("Add a view"), search: t("Search") };
 
   return (
     <div ref={rootRef} className="base relative flex h-full min-h-0 flex-col">
@@ -302,50 +303,50 @@ export function BaseView({ note }: { note: Note }) {
         <div className="flex items-center gap-2.5">
           <ReaderBack phone={!wide} />
           <Glyph name="base" size={20} />
-          <span dir="auto" className={cx("min-w-0 flex-1 truncate font-[650] tracking-[-.02em]", wide ? "text-[20px]" : "text-[17px]")}>{note.title || "Untitled base"}</span>
-          {wide && <button className="base-primary" onClick={() => newNote()}>New {newType ?? "note"}</button>}
+          <span dir="auto" className={cx("min-w-0 flex-1 truncate font-[650] tracking-[-.02em]", wide ? "text-[20px]" : "text-[17px]")}>{note.title || t("Untitled base")}</span>
+          {wide && <button className="base-primary" onClick={() => newNote()}>{newType ? t("New {type}", { type: newType }) : t("New note")}</button>}
         </div>
         {/* views */}
         <div ref={tabsRef} className="flex items-end gap-3.5 overflow-x-auto whitespace-nowrap border-b border-line" style={{ scrollbarWidth: "none" }}>
           {cfg.views.map((w, i) => (
-            <button key={i} data-active={i === idx || undefined} data-pop-anchor={i === idx || undefined} onClick={(e) => (i === idx ? open("view", e.currentTarget) : pick(i))} title={i === idx ? "View settings" : w.name}
+            <button key={i} data-active={i === idx || undefined} data-pop-anchor={i === idx || undefined} onClick={(e) => (i === idx ? open("view", e.currentTarget) : pick(i))} title={i === idx ? t("View settings") : w.name}
               className={cx("base-vtab", i === idx && "is-on")}>
               <Glyph name={VIEW_GLYPH[w.type]} size={15} /><span dir="auto" className="max-w-[160px] truncate">{w.name}</span>
             </button>
           ))}
-          <button aria-label="Add view" title="Add view" data-pop-anchor onClick={(e) => open("add", e.currentTarget)} className="pb-2.5 text-muted hover:text-ink">+</button>
+          <button aria-label={t("Add view")} title={t("Add view")} data-pop-anchor onClick={(e) => open("add", e.currentTarget)} className="pb-2.5 text-muted hover:text-ink">+</button>
         </div>
         {/* toolbar */}
         <div className="flex flex-wrap items-center gap-1.5">
-          {tools.map((t) => (
-            <button key={t.k} data-pop-anchor onClick={(e) => open(t.k, e.currentTarget)} className={cx("base-tool", pop?.kind === t.k && "is-on")}>
-              {t.l}{t.n ? <span className="base-badge">{t.n}</span> : null}
+          {tools.map((tl) => (
+            <button key={tl.k} data-pop-anchor onClick={(e) => open(tl.k, e.currentTarget)} className={cx("base-tool", pop?.kind === tl.k && "is-on")}>
+              {tl.l}{tl.n ? <span className="base-badge tabular-nums">{fmtNum(tl.n)}</span> : null}
             </button>
           ))}
-          {wide && <button data-pop-anchor aria-label="View settings" onClick={(e) => open("view", e.currentTarget)} className={cx("base-tool", pop?.kind === "view" && "is-on")}>⋯</button>}
+          {wide && <button data-pop-anchor aria-label={t("View settings")} onClick={(e) => open("view", e.currentTarget)} className={cx("base-tool", pop?.kind === "view" && "is-on")}>⋯</button>}
           {pop?.kind === "search" || search ? (
             <label className="base-tool w-[180px] focus-within:border-accent">
               <Search size={13} className="shrink-0 text-muted" />
-              <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} onBlur={() => !search && setPop(null)} onKeyDown={(e) => e.key === "Escape" && (setSearch(""), setPop(null))} placeholder="Search" dir="auto" className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-muted" />
-              {search && <button aria-label="Clear search" onClick={() => setSearch("")}><X size={12} /></button>}
+              <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} onBlur={() => !search && setPop(null)} onKeyDown={(e) => e.key === "Escape" && (setSearch(""), setPop(null))} placeholder={t("Search")} dir="auto" className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-muted" />
+              {search && <button aria-label={t("Clear search")} onClick={() => setSearch("")}><X size={12} /></button>}
             </label>
-          ) : wide && <button aria-label="Search" title="Search" onClick={() => setPop({ kind: "search", x: 0, y: 0 })} className="base-tool px-2 text-muted"><Search size={13} /></button>}
+          ) : wide && <button aria-label={t("Search")} title={t("Search")} onClick={() => setPop({ kind: "search", x: 0, y: 0 })} className="base-tool px-2 text-muted"><Search size={13} /></button>}
           <span className="flex-1" />
           {view.type === "calendar" && (
             <span className="flex items-center gap-1 text-[12.5px]">
-              <span className="me-1 font-semibold">{month.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</span>
-              <button aria-label="Previous month" className="base-icon rtl:rotate-180" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft size={15} /></button>
-              <button className="base-icon w-auto px-1.5 text-[12px]" onClick={() => { const d = new Date(); setMonth(new Date(d.getFullYear(), d.getMonth(), 1)); }}>Today</button>
-              <button aria-label="Next month" className="base-icon rtl:rotate-180" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight size={15} /></button>
+              <span className="me-1 font-semibold">{fmtDay(month, { month: "long", year: "numeric" })}</span>
+              <button aria-label={t("Previous month")} className="base-icon rtl:rotate-180" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft size={15} /></button>
+              <button className="base-icon w-auto px-1.5 text-[12px]" onClick={() => { const d = new Date(); setMonth(new Date(d.getFullYear(), d.getMonth(), 1)); }}>{t("Today")}</button>
+              <button aria-label={t("Next month")} className="base-icon rtl:rotate-180" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight size={15} /></button>
             </span>
           )}
-          <span className="text-[12px] text-muted" title={view.limit && total > rows.length ? `Limited to ${view.limit}` : undefined}>{count}</span>
+          <span className="text-[12px] text-muted" title={view.limit && total > rows.length ? t("Limited to {n}", { n: view.limit }) : undefined}>{count}</span>
         </div>
       </div>
 
       {(error || !found) && !tpl.show && (
         <div className={cx("shrink-0 pt-2 text-[12px]", wide ? "px-8" : "px-4", error ? "text-bad" : "text-muted")} dir="auto">
-          {error ? `Couldn't read the base definition: ${error}` : "No ```base block yet: showing every note. Change a view here or use Edit to write the YAML."}
+          {error ? t("Couldn't read the base definition: {error}", { error }) : t("No ```base block yet: showing every note. Change a view here or use Edit to write the YAML.")}
         </div>
       )}
 
@@ -362,8 +363,8 @@ export function BaseView({ note }: { note: Note }) {
           <GalleryView rows={visible} groups={groups} by={groupBy} cols={cols} ctx={ctx} colorOf={colorOf} wide={wide} more={more} />
         )}
         {/* Lumen 21 empty state: one glyph, one line, one action (clears the search, else this view's filters, else the base-wide ones) */}
-        {!rows.length && !tpl.show && <EmptyState glyph="base" text={search ? `No notes match “${search}”.` : "No notes match this view."}
-          action={search || nFilter ? { label: search ? "Clear search" : "Clear filters", onClick: () => { if (search) { setSearch(""); return; } edit((c, w) => { if (filterCount(w.filters)) w.filters = undefined; else c.filters = undefined; }); } } : undefined} />}
+        {!rows.length && !tpl.show && <EmptyState glyph="base" text={search ? t("No notes match “{q}”.", { q: search }) : t("No notes match this view.")}
+          action={search || nFilter ? { label: search ? t("Clear search") : t("Clear filters"), onClick: () => { if (search) { setSearch(""); return; } edit((c, w) => { if (filterCount(w.filters)) w.filters = undefined; else c.filters = undefined; }); } } : undefined} />}
       </div>
 
       {pop && pop.kind !== "search" && (wide ? (
@@ -375,7 +376,7 @@ export function BaseView({ note }: { note: Note }) {
       {moved && (
         <div role="status" className="base-toast">
           <span dir="auto">{moved.text.split(/(#[^\s,]+)/).map((s, i) => (i % 2 ? <b key={i}>{s}</b> : s))}</span>
-          {moved.text.startsWith("Moved") || moved.text.startsWith("Removed") ? <button onClick={moved.undo}>Undo</button> : null}
+          {moved.undoable ? <button onClick={moved.undo}>{t("Undo")}</button> : null}
         </div>
       )}
     </div>
@@ -396,24 +397,24 @@ function useTemplateOffer(note: Note, found: boolean) {
 export function TemplatePicker({ note, onCancel }: { note: Note; onCancel: () => void }) {
   const [sel, setSel] = useState<BaseTemplate>(BASE_TEMPLATES[0]);
   const create = () => {
-    const title = !note.title || /^new base$/i.test(note.title) || note.title === "Untitled" ? sel.title : note.title;
+    const title = !note.title || /^new base$/i.test(note.title) || note.title === "Untitled" || note.title === t("New base") || note.title === t("Untitled") ? t(sel.title) : note.title;
     void updateNote(note.id, { title, type: sel.type, body: templateBody(sel) });
     onCancel();
   };
   return (
     <div className="flex justify-center overflow-y-auto px-4 py-6">
       <div className="base-tpl">
-        <div className="px-5 pb-1.5 pt-[18px] text-[17px] font-[650]">New from template</div>
+        <div className="px-5 pb-1.5 pt-[18px] text-[17px] font-[650]">{t("New from template")}</div>
         <div className="grid grid-cols-1 gap-2.5 px-5 py-2.5 sm:grid-cols-3">
-          {BASE_TEMPLATES.map((t) => (
-            <button key={t.id} aria-pressed={sel.id === t.id} onClick={() => setSel(t)} onDoubleClick={create} className={cx("base-tpl-card", sel.id === t.id && "is-on")}>
-              <Glyph name={t.glyph} size={18} /><span className="font-semibold">{t.name}</span><span className="text-[12px] leading-[17px] text-muted">{t.desc}</span>
+          {BASE_TEMPLATES.map((tp) => (
+            <button key={tp.id} aria-pressed={sel.id === tp.id} onClick={() => setSel(tp)} onDoubleClick={create} className={cx("base-tpl-card", sel.id === tp.id && "is-on")}>
+              <Glyph name={tp.glyph} size={18} /><span className="font-semibold">{t(tp.name)}</span><span className="text-[12px] leading-[17px] text-muted">{t(tp.desc)}</span>
             </button>
           ))}
         </div>
         <div className="flex justify-end gap-2 px-5 py-3.5">
-          <button className="h-[34px] px-3.5 text-muted hover:text-ink" onClick={onCancel}>Cancel</button>
-          <button className="base-primary h-[34px] rounded-[10px] px-4" onClick={create}>{sel.type === "dashboard" ? "Create dashboard" : "Create base"}</button>
+          <button className="h-[34px] px-3.5 text-muted hover:text-ink" onClick={onCancel}>{t("Cancel")}</button>
+          <button className="base-primary h-[34px] rounded-[10px] px-4" onClick={create}>{sel.type === "dashboard" ? t("Create dashboard") : t("Create base")}</button>
         </div>
       </div>
     </div>
@@ -426,7 +427,7 @@ function StatusPill({ s, ring }: { s: string | null; ring?: boolean }) {
   const m = isStatus(s) ? STATUS_META[s] : { g: "s-todo", c: "var(--muted)", l: s };
   return (
     <span className="base-pill" style={{ color: m.c, background: `color-mix(in srgb, ${m.c} 14%, transparent)`, boxShadow: ring ? "0 0 0 2px var(--accent)" : undefined }}>
-      <Glyph name={m.g} size={12} />{m.l}
+      <Glyph name={m.g} size={12} />{isStatus(s) ? t(m.l) : m.l}
     </span>
   );
 }
@@ -441,8 +442,8 @@ function ValueView({ v, p, colorOf }: { v: Val; p: string; colorOf: (s: string) 
   }
   if (Array.isArray(v)) return <span className="inline-flex max-w-full gap-1 overflow-hidden">{v.map((t) => <span key={t} dir="auto" className="base-chip">{k === "tags" ? "#" : ""}{t}</span>)}</span>;
   if (typeof v === "string" && /^https?:\/\//.test(v)) return <a href={v} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-link hover:underline">{v.replace(/^https?:\/\/(www\.)?/, "").slice(0, 40)}</a>;
-  const t = isDateProp(p, v) ? asTime(v as string | number) : null;
-  return <span dir="auto" className={cx(t !== null || typeof v === "number" ? "text-muted" : "")}>{t !== null ? fmtShort(t) : show(v, p)}</span>;
+  const ts = isDateProp(p, v) ? asTime(v as string | number) : null;
+  return <span dir="auto" className={cx(ts !== null || typeof v === "number" ? "text-muted" : "", typeof v === "number" && "tabular-nums")}>{ts !== null ? fmtShort(ts) : typeof v === "number" && canon(p) !== "created" && canon(p) !== "updated" ? fmtNum(v) : show(v, p)}</span>;
 }
 
 /** Status menu (R4-18B): glyph rows, check on the current one. */
@@ -465,7 +466,7 @@ function StatusMenu({ cur, at, onPick, onClose }: { cur: Status | null; at: DOMR
         return (
           <button key={s ?? "none"} role="menuitemradio" aria-checked={cur === s} onClick={() => { onPick(s); onClose(); }} className={cx("base-menu-item", cur === s && "is-on")}>
             {m ? <Glyph name={m.g} size={14} color={m.c} /> : <span className="w-3.5" />}
-            <span className={cx("flex-1", !m && "text-muted")}>{m ? m.l : "No status"}</span>
+            <span className={cx("flex-1", !m && "text-muted")}>{m ? t(m.l) : t("No status")}</span>
             {cur === s && <span className="text-accent">✓</span>}
           </button>
         );
@@ -482,8 +483,8 @@ function ChipInput({ value, onCommit, prefix = "" }: { value: string[]; onCommit
   const commit = (vs = vals) => { if (done.current) return; done.current = true; const d = draft.trim().replace(/^#/, ""); onCommit(d ? [...vs, d] : vs); };
   return (
     <div className="base-chips" onClick={(e) => { e.stopPropagation(); (e.currentTarget.querySelector("input") as HTMLInputElement)?.focus(); }}>
-      {vals.map((t) => <span key={t} className="base-chip">{prefix}{t}<button aria-label={`Remove ${t}`} onMouseDown={(e) => e.preventDefault()} onClick={() => setVals(vals.filter((x) => x !== t))}>×</button></span>)}
-      <input autoFocus value={draft} dir="auto" aria-label="Add value" onChange={(e) => { const s = e.target.value; if (s.endsWith(",")) { const d = s.slice(0, -1).trim().replace(/^#/, ""); if (d && !vals.includes(d)) setVals([...vals, d]); setDraft(""); } else setDraft(s); }}
+      {vals.map((val) => <span key={val} className="base-chip">{prefix}{val}<button aria-label={t("Remove {value}", { value: val })} onMouseDown={(e) => e.preventDefault()} onClick={() => setVals(vals.filter((x) => x !== val))}>×</button></span>)}
+      <input autoFocus value={draft} dir="auto" aria-label={t("Add value")} onChange={(e) => { const s = e.target.value; if (s.endsWith(",")) { const d = s.slice(0, -1).trim().replace(/^#/, ""); if (d && !vals.includes(d)) setVals([...vals, d]); setDraft(""); } else setDraft(s); }}
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); const d = draft.trim().replace(/^#/, ""); if (d) { if (!vals.includes(d)) setVals([...vals, d]); setDraft(""); } else commit(); } else if (e.key === "Backspace" && !draft && vals.length) setVals(vals.slice(0, -1)); else if (e.key === "Escape") { done.current = true; onCommit(value); } }}
         onBlur={() => commit()} className="min-w-[60px] flex-1 bg-transparent outline-none" />
     </div>
@@ -500,14 +501,14 @@ function CellEdit({ r, p, ctx, spaces, colorOf }: { r: Row; p: string; ctx: Ctx;
   const sel = "h-7 w-full cursor-pointer appearance-none rounded-[6px] bg-transparent px-1 text-[13px] outline-none hover:bg-surface-2 focus:bg-surface-2";
   if (k === "status") return (
     <div className="relative">
-      <button className="flex h-7 items-center rounded-[6px] px-0.5" aria-haspopup="menu" aria-expanded={editing} aria-label="Status" onClick={(e) => { e.stopPropagation(); setAt(e.currentTarget.getBoundingClientRect()); setEditing(!editing); }}><StatusPill s={r.n.status} ring={editing} /></button>
+      <button className="flex h-7 items-center rounded-[6px] px-0.5" aria-haspopup="menu" aria-expanded={editing} aria-label={t("Status")} onClick={(e) => { e.stopPropagation(); setAt(e.currentTarget.getBoundingClientRect()); setEditing(!editing); }}><StatusPill s={r.n.status} ring={editing} /></button>
       {editing && at && <StatusMenu cur={r.n.status} at={at} onPick={(s) => writeValue(r.n, "status", s, spaces)} onClose={() => setEditing(false)} />}
     </div>
   );
-  if (k === "type") return <select aria-label="Type" value={r.n.type} onChange={(e) => writeValue(r.n, "type", e.target.value, spaces)} className={sel}>{NOTE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select>;
+  if (k === "type") return <select aria-label={t("Type")} value={r.n.type} onChange={(e) => writeValue(r.n, "type", e.target.value, spaces)} className={sel}>{NOTE_TYPES.map((ty) => <option key={ty} value={ty}>{ty}</option>)}</select>;
   if (k === "space") return (
     <div className="relative flex items-center gap-1.5 ps-1"><Bar c={colorOf(ctx.spaceName(r.n.spaceId))} />
-      <select aria-label="Space" value={r.n.spaceId} onChange={(e) => writeValue(r.n, "space", e.target.value, spaces)} className={sel} dir="auto">{spaces.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}{!spaces.some((s) => s.id === r.n.spaceId) && <option value={r.n.spaceId}>{ctx.spaceName(r.n.spaceId)}</option>}</select>
+      <select aria-label={t("Space")} value={r.n.spaceId} onChange={(e) => writeValue(r.n, "space", e.target.value, spaces)} className={sel} dir="auto">{spaces.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}{!spaces.some((s) => s.id === r.n.spaceId) && <option value={r.n.spaceId}>{ctx.spaceName(r.n.spaceId)}</option>}</select>
     </div>
   );
   if (!editable(k)) return <ValueView v={v} p={p} colorOf={colorOf} />;
@@ -560,8 +561,8 @@ function TableView({ rows, cols, view, ctx, spaces, colorOf, groups, copies, wid
     const tag = (k: string) => (by && canon(by.property) === "tags" ? "#" : "") + (gLabel.get(k) ?? k);
     return (
       <tr key={gk + r.n.id} onClick={() => openNote(r.n.id)} className="base-row">
-        <td className="base-sticky"><span className="flex items-center gap-2"><Glyph name={r.n.type} size={14} color="var(--muted)" /><span dir="auto" className="truncate font-medium">{r.n.title || "Untitled"}</span>
-          {others.length > 0 && <span className="base-also" title={`Also in ${others.map(tag).join(", ")}`}>also in {others.length} group{others.length === 1 ? "" : "s"}</span>}</span></td>
+        <td className="base-sticky"><span className="flex items-center gap-2"><Glyph name={r.n.type} size={14} color="var(--muted)" /><span dir="auto" className="truncate font-medium">{r.n.title || t("Untitled")}</span>
+          {others.length > 0 && <span className="base-also" title={t("Also in {list}", { list: others.map(tag).join(t(", ")) })}>{t("also in {n} group|also in {n} groups", { n: others.length })}</span>}</span></td>
         {cols.map((p) => (
           <td key={p} onClick={editable(p) ? (e) => e.stopPropagation() : undefined} className={cx(canon(p) === "cards" && "text-end")}>
             {editable(p) ? <CellEdit r={r} p={p} ctx={ctx} spaces={spaces} colorOf={colorOf} /> : <span className="block truncate"><ValueView v={getValue(r.n, p, ctx, r.props)} p={p} colorOf={colorOf} /></span>}
@@ -578,7 +579,7 @@ function TableView({ rows, cols, view, ctx, spaces, colorOf, groups, copies, wid
           <thead>
             <tr>
               {all.map((p, i) => (
-                <th key={p} className={cx(i === 0 && "base-sticky", sortOf(p) && "is-sorted", canon(p) === "cards" && "text-end")} onClick={() => clickHead(p)} title={`Sort by ${label(p)}`}>
+                <th key={p} className={cx(i === 0 && "base-sticky", sortOf(p) && "is-sorted", canon(p) === "cards" && "text-end")} onClick={() => clickHead(p)} title={t("Sort by {prop}", { prop: label(p) })}>
                   <span className={cx("inline-flex items-center gap-1", canon(p) === "cards" && "justify-end")}><span className="truncate">{label(p)}</span>{sortOf(p) === "ASC" ? <ArrowUp size={12} /> : sortOf(p) === "DESC" ? <ArrowDown size={12} /> : null}</span>
                   <span className="base-resize" onPointerDown={(e) => resize(e, p)} onClick={(e) => e.stopPropagation()} aria-hidden />
                 </th>
@@ -588,7 +589,7 @@ function TableView({ rows, cols, view, ctx, spaces, colorOf, groups, copies, wid
           <tbody>
             {gs.map((g) => [
               groups && by && (
-                <tr key={"g" + g.key} className="base-group"><td className="base-sticky" colSpan={1}><span className="flex items-center gap-2">{canon(by.property) === "status" && g.key !== NONE ? <StatusPill s={g.key} /> : <span dir="auto" className="font-semibold">{g.label}</span>}<span className="text-muted">{g.rows.length}</span></span></td><td colSpan={cols.length} /></tr>
+                <tr key={"g" + g.key} className="base-group"><td className="base-sticky" colSpan={1}><span className="flex items-center gap-2">{canon(by.property) === "status" && g.key !== NONE ? <StatusPill s={g.key} /> : <span dir="auto" className="font-semibold">{g.label}</span>}<span className="text-muted tabular-nums">{fmtNum(g.rows.length)}</span></span></td><td colSpan={cols.length} /></tr>
               ),
               ...g.rows.map((r) => body(r, g.key)),
             ])}
@@ -626,10 +627,10 @@ function BoardView({ groups, copies, cols, groupBy, ctx, spaces, colorOf, wide, 
             <section key={g.key} data-drop={g.key} className={cx("base-col", over && "is-over")}>
               <header className="group/h flex items-center gap-1.5 p-1 font-semibold">
                 {m ? <Glyph name={m.g} size={15} color={m.c} /> : g.key !== NONE ? <Bar c={colorOf(g.key)} /> : null}
-                <span dir="auto" className="truncate">{m ? m.l : name(g.key)}</span>
-                <span className="font-normal text-muted">{g.rows.length}</span>
+                <span dir="auto" className="truncate">{m ? t(m.l) : name(g.key)}</span>
+                <span className="font-normal text-muted tabular-nums">{fmtNum(g.rows.length)}</span>
                 <span className="flex-1" />
-                <button aria-label={`New note in ${g.label}`} title="New note here" onClick={() => onNew(g.key)} className="base-icon opacity-0 group-hover/h:opacity-100 focus:opacity-100 max-md:opacity-100">+</button>
+                <button aria-label={t("New note in {group}", { group: g.label })} title={t("New note here")} onClick={() => onNew(g.key)} className="base-icon opacity-0 group-hover/h:opacity-100 focus:opacity-100 max-md:opacity-100">+</button>
               </header>
               <div className="flex min-h-[60px] flex-1 flex-col gap-2 overflow-y-auto">
                 {g.rows.slice(0, 300).map((r) => {
@@ -641,20 +642,20 @@ function BoardView({ groups, copies, cols, groupBy, ctx, spaces, colorOf, wide, 
                       {meta.cs && <><Bar c={meta.color} h={12} /><span dir="auto" className="truncate">{meta.cs}</span></>}
                       {meta.rest.map(([p, v]) => <span key={p} className="truncate" title={label(p)}>{Array.isArray(v) ? v.map((x) => (canon(p) === "tags" ? "#" : "") + x).join(" ") : isDateProp(p, v) && asTime(v as string) !== null ? fmtShort(asTime(v as string)!) : String(v)}</span>)}
                       <span className="flex-1" />
-                      {also.length > 0 && <span className="base-also-card" title={`Also in ${also.map(name).join(", ")}`}>also in {also.length > 1 ? `${also.length} groups` : name(also[0])}</span>}
+                      {also.length > 0 && <span className="base-also-card" title={t("Also in {list}", { list: also.map(name).join(t(", ")) })}>{also.length > 1 ? t("also in {n} group|also in {n} groups", { n: also.length }) : t("also in {group}", { group: name(also[0]) })}</span>}
                     </div>
                   );
                   return (
                     <article key={r.n.id} onPointerDown={(e) => start(e, r.n.id, g.key, r.n.title, metaRow)} onClick={() => !wasDrag() && openNote(r.n.id)}
                       onKeyDown={(e) => { if (e.key === "Enter") openNote(r.n.id); }} tabIndex={0}
                       className={cx("base-card", drag?.id === r.n.id && drag.from === g.key && "is-ghost")}>
-                      <span dir="auto" className="font-medium">{r.n.title || "Untitled"}</span>
+                      <span dir="auto" className="font-medium">{r.n.title || t("Untitled")}</span>
                       {metaRow}
                     </article>
                   );
                 })}
                 {over && <span className="base-slot" aria-hidden />}
-                {g.rows.length > 300 && <div className="px-1 text-[12px] text-muted">+{g.rows.length - 300} more</div>}
+                {g.rows.length > 300 && <div className="px-1 text-[12px] text-muted">{t("+{n} more", { n: g.rows.length - 300 })}</div>}
               </div>
             </section>
           );
@@ -679,7 +680,7 @@ function CoverImg({ src }: { src: string }) {
 const coverOf = (r: Row) => noteDerived("baseCover", r.n, (n) => Object.entries(r.props).find(([k, val]) => /^(cover|image|banner|thumbnail)$/i.test(k) && COVER.test(val))?.[1] ?? (isMd(n) ? IMG.exec(n.body.slice(0, 20000))?.[1] ?? "" : ""));
 function GroupHead({ g, by }: { g: RowGroup; by: SortRule }) {
   const m = canon(by.property) === "status" && isStatus(g.key) ? STATUS_META[g.key] : null;
-  return <div className="base-ghead">{m ? m.l : (canon(by.property) === "tags" && g.key !== NONE ? "#" : "") + g.label}<span className="ms-1.5 font-normal">{g.rows.length}</span></div>;
+  return <div className="base-ghead">{m ? t(m.l) : (canon(by.property) === "tags" && g.key !== NONE ? "#" : "") + g.label}<span className="ms-1.5 font-normal tabular-nums">{fmtNum(g.rows.length)}</span></div>;
 }
 function useGroups(rows: Row[], groups: RowGroup[] | null) {
   const ids = new Set(rows.map((r) => r.n.id));
@@ -700,11 +701,11 @@ function GalleryView({ rows, groups, by, cols, ctx, colorOf, wide, more }: { row
               const m = r.n.status ? STATUS_META[r.n.status] : null;
               return (
                 <button key={r.n.id} onClick={() => openNote(r.n.id)} className="base-gcard">
-                  {cover ? <CoverImg src={cover} /> : <div className="base-cover"><span>cover</span></div>}
+                  {cover ? <CoverImg src={cover} /> : <div className="base-cover"><span>{t("cover")}</span></div>}
                   <div className="flex flex-col gap-1.5 px-3 py-2.5">
-                    <span dir="auto" className="line-clamp-2 font-semibold">{r.n.title || "Untitled"}</span>
+                    <span dir="auto" className="line-clamp-2 font-semibold">{r.n.title || t("Untitled")}</span>
                     <span className="flex min-w-0 items-center gap-1.5 text-[12px]" style={{ color: m?.c ?? "var(--muted)" }}>
-                      {showStatus && m && <><Glyph name={m.g} size={12} />{m.l}</>}
+                      {showStatus && m && <><Glyph name={m.g} size={12} />{t(m.l)}</>}
                       {meta.cs && <span dir="auto" className="truncate text-muted">{showStatus && m ? "· " : ""}{meta.cs}</span>}
                     </span>
                   </div>
@@ -735,7 +736,7 @@ function ListView({ rows, groups, cols, view, ctx, colorOf, wide, more }: { rows
             return (
               <button key={r.n.id} onClick={() => openNote(r.n.id)} className="base-lrow">
                 {m ? <Glyph name={m.g} size={15} color={m.c} /> : <Glyph name={r.n.type} size={15} color="var(--muted)" />}
-                <span dir="auto" className="min-w-0 flex-1 truncate font-medium">{r.n.title || "Untitled"}</span>
+                <span dir="auto" className="min-w-0 flex-1 truncate font-medium">{r.n.title || t("Untitled")}</span>
                 {meta.cs && <span dir="auto" className="truncate text-[12px] text-muted">{meta.cs}</span>}
                 {dateP && <span className="w-14 shrink-0 text-end text-[12px] text-muted">{dt !== null ? fmtShort(dt) : ""}</span>}
               </button>
@@ -777,35 +778,35 @@ function CalendarView({ rows, view, cols, ctx, spaces, colorOf, wide, month, say
   const fit = wide ? 3 : 0;
   return (
     <div ref={scroller} className={cx("flex h-full flex-col overflow-y-auto", wide ? "px-8 py-3" : "px-4 py-3")}>
-      <div className="grid grid-cols-7 pb-1.5 text-[12px] text-muted">{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <span key={d}>{wide ? d : d.slice(0, 1)}</span>)}</div>
+      <div className="grid grid-cols-7 pb-1.5 text-[12px] text-muted">{days.slice(0, 7).map((d) => <span key={d.getDay()}>{fmtDay(d, { weekday: wide ? "short" : "narrow" })}</span>)}</div>
       <div className="base-cal" style={{ gridTemplateRows: `repeat(${weeks}, minmax(${wide ? 104 : 56}px, 1fr))` }}>
         {days.map((d) => {
           const k = ymd(d), list = byDay.m.get(k) ?? [], out = d.getMonth() !== month.getMonth();
           return (
             <div key={k} data-drop={k} onClick={() => setSel(sel === k ? null : k)} className={cx("base-day", out && "is-out", sel === k && "is-sel", drag?.over === k && "is-over")}>
-              <span className={cx("text-[12px]", k === today ? "font-bold text-accent" : "text-muted")}>{out ? "" : d.getDate()}</span>
+              <span className={cx("text-[12px] tabular-nums", k === today ? "font-bold text-accent" : "text-muted")}>{out ? "" : fmtNum(d.getDate())}</span>
               {fit ? (
                 <>
                   {list.slice(0, fit).map((r) => (
                     <span key={r.n.id} onPointerDown={(e) => start(e, r.n.id, k, r.n.title)} onClick={(e) => { e.stopPropagation(); if (!wasDrag()) openNote(r.n.id); }} dir="auto"
-                      className="base-cal-item" style={{ borderInlineStartColor: colorFor(r) }}>{r.n.title || "Untitled"}</span>
+                      className="base-cal-item" style={{ borderInlineStartColor: colorFor(r) }}>{r.n.title || t("Untitled")}</span>
                   ))}
-                  {list.length > fit && <span className="px-1 text-[11px] text-muted">+{list.length - fit} more</span>}
+                  {list.length > fit && <span className="px-1 text-[11px] text-muted">{t("+{n} more", { n: list.length - fit })}</span>}
                 </>
               ) : list.length > 0 && <span className="flex flex-wrap gap-0.5">{list.slice(0, 4).map((r) => <span key={r.n.id} className="size-1.5 rounded-full" style={{ background: colorFor(r) }} />)}</span>}
             </div>
           );
         })}
       </div>
-      {byDay.none > 0 && <div className="mt-2 text-[12px] text-muted">{byDay.none} note{byDay.none === 1 ? "" : "s"} without a {label(prop).toLowerCase()}</div>}
+      {byDay.none > 0 && <div className="mt-2 text-[12px] text-muted">{t("{n} note without a {prop}|{n} notes without a {prop}", { n: byDay.none, prop: label(prop).toLowerCase() })}</div>}
       {sel && (
         <div className="mt-3 shrink-0 rounded-[12px] border border-line bg-surface">
-          <div className="border-b border-line px-3 py-2 text-[13px] font-semibold">{fmtDate(asTime(sel)!)} <span className="font-normal text-muted">{selRows.length}</span></div>
+          <div className="border-b border-line px-3 py-2 text-[13px] font-semibold">{fmtDate(asTime(sel)!)} <span className="font-normal text-muted tabular-nums">{fmtNum(selRows.length)}</span></div>
           {selRows.length ? selRows.map((r) => (
             <button key={r.n.id} onClick={() => openNote(r.n.id)} className="flex w-full items-center gap-2 px-3 py-2.5 text-start hover:bg-surface-2">
-              <Bar c={colorFor(r)} /><span dir="auto" className="truncate text-[13.5px]">{r.n.title || "Untitled"}</span>
+              <Bar c={colorFor(r)} /><span dir="auto" className="truncate text-[13.5px]">{r.n.title || t("Untitled")}</span>
             </button>
-          )) : <div className="px-3 py-3 text-[12.5px] text-muted">Nothing on this day.</div>}
+          )) : <div className="px-3 py-3 text-[12.5px] text-muted">{t("Nothing on this day.")}</div>}
         </div>
       )}
       {ghost}
@@ -817,26 +818,26 @@ function CalendarView({ rows, view, cols, ctx, spaces, colorOf, wide, month, say
 function PropSelect({ value, props, onChange, allowNone, className }: { value: string; props: string[]; onChange: (p: string) => void; allowNone?: boolean; className?: string }) {
   const has = props.some((p) => canon(p) === canon(value));
   return (
-    <select aria-label="Property" value={has ? props.find((p) => canon(p) === canon(value)) : value} onChange={(e) => onChange(e.target.value ? yamlName(canon(e.target.value)) : "")} className={cx(ctl, "cursor-pointer", className)}>
-      {allowNone && <option value="">None</option>}
+    <select aria-label={t("Property")} value={has ? props.find((p) => canon(p) === canon(value)) : value} onChange={(e) => onChange(e.target.value ? yamlName(canon(e.target.value)) : "")} className={cx(ctl, "cursor-pointer", className)}>
+      {allowNone && <option value="">{t("None")}</option>}
       {!has && value && <option value={value}>{canon(value)}</option>}
       {props.map((p) => <option key={p} value={p}>{canon(p) === "title" ? "title" : canon(p)}</option>)}
     </select>
   );
 }
 const DirButton = ({ dir, onClick }: { dir: "ASC" | "DESC"; onClick: () => void }) => (
-  <button onClick={onClick} className={cx(ctl, "flex shrink-0 items-center gap-1 hover:border-accent")}>{dir === "ASC" ? <><ArrowUp size={13} />Ascending</> : <><ArrowDown size={13} />Descending</>}</button>
+  <button onClick={onClick} className={cx(ctl, "flex shrink-0 items-center gap-1 hover:border-accent")}>{dir === "ASC" ? <><ArrowUp size={13} />{t("Ascending")}</> : <><ArrowDown size={13} />{t("Descending")}</>}</button>
 );
 const Remove = ({ onClick, l }: { onClick: () => void; l: string }) => <button aria-label={l} onClick={onClick} className="px-1 text-muted hover:text-bad">×</button>;
 
 const OPS: { id: string; l: string; op: Cond["op"] | "any"; neg: boolean; noValue?: boolean }[] = [
-  { id: "is", l: "is", op: "==", neg: false }, { id: "any", l: "is any of", op: "any", neg: false }, { id: "isnt", l: "is not", op: "!=", neg: false },
-  { id: "has", l: "contains", op: "contains", neg: false }, { id: "hasnt", l: "does not contain", op: "contains", neg: true },
-  { id: "starts", l: "starts with", op: "startsWith", neg: false },
+  { id: "is", l: tk("is"), op: "==", neg: false }, { id: "any", l: tk("is any of"), op: "any", neg: false }, { id: "isnt", l: tk("is not"), op: "!=", neg: false },
+  { id: "has", l: tk("contains"), op: "contains", neg: false }, { id: "hasnt", l: tk("does not contain"), op: "contains", neg: true },
+  { id: "starts", l: tk("starts with"), op: "startsWith", neg: false },
   { id: "gt", l: ">", op: ">", neg: false }, { id: "gte", l: "≥", op: ">=", neg: false }, { id: "lt", l: "<", op: "<", neg: false }, { id: "lte", l: "≤", op: "<=", neg: false },
-  { id: "empty", l: "is empty", op: "isEmpty", neg: false, noValue: true }, { id: "set", l: "is not empty", op: "isEmpty", neg: true, noValue: true },
-  { id: "tag", l: "has tag", op: "hasTag", neg: false }, { id: "notag", l: "does not have tag", op: "hasTag", neg: true },
-  { id: "folder", l: "in folder", op: "inFolder", neg: false },
+  { id: "empty", l: tk("is empty"), op: "isEmpty", neg: false, noValue: true }, { id: "set", l: tk("is not empty"), op: "isEmpty", neg: true, noValue: true },
+  { id: "tag", l: tk("has tag"), op: "hasTag", neg: false }, { id: "notag", l: tk("does not have tag"), op: "hasTag", neg: true },
+  { id: "folder", l: tk("in folder"), op: "inFolder", neg: false },
 ];
 const opId = (c: Cond) => (c.op === "==" && c.neg ? "isnt" : c.op === "!=" && c.neg ? "is" : OPS.find((o) => o.op === c.op && o.neg === c.neg)?.id ?? "is");
 
@@ -852,40 +853,40 @@ function FilterPanel({ cfg, view, props, notes, ctx, edit }: { cfg: BaseConfig; 
     return [...s].sort();
   };
   const upd = (i: number, r: FilterRow | null) => set({ ...fr, rows: r ? fr.rows.map((x, j) => (j === i ? r : x)) : fr.rows.filter((_, j) => j !== i) });
-  const join = (i: number, mode: "and" | "or", toggle: () => void) => i === 0 ? <span className="w-11 shrink-0 text-[12px] text-muted">Where</span> : <button className="w-11 shrink-0 text-start text-[12px] text-muted hover:text-ink" title="Switch between and / or" onClick={toggle}>{mode}</button>;
+  const join = (i: number, mode: "and" | "or", toggle: () => void) => i === 0 ? <span className="w-11 shrink-0 text-[12px] text-muted">{t("Where")}</span> : <button className="w-11 shrink-0 text-start text-[12px] text-muted hover:text-ink" title={t("Switch between and / or")} onClick={toggle}>{mode === "and" ? t("and") : t("or")}</button>;
   const toggleTop = () => set({ ...fr, mode: fr.mode === "and" ? "or" : "and" });
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <span className="flex-1 font-semibold max-md:invisible">Filter</span>{/* phones: the sheet already says "Filter" */}
+        <span className="flex-1 font-semibold max-md:invisible">{t("Filter")}</span>{/* phones: the sheet already says "Filter" */}
         <span className="flex rounded-[7px] border border-line p-0.5 text-[11.5px]">
-          {(["view", "all"] as const).map((s) => <button key={s} onClick={() => setScope(s)} className={cx("rounded-[5px] px-2 leading-5", scope === s ? "bg-bg text-ink" : "text-muted")}>{s === "view" ? "This view" : "All views"}</button>)}
+          {(["view", "all"] as const).map((s) => <button key={s} onClick={() => setScope(s)} className={cx("rounded-[5px] px-2 leading-5", scope === s ? "bg-bg text-ink" : "text-muted")}>{s === "view" ? t("This view") : t("All views")}</button>)}
         </span>
       </div>
       {fr.rows.map((r, i) => {
-        if (r.kind === "raw") return <div key={i} className="flex items-center gap-1.5">{join(i, fr.mode, toggleTop)}<span className="min-w-0 flex-1 truncate rounded-[7px] bg-bg px-2.5 py-1.5 font-mono text-[12px] text-muted" title="Edit in the YAML source">{typeof r.node === "string" ? r.node : JSON.stringify(r.node)}</span><Remove l="Remove filter" onClick={() => upd(i, null)} /></div>;
+        if (r.kind === "raw") return <div key={i} className="flex items-center gap-1.5">{join(i, fr.mode, toggleTop)}<span className="min-w-0 flex-1 truncate rounded-[7px] bg-bg px-2.5 py-1.5 font-mono text-[12px] text-muted" title={t("Edit in the YAML source")} dir="ltr">{typeof r.node === "string" ? r.node : JSON.stringify(r.node)}</span><Remove l={t("Remove filter")} onClick={() => upd(i, null)} /></div>;
         if (r.kind === "group") return (
           <div key={i} className="flex items-start gap-1.5">
             {join(i, fr.mode, toggleTop)}
             <div className="flex min-w-0 flex-1 flex-col gap-1.5 rounded-[9px] border border-dashed border-line p-1.5">
-              <span className="text-[11.5px] text-muted">Any of</span>
+              <span className="text-[11.5px] text-muted">{t("Any of")}</span>
               {r.conds.map((c, j) => (
-                <CondRow key={j} c={c} lead={j === 0 ? <span className="w-6 shrink-0 text-[12px] text-muted" /> : <span className="w-6 shrink-0 text-[12px] text-muted">or</span>} props={props} values={values}
+                <CondRow key={j} c={c} lead={j === 0 ? <span className="w-6 shrink-0 text-[12px] text-muted" /> : <span className="w-6 shrink-0 text-[12px] text-muted">{t("or")}</span>} props={props} values={values}
                   onChange={(nc) => upd(i, { kind: "group", conds: nc && nc.kind === "cond" ? r.conds.map((x, k) => (k === j ? nc.c : x)) : r.conds.filter((_, k) => k !== j) })} />
               ))}
-              <button className="self-start text-[12px] text-muted hover:text-ink" onClick={() => upd(i, { kind: "group", conds: [...r.conds, { prop: "status", op: "==", neg: false, args: ["learning"] }] })}>+ Add condition</button>
+              <button className="self-start text-[12px] text-muted hover:text-ink" onClick={() => upd(i, { kind: "group", conds: [...r.conds, { prop: "status", op: "==", neg: false, args: ["learning"] }] })}>{t("+ Add condition")}</button>
             </div>
-            <Remove l="Remove group" onClick={() => upd(i, null)} />
+            <Remove l={t("Remove group")} onClick={() => upd(i, null)} />
           </div>
         );
         return <CondRow key={i} row={r} lead={join(i, fr.mode, toggleTop)} props={props} values={values} onChange={(nr) => upd(i, nr)} />;
       })}
-      {!fr.rows.length && <span className="text-[12.5px] text-muted">No filters: every note is shown.</span>}
+      {!fr.rows.length && <span className="text-[12.5px] text-muted">{t("No filters: every note is shown.")}</span>}
       <div className="flex flex-wrap items-center gap-2.5 pt-1 text-[12.5px] text-muted">
-        <button className="hover:text-ink" onClick={() => set({ ...fr, rows: [...fr.rows, { kind: "cond", c: { prop: "status", op: "==", neg: false, args: ["learning"] } }] })}>+ Add filter</button>
-        <button className="hover:text-ink" onClick={() => set({ ...fr, rows: [...fr.rows, { kind: "group", conds: [{ prop: "status", op: "==", neg: false, args: ["learning"] }, { prop: "status", op: "==", neg: false, args: ["review"] }] }] })}>+ Add group (any of)</button>
+        <button className="hover:text-ink" onClick={() => set({ ...fr, rows: [...fr.rows, { kind: "cond", c: { prop: "status", op: "==", neg: false, args: ["learning"] } }] })}>{t("+ Add filter")}</button>
+        <button className="hover:text-ink" onClick={() => set({ ...fr, rows: [...fr.rows, { kind: "group", conds: [{ prop: "status", op: "==", neg: false, args: ["learning"] }, { prop: "status", op: "==", neg: false, args: ["review"] }] }] })}>{t("+ Add group (any of)")}</button>
         <span className="flex-1" />
-        <span>Writes to the base YAML</span>
+        <span>{t("Writes to the base YAML")}</span>
       </div>
     </div>
   );
@@ -909,38 +910,38 @@ function CondRow({ row, c: c0, lead, props, values, onChange }: { row?: FilterRo
     // phones: the value wraps to its own line when the property + operator leave it too little room
     <div className="flex flex-wrap items-center gap-1.5">
       {lead}
-      {o.op === "hasTag" || o.op === "inFolder" ? <span className={cx(ctl, "flex min-w-[90px] items-center text-muted")}>{o.op === "hasTag" ? "tags" : "folder"}</span>
+      {o.op === "hasTag" || o.op === "inFolder" ? <span className={cx(ctl, "flex min-w-[90px] items-center text-muted")}>{o.op === "hasTag" ? t("tags") : t("folder")}</span>
         : <PropSelect value={prop} props={props} className="w-[110px] shrink-0" onChange={(p) => onChange(r.kind === "any" ? { ...r, prop: p } : { kind: "cond", c: { ...c!, prop: p } })} />}
-      <select aria-label="Operator" value={o.id} onChange={(e) => setOp(e.target.value)} className={cx(ctl, "w-auto shrink-0 cursor-pointer")}>
-        {OPS.filter((x) => x.op !== "any" || row).map((x) => <option key={x.id} value={x.id}>{x.l}</option>)}
+      <select aria-label={t("Operator")} value={o.id} onChange={(e) => setOp(e.target.value)} className={cx(ctl, "w-auto shrink-0 cursor-pointer")}>
+        {OPS.filter((x) => x.op !== "any" || row).map((x) => <option key={x.id} value={x.id}>{t(x.l)}</option>)}
       </select>
       {r.kind === "any" ? (
         <span className={cx(ctl.replace("h-[30px] ", ""), "flex min-h-[30px] min-w-[140px] flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5 py-1")}>
-          {r.values.map((x) => <span key={x} className="inline-flex items-center gap-1">{status && isStatus(x) ? STATUS_META[x].l.toLowerCase() : x}<button aria-label={`Remove ${x}`} className="text-muted hover:text-ink" onClick={() => onChange({ ...r, values: r.values.filter((y) => y !== x) })}>×</button></span>)}
+          {r.values.map((x) => <span key={x} className="inline-flex items-center gap-1">{status && isStatus(x) ? t(STATUS_META[x].l).toLowerCase() : x}<button aria-label={t("Remove {value}", { value: x })} className="text-muted hover:text-ink" onClick={() => onChange({ ...r, values: r.values.filter((y) => y !== x) })}>×</button></span>)}
           {status ? (
-            <select aria-label="Add value" value="" onChange={(e) => e.target.value && onChange({ ...r, values: [...r.values, e.target.value] })} className="min-w-0 flex-1 bg-transparent text-muted outline-none">
+            <select aria-label={t("Add value")} value="" onChange={(e) => e.target.value && onChange({ ...r, values: [...r.values, e.target.value] })} className="min-w-0 flex-1 bg-transparent text-muted outline-none">
               <option value="">+</option>{STATUSES.filter((s) => !r.values.includes(s)).map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           ) : (
-            <input aria-label="Add value" list={listId} placeholder={r.values.length ? "" : "value, value"} dir="auto" className="min-w-[50px] flex-1 bg-transparent outline-none"
+            <input aria-label={t("Add value")} list={listId} placeholder={r.values.length ? "" : t("value, value")} dir="auto" className="min-w-[50px] flex-1 bg-transparent outline-none"
               onKeyDown={(e) => { const t = e.currentTarget; if ((e.key === "Enter" || e.key === ",") && t.value.trim()) { e.preventDefault(); onChange({ ...r, values: [...r.values, t.value.trim()] }); t.value = ""; } }}
               onBlur={(e) => { if (e.target.value.trim()) onChange({ ...r, values: [...r.values, e.target.value.trim()] }); }} />
           )}
           <datalist id={listId}>{values(prop).map((x) => <option key={x} value={x} />)}</datalist>
         </span>
       ) : o.noValue ? <span className="flex-1" /> : status && (o.op === "==" || o.op === "!=") ? (
-        <select aria-label="Value" value={String(c!.args[0] ?? "")} onChange={(e) => onChange({ kind: "cond", c: { ...c!, args: [e.target.value] } })} className={cx(ctl, "min-w-[96px] flex-1 cursor-pointer")}>
+        <select aria-label={t("Value")} value={String(c!.args[0] ?? "")} onChange={(e) => onChange({ kind: "cond", c: { ...c!, args: [e.target.value] } })} className={cx(ctl, "min-w-[96px] flex-1 cursor-pointer")}>
           <option value="">—</option>{STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       ) : (
         <>
-          <input aria-label="Value" defaultValue={String(c!.args[0] ?? "")} list={listId} dir="auto" placeholder={isDateProp(prop) ? "2026-11-13 or today()" : "value"} key={String(c!.args[0] ?? "")}
+          <input aria-label={t("Value")} defaultValue={String(c!.args[0] ?? "")} list={listId} dir="auto" placeholder={isDateProp(prop) ? t("2026-11-13 or today()") : t("value")} key={String(c!.args[0] ?? "")}
             onBlur={(e) => { const raw = e.target.value.trim(); if (raw === String(c!.args[0] ?? "")) return; onChange({ kind: "cond", c: { ...c!, args: [/^-?\d+(\.\d+)?$/.test(raw) && !isDateProp(prop) ? Number(raw) : raw] } }); }}
             onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()} className={cx(ctl, "min-w-[96px] flex-1")} />
           <datalist id={listId}>{(o.op === "hasTag" ? values("tags") : values(prop)).map((x) => <option key={x} value={x} />)}</datalist>
         </>
       )}
-      <Remove l="Remove filter" onClick={() => onChange(null)} />
+      <Remove l={t("Remove filter")} onClick={() => onChange(null)} />
     </div>
   );
 }
@@ -948,17 +949,17 @@ function CondRow({ row, c: c0, lead, props, values, onChange }: { row?: FilterRo
 function SortEditor({ sort, props, onChange }: { sort: SortRule[]; props: string[]; onChange: (s: SortRule[]) => void }) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="font-semibold">Sort</span>
-      {!sort.length && <div className="text-[12.5px] text-muted">Default: last updated first. Tip: click a table column header to sort by it.</div>}
+      <span className="font-semibold">{t("Sort")}</span>
+      {!sort.length && <div className="text-[12.5px] text-muted">{t("Default: last updated first. Tip: click a table column header to sort by it.")}</div>}
       {sort.map((s, i) => (
         <div key={i} className="flex items-center gap-1.5">
-          <span className="w-11 shrink-0 text-[12px] text-muted">{i ? "then" : "By"}</span>
+          <span className="w-11 shrink-0 text-[12px] text-muted">{i ? t("then") : t("By")}</span>
           <PropSelect value={s.property} props={props} className="flex-1" onChange={(p) => { const n = [...sort]; n[i] = { ...s, property: p }; onChange(n); }} />
           <DirButton dir={s.direction} onClick={() => { const n = [...sort]; n[i] = { ...s, direction: s.direction === "ASC" ? "DESC" : "ASC" }; onChange(n); }} />
-          <Remove l="Remove sort" onClick={() => onChange(sort.filter((_, j) => j !== i))} />
+          <Remove l={t("Remove sort")} onClick={() => onChange(sort.filter((_, j) => j !== i))} />
         </div>
       ))}
-      <button className="self-start pt-1 text-[12.5px] text-muted hover:text-ink" onClick={() => onChange([...sort, { property: "file.name", direction: "ASC" }])}>+ Add sort</button>
+      <button className="self-start pt-1 text-[12.5px] text-muted hover:text-ink" onClick={() => onChange([...sort, { property: "file.name", direction: "ASC" }])}>{t("+ Add sort")}</button>
     </div>
   );
 }
@@ -966,10 +967,10 @@ function SortEditor({ sort, props, onChange }: { sort: SortRule[]; props: string
 function GroupEditor({ view, groupBy, props, edit }: { view: BaseViewDef; groupBy?: SortRule; props: string[]; edit: (fn: (c: BaseConfig, v: BaseViewDef) => void) => void }) {
   return (
     <div className="flex flex-col gap-2.5">
-      <span className="font-semibold">{view.type === "board" ? "Board columns" : "Group"}</span>
-      <span className="text-[12.5px] text-muted">{view.type === "board" ? "Each value is a column. Dragging a card to another column writes the property." : "Rows are grouped under a header per value."}</span>
+      <span className="font-semibold">{view.type === "board" ? t("Board columns") : t("Group")}</span>
+      <span className="text-[12.5px] text-muted">{view.type === "board" ? t("Each value is a column. Dragging a card to another column writes the property.") : t("Rows are grouped under a header per value.")}</span>
       <div className="flex items-center gap-1.5">
-        <span className="w-11 shrink-0 text-[12px] text-muted">By</span>
+        <span className="w-11 shrink-0 text-[12px] text-muted">{t("By")}</span>
         <PropSelect value={groupBy?.property ?? ""} props={props} className="flex-1" allowNone={view.type !== "board"} onChange={(p) => edit((_c, w) => { w.groupBy = p ? { property: p, direction: w.groupBy?.direction ?? "ASC" } : undefined; })} />
         {groupBy && <DirButton dir={groupBy.direction} onClick={() => edit((_c, w) => { w.groupBy = { property: groupBy.property, direction: groupBy.direction === "ASC" ? "DESC" : "ASC" }; })} />}
       </div>
@@ -979,9 +980,9 @@ function GroupEditor({ view, groupBy, props, edit }: { view: BaseViewDef; groupB
 }
 const SeveralValues = ({ view, edit }: { view: BaseViewDef; edit: (fn: (c: BaseConfig, v: BaseViewDef) => void) => void }) => (
   <div className="flex items-center gap-2">
-    <span className="flex-1 text-muted">Several values</span>
-    <select aria-label="Several values" value={view.groupMulti ?? "each"} onChange={(e) => edit((_c, w) => { w.groupMulti = e.target.value === "first" ? "first" : "each"; })} className={cx(ctl, "h-7 cursor-pointer text-[12.5px]")}>
-      <option value="each">Show in each group</option><option value="first">First group only</option>
+    <span className="flex-1 text-muted">{t("Several values")}</span>
+    <select aria-label={t("Several values")} value={view.groupMulti ?? "each"} onChange={(e) => edit((_c, w) => { w.groupMulti = e.target.value === "first" ? "first" : "each"; })} className={cx(ctl, "h-7 cursor-pointer text-[12.5px]")}>
+      <option value="each">{t("Show in each group")}</option><option value="first">{t("First group only")}</option>
     </select>
   </div>
 );
@@ -992,16 +993,16 @@ function PropsEditor({ order, props, onChange }: { order: string[]; props: strin
   const move = (i: number, d: number) => { const n = [...order]; const j = i + d; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j], n[i]]; onChange(n); };
   return (
     <div className="flex max-h-[60vh] flex-col gap-1 overflow-y-auto">
-      <span className="px-1 pb-1 font-semibold">Properties</span>
+      <span className="px-1 pb-1 font-semibold">{t("Properties")}</span>
       {order.map((p, i) => (
         <div key={p} className="flex items-center gap-2 rounded-[6px] px-1.5 py-1 hover:bg-bg">
-          <input type="checkbox" checked disabled={canon(p) === "title"} onChange={() => onChange(order.filter((x) => x !== p))} className="accent-[var(--accent)]" aria-label={`Hide ${label(p)}`} />
+          <input type="checkbox" checked disabled={canon(p) === "title"} onChange={() => onChange(order.filter((x) => x !== p))} className="accent-[var(--accent)]" aria-label={t("Hide {prop}", { prop: label(p) })} />
           <span className="flex-1">{label(p)}</span>
-          <button aria-label="Move up" onClick={() => move(i, -1)} className="text-muted hover:text-ink"><ArrowUp size={13} /></button>
-          <button aria-label="Move down" onClick={() => move(i, 1)} className="text-muted hover:text-ink"><ArrowDown size={13} /></button>
+          <button aria-label={t("Move up")} onClick={() => move(i, -1)} className="text-muted hover:text-ink"><ArrowUp size={13} /></button>
+          <button aria-label={t("Move down")} onClick={() => move(i, 1)} className="text-muted hover:text-ink"><ArrowDown size={13} /></button>
         </div>
       ))}
-      {rest.length > 0 && <div className="mt-1 border-t border-line px-1.5 pt-2 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Hidden</div>}
+      {rest.length > 0 && <div className="mt-1 border-t border-line px-1.5 pt-2 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("Hidden")}</div>}
       {rest.map((p) => (
         <label key={p} className="flex cursor-pointer items-center gap-2 rounded-[6px] px-1.5 py-1 hover:bg-bg">
           <input type="checkbox" checked={false} onChange={() => onChange([...order, yamlName(canon(p))])} className="accent-[var(--accent)]" />
@@ -1018,26 +1019,26 @@ function ViewSettings({ view, props, canDelete, edit, phone, onProps, onSearch, 
   const box = cx(ctl, "h-7 max-w-[170px] text-[12.5px]");
   return (
     <div className="flex flex-col gap-2.5">
-      <span className="font-semibold">View settings</span>
-      {row("Name", <input defaultValue={view.name} dir="auto" className={cx(box, "w-[150px] text-end")} onBlur={(e) => e.target.value.trim() && e.target.value !== view.name && edit((_c, w) => { w.name = e.target.value.trim(); })} onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()} />)}
-      {row("Layout", (
-        <select value={view.type} className={cx(box, "cursor-pointer")} onChange={(e) => { const t = e.target.value as ViewType; edit((_c, w) => { w.type = t; if (t === "board" && !w.groupBy) w.groupBy = { property: "status", direction: "ASC" }; }); }}>
-          {(["table", "board", "cards", "list", "calendar"] as ViewType[]).map((t) => <option key={t} value={t}>{VIEW_LABEL[t]}</option>)}
+      <span className="font-semibold">{t("View settings")}</span>
+      {row(t("Name"), <input defaultValue={view.name} dir="auto" className={cx(box, "w-[150px] text-end")} onBlur={(e) => e.target.value.trim() && e.target.value !== view.name && edit((_c, w) => { w.name = e.target.value.trim(); })} onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()} />)}
+      {row(t("Layout"), (
+        <select value={view.type} className={cx(box, "cursor-pointer")} onChange={(e) => { const vt = e.target.value as ViewType; edit((_c, w) => { w.type = vt; if (vt === "board" && !w.groupBy) w.groupBy = { property: "status", direction: "ASC" }; }); }}>
+          {(["table", "board", "cards", "list", "calendar"] as ViewType[]).map((vt) => <option key={vt} value={vt}>{t(VIEW_LABEL[vt])}</option>)}
         </select>
       ))}
       {view.type === "calendar"
-        ? row("Date property", <PropSelect value={view.date ?? "file.ctime"} props={props.filter((p) => isDateProp(p) || !BUILTIN.includes(p as never))} className={box} onChange={(p) => edit((_c, w) => { w.date = p; })} />)
-        : row("Group by", <PropSelect value={view.groupBy?.property ?? (view.type === "board" ? "status" : "")} props={props} className={box} allowNone={view.type !== "board"} onChange={(p) => edit((_c, w) => { w.groupBy = p ? { property: p, direction: w.groupBy?.direction ?? "ASC" } : undefined; })} />)}
+        ? row(t("Date property"), <PropSelect value={view.date ?? "file.ctime"} props={props.filter((p) => isDateProp(p) || !BUILTIN.includes(p as never))} className={box} onChange={(p) => edit((_c, w) => { w.date = p; })} />)
+        : row(t("Group by"), <PropSelect value={view.groupBy?.property ?? (view.type === "board" ? "status" : "")} props={props} className={box} allowNone={view.type !== "board"} onChange={(p) => edit((_c, w) => { w.groupBy = p ? { property: p, direction: w.groupBy?.direction ?? "ASC" } : undefined; })} />)}
       {(view.groupBy || view.type === "board") && view.type !== "calendar" && <SeveralValues view={view} edit={edit} />}
-      {row("Limit", <input type="number" min={1} placeholder="All" defaultValue={view.limit ?? ""} className={cx(box, "w-[70px] text-end")} onBlur={(e) => { const n = Number(e.target.value); if ((n || undefined) !== view.limit) edit((_c, w) => { w.limit = n > 0 ? n : undefined; }); }} />)}
+      {row(t("Limit"), <input type="number" min={1} placeholder={t("All")} defaultValue={view.limit ?? ""} className={cx(box, "w-[70px] text-end")} onBlur={(e) => { const n = Number(e.target.value); if ((n || undefined) !== view.limit) edit((_c, w) => { w.limit = n > 0 ? n : undefined; }); }} />)}
       <div className="h-px bg-line" />
       {phone && <button className="text-start font-semibold text-accent" onClick={onNew}>{newLabel}</button>}
-      {phone && <button className="text-start" onClick={onSearch}>Search…</button>}
-      {phone && <button className="text-start" onClick={onProps}>Properties…</button>}
-      <button className="text-start hover:text-accent" onClick={onDuplicate}>Duplicate view</button>
-      <button className="text-start hover:text-accent" onClick={onSource}>Edit YAML</button>
-      <button className="text-start hover:text-accent" onClick={onDownload}>Download .base</button>
-      {canDelete && <button className="text-start text-bad hover:underline" onClick={onDelete}>Delete view</button>}
+      {phone && <button className="text-start" onClick={onSearch}>{t("Search…")}</button>}
+      {phone && <button className="text-start" onClick={onProps}>{t("Properties…")}</button>}
+      <button className="text-start hover:text-accent" onClick={onDuplicate}>{t("Duplicate view")}</button>
+      <button className="text-start hover:text-accent" onClick={onSource}>{t("Edit YAML")}</button>
+      <button className="text-start hover:text-accent" onClick={onDownload}>{t("Download .base")}</button>
+      {canDelete && <button className="text-start text-bad hover:underline" onClick={onDelete}>{t("Delete view")}</button>}
     </div>
   );
 }

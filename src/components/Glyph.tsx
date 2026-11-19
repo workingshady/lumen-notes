@@ -24,6 +24,7 @@ export function Glyph({ name, size = 20, color = "currentColor", tile, initials 
   return (
     <span
       className={className}
+      data-glyph={name}
       role={title ? "img" : undefined}
       aria-label={title}
       aria-hidden={title ? undefined : true}

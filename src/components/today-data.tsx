@@ -15,6 +15,7 @@ import {
 import { useSettings, type Settings } from "../lib/settings";
 import { go, noteDerived, openNote, toast, useVault, type Vault } from "../lib/store";
 import { useDueCards } from "./Review";
+import { t } from "../lib/i18n";
 
 export const planSettingsOf = (s: Settings): PlanSettings => ({
   dailyMinutes: s.planDailyMinutes ?? PLAN_DEFAULTS.dailyMinutes,
@@ -138,15 +139,15 @@ export async function markPlanItem(item: PlanItem, mark: Mark | null, day = toda
 
 /** Start: open what the item points at and start the study timer. Concept items are handled by the view (sheets). */
 export async function startPlanItem(item: PlanItem) {
-  const t = item.target;
-  if (!t) return;
-  if (t.type === "cards") { go("review"); startStudyTimer(); return; }
-  if (t.type === "topic") {
-    if (t.status === "todo") await setStatusIn(t.courseKey, t.topic, t.line, "learning");
-    if (t.noteId) openNote(t.noteId, "read");
-    else if (t.spaceId) { go("space", { spaceId: t.spaceId, folderId: null, noteId: null }); toast(`No lesson note linked to "${t.topic}" yet`); return; }
-    else openNote(t.courseKey);
-    startStudyTimer(t.noteId ?? null);
+  const tg = item.target;
+  if (!tg) return;
+  if (tg.type === "cards") { go("review"); startStudyTimer(); return; }
+  if (tg.type === "topic") {
+    if (tg.status === "todo") await setStatusIn(tg.courseKey, tg.topic, tg.line, "learning");
+    if (tg.noteId) openNote(tg.noteId, "read");
+    else if (tg.spaceId) { go("space", { spaceId: tg.spaceId, folderId: null, noteId: null }); toast(t("No lesson note linked to “{topic}” yet", { topic: tg.topic })); return; }
+    else openNote(tg.courseKey);
+    startStudyTimer(tg.noteId ?? null);
   }
 }
 

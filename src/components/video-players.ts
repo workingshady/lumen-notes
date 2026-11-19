@@ -6,6 +6,9 @@
 //  - Vimeo: Player postMessage API directly (no script).
 //  - <video> / <audio>: the element itself.
 import { findTimestamps, formatTime, videoClock, type VideoKind } from "../lib/video-notes";
+import { fmtNum, t } from "../lib/i18n";
+/** Iframe title fallback (module-level: `t` is shadowed by a time parameter where it is used). */
+const videoLabel = () => t("Video");
 import { icon as wsIcon } from "./ws-icons";
 
 // Lucide bodies not in ws-icons (kept here so that file stays untouched).
@@ -106,7 +109,7 @@ function tick() {
 export function markChips(scope: ParentNode = document) {
   const cur = currentPlayer();
   const idx = cur ? indexOf(cur) : 0;
-  const t = cur ? cur.time() : -1;
+  const now = cur ? cur.time() : -1;
   for (const root of scope.querySelectorAll<HTMLElement>("[data-vn-ts]")) {
     const players = root.querySelectorAll(PLAYER_SEL).length;
     let best: HTMLElement | null = null, bt = -1;
@@ -114,8 +117,8 @@ export function markChips(scope: ParentNode = document) {
       const v = Number(b.dataset.v) || 1, bs = Number(b.dataset.t) || 0;
       const none = v > players && !(videoRegistry.dock?.root() && Number(videoRegistry.dock.root()!.dataset.vnDock) === v);
       b.classList.toggle("vts-none", none);
-      b.title = none ? "No video at this position in the note" : `Play from ${b.textContent}${v > 1 ? ` (video ${v})` : ""}`;
-      if (cur && v === idx && bs <= t + 0.5 && bs > bt) { best = b; bt = bs; }
+      b.title = none ? t("No video at this position in the note") : v > 1 ? t("Play from {time} (video {n})", { time: b.textContent ?? "", n: v }) : t("Play from {time}", { time: b.textContent ?? "" });
+      if (cur && v === idx && bs <= now + 0.5 && bs > bt) { best = b; bt = bs; }
     }
     root.querySelectorAll("button.vts.vts-on").forEach((b) => b !== best && b.classList.remove("vts-on"));
     best?.classList.add("vts-on");
@@ -219,7 +222,7 @@ export function remoteCtl(fig: HTMLElement, provider: "youtube" | "vimeo", id: s
       ? `https://player.vimeo.com/video/${id}?autoplay=${play ? 1 : 0}&dnt=1${s ? `#t=${s}s` : ""}`
       : `https://www.youtube-nocookie.com/embed/${id}?autoplay=${play ? 1 : 0}&rel=0&enablejsapi=1&origin=${origin}${s ? `&start=${s}` : ""}`;
     const f = document.createElement("iframe");
-    f.src = src; f.title = fig.querySelector(".vt-title")?.textContent || "Video";
+    f.src = src; f.title = fig.querySelector(".vt-title")?.textContent || videoLabel();
     f.allow = "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen";
     f.allowFullscreen = true;
     frame = f;
@@ -294,7 +297,7 @@ export function mediaCtl(el: HTMLElement, m: HTMLMediaElement): VideoCtl {
   // a removed <video> pauses itself: keep the snapshot as it was so the re-rendered copy can resume
   m.addEventListener("pause", () => { if (live()) { ctl.snap = { t: m.currentTime, playing: false }; emit(); } });
   m.addEventListener("timeupdate", () => { if (live()) ctl.snap = { t: m.currentTime, playing: !m.paused }; });
-  m.addEventListener("ratechange", () => { el.querySelectorAll<HTMLElement>(".mb-speed").forEach((b) => (b.textContent = `${m.playbackRate}×`)); emit(); });
+  m.addEventListener("ratechange", () => { el.querySelectorAll<HTMLElement>(".mb-speed").forEach((b) => (b.textContent = `${fmtNum(m.playbackRate)}×`)); emit(); });
   add(ctl);
   return ctl;
 }
@@ -305,12 +308,12 @@ function decorate(c: VideoCtl) {
   if (c.el.nextElementSibling?.classList.contains("vn-extras") || c.el.querySelector(".vn-extras")) return;
   const row = document.createElement("div");
   row.className = "vn-extras";
-  row.innerHTML = (c.kind === "audio" ? "" : `<button type="button" class="vn-rate" title="Playback speed">${icon("gauge", 13)}<span>1×</span></button>`)
-    + `<button type="button" class="vn-ed vn-ts" title="Insert a timestamp at the caret (Alt+T)">${icon("clock", 13)}<span>Timestamp</span></button>`
-    + `<button type="button" class="vn-ed vn-card" title="Make a flashcard at this moment">${icon("layers", 13)}<span>Flashcard at this moment</span></button>`;
+  row.innerHTML = (c.kind === "audio" ? "" : `<button type="button" class="vn-rate" title="${t("Playback speed")}">${icon("gauge", 13)}<span>1×</span></button>`)
+    + `<button type="button" class="vn-ed vn-ts" title="${t("Insert a timestamp at the caret (Alt+T)")}">${icon("clock", 13)}<span>${t("Timestamp")}</span></button>`
+    + `<button type="button" class="vn-ed vn-card" title="${t("Make a flashcard at this moment")}">${icon("layers", 13)}<span>${t("Flashcard at this moment")}</span></button>`;
   const rate = row.querySelector<HTMLElement>(".vn-rate");
   let off = () => {};
-  const showRate = () => { if (!c.el.isConnected && Date.now() - c.active > 2000) { off(); return; } if (rate) rate.querySelector("span")!.textContent = `${c.rate()}×`; };
+  const showRate = () => { if (!c.el.isConnected && Date.now() - c.active > 2000) { off(); return; } if (rate) rate.querySelector("span")!.textContent = `${fmtNum(c.rate())}×`; };
   rate?.addEventListener("click", (e) => { e.stopPropagation(); const i = RATES.indexOf(c.rate()); c.setRate(RATES[(i + 1) % RATES.length]); showRate(); });
   off = onVideoChange(showRate); // dropped once the player is gone (the preview re-renders while you type)
   const ins = (k: "timestamp" | "card") => (e: Event) => { e.stopPropagation(); if (!c.loaded()) c.seek(c.snap.t, false); videoRegistry.insert?.(k, c); };
@@ -357,13 +360,13 @@ export function hydrateTimestamps(root: HTMLElement) {
     const scope = b.closest<HTMLElement>("[data-vn-root]") ?? root;
     if (!seekIn(scope, Number(b.dataset.v) || 1, Number(b.dataset.t) || 0)) {
       b.classList.add("vts-none");
-      b.title = "No video at this position in the note";
+      b.title = t("No video at this position in the note");
     }
   });
 }
 
 /** Chip HTML for the markdown renderer. */
 export const timestampChip = (seconds: number, video: number, label: string) =>
-  `<button type="button" class="vts" data-t="${seconds}" data-v="${video}" title="Play from ${label}${video > 1 ? ` (video ${video})` : ""}">${icon("play", 10)}<span>${label}</span></button>`;
+  `<button type="button" class="vts" data-t="${seconds}" data-v="${video}" title="${video > 1 ? t("Play from {time} (video {n})", { time: label, n: video }) : t("Play from {time}", { time: label })}">${icon("play", 10)}<span>${label}</span></button>`;
 
 export { findTimestamps, formatTime };

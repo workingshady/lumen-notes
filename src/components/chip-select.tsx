@@ -33,11 +33,11 @@ export function ChipSelect<T extends string | number>({ value, options, onChange
         {label ?? cur?.label ?? String(value)}
       </button>
       {open && (
-        <div role="listbox" className={cx("absolute top-full z-50 mt-1 flex max-h-[280px] min-w-full flex-col overflow-y-auto rounded-[9px] border border-line bg-surface-2 p-1 shadow-[0_12px_28px_rgba(0,0,0,.35)]", align === "right" ? "right-0" : "left-0")}>
+        <div role="listbox" className={cx("absolute top-full z-50 mt-1 flex max-h-[280px] min-w-full flex-col overflow-y-auto rounded-[9px] border border-line bg-surface-2 p-1 shadow-[0_12px_28px_rgba(0,0,0,.35)]", align === "right" ? "end-0" : "start-0")}>
           {options.map((o, i) => (
             <button key={String(o.value)} type="button" role="option" aria-selected={o.value === value} disabled={o.disabled}
               onMouseEnter={() => setHi(i)} onClick={() => { onChange(o.value); setOpen(false); }}
-              className={cx("flex min-h-7 flex-col items-start whitespace-nowrap rounded-[6px] px-2.5 py-1 text-left text-[12.5px] disabled:opacity-40", i === hi && "bg-surface", o.value === value && "font-semibold")}>
+              className={cx("flex min-h-7 flex-col items-start whitespace-nowrap rounded-[6px] px-2.5 py-1 text-start text-[12.5px] disabled:opacity-40", i === hi && "bg-surface", o.value === value && "font-semibold")}>
               <span>{o.label}</span>{o.hint && <span className="text-[11px] font-normal text-muted">{o.hint}</span>}
             </button>
           ))}

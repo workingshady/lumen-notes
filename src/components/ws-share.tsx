@@ -8,6 +8,7 @@ import { addFile } from "../lib/attachments";
 import { useVault, toast } from "../lib/store";
 import { LumenMark } from "./LumenMark";
 import { cx } from "./ui";
+import { t } from "../lib/i18n";
 
 /*
  * Share to Lumen (design: Lumen 12 · R3-5E "Save to Lumen sheet").
@@ -95,12 +96,12 @@ export function ShareSheet() {
         } catch (e) { toast((e as Error).message); }
       }
       if (thought.trim()) parts.push(thought.trim());
-      const t = title.trim() || "Shared";
-      await createNote({ spaceId: space, title: t, body: `# ${t}\n\n${parts.join("\n\n")}\n`, tags: [] });
+      const nt = title.trim() || "Shared";
+      await createNote({ spaceId: space, title: nt, body: `# ${nt}\n\n${parts.join("\n\n")}\n`, tags: [] });
       try { localStorage.setItem(LAST, space); } catch { /* ignore */ }
-      const name = v.spaceMap.get(space)?.name ?? "Inbox";
+      const name = v.spaceMap.get(space)?.name ?? t("Inbox");
       set(null);
-      toast(`Saved to ${name}`, undefined, { icon: "check" });
+      toast(t("Saved to {name}", { name }), undefined, { icon: "check" });
       if (s.native) setTimeout(() => void finishNative(), 700);
     } finally { setBusy(false); }
   }
@@ -109,15 +110,15 @@ export function ShareSheet() {
   const onStyle = { background: "color-mix(in srgb,var(--accent) 16%,transparent)", boxShadow: "inset 0 0 0 1.5px var(--accent)" };
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center fade-in md:items-center" style={{ background: "rgba(0,0,0,.45)" }} onMouseDown={(e) => e.target === e.currentTarget && close()}>
-      <div className="sheet-in flex w-full flex-col gap-3.5 rounded-t-[14px] bg-surface px-4 pt-2.5 text-[14px] md:max-w-[440px] md:rounded-[14px] md:border md:border-line md:pb-4" role="dialog" aria-label="Save to Lumen">
+      <div className="sheet-in flex w-full flex-col gap-3.5 rounded-t-[14px] bg-surface px-4 pt-2.5 text-[14px] md:max-w-[440px] md:rounded-[14px] md:border md:border-line md:pb-4" role="dialog" aria-label={t("Save to Lumen")}>
         <div className="flex justify-center md:hidden"><span className="h-1 w-9 rounded-[2px] bg-line" /></div>
         <div className="flex items-center gap-2.5 px-1">
           <LumenMark size={28} />
-          <span className="flex-1 text-[18px] font-[650]">Save to Lumen</span>
-          <button aria-label="Close" onClick={close} className="text-muted hover:text-ink"><X size={20} /></button>
+          <span className="flex-1 text-[18px] font-[650]">{t("Save to Lumen")}</span>
+          <button aria-label={t("Close")} onClick={close} className="text-muted hover:text-ink"><X size={20} /></button>
         </div>
         <label className="flex flex-col gap-1.5">
-          <span className="px-1 text-[12.5px] font-medium text-muted">Title</span>
+          <span className="px-1 text-[12.5px] font-medium text-muted">{t("Title")}</span>
           <input ref={titleRef} dir="auto" value={title} onChange={(e) => setTitle(e.target.value)} className="h-[52px] rounded-[10px] border border-line bg-bg px-3.5 text-ink outline-none focus:border-accent" />
         </label>
         {s.url ? (
@@ -127,7 +128,7 @@ export function ShareSheet() {
             <div className="flex h-[72px] overflow-hidden rounded-[12px] border border-line bg-bg">
               <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 px-3 py-2.5">
                 <span dir="auto" className="truncate text-[13px] text-muted">{meta?.description || meta?.title || s.url}</span>
-                <span className="text-[12px] text-link">{host}</span>
+                <span dir="ltr" className="text-start text-[12px] text-link">{host}</span>
               </div>
               {meta?.image ? <img src={meta.image} alt="" className="w-[72px] object-cover" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} /> : <div className="w-[72px]" style={{ background: "repeating-linear-gradient(135deg,var(--surface-2) 0 8px,var(--surface) 8px 16px)" }} />}
             </div>
@@ -136,26 +137,26 @@ export function ShareSheet() {
           <div dir="auto" className="line-clamp-3 rounded-[12px] border border-line bg-bg px-3 py-2.5 text-[13px] text-muted">{s.text || s.fileUrl?.split("/").pop()}</div>
         ) : null}
         <div className="flex flex-col gap-2">
-          <span className="px-1 text-[12.5px] font-medium text-muted">Save into</span>
+          <span className="px-1 text-[12.5px] font-medium text-muted">{t("Save into")}</span>
           <div className="flex flex-wrap gap-2">
             {chips.map((c) => (
               <button key={c.id} onClick={() => setSpace(c.id)} className={chip(space === c.id)} style={space === c.id ? onStyle : undefined}>
-                {c.id === "inbox" ? <Inbox size={15} /> : <SpaceIcon space={c} size={15} />}{c.name}
+                {c.id === "inbox" ? <Inbox size={15} /> : <SpaceIcon space={c} size={15} />}<span dir="auto">{c.name}</span>
               </button>
             ))}
-            <button onClick={() => setMore((m) => !m)} className="flex h-10 items-center rounded-full border border-line px-3 text-muted">More…</button>
+            <button onClick={() => setMore((m) => !m)} className="flex h-10 items-center rounded-full border border-line px-3 text-muted">{t("More…")}</button>
           </div>
           {more && (
             <div className="flex max-h-48 flex-col overflow-y-auto rounded-[10px] border border-line bg-bg p-1">
-              {live.map((c) => <button key={c.id} onClick={() => { setSpace(c.id); setMore(false); }} className={cx("flex h-9 items-center gap-2 rounded-[6px] px-2 text-start", space === c.id ? "bg-surface-2 font-semibold" : "hover:bg-surface-2")}><SpaceIcon space={c} size={15} />{c.name}</button>)}
+              {live.map((c) => <button key={c.id} onClick={() => { setSpace(c.id); setMore(false); }} className={cx("flex h-9 items-center gap-2 rounded-[6px] px-2 text-start", space === c.id ? "bg-surface-2 font-semibold" : "hover:bg-surface-2")}><SpaceIcon space={c} size={15} /><span dir="auto">{c.name}</span></button>)}
             </div>
           )}
         </div>
         <label className="flex h-12 items-center gap-2 rounded-[10px] border border-dashed border-line px-3.5 text-muted focus-within:border-accent">
           <PenLine size={15} className="shrink-0" />
-          <input dir="auto" value={thought} onChange={(e) => setThought(e.target.value)} placeholder="Add a thought (optional)" className="min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-muted" />
+          <input dir="auto" value={thought} onChange={(e) => setThought(e.target.value)} placeholder={t("Add a thought (optional)")} className="min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-muted" />
         </label>
-        <button disabled={busy} onClick={saveIt} className="h-14 rounded-[14px] bg-accent text-[16px] font-semibold text-accent-fg disabled:opacity-60">Save</button>
+        <button disabled={busy} onClick={saveIt} className="h-14 rounded-[14px] bg-accent text-[16px] font-semibold text-accent-fg disabled:opacity-60">{t("Save")}</button>
         <div className="safe-b h-2 md:hidden" />
       </div>
     </div>

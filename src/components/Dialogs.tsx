@@ -2,6 +2,7 @@ import { Archive, Braces, Briefcase, ChevronDown, ChevronRight, CircleCheck, Com
 import { useEffect, useRef, useState, type KeyboardEvent as RKeyboardEvent, type ReactNode } from "react";
 import { SPACE_KINDS, type SpaceKind } from "../../shared/types";
 import { createFolder, createNote, createSpace } from "../lib/actions";
+import { t, tk } from "../lib/i18n";
 import { PRESETS } from "../lib/canvas";
 import { patch } from "../lib/db";
 import {
@@ -14,38 +15,40 @@ import { fmtBytes, Modal, usePhone } from "../views/spaces-util";
 import { KIND_LABEL } from "./Sidebar";
 import { cx } from "./ui";
 import { SpaceIcon, SpaceIconPicker } from "./SpaceIcon";
+import { Glyph } from "./Glyph";
+import { openImport } from "./NewMenu";
 
 const KIND_HINT: Record<SpaceKind, string> = {
-  project: "A goal with a deadline and milestones.",
-  area: "An ongoing responsibility. No end date.",
-  course: "Learn something, with a roadmap.",
-  resource: "Reference material on a topic.",
-  archive: "Finished. Hidden, still searchable.",
+  project: tk("A goal with a deadline and milestones."),
+  area: tk("An ongoing responsibility. No end date."),
+  course: tk("Learn something, with a roadmap."),
+  resource: tk("Reference material on a topic."),
+  archive: tk("Finished. Hidden, still searchable."),
 };
 const KIND_GLYPH: Record<SpaceKind, typeof Briefcase> = { project: Briefcase, area: Compass, course: GraduationCap, resource: Library, archive: Archive };
 /** Default stored icon per kind (glyph form, see src/lib/space-icon.ts). */
 const KIND_ICON: Record<SpaceKind, string> = { project: "glyph:project", area: "glyph:area", course: "glyph:course", resource: "glyph:resource", archive: "glyph:archive" };
 
 /** Space templates per kind. Course → roadmaps; project → milestone plans; area/resource → starter folders. */
-type SpaceTemplate = { name: string; detail?: string; roadmap?: string; folders?: string[] };
+type SpaceTemplate = { name: string; detail?: string; n?: number; roadmap?: string; folders?: string[] };
 const modules = (md: string) => (md.match(/^##\s/gm) ?? []).length;
 const TEMPLATES_BY_KIND: Record<SpaceKind, SpaceTemplate[]> = {
-  course: ROADMAP_PRESETS.map((p, i) => ({ name: p.name, detail: i > 0 ? `roadmap with ${modules(p.body)} modules` : undefined, roadmap: p.body })),
+  course: ROADMAP_PRESETS.map((p, i) => ({ name: p.name, detail: i > 0 ? tk("roadmap with {n} modules") : undefined, n: modules(p.body), roadmap: p.body })),
   project: [
-    { name: "No template" },
-    { name: "Thesis / paper", detail: "5 milestones", roadmap: "## Milestones\n- [ ] Proposal\n- [ ] Literature review\n- [ ] Experiments\n- [ ] First draft\n- [ ] Submission\n" },
-    { name: "Software release", detail: "4 milestones", roadmap: "## Milestones\n- [ ] Spec\n- [ ] Prototype\n- [ ] Beta\n- [ ] Launch\n" },
-    { name: "Event", detail: "4 milestones", roadmap: "## Milestones\n- [ ] Plan\n- [ ] Book venue\n- [ ] Invite\n- [ ] Event day\n" },
+    { name: tk("No template") },
+    { name: tk("Thesis / paper"), detail: tk("{n} milestone|{n} milestones"), n: 5, roadmap: "## Milestones\n- [ ] Proposal\n- [ ] Literature review\n- [ ] Experiments\n- [ ] First draft\n- [ ] Submission\n" },
+    { name: tk("Software release"), detail: tk("{n} milestone|{n} milestones"), n: 4, roadmap: "## Milestones\n- [ ] Spec\n- [ ] Prototype\n- [ ] Beta\n- [ ] Launch\n" },
+    { name: tk("Event"), detail: tk("{n} milestone|{n} milestones"), n: 4, roadmap: "## Milestones\n- [ ] Plan\n- [ ] Book venue\n- [ ] Invite\n- [ ] Event day\n" },
   ],
   area: [
-    { name: "No template" },
-    { name: "Journal + reference", detail: "3 folders", folders: ["Journal", "Reference", "Someday"] },
+    { name: tk("No template") },
+    { name: tk("Journal + reference"), detail: tk("{n} folder|{n} folders"), n: 3, folders: ["Journal", "Reference", "Someday"] },
   ],
   resource: [
-    { name: "No template" },
-    { name: "Reading library", detail: "3 folders", folders: ["Books", "Papers", "Articles"] },
+    { name: tk("No template") },
+    { name: tk("Reading library"), detail: tk("{n} folder|{n} folders"), n: 3, folders: ["Books", "Papers", "Articles"] },
   ],
-  archive: [{ name: "No template" }],
+  archive: [{ name: tk("No template") }],
 };
 
 // Design-spec form controls (6px radius, bg field, accent focus ring).
@@ -104,60 +107,60 @@ export function NewSpaceDialog() {
     setKind(SPACE_KINDS[j]);
     cards.current[j]?.focus();
   }
-  const details = kind === "project" ? "goal, deadline, description" : kind === "course" ? "provider, URL, target date, description" : "description";
+  const details = kind === "project" ? t("goal, deadline, description") : kind === "course" ? t("provider, URL, target date, description") : t("description");
   const pad = "px-5 md:px-6";
 
   return (
-    <Modal open={ui.newSpace} onClose={close} width={720} phoneHeight="100dvh" label="New space">
+    <Modal open={ui.newSpace} onClose={close} width={720} phoneHeight="100dvh" label={t("New space")}>
       <div className="flex flex-col text-[13px]" onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void create(); } }}>
-        <div className={cx("flex items-center pb-1 pt-5", pad)}><span className="flex-1 text-[18px] font-[650]">New space</span>
-          <button aria-label="Close" onClick={close} className="-m-1 rounded-md p-1 text-muted hover:text-ink"><X size={18} /></button></div>
-        <div className={cx("pb-4 text-muted", pad)}>A self-contained container with its own folders, icon and colour. Links and search still work across spaces.</div>
-        <div role="radiogroup" aria-label="Kind" className={cx("grid grid-cols-2 gap-2.5 md:grid-cols-5", pad)}>
+        <div className={cx("flex items-center pb-1 pt-5", pad)}><span className="flex-1 text-[18px] font-[650]">{t("New space")}</span>
+          <button aria-label={t("Close")} onClick={close} className="-m-1 rounded-md p-1 text-muted hover:text-ink"><X size={18} /></button></div>
+        <div className={cx("pb-4 text-muted", pad)}>{t("A self-contained container with its own folders, icon and colour. Links and search still work across spaces.")}</div>
+        <div role="radiogroup" aria-label={t("Kind")} className={cx("grid grid-cols-2 gap-2.5 md:grid-cols-5", pad)}>
           {SPACE_KINDS.map((k, i) => {
             const on = kind === k;
             const I = KIND_GLYPH[k];
             return (
               <button key={k} ref={(el) => { cards.current[i] = el; }} role="radio" aria-checked={on} tabIndex={on ? 0 : -1}
                 onClick={() => setKind(k)} onKeyDown={(e) => cardKeys(e, i)}
-                className="box-border flex min-h-[118px] flex-col gap-2 rounded-[10px] px-3 py-3.5 text-left focus:outline-none"
+                className="box-border flex min-h-[118px] flex-col gap-2 rounded-[10px] px-3 py-3.5 text-start focus:outline-none"
                 style={{ border: on ? "1.5px solid var(--accent)" : "1px solid var(--border)", background: on ? "color-mix(in srgb, var(--accent) 8%, var(--surface))" : "var(--bg)", boxShadow: on ? "0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent)" : "none" }}>
                 <I size={18} style={{ color: on ? "var(--accent)" : "var(--muted)" }} />
-                <span className="text-[13.5px] font-semibold">{KIND_LABEL[k]}</span>
-                <span className="text-[12px] leading-[17px] text-muted">{KIND_HINT[k]}</span>
+                <span className="text-[13.5px] font-semibold">{t(KIND_LABEL[k])}</span>
+                <span className="text-[12px] leading-[17px] text-muted">{t(KIND_HINT[k])}</span>
               </button>
             );
           })}
         </div>
         <div className={cx("grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 gap-y-4 pt-5", pad)}>
-          <span className="font-medium text-muted">Name</span>
+          <span className="font-medium text-muted">{t("Name")}</span>
           <div className="flex gap-2">
-            <button ref={iconBtn} type="button" aria-label="Space icon" aria-haspopup="dialog" aria-expanded={picker} onClick={() => setPicker((x) => !x)}
+            <button ref={iconBtn} type="button" aria-label={t("Space icon")} aria-haspopup="dialog" aria-expanded={picker} onClick={() => setPicker((x) => !x)}
               className={cx("flex size-10 shrink-0 items-center justify-center rounded-[6px] border bg-bg", picker ? "border-accent" : "border-line hover:border-muted")}>
               <SpaceIcon space={{ icon: icon || KIND_ICON[kind], name, color, kind }} size={15} />
             </button>
             <SpaceIconPicker open={picker} onClose={() => setPicker(false)} phone={phone} anchor={iconBtn.current} icon={icon || KIND_ICON[kind]} color={color} name={name} kind={kind}
               onChange={(ic, c) => { setIcon(ic); setColor(c); }} />
-            <input autoFocus aria-label="Name" className={fieldCls} value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && !e.metaKey && !e.ctrlKey && create()}
-              placeholder={kind === "course" ? "e.g. Linear Algebra (MIT 18.06)" : kind === "project" ? "e.g. Build my portfolio" : "e.g. Arabic"} dir="auto" />
+            <input autoFocus aria-label={t("Name")} className={fieldCls} value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && !e.metaKey && !e.ctrlKey && create()}
+              placeholder={kind === "course" ? t("e.g. Linear Algebra (MIT 18.06)") : kind === "project" ? t("e.g. Build my portfolio") : t("e.g. Arabic")} dir="auto" />
           </div>
-          <span className="font-medium text-muted">Colour</span>
+          <span className="font-medium text-muted">{t("Colour")}</span>
           <div className="flex flex-wrap gap-2.5">
             {Object.entries(PRESETS).map(([k, c]) => (
-              <button key={k} aria-label={`Colour ${k}`} aria-pressed={color === k} onClick={() => setColor(color === k ? null : k)} className="size-6 rounded-full"
+              <button key={k} aria-label={t("Colour {name}", { name: k })} aria-pressed={color === k} onClick={() => setColor(color === k ? null : k)} className="size-6 rounded-full"
                 style={{ background: c, boxShadow: color === k ? "0 0 0 2px var(--surface), 0 0 0 4px var(--text)" : undefined }} />
             ))}
           </div>
           {templates.length > 1 && (
             <>
-              <span className="font-medium text-muted">Template</span>
+              <span className="font-medium text-muted">{t("Template")}</span>
               <label className="relative flex h-10 items-center gap-2 rounded-[6px] border border-line bg-bg px-3 focus-within:border-accent">
                 <MapIcon size={14} className="shrink-0 text-muted" />
-                <span className="min-w-0 flex-1 truncate">{tpl.name}{tpl.detail ? ` — ${tpl.detail}` : ""}</span>
-                <span className="text-[12px] text-muted">optional</span>
+                <span className="min-w-0 flex-1 truncate">{t(tpl.name)}{tpl.detail ? ` — ${t(tpl.detail, { n: tpl.n })}` : ""}</span>
+                <span className="text-[12px] text-muted">{t("optional")}</span>
                 <ChevronDown size={14} className="shrink-0 text-muted" />
-                <select aria-label="Template" className="absolute inset-0 cursor-pointer opacity-0" value={Math.min(preset, templates.length - 1)} onChange={(e) => setPreset(Number(e.target.value))}>
-                  {templates.map((p, i) => <option key={i} value={i}>{p.name}{p.detail ? ` — ${p.detail}` : ""}</option>)}
+                <select aria-label={t("Template")} className="absolute inset-0 cursor-pointer opacity-0" value={Math.min(preset, templates.length - 1)} onChange={(e) => setPreset(Number(e.target.value))}>
+                  {templates.map((p, i) => <option key={i} value={i}>{t(p.name)}{p.detail ? ` — ${t(p.detail, { n: p.n })}` : ""}</option>)}
                 </select>
               </label>
             </>
@@ -165,27 +168,27 @@ export function NewSpaceDialog() {
         </div>
         <div className="mx-5 mt-4 border-t border-line pt-3.5 md:mx-6">
           <button onClick={() => setMore((x) => !x)} aria-expanded={more} className="flex items-center gap-2 text-muted hover:text-ink">
-            {more ? <ChevronDown size={14} /> : <ChevronRight size={14} />}<span className="font-medium">More details</span><span className="text-[12px]">{details}</span>
+            {more ? <ChevronDown size={14} /> : <ChevronRight size={14} />}<span className="font-medium">{t("More details")}</span><span className="text-[12px]">{details}</span>
           </button>
           {more && (
             <div className="grid grid-cols-1 gap-3 pt-3.5 sm:grid-cols-2">
               {kind === "project" && <>
-                <DetailField label="Goal"><input className={fieldCls} value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="What does done look like?" dir="auto" /></DetailField>
-                <DetailField label="Deadline"><input type="date" className={fieldCls} value={deadline} onChange={(e) => setDeadline(e.target.value)} /></DetailField>
+                <DetailField label={t("Goal")}><input className={fieldCls} value={goal} onChange={(e) => setGoal(e.target.value)} placeholder={t("What does done look like?")} dir="auto" /></DetailField>
+                <DetailField label={t("Deadline")}><input type="date" className={fieldCls} value={deadline} onChange={(e) => setDeadline(e.target.value)} /></DetailField>
               </>}
               {kind === "course" && <>
-                <DetailField label="Provider"><input className={fieldCls} value={provider} onChange={(e) => setProvider(e.target.value)} placeholder="e.g. Coursera · Stanford Online" /></DetailField>
-                <DetailField label="Course URL"><input className={fieldCls} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" /></DetailField>
-                <DetailField label="Target date"><input type="date" className={fieldCls} value={deadline} onChange={(e) => setDeadline(e.target.value)} /></DetailField>
+                <DetailField label={t("Provider")}><input className={fieldCls} value={provider} onChange={(e) => setProvider(e.target.value)} placeholder={t("e.g. Coursera · Stanford Online")} /></DetailField>
+                <DetailField label={t("Course URL")}><input className={fieldCls} dir="ltr" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" /></DetailField>
+                <DetailField label={t("Target date")}><input type="date" className={fieldCls} value={deadline} onChange={(e) => setDeadline(e.target.value)} /></DetailField>
               </>}
-              <div className={kind === "course" ? "" : "sm:col-span-2"}><DetailField label="Description"><input className={fieldCls} value={description} onChange={(e) => setDescription(e.target.value)} dir="auto" /></DetailField></div>
+              <div className={kind === "course" ? "" : "sm:col-span-2"}><DetailField label={t("Description")}><input className={fieldCls} value={description} onChange={(e) => setDescription(e.target.value)} dir="auto" /></DetailField></div>
             </div>
           )}
         </div>
         <span className="flex-1" />
         <div className={cx("flex justify-end gap-2 py-5", pad)}>
-          <button className={btnGhost} onClick={close}>Cancel</button>
-          <button className={btnPrimary} onClick={create} disabled={!name.trim()}>Create space <span className="font-mono text-[11px] font-medium opacity-65">{isMac ? "⌘" : "Ctrl"}↵</span></button>
+          <button className={btnGhost} onClick={close}>{t("Cancel")}</button>
+          <button className={btnPrimary} onClick={create} disabled={!name.trim()}>{t("Create space")} <span dir="ltr" className="font-mono text-[11px] font-medium opacity-65">{isMac ? "⌘" : "Ctrl"}↵</span></button>
         </div>
       </div>
     </Modal>
@@ -221,6 +224,9 @@ const IMPORT_SOURCES: { I: typeof FileText; n: string; d: string; accept: string
   { I: LayoutDashboard, n: "Canvas", d: ".canvas (JSON Canvas 1.0)", accept: ".canvas,.excalidraw" },
   { I: Braces, n: "JSON backup", d: "Full restore from Lumen", accept: ".json" },
 ];
+
+/** Import from other apps: opens the Import dialog (ImportDialog.tsx) on that source. */
+const FROM_APPS = { label: "From another app", items: [["anki", "flashcards", "Anki"], ["notion", "database", "Notion"], ["obsidian", "wikilink", "Obsidian"]] as const };
 
 export function ImportExportDialog() {
   const ui = useUI();
@@ -311,6 +317,16 @@ export function ImportExportDialog() {
 
   const importBody = (
     <div className="flex flex-col gap-4 px-[22px] py-5">
+      {!job && (
+        <div className="flex flex-wrap items-center gap-2 text-[12.5px]" data-testid="io-import-sources">
+          <span className="text-muted">{FROM_APPS.label}</span>
+          {FROM_APPS.items.map(([k, g, n]) => (
+            <button key={k} onClick={() => { setUI({ io: false }); openImport(k); }} className="flex h-8 items-center gap-1.5 rounded-[8px] border border-line px-2.5 hover:bg-surface-2">
+              <Glyph name={g} size={14} color="var(--accent)" />{n}
+            </button>
+          ))}
+        </div>
+      )}
       {phone && !job && !res ? (
         <div className="flex flex-col gap-2.5">
           {IMPORT_SOURCES.map(({ I, n, d, accept }) => (

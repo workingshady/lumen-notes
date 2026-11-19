@@ -56,6 +56,8 @@ export interface Vault {
   attachments: AttachmentMeta[]; blobs: AttachmentBlob[];
   /** FSRS review log rows (optional; the Dexie `reviews` table). */
   reviews?: ReviewLog[];
+  /** Ask chat threads + tutor sessions (optional; the Dexie `chats` table, scenarios-r5-chat.ts). */
+  chats?: import("../../../shared/types").ChatThread[];
   /** Extra meta rows (e.g. sync cursor) written alongside. */
   meta?: { k: string; v: unknown }[];
 }
@@ -191,7 +193,7 @@ export function addFile(v: Vault, id: string, name: string, blob: Blob) {
 // ------------------------------------------------------------------ write
 /** Wipe every demo table (meta keeps only UI-independent keys) and bulk-write the vault. */
 export async function writeVault(db: LumenDB, v: Vault) {
-  const tables = [db.spaces, db.notes, db.folders, db.versions, db.cards, db.sessions, db.attachments, db.blobs, db.reviews];
+  const tables = [db.spaces, db.notes, db.folders, db.versions, db.cards, db.sessions, db.attachments, db.blobs, db.reviews, db.chats];
   seeding.on = true;
   try { await write(); } finally { seeding.on = false; }
   async function write() { await db.transaction("rw", [...tables, db.meta], async () => {
@@ -207,6 +209,7 @@ export async function writeVault(db: LumenDB, v: Vault) {
     await db.attachments.bulkPut(v.attachments);
     await db.blobs.bulkPut(v.blobs);
     if (v.reviews?.length) await db.reviews.bulkPut(v.reviews);
+    if (v.chats?.length) await db.chats.bulkPut(v.chats);
     if (v.meta?.length) await db.meta.bulkPut(v.meta);
   }); }
 }

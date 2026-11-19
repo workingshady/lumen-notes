@@ -2,6 +2,7 @@
 // replace it), and a legend: swatch, name, value. Slices are keyboard focusable (arrows move).
 import { useRef, useState } from "react";
 import type { Dataset } from "../../lib/dashboard";
+import { t } from "../../lib/i18n";
 import { ChartEmpty, fmt, rovingKeys, useSize } from "./common";
 
 type SeriesData = Extract<Dataset, { kind: "series" }>;
@@ -26,10 +27,10 @@ export function DonutChart({ data, colors, label }: { data: SeriesData; colors: 
   const r1 = size / 2, r0 = r1 * (70 / 110), cxy = size / 2;
   let a = 0;
   const paths = slices.map((s) => { const a0 = a, a1 = a + (s.v / total) * Math.PI * 2; a = a1; return { ...s, d: arc(cxy, cxy, r0, r1, a0, Math.max(a0 + 0.001, a1)) }; });
-  const pct = (v: number) => `${Math.round((v / total) * 100)}%`;
+  const pct = (v: number) => t("{n}%", { n: Math.round((v / total) * 100) });
   const act = active !== null ? paths[active] : null;
   // 10 h and more of study time reads in whole hours ("41 h", legend "14 h": design 18K); "83h 30m" overflowed the ring.
-  const val = (v: number) => (data.unit === "min" && total >= 600 ? `${Math.round(v / 60)} h` : fmt(v, data.unit));
+  const val = (v: number) => (data.unit === "min" && total >= 600 ? t("{n} h", { n: Math.round(v / 60) }) : fmt(v, data.unit));
   return (
     <div ref={box.ref} className={side ? "relative flex h-full min-h-0 items-center gap-4" : "relative flex h-full min-h-0 flex-col items-center gap-2"} onMouseLeave={() => setActive(null)}>
       <div className="relative shrink-0" style={{ width: size, height: size }}>
@@ -43,7 +44,7 @@ export function DonutChart({ data, colors, label }: { data: SeriesData; colors: 
         </svg>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <b className="text-[17px] font-bold leading-[21px] tabular-nums">{val(act ? act.v : total)}</b>
-          <span className="max-w-[64px] truncate text-[10.5px] text-muted">{act ? pct(act.v) : data.unit === "min" ? "studied" : "total"}</span>
+          <span className="max-w-[64px] truncate text-[10.5px] text-muted">{act ? pct(act.v) : data.unit === "min" ? t("studied") : t("total")}</span>
         </div>
       </div>
       <ul className="chart-donut-legend min-w-0" aria-hidden>
@@ -61,4 +62,4 @@ export function DonutChart({ data, colors, label }: { data: SeriesData; colors: 
 
 /** Status / card-state values read as words in the legend ("Todo", "Mastered"); names (fast.ai, CS231n) stay as written. */
 const ENUM = /^(locked|todo|learning|learned|review|mastered|new|relearning|suspended|none|done|open)$/;
-const legendLabel = (l: string) => (ENUM.test(l) ? l[0].toUpperCase() + l.slice(1) : l);
+const legendLabel = (l: string) => (ENUM.test(l) ? t(l[0].toUpperCase() + l.slice(1)) : l);

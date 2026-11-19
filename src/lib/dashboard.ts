@@ -10,6 +10,8 @@ import {
 } from "./base";
 import { buildPath, parsePath, resolveCourses } from "./path";
 import { natural, splitFrontMatter } from "./parse";
+// `tr` = i18n `t` (this module uses `t` for tiles)
+import { fmtDate as fmtD, fmtNum as fmtN, t as tr, tk } from "./i18n";
 
 // ------------------------------------------------------------------ format
 export type TileType = "number" | "bar" | "line" | "area" | "donut" | "stackedBar" | "heatmap" | "ring" | "table" | "list";
@@ -66,8 +68,19 @@ export function withDashRange(t: Tile, range: string | undefined): Tile {
   return dateX ? { ...t, range } : t;
 }
 /** Default caption under a number: its range in words ("this week", "last 30 days", "today"). */
-export const rangeCaption = (r: string | undefined, now: number) => parseRange(r, now)?.label.replace(/^last 7 days$/, "this week").replace(/^next 1 day$/, "today");
-export const DASH_RANGES: [string, string][] = [["7d", "Last 7 days"], ["30d", "Last 30 days"], ["8w", "Last 8 weeks"], ["12w", "Last 12 weeks"], ["6m", "Last 6 months"], ["1y", "Last year"]];
+export const rangeCaption = (r: string | undefined, now: number) => {
+  const rg = parseRange(r, now);
+  if (!rg) return undefined;
+  return rg.label === "last 7 days" ? tr("this week") : rg.label === "next 1 day" ? tr("today") : rangeLabel(rg);
+};
+/** Translated range text ("last 8 weeks" / "آخر 8 أسابيع"); `Range.label` stays English for logic. */
+export function rangeLabel(rg: Pick<Range, "n" | "unit" | "next">): string {
+  const n = rg.n;
+  if (rg.next) return rg.unit === "d" ? tr("next {n} day|next {n} days", { n }) : rg.unit === "w" ? tr("next {n} week|next {n} weeks", { n }) : rg.unit === "m" ? tr("next {n} month|next {n} months", { n }) : tr("next {n} year|next {n} years", { n });
+  return rg.unit === "d" ? tr("last {n} day|last {n} days", { n }) : rg.unit === "w" ? tr("last {n} week|last {n} weeks", { n }) : rg.unit === "m" ? tr("last {n} month|last {n} months", { n }) : tr("last {n} year|last {n} years", { n });
+}
+/** Dashboard-wide ranges: [value, label] (translate the label with `t`). */
+export const DASH_RANGES: [string, string][] = [["7d", tk("Last 7 days")], ["30d", tk("Last 30 days")], ["8w", tk("Last 8 weeks")], ["12w", tk("Last 12 weeks")], ["6m", tk("Last 6 months")], ["1y", tk("Last year")]];
 
 export const COLS = 12;
 const FENCE = /^([ \t]*)(`{3,}|~{3,})[ \t]*dashboard[ \t]*\r?\n([\s\S]*?)\r?\n[ \t]*\2[ \t]*$/m;
@@ -133,7 +146,7 @@ export function parseDashboard(body: string): { cfg: DashboardConfig; error: str
   let raw: unknown = null, error: string | null = null;
   if (loc) { try { raw = parseYaml(loc.yaml); } catch (e) { error = String(e); } }
   const o: YMap = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as YMap) : {};
-  if (loc && raw !== null && (typeof raw !== "object" || Array.isArray(raw))) error = "The dashboard block should be a YAML map (tiles:)";
+  if (loc && raw !== null && (typeof raw !== "object" || Array.isArray(raw))) error = tr("The dashboard block should be a YAML map (tiles:)");
   const tiles = (Array.isArray(o.tiles) ? o.tiles : []).filter((v): v is YMap => !!v && typeof v === "object" && !Array.isArray(v)).map(tileOf);
   // unique ids
   const seen = new Set<string>();
@@ -249,12 +262,12 @@ export type FieldKind = "date" | "number" | "category" | "text" | "bool";
 export interface FieldInfo { name: string; kind: FieldKind; label: string }
 const F = (name: string, kind: FieldKind, label: string): FieldInfo => ({ name, kind, label });
 export const SOURCE_FIELDS: Record<"cards" | "sessions" | "path" | "notes", FieldInfo[]> = {
-  cards: [F("dueOn", "date", "Due (overdue counts today)"), F("due", "date", "Due"), F("lastReview", "date", "Last review"), F("state", "category", "State"), F("course", "category", "Course"), F("note", "category", "Note"),
-    F("interval", "number", "Interval (days)"), F("reps", "number", "Reviews"), F("lapses", "number", "Lapses"), F("stability", "number", "Stability"), F("difficulty", "number", "Difficulty")],
-  sessions: [F("at", "date", "Date"), F("course", "category", "Course"), F("note", "category", "Note"), F("weekday", "category", "Weekday"), F("hour", "number", "Hour"), F("minutes", "number", "Minutes")],
-  path: [F("learnedOn", "date", "Learned on"), F("review", "date", "Next review"), F("due", "date", "Course due date"), F("status", "category", "Status"), F("stage", "category", "Stage"), F("courses", "category", "Courses"),
-    F("concept", "text", "Concept"), F("mastered", "bool", "Mastered"), F("learned", "bool", "Learned"), F("reviewDue", "bool", "Review due"), F("interval", "number", "Review interval")],
-  notes: [F("created", "date", "Created"), F("updated", "date", "Updated"), F("status", "category", "Status"), F("type", "category", "Type"), F("space", "category", "Space (course)"), F("tags", "category", "Tags"), F("folder", "category", "Folder"), F("title", "text", "Title")],
+  cards: [F("dueOn", "date", tk("Due (overdue counts today)")), F("due", "date", tk("Due")), F("lastReview", "date", tk("Last review")), F("state", "category", tk("State")), F("course", "category", tk("Course")), F("note", "category", tk("Note")),
+    F("interval", "number", tk("Interval (days)")), F("reps", "number", tk("Reviews")), F("lapses", "number", tk("Lapses")), F("stability", "number", tk("Stability")), F("difficulty", "number", tk("Difficulty"))],
+  sessions: [F("at", "date", tk("Date")), F("course", "category", tk("Course")), F("note", "category", tk("Note")), F("weekday", "category", tk("Weekday")), F("hour", "number", tk("Hour")), F("minutes", "number", tk("Minutes"))],
+  path: [F("learnedOn", "date", tk("Learned on")), F("review", "date", tk("Next review")), F("due", "date", tk("Course due date")), F("status", "category", tk("Status")), F("stage", "category", tk("Stage")), F("courses", "category", tk("Courses")),
+    F("concept", "text", tk("Concept")), F("mastered", "bool", tk("Mastered")), F("learned", "bool", tk("Learned")), F("reviewDue", "bool", tk("Review due")), F("interval", "number", tk("Review interval"))],
+  notes: [F("created", "date", tk("Created")), F("updated", "date", tk("Updated")), F("status", "category", tk("Status")), F("type", "category", tk("Type")), F("space", "category", tk("Space (course)")), F("tags", "category", tk("Tags")), F("folder", "category", tk("Folder")), F("title", "text", tk("Title"))],
 };
 export const sourceKind = (source: string): "cards" | "sessions" | "path" | "notes" | "base" => {
   const s = source.trim().toLowerCase();
@@ -313,7 +326,7 @@ export function sourceRecords(t: Pick<Tile, "source" | "view" | "filter">, d: Da
     const name = sourceArg(t.source).replace(/^path$/i, "").toLowerCase();
     const paths = d.notes.filter((n) => n.type === "path").sort((a, b) => b.updatedAt - a.updatedAt);
     const pn = name ? paths.find((n) => n.title.toLowerCase() === name) ?? paths.find((n) => n.title.toLowerCase().includes(name)) : paths[0];
-    if (!pn) return { recs: [], error: name ? `No learning path called "${sourceArg(t.source)}"` : "No learning path yet" };
+    if (!pn) return { recs: [], error: name ? tr("No learning path called \"{name}\"", { name: sourceArg(t.source) }) : tr("No learning path yet") };
     const refs = resolveCourses(parsePath(pn.body).courses, d.notes, d.spaces);
     const p = buildPath(pn.body, refs);
     recs = p.concepts.map((c) => {
@@ -332,7 +345,7 @@ export function sourceRecords(t: Pick<Tile, "source" | "view" | "filter">, d: Da
   } else if (kind === "base") {
     const name = sourceArg(t.source).toLowerCase();
     const bn = d.notes.find((n) => n.type === "base" && n.title.toLowerCase() === name);
-    if (!bn) return { recs: [], error: `No base called "${sourceArg(t.source)}"` };
+    if (!bn) return { recs: [], error: tr("No base called \"{name}\"", { name: sourceArg(t.source) }) };
     const { cfg } = parseBase(bn.body);
     const view = cfg.views.find((v) => v.name.toLowerCase() === (t.view ?? "").toLowerCase()) ?? cfg.views[0];
     const { rows } = runView(d.notes, cfg, { ...view, limit: undefined }, d.ctx, d.propsFor ?? propsOf, { self: bn.id });
@@ -357,7 +370,7 @@ export function recGet(r: Rec, p: string): Val {
 /** Field names present in records (for the field pickers), with a guessed kind. */
 export function fieldsOf(source: string, recs: Rec[]): FieldInfo[] {
   const kind = sourceKind(source);
-  const base = SOURCE_FIELDS[kind === "base" ? "notes" : kind];
+  const base = SOURCE_FIELDS[kind === "base" ? "notes" : kind].map((f) => ({ ...f, label: tr(f.label) })); // labels in the interface language
   if (kind !== "notes" && kind !== "base") return base;
   const seen = new Map<string, FieldKind>();
   for (const r of recs.slice(0, 500)) for (const [k, v] of Object.entries(r)) {
@@ -397,14 +410,14 @@ export function bucketStart(t: number, b: Bucket): number {
 const nextBucket = (t: number, b: Bucket) => { const d = new Date(t); if (b === "day") d.setDate(d.getDate() + 1); else if (b === "week") d.setDate(d.getDate() + 7); else d.setMonth(d.getMonth() + 1); return d.getTime(); };
 export function bucketLabel(t: number, b: Bucket): string {
   const d = new Date(t);
-  if (b === "month") return d.toLocaleDateString("en-GB", { month: "short", year: d.getMonth() === 0 ? "2-digit" : undefined });
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  if (b === "month") return fmtD(d, d.getMonth() === 0 ? { month: "short", year: "2-digit" } : { month: "short" });
+  return fmtD(d, { day: "numeric", month: "short" });
 }
 export function bucketLong(t: number, b: Bucket): string {
   const d = new Date(t);
-  if (b === "month") return d.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
-  if (b === "week") return `Week of ${d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
-  return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  if (b === "month") return fmtD(d, { month: "long", year: "numeric" });
+  if (b === "week") return tr("Week of {date}", { date: fmtD(d, { day: "numeric", month: "short", year: "numeric" }) });
+  return fmtD(d, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 }
 
 // ------------------------------------------------------------------ aggregation
@@ -471,11 +484,13 @@ const fmtCell = (v: RVal | undefined, field: string): string => {
   return typeof v === "number" ? fmtNum(v) : String(v);
 };
 export function fmtNum(v: number, unit?: string): string {
-  const s = Math.abs(v) >= 100 || Number.isInteger(v) ? Math.round(v).toLocaleString("en-GB") : v.toLocaleString("en-GB", { maximumFractionDigits: 1 });
-  if (unit === "min" && Math.abs(v) >= 60) { const h = Math.floor(v / 60), m = Math.round(v % 60); return m ? `${h}h ${m}m` : `${h}h`; }
+  const s = Math.abs(v) >= 100 || Number.isInteger(v) ? fmtN(Math.round(v), { useGrouping: true }) : fmtN(v, { maximumFractionDigits: 1, useGrouping: true });
+  if (unit === "min" && Math.abs(v) >= 60) { const h = Math.floor(v / 60), m = Math.round(v % 60); return m ? tr("{h}h {m}m", { h, m }) : tr("{h}h", { h }); }
+  if (unit === "min") return tr("{n} min", { n: s });
   return unit ? `${s} ${unit}` : s;
 }
-const label = (f: string) => { const x = f.replace(/^(note|file)\./, ""); return x.charAt(0).toUpperCase() + x.slice(1).replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase(); };
+/** Field name → label ("dueOn" → "Due on"); built-in field labels are translated (catalog: lib/dashboard field labels). */
+const label = (f: string) => { const x = f.replace(/^(note|file)\./, ""); return tr(x.charAt(0).toUpperCase() + x.slice(1).replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase()); };
 
 /** Run a tile: source → filter → range → group (x × series) → aggregate. */
 export function runTile(tile: Tile, d: DashData): TileResult {
@@ -484,7 +499,9 @@ export function runTile(tile: Tile, d: DashData): TileResult {
   const agg = aggOf(t);
   const yField = t.y;
   const unit = t.unit ?? (sourceKind(t.source) === "sessions" && yField === "minutes" ? "min" : undefined);
-  const yLabel = agg === "count" ? (sourceKind(t.source) === "cards" ? "Cards" : sourceKind(t.source) === "sessions" ? "Sessions" : sourceKind(t.source) === "path" ? "Concepts" : "Notes") : `${agg === "sum" ? "" : agg + " "}${label(yField ?? "")}`.trim();
+  const yl = label(yField ?? "");
+  const yLabel = agg === "count" ? (sourceKind(t.source) === "cards" ? tr("Cards") : sourceKind(t.source) === "sessions" ? tr("Sessions") : sourceKind(t.source) === "path" ? tr("Concepts") : tr("Notes"))
+    : agg === "avg" ? tr("avg {field}", { field: yl }) : agg === "min" ? tr("min {field}", { field: yl }) : agg === "max" ? tr("max {field}", { field: yl }) : yl;
   const range = parseRange(t.range, d.now);
   const dateField = t.x && isDateField(t, t.x, all) ? t.x : defaultDateField(t.source);
   const inRange = (r: Rec, rg: { start: number; end: number }) => { const tt = timeOf(r[dateField]); return tt !== null && tt >= rg.start && tt < rg.end; };
@@ -497,15 +514,18 @@ export function runTile(tile: Tile, d: DashData): TileResult {
     if (range && !range.next && t.delta !== false) {
       const len = range.end - range.start;
       prev = value(all.filter((r) => inRange(r, { start: range.start - len, end: range.start })));
-      vs = range.n === 1 || (range.unit === "d" && range.n === 7) ? `vs last ${range.unit === "d" && range.n === 7 ? "week" : { d: "day", w: "week", m: "month", y: "year" }[range.unit]}` : `vs previous ${range.label.replace(/^last /, "")}`;
+      const u = range.unit === "d" && range.n === 7 ? "w" : range.unit, n = range.n;
+      vs = range.n === 1 || (range.unit === "d" && range.n === 7)
+        ? (u === "d" ? tr("vs last day") : u === "w" ? tr("vs last week") : u === "m" ? tr("vs last month") : tr("vs last year"))
+        : u === "d" ? tr("vs previous {n} days", { n }) : u === "w" ? tr("vs previous {n} weeks", { n }) : u === "m" ? tr("vs previous {n} months", { n }) : tr("vs previous {n} years", { n });
     }
     let sub = t.caption;
     if (sub === undefined && t.filter && agg === "count") {
       // "of 101 in AI Engineer": the filtered count out of the whole source
       const whole = sourceRecords({ source: t.source, view: t.view }, d).recs.length;
       const k = sourceKind(t.source);
-      const name = k === "path" ? (sourceArg(t.source).replace(/^path$/i, "") || d.notes.filter((n) => n.type === "path").sort((a, b) => b.updatedAt - a.updatedAt)[0]?.title || "") : k === "base" ? sourceArg(t.source) : k === "cards" ? "cards" : k === "sessions" ? "sessions" : "notes";
-      sub = `of ${whole}${name ? ` in ${name}` : ""}`;
+      const name = k === "path" ? (sourceArg(t.source).replace(/^path$/i, "") || d.notes.filter((n) => n.type === "path").sort((a, b) => b.updatedAt - a.updatedAt)[0]?.title || "") : k === "base" ? sourceArg(t.source) : k === "cards" ? tr("cards") : k === "sessions" ? tr("sessions") : tr("notes");
+      sub = name ? tr("of {n} in {name}", { n: whole, name }) : tr("of {n}", { n: whole });
     }
     return { data: { kind: "number", value: value(cur), prev, vs, yLabel, unit, ...(sub !== undefined ? { sub } : {}), ...(t.better ? { better: t.better } : {}), ...(t.delta === "percent" ? { pct: true } : {}) }, error, records: cur.length };
   }
@@ -565,7 +585,7 @@ export function runTile(tile: Tile, d: DashData): TileResult {
     const lim = t.limit ?? (t.type === "donut" ? 6 : 12);
     const other = keys.length > lim ? keys.slice(lim - 1) : [];
     if (other.length) keys = [...keys.slice(0, lim - 1), "\u0000other"];
-    keys.forEach((k, i) => { catOf.set(k, i); categories.push({ key: k, label: k === NONE_KEY ? `No ${label(xField).toLowerCase()}` : k === "\u0000other" ? "Other" : k, long: k === NONE_KEY ? `No ${label(xField).toLowerCase()}` : k === "\u0000other" ? `Other (${other.length})` : k }); });
+    keys.forEach((k, i) => { catOf.set(k, i); categories.push({ key: k, label: k === NONE_KEY ? tr("No {prop}", { prop: label(xField).toLowerCase() }) : k === "\u0000other" ? tr("Other") : k, long: k === NONE_KEY ? tr("No {prop}", { prop: label(xField).toLowerCase() }) : k === "\u0000other" ? tr("Other ({n})", { n: other.length }) : k }); });
     for (const k of other) catOf.set(k, keys.length - 1);
   }
   // series keys
@@ -609,7 +629,7 @@ export function runTile(tile: Tile, d: DashData): TileResult {
   const series: Series[] = sList.map((sk, si) => {
     let values = bins[si].map((rs) => value(rs));
     if (t.cumulative) { let acc = carry[si]; values = values.map((v) => (acc += v)); }
-    const lbl = sk === "" ? yLabel : sk === NONE_KEY ? `No ${label(t.series ?? "").toLowerCase()}` : sk === "\u0000other" ? "Other" : sk;
+    const lbl = sk === "" ? yLabel : sk === NONE_KEY ? tr("No {prop}", { prop: label(t.series ?? "").toLowerCase() }) : sk === "\u0000other" ? tr("Other") : sk;
     return { key: sk || "value", label: lbl, color: "", values };
   });
   if (t.type === "donut" && !t.series) series[0].color = "";
@@ -638,8 +658,8 @@ export function categoryColors(t: Tile, cats: Category[], d: Pick<DashData, "spa
 /** Data table form of any dataset (the accessibility toggle, and the table tile with x). */
 export function datasetTable(ds: Dataset): { columns: string[]; rows: string[][] } {
   if (ds.kind === "rows") return { columns: ds.columns, rows: ds.rows.map((r) => r.cells) };
-  if (ds.kind === "number") return { columns: [ds.yLabel, "Previous period"], rows: [[fmtNum(ds.value, ds.unit), ds.prev === null ? "" : fmtNum(ds.prev, ds.unit)]] };
-  if (ds.kind === "ring") return { columns: [ds.yLabel, "Total", "Share"], rows: [[fmtNum(ds.value, ds.unit), fmtNum(ds.total, ds.unit), ds.total ? `${Math.round((ds.value / ds.total) * 100)}%` : ""]] };
+  if (ds.kind === "number") return { columns: [ds.yLabel, tr("Previous period")], rows: [[fmtNum(ds.value, ds.unit), ds.prev === null ? "" : fmtNum(ds.prev, ds.unit)]] };
+  if (ds.kind === "ring") return { columns: [ds.yLabel, tr("Total"), tr("Share@@proportion")], rows: [[fmtNum(ds.value, ds.unit), fmtNum(ds.total, ds.unit), ds.total ? tr("{n}%", { n: Math.round((ds.value / ds.total) * 100) }) : ""]] };
   return { columns: [ds.xLabel, ...ds.series.map((s) => s.label)], rows: ds.categories.map((c, i) => [c.long, ...ds.series.map((s) => fmtNum(s.values[i] ?? 0, ds.unit))]) };
 }
 

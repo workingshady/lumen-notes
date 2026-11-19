@@ -19,11 +19,12 @@ import { cx } from "../components/ui";
 import { updateNote } from "../lib/actions";
 import { setTopicLink } from "../lib/parse";
 import { addConceptNeed, conceptCourses, focusChain, graphLayout, pathLinkKind, setConceptLink, type BuiltConcept, type BuiltPath } from "../lib/path";
-import { checkLink, crossings, impliedLinks, linkMessage, needPath, type LinkCheck, type LinkKind } from "../lib/prereq-graph";
+import { arrow, checkLink, crossings, LINK_LABEL, impliedLinks, linkMessage, needPath, type LinkCheck, type LinkKind } from "../lib/prereq-graph";
 import { toast } from "../lib/store";
 import { announce } from "./dnd-parts";
 import { shortStage, StatusIcon, useStored } from "./path-ui";
 import { usePhone } from "./spaces-util";
+import { t, useLang } from "../lib/i18n";
 
 type P = { x: number; y: number };
 type CData = { c: BuiltConcept; stageNo: number; chain: boolean; inFocus: boolean; sel: boolean; vertical: boolean; drop: DropState; pinned: boolean; dimOff: boolean };
@@ -32,6 +33,7 @@ type SData = { stage: number; name: string; count: number; onExpand: () => void;
 const NW = 176, NH = 46;
 
 const CNode = memo(({ data }: NodeProps<RFNode<CData>>) => {
+  useLang();
   const { c, chain, sel, inFocus, vertical, drop, pinned, dimOff } = data;
   const done = c.status === "done";
   const bars = conceptCourses(c).slice(0, 3);
@@ -47,31 +49,31 @@ const CNode = memo(({ data }: NodeProps<RFNode<CData>>) => {
         <div className="flex min-w-0 flex-1 items-center gap-2 px-2.5">
           <StatusIcon c={c} size={14} />
           <span className="min-w-0 flex-1 truncate font-semibold" dir="auto" title={c.def.name}>{c.def.name}</span>
-          <span className="text-[10.5px] font-semibold text-muted">{data.stageNo ? `S${data.stageNo}` : "—"}</span>
+          <span className="text-[10.5px] font-semibold text-muted">{data.stageNo ? t("S{n}", { n: data.stageNo }) : "—"}</span>
         </div>
-        <Handle type="source" position={vertical ? Position.Bottom : Position.Right} title="Drag onto a concept to make this its prerequisite" className="pdnd-src"
+        <Handle type="source" position={vertical ? Position.Bottom : Position.Right} title={t("Drag onto a concept to make this its prerequisite")} className="pdnd-src"
           style={{ width: 10, height: 10, ...(vertical ? { bottom: -6 } : { right: -6 }), background: "var(--accent)", border: "2px solid var(--bg)", cursor: "crosshair" }} />
       </div>
-      {pinned && <span title="Pinned: Tidy up keeps it here" className="pointer-events-none absolute -right-1.5 -top-1.5 size-2.5 rounded-full bg-accent shadow-[0_0_0_2px_var(--bg)]" />}
+      {pinned && <span title={t("Pinned: Tidy up keeps it here")} className="pointer-events-none absolute -right-1.5 -top-1.5 size-2.5 rounded-full bg-accent shadow-[0_0_0_2px_var(--bg)]" />}
     </div>
   );
 });
-const HNode = memo(({ data }: NodeProps<RFNode<HData>>) => (
+const HNode = memo(({ data }: NodeProps<RFNode<HData>>) => { useLang(); return (
   <div className="group flex flex-col gap-0.5" style={{ width: data.width }}>
-    <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Step {data.stage + 1}
-      <button title="Collapse this stage" aria-label={`Collapse step ${data.stage + 1}`} onClick={data.onCollapse} className="nodrag opacity-0 hover:text-ink group-hover:opacity-100"><ChevronsLeft size={13} /></button></span>
+    <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("Step {n}", { n: data.stage + 1 })}
+      <button title={t("Collapse this stage")} aria-label={t("Collapse step {n}", { n: data.stage + 1 })} onClick={data.onCollapse} className="nodrag opacity-0 hover:text-ink group-hover:opacity-100"><ChevronsLeft size={13} /></button></span>
     <span className="truncate font-[650]" dir="auto">{shortStage(data.name)}</span>
   </div>
-));
-const SNode = memo(({ data }: NodeProps<RFNode<SData>>) => (
+); });
+const SNode = memo(({ data }: NodeProps<RFNode<SData>>) => { useLang(); return (
   <div className="flex w-[150px] flex-col gap-1 rounded-[12px] border border-dashed border-line bg-surface px-3 py-2.5">
     <Handle type="target" position={data.vertical ? Position.Top : Position.Left} isConnectable={false} style={{ opacity: 0 }} />
-    <span className="truncate font-[650]" dir="auto">Step {data.stage + 1} · {shortStage(data.name)}</span>
-    <span className="text-[12px] text-muted">{data.count} {data.count === 1 ? "concept" : "concepts"} · collapsed</span>
-    <button onClick={data.onExpand} className="nodrag self-start text-[12px] text-link hover:underline">Expand</button>
+    <span className="truncate font-[650]" dir="auto">{t("Step {n} · {name}", { n: data.stage + 1, name: shortStage(data.name) })}</span>
+    <span className="text-[12px] text-muted">{t("{n} concept|{n} concepts", { n: data.count })} · {t("collapsed")}</span>
+    <button onClick={data.onExpand} className="nodrag self-start text-[12px] text-link hover:underline">{t("Expand")}</button>
     <Handle type="source" position={data.vertical ? Position.Bottom : Position.Right} isConnectable={false} style={{ opacity: 0 }} />
   </div>
-));
+); });
 const nodeTypes = { concept: CNode, head: HNode, summary: SNode };
 
 type EKind = LinkKind | "added" | "implied";
@@ -205,7 +207,7 @@ export function Graph({ path, note, save, onOpen, sel, keep, focus, setFocus }: 
     const pre = path.byKey.get(fromKey), c = path.byKey.get(toKey);
     if (!pre || !c) return;
     save(addConceptNeed(note.body, c, pre));
-    announce(`${c.def.name} now needs ${pre.def.name}`);
+    announce(t("{a} now needs {b}", { a: c.def.name, b: pre.def.name }));
   };
   const tipAt = (k: string) => {
     const p = posOf(k), vp = rf.getViewport(), w = box.current?.clientWidth ?? 800;
@@ -254,13 +256,13 @@ export function Graph({ path, note, save, onOpen, sel, keep, focus, setFocus }: 
   const setKind = (k: LinkKind) => {
     if (!menu) return;
     if (menu.own || !sites.length) save(setConceptLink(note.body, menu.to, menu.from, k)); else writeCourse(k);
-    announce(`${menu.from.def.name} → ${menu.to.def.name}: ${k === "needs" ? "prerequisite" : k === "after" ? "recommended order" : "related"}`);
+    announce(`${menu.from.def.name}${arrow()}${menu.to.def.name}: ${t(LINK_LABEL[k])}`);
     setMenu(null);
   };
   const remove = () => {
     if (!menu) return;
     if (menu.own || !sites.length) save(setConceptLink(note.body, menu.to, menu.from, null)); else writeCourse(null);
-    announce(`Removed ${menu.from.def.name} → ${menu.to.def.name}`);
+    announce(t("Removed {link}", { link: `${menu.from.def.name}${arrow()}${menu.to.def.name}` }));
     setMenu(null);
   };
   const reverse = () => {
@@ -268,11 +270,11 @@ export function Graph({ path, note, save, onOpen, sel, keep, focus, setFocus }: 
     const { from, to, kind } = menu;
     // a reversed prerequisite must not close a loop through the other links
     const without = (k: string) => (k === to.key ? needsOf(k).filter((n) => n !== from.key) : needsOf(k));
-    if (kind === "needs" && needPath(without, to.key, from.key)) { toast(`Can't reverse: ${to.def.name} still needs ${from.def.name} through other links, so this would make a loop.`, undefined, { icon: "error" }); return setMenu(null); }
+    if (kind === "needs" && needPath(without, to.key, from.key)) { toast(t("Can't reverse: {a} still needs {b} through other links, so this would make a loop.", { a: to.def.name, b: from.def.name }), undefined, { icon: "error" }); return setMenu(null); }
     let body = note.body;
     if (menu.own || !sites.length) body = setConceptLink(body, to, from, null); else writeCourse(null);
     save(setConceptLink(body, from, to, kind));
-    announce(`Reversed: ${to.def.name} → ${from.def.name}`);
+    announce(t("Reversed: {link}", { link: `${to.def.name}${arrow()}${from.def.name}` }));
     setMenu(null);
   };
 
@@ -287,7 +289,7 @@ export function Graph({ path, note, save, onOpen, sel, keep, focus, setFocus }: 
     const pairs = linkList.filter((l) => l.kind !== "related" && (l.kind !== "implied" || disp.implied)).map((l) => [l.src, l.dst] as [string, string]);
     const before = crossings(pairs, (k) => posOf(k)), after = crossings(pairs.filter(([a, b]) => !implied.has(`${a}>${b}`)), (k) => next.get(k));
     const pinned = keepPins ? T.nodes.filter((n) => pinSet.has(n.key) && manual[n.key]).length : 0;
-    setPreview({ pos: next, stats: { moved, before, after, pinned, label: counts.implied && disp.implied ? `hides ${counts.implied} implied link${counts.implied === 1 ? "" : "s"}` : undefined } });
+    setPreview({ pos: next, stats: { moved, before, after, pinned, label: counts.implied && disp.implied ? t("hides {n} implied link|hides {n} implied links", { n: counts.implied }) : undefined } });
   };
   const applyTidy = () => {
     if (!preview) return;
@@ -297,7 +299,7 @@ export function Graph({ path, note, save, onOpen, sel, keep, focus, setFocus }: 
     if (!keepPins) setPins([]);
     setTidied(true);
     setDisp({ implied: false });
-    toast(`Tidied up · ${preview.stats.moved} card${preview.stats.moved === 1 ? "" : "s"} moved`, { label: "Undo", run: () => { setManual(prev.manual); setPins(prev.pins); setTidied(prev.tidied); setDisp({ implied: prev.implied }); } });
+    toast(t("Tidied up · {n} card moved|Tidied up · {n} cards moved", { n: preview.stats.moved }), { label: t("Undo"), run: () => { setManual(prev.manual); setPins(prev.pins); setTidied(prev.tidied); setDisp({ implied: prev.implied }); } });
     setPreview(null);
   };
   useEffect(() => {
@@ -325,6 +327,7 @@ export function Graph({ path, note, save, onOpen, sel, keep, focus, setFocus }: 
   const fitOpts = { padding: phone ? 0.08 : 0.06, maxZoom: 1, minZoom: 0.45, nodes: firstCols.length ? firstCols : undefined };
   const fc = focusKey ? path.byKey.get(focusKey) : null;
   const inset = panel && !phone ? 300 : 0;
+  const { rtl } = useLang();
 
   return (
     <div ref={box} className="pdnd-flow lm-flow lp-graph relative h-full min-h-[420px]"
@@ -334,7 +337,7 @@ export function Graph({ path, note, save, onOpen, sel, keep, focus, setFocus }: 
         onNodeClick={(_, n) => { setMenu(null); setAsk(null); if (n.type === "concept") onOpen(n.id); }}
         onNodeMouseEnter={(_, n) => n.type === "concept" && setHover(n.id)} onNodeMouseLeave={() => setHover(null)}
         onNodeDragStop={(_, n) => { if (!free || n.type !== "concept") return; setManual((m) => ({ ...m, [n.id]: n.position })); if (!pinSet.has(n.id)) setPins((p) => [...p, n.id]); }}
-        onNodeContextMenu={(e, n) => { if (!free || n.type !== "concept") return; e.preventDefault(); const on = pinSet.has(n.id); setPins((p) => (on ? p.filter((x) => x !== n.id) : [...p, n.id])); toast(on ? "Unpinned · Tidy up may move it" : "Pinned · Tidy up keeps it here"); }}
+        onNodeContextMenu={(e, n) => { if (!free || n.type !== "concept") return; e.preventDefault(); const on = pinSet.has(n.id); setPins((p) => (on ? p.filter((x) => x !== n.id) : [...p, n.id])); toast(on ? t("Unpinned · Tidy up may move it") : t("Pinned · Tidy up keeps it here")); }}
         nodesConnectable connectOnClick={false} onConnect={connect}
         onConnectStart={(e, p) => { setAsk(null); setMenu(null); const r = box.current!.getBoundingClientRect(); const ev = "touches" in e ? e.touches[0] : e; if (p.nodeId) setDrag({ x: ev.clientX - r.left, y: ev.clientY - r.top, from: p.nodeId, over: null }); }}
         onConnectEnd={endConnect}
@@ -342,21 +345,21 @@ export function Graph({ path, note, save, onOpen, sel, keep, focus, setFocus }: 
         connectionLineStyle={{ stroke: dropLineColor(overState), strokeWidth: 2, strokeDasharray: "6 5" }}
         onEdgeClick={openMenu} onEdgeContextMenu={openMenu} onPaneClick={() => { setMenu(null); setAsk(null); }}>
         <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="color-mix(in srgb, var(--muted) 30%, transparent)" />
-        {!phone && <MiniMap position="bottom-right" pannable zoomable style={{ width: 168, height: 96, margin: 16, marginRight: 16 + inset, borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", overflow: "hidden" }}
+        {!phone && <MiniMap position={rtl ? "bottom-left" : "bottom-right"} pannable zoomable style={{ width: 168, height: 96, margin: 16, [rtl ? "marginLeft" : "marginRight"]: 16 + inset, borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", overflow: "hidden" }}
           nodeColor={(n) => (n.type === "concept" ? ((n.data as CData).c.status === "done" ? "var(--success)" : "var(--muted)") : n.type === "summary" ? "var(--border)" : "transparent")} nodeBorderRadius={2}
           maskColor="transparent" maskStrokeColor="var(--accent)" maskStrokeWidth={3} bgColor="var(--surface)" />}
       </ReactFlow>
 
       {/* top-right: focus pill (+ the phone Display button) */}
-      <div className="absolute top-3 z-10 flex items-center gap-2" style={{ right: 16 + inset }}>
+      <div className="absolute top-3 z-10 flex items-center gap-2" style={{ insetInlineEnd: 16 + inset }}>
         {fc && (
           <div className="flex items-center gap-2 rounded-[10px] border border-line bg-surface px-2.5 py-1 text-[12px]">
-            <span className="text-muted">Focus</span><b className="font-semibold" dir="auto">{fc.def.name}</b><span className="text-muted">· {chain.size} in chain</span>
-            <button onClick={() => setOnly((o) => !o)} aria-pressed={only} className={cx("rounded-[6px] px-1.5", only ? "bg-accent/15 text-ink" : "text-link")}>{only ? "Show all" : "Only this chain"}</button>
-            {focus && <button aria-label="Clear focus" onClick={() => { setFocus(null); setOnly(false); }} className="text-muted hover:text-ink"><X size={13} /></button>}
+            <span className="text-muted">{t("Focus")}</span><b className="font-semibold" dir="auto">{fc.def.name}</b><span className="text-muted">· {t("{n} in chain", { n: chain.size })}</span>
+            <button onClick={() => setOnly((o) => !o)} aria-pressed={only} className={cx("rounded-[6px] px-1.5", only ? "bg-accent/15 text-ink" : "text-link")}>{only ? t("Show all") : t("Only this chain")}</button>
+            {focus && <button aria-label={t("Clear focus")} onClick={() => { setFocus(null); setOnly(false); }} className="text-muted hover:text-ink"><X size={13} /></button>}
           </div>
         )}
-        {phone && <button aria-label="Graph display" onClick={() => setSheet(true)} className="flex size-10 items-center justify-center rounded-[10px] border border-line bg-surface"><SlidersHorizontal size={18} /></button>}
+        {phone && <button aria-label={t("Graph display")} onClick={() => setSheet(true)} className="flex size-10 items-center justify-center rounded-[10px] border border-line bg-surface"><SlidersHorizontal size={18} /></button>}
       </div>
 
       {preview && <TidyBanner stats={preview.stats} onCancel={() => setPreview(null)} onApply={applyTidy} top={phone ? 60 : 56} />}
@@ -364,20 +367,20 @@ export function Graph({ path, note, save, onOpen, sel, keep, focus, setFocus }: 
       {drag && !(overMsg && overState !== "valid") && (
         <div className="pointer-events-none absolute z-30 flex items-center gap-1.5 rounded-[8px] px-2 py-1 text-[12px]" style={{ left: drag.x + 14, top: drag.y + 14, background: "var(--surface-2)", border: `1px solid ${dropLineColor(overState)}`, color: overState && overState !== "valid" ? dropLineColor(overState) : undefined, boxShadow: "0 8px 20px rgba(0,0,0,.35)" }}>
           <span className="size-2.5 rounded-full" style={{ background: dropLineColor(overState) }} />
-          {overState === "valid" ? `${nameOf(drag.over!)} will need ${nameOf(drag.from)}` : overMsg ? overMsg.title : "Drop on a concept to make it a prerequisite"}
+          {overState === "valid" ? t("{a} will need {b}", { a: nameOf(drag.over!), b: nameOf(drag.from) }) : overMsg ? overMsg.title : t("Drop on a concept to make it a prerequisite")}
         </div>
       )}
-      {drag?.over && overMsg && overState && overState !== "valid" && (() => { const t = tipAt(drag.over); return <LinkTip state={overState} title={overMsg.title} body={overMsg.body} x={t.x} y={t.y} />; })()}
+      {drag?.over && overMsg && overState && overState !== "valid" && (() => { const tp = tipAt(drag.over); return <LinkTip state={overState} title={overMsg.title} body={overMsg.body} x={tp.x} y={tp.y} />; })()}
       {ask && (() => { const m = linkMessage(checkLink(needsOf, ask.from, ask.to), nameOf, ask.from, ask.to); return m ? <LinkTip state="implied" title={m.title} body={m.body} x={ask.x} y={ask.y} onAdd={() => { addLink(ask.from, ask.to); setAsk(null); }} onCancel={() => setAsk(null)} /> : null; })()}
 
       {menu && (
         <LinkMenu phone={phone} x={Math.max(8, menu.x)} y={Math.max(8, menu.y)} from={menu.from.def.name} to={menu.to.def.name} kind={menu.kind}
-          note={phone ? (menu.own ? "Added in this path" : sites.length ? `Prerequisite · added from ${[...new Set(sites.map((s) => s.course))].join(", ")} roadmap` : undefined) : undefined}
+          note={phone ? (menu.own ? t("Added in this path") : sites.length ? t("Prerequisite · added from {names} roadmap", { names: [...new Set(sites.map((s) => s.course))].join(t(", ")) }) : undefined) : undefined}
           onKind={setKind} onReverse={reverse} onRemove={remove} onClose={() => setMenu(null)} />
       )}
 
       {/* legend (collapsible) */}
-      <div className="absolute bottom-4 left-5 z-10 flex max-w-[calc(100%-2.5rem)] flex-col rounded-[10px] border border-line bg-surface text-[12px] text-muted">
+      <div className="absolute bottom-4 start-5 z-10 flex max-w-[calc(100%-2.5rem)] flex-col rounded-[10px] border border-line bg-surface text-[12px] text-muted">
         {legend && courses && (
           <div className="flex max-h-[30vh] flex-wrap gap-x-3 gap-y-1.5 overflow-y-auto border-b border-line px-3 py-2">
             {path.courses.map((c) => <span key={c.key} className="flex items-center gap-1.5"><span className="h-2 w-1 rounded-[1px]" style={{ background: c.color }} />{c.spaceName}</span>)}
@@ -386,32 +389,32 @@ export function Graph({ path, note, save, onOpen, sel, keep, focus, setFocus }: 
         <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 px-3 py-2">
           {legend && (
             <>
-              <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-ok" />done</span>
-              <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-muted" />needed</span>
-              {counts.after > 0 && <span className="flex items-center gap-1.5"><svg width="16" height="4" aria-hidden><path d="M1 2H15" stroke="var(--muted)" strokeWidth="2" strokeDasharray="6 5" /></svg>recommended</span>}
-              {counts.related > 0 && <span className="flex items-center gap-1.5"><svg width="16" height="4" aria-hidden><path d="M1 2H15" stroke="var(--link)" strokeWidth="2" strokeDasharray="1.5 5" strokeLinecap="round" /></svg>related</span>}
-              <span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed border-accent" />added by you</span>
-              <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-accent" />focus chain</span>
-              <button onClick={() => setCourses((x) => !x)} className="hover:text-ink">{path.courses.length} courses</button>
+              <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-ok" />{t("done")}</span>
+              <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-muted" />{t("needed")}</span>
+              {counts.after > 0 && <span className="flex items-center gap-1.5"><svg width="16" height="4" aria-hidden><path d="M1 2H15" stroke="var(--muted)" strokeWidth="2" strokeDasharray="6 5" /></svg>{t("recommended")}</span>}
+              {counts.related > 0 && <span className="flex items-center gap-1.5"><svg width="16" height="4" aria-hidden><path d="M1 2H15" stroke="var(--link)" strokeWidth="2" strokeDasharray="1.5 5" strokeLinecap="round" /></svg>{t("related")}</span>}
+              <span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed border-accent" />{t("added by you")}</span>
+              <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-accent" />{t("focus chain")}</span>
+              <button onClick={() => setCourses((x) => !x)} className="hover:text-ink">{t("{n} course|{n} courses", { n: path.courses.length })}</button>
             </>
           )}
-          <button onClick={() => setLegend(!legend)} aria-expanded={legend} aria-label={legend ? "Hide legend" : "Show legend"} className="flex items-center gap-1 hover:text-ink">{!legend && "Legend"}<ChevronDown size={13} className={cx("transition-transform", legend && "rotate-180")} /></button>
+          <button onClick={() => setLegend(!legend)} aria-expanded={legend} aria-label={legend ? t("Hide legend") : t("Show legend")} className="flex items-center gap-1 hover:text-ink">{!legend && t("Legend")}<ChevronDown size={13} className={cx("transition-transform", legend && "rotate-180")} /></button>
         </div>
       </div>
 
       {/* Display · Tidy up (14b-P3) · zoom + fit */}
       {!phone && !panel && (
-        <div className="absolute bottom-4 z-10 flex gap-2" style={{ right: 196 + 120 }}>
-          <button onClick={() => setPanel(true)} className="flex h-[36px] items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 text-[12.5px] text-muted hover:text-ink"><SlidersHorizontal size={14} />Display</button>
-          <button onClick={startTidy} title="Tidy up (Shift T)" className="flex h-[36px] items-center gap-1.5 rounded-[10px] border border-accent bg-[color-mix(in_srgb,var(--accent)_12%,var(--surface))] px-3 text-[12.5px] font-semibold"><Glyph name="wide" size={14} color="var(--accent)" />Tidy up</button>
+        <div className="absolute bottom-4 z-10 flex gap-2" style={{ insetInlineEnd: 196 + 120 }}>
+          <button onClick={() => setPanel(true)} className="flex h-[36px] items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 text-[12.5px] text-muted hover:text-ink"><SlidersHorizontal size={14} />{t("Display")}</button>
+          <button onClick={startTidy} title={t("Tidy up (Shift T)")} className="flex h-[36px] items-center gap-1.5 rounded-[10px] border border-accent bg-[color-mix(in_srgb,var(--accent)_12%,var(--surface))] px-3 text-[12.5px] font-semibold"><Glyph name="wide" size={14} color="var(--accent)" />{t("Tidy up")}</button>
         </div>
       )}
-      <div className="absolute bottom-4 z-10 flex gap-0.5 rounded-[10px] border border-line bg-surface p-[3px]" style={{ right: phone ? 16 : 196 + inset }}>
-        <button aria-label="Zoom out" onClick={() => void rf.zoomOut({ duration: 150 })} className="flex size-7 items-center justify-center rounded-[7px] hover:bg-surface-2"><Minus size={14} /></button>
-        <button aria-label="Zoom in" onClick={() => void rf.zoomIn({ duration: 150 })} className="flex size-7 items-center justify-center rounded-[7px] hover:bg-surface-2"><Plus size={14} /></button>
-        <button onClick={() => void rf.fitView({ padding: 0.06, duration: 200 })} className="flex h-7 items-center rounded-[7px] px-2 text-[12px] hover:bg-surface-2">Fit</button>
+      <div className="absolute bottom-4 z-10 flex gap-0.5 rounded-[10px] border border-line bg-surface p-[3px]" style={{ insetInlineEnd: phone ? 16 : 196 + inset }}>
+        <button aria-label={t("Zoom out")} onClick={() => void rf.zoomOut({ duration: 150 })} className="flex size-7 items-center justify-center rounded-[7px] hover:bg-surface-2"><Minus size={14} /></button>
+        <button aria-label={t("Zoom in")} onClick={() => void rf.zoomIn({ duration: 150 })} className="flex size-7 items-center justify-center rounded-[7px] hover:bg-surface-2"><Plus size={14} /></button>
+        <button onClick={() => void rf.fitView({ padding: 0.06, duration: 200 })} className="flex h-7 items-center rounded-[7px] px-2 text-[12px] hover:bg-surface-2">{t("Fit")}</button>
       </div>
-      {!L.nodes.length && !L.cols.some((c) => c.collapsed) && <div className="absolute inset-0 flex items-center justify-center text-[13px] text-muted">No concepts match the filters.</div>}
+      {!L.nodes.length && !L.cols.some((c) => c.collapsed) && <div className="absolute inset-0 flex items-center justify-center text-[13px] text-muted">{t("No concepts match the filters.")}</div>}
 
       {panel && !phone && (
         <PrereqDisplayPanel d={disp} set={setDisp} onClose={() => setPanel(false)} counts={counts}

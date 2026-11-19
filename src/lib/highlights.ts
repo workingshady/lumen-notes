@@ -6,9 +6,11 @@
 // A highlight is anchored like a W3C Web Annotation TextQuoteSelector: the exact text plus a little context before
 // and after, which picks the right occurrence when the same words appear more than once.
 
+import { tk } from "./i18n";
+
 export type HlColor = "yellow" | "green" | "blue" | "pink" | "purple";
 export const HL_COLORS: { c: HlColor; label: string }[] = [
-  { c: "yellow", label: "Yellow" }, { c: "green", label: "Green" }, { c: "blue", label: "Blue" }, { c: "pink", label: "Pink" }, { c: "purple", label: "Purple" },
+  { c: "yellow", label: tk("Yellow") }, { c: "green", label: tk("Green") }, { c: "blue", label: tk("Blue") }, { c: "pink", label: tk("Pink") }, { c: "purple", label: tk("Purple") },
 ];
 export interface Highlight { id: string; exact: string; prefix: string; suffix: string; color: HlColor; comment: string; at: number }
 

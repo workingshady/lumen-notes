@@ -10,6 +10,7 @@ import { getSettings } from "../lib/settings";
 import { setUI, toast } from "../lib/store";
 import { syncNow } from "../lib/sync";
 import { cx } from "./ui";
+import { t, tx } from "../lib/i18n";
 // Applies Settings › Appearance › Advanced (UI size, reduced motion, custom CSS) at startup; this module loads eagerly.
 import "../views/settings-advanced";
 
@@ -20,7 +21,7 @@ const token = () => {
   const b = crypto.getRandomValues(new Uint8Array(16));
   return btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 };
-export const shareUrl = (t: string) => `${origin()}/s/${t}`;
+export const shareUrl = (id: string) => `${origin()}/s/${id}`;
 export const blogUrl = (slug: string) => `${origin()}/blog/${slug}`;
 /** Host + path without the scheme, for compact display. */
 export const bareUrl = (u: string) => u.replace(/^https?:\/\//, "");
@@ -36,7 +37,7 @@ async function shareOrCopy(url: string, title: string) {
     if (navigator.share) { await navigator.share({ title, url }); return; }
   } catch (e) { if ((e as Error).name === "AbortError") return; }
   await navigator.clipboard.writeText(url);
-  toast("Link copied");
+  toast(t("Link copied"));
 }
 
 /** Turn a note/space link on or off; shared with Settings › Sharing so toasts stay consistent. */
@@ -48,7 +49,7 @@ export async function setShareId(target: ShareTarget, v: string | null) {
 export async function turnOffLink(target: ShareTarget) {
   const old = target.kind === "note" ? target.note.shareId : target.space.shareId;
   await setShareId(target, null);
-  toast("Link turned off. Anyone who had it can no longer open it.", old ? { label: "Undo", run: () => void setShareId(target, old) } : undefined);
+  toast(t("Link turned off. Anyone who had it can no longer open it."), old ? { label: t("Undo"), run: () => void setShareId(target, old) } : undefined);
 }
 
 const Badge = ({ c, icon, children }: { c: string; icon: ReactNode; children: ReactNode }) => (
@@ -78,7 +79,7 @@ export function ShareSheet({ target, open, onClose }: { target: ShareTarget; ope
     if (!on) return turnOffLink(target);
     const v = token();
     await setShareId(target, v);
-    toast("Link is live", { label: "Copy", run: () => void navigator.clipboard.writeText(shareUrl(v)).then(() => toast("Link copied")) });
+    toast(t("Link is live"), { label: t("Copy"), run: () => void navigator.clipboard.writeText(shareUrl(v)).then(() => toast(t("Link copied"))) });
   };
   const url = shareId ? shareUrl(shareId) : "";
   const copy = async () => { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); };
@@ -92,14 +93,14 @@ export function ShareSheet({ target, open, onClose }: { target: ShareTarget; ope
         <div className="flex justify-center pt-2.5 md:hidden"><span className="h-1 w-9 rounded-sm bg-line" /></div>
         <div className="flex items-center gap-2.5 px-5 pb-1 pt-5 md:px-[22px] md:pt-[22px]">
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <span dir="auto" className="truncate text-[18px] font-[650] md:text-[17px]">{isNote ? `Share “${title}”` : `Share space “${title}”`}</span>
-            <span className="flex items-center gap-2 text-[12.5px] text-muted">Visibility
-              {published ? <Badge c="var(--success)" icon={<Globe size={11} />}>Published</Badge>
-                : shareId ? <Badge c="var(--info)" icon={<Link2 size={11} />}>Shared</Badge>
-                : <span>Private</span>}
+            <span dir="auto" className="truncate text-[18px] font-[650] md:text-[17px]">{isNote ? t("Share “{title}”", { title }) : t("Share space “{title}”", { title })}</span>
+            <span className="flex items-center gap-2 text-[12.5px] text-muted">{t("Visibility")}
+              {published ? <Badge c="var(--success)" icon={<Globe size={11} />}>{t("Published")}</Badge>
+                : shareId ? <Badge c="var(--info)" icon={<Link2 size={11} />}>{t("Shared")}</Badge>
+                : <span>{t("Private")}</span>}
             </span>
           </div>
-          <button aria-label="Close" onClick={onClose} className="hidden text-muted hover:text-ink md:block"><X size={18} /></button>
+          <button aria-label={t("Close")} onClick={onClose} className="hidden text-muted hover:text-ink md:block"><X size={18} /></button>
         </div>
 
         <div className="flex flex-col gap-3 px-5 pt-3 md:px-[22px]">
@@ -107,28 +108,28 @@ export function ShareSheet({ target, open, onClose }: { target: ShareTarget; ope
             <div className="flex items-start gap-2.5 rounded-[10px] border px-3.5 py-3 leading-[19px]" style={{ background: "color-mix(in srgb, var(--warning) 10%, transparent)", borderColor: "color-mix(in srgb, var(--warning) 32%, transparent)" }}>
               <CloudOff size={16} className="mt-0.5 shrink-0 text-warn" />
               <div className="flex flex-1 flex-col gap-2">
-                <span><b className="font-semibold">Sharing needs sync on.</b> Links are served from your Cloudflare, so this device has to sync first.</span>
-                <button onClick={() => { onClose(); openSettings("sync"); }} className="flex h-8 items-center self-start rounded-[10px] bg-accent px-3 text-[13px] font-semibold text-accent-fg">Turn on sync</button>
+                <span>{tx("{bold} Links are served from your Cloudflare, so this device has to sync first.", { bold: <b className="font-semibold">{t("Sharing needs sync on.")}</b> })}</span>
+                <button onClick={() => { onClose(); openSettings("sync"); }} className="flex h-8 items-center self-start rounded-[10px] bg-accent px-3 text-[13px] font-semibold text-accent-fg">{t("Turn on sync")}</button>
               </div>
             </div>
           )}
 
           <div className={cx("rounded-[12px] border border-line bg-surface", off && "opacity-45")}>
-            <Row icon={<Link2 size={16} />} c="var(--info)" title="Share link" hint="Anyone with the link can view. Read-only, not listed anywhere."
+            <Row icon={<Link2 size={16} />} c="var(--info)" title={t("Share link")} hint={t("Anyone with the link can view. Read-only, not listed anywhere.")}
               on={!!shareId && !off} disabled={off} onChange={setShare} />
             {shareId && !off && (
               <div className="flex flex-col gap-2.5 px-3.5 pb-3.5">
                 <div className="flex flex-wrap gap-2 md:flex-nowrap">
-                  <div className="flex h-[46px] min-w-[220px] flex-1 items-center overflow-hidden whitespace-nowrap rounded-md border border-line bg-bg px-2.5 font-mono text-[12.5px] md:h-[38px]" onClick={copy}>
+                  <div className="flex h-[46px] min-w-[220px] flex-1 items-center overflow-hidden whitespace-nowrap rounded-md border border-line bg-bg px-2.5 font-mono text-[12.5px] md:h-[38px]" dir="ltr" onClick={copy}>
                     <span className="text-muted">{bareUrl(origin())}/s/</span>{shareId}
                   </div>
                   <button onClick={copy} className={cx(btn, "font-semibold")} style={copied ? { color: "var(--success)", borderColor: "color-mix(in srgb, var(--success) 45%, transparent)" } : undefined}>
-                    {copied ? <Check size={14} /> : <Copy size={14} />}{copied ? "Copied" : "Copy"}
+                    {copied ? <Check size={14} /> : <Copy size={14} />}{copied ? t("Copied") : t("Copy")}
                   </button>
-                  <button onClick={() => shareOrCopy(url, title)} className={cx(btn, "md:hidden")}><Share2 size={14} />Share…</button>
-                  <button onClick={() => window.open(url, "_blank")} className={btn}><ArrowUpRight size={14} />Open</button>
+                  <button onClick={() => shareOrCopy(url, title)} className={cx(btn, "md:hidden")}><Share2 size={14} />{t("Share…")}</button>
+                  <button onClick={() => window.open(url, "_blank")} className={btn}><ArrowUpRight size={14} />{t("Open")}</button>
                 </div>
-                <span className="text-[12.5px] text-muted"><button className="text-link underline underline-offset-[3px]" onClick={() => setShare(true)}>Make a new link</button> (old one stops working)</span>
+                <span className="text-[12.5px] text-muted">{tx("{action} (old one stops working)", { action: <button className="text-link underline underline-offset-[3px]" onClick={() => setShare(true)}>{t("Make a new link")}</button> })}</span>
               </div>
             )}
           </div>
@@ -136,7 +137,7 @@ export function ShareSheet({ target, open, onClose }: { target: ShareTarget; ope
           {!isNote && (
             <div className={cx("flex gap-2.5 rounded-[10px] bg-surface px-3.5 py-3 text-[13px] leading-[19px]", off && "opacity-45")}>
               <Info size={15} className="mt-0.5 shrink-0 text-info" />
-              <span>Everything in this space is visible through the link, <b className="font-semibold">including notes you add later.</b> Only safe properties (goal, dates, course URL) are shown.</span>
+              <span>{tx("Everything in this space is visible through the link, {bold} Only safe properties (goal, dates, course URL) are shown.", { bold: <b className="font-semibold">{t("including notes you add later.")}</b> })}</span>
             </div>
           )}
 
@@ -144,8 +145,8 @@ export function ShareSheet({ target, open, onClose }: { target: ShareTarget; ope
         </div>
 
         <div className="flex items-center gap-2.5 p-5 md:p-[22px]">
-          <span className="flex-1 text-[12.5px] text-muted">All links: <button className="text-link" onClick={() => { onClose(); openSettings("sharing"); }}>Settings › Sharing</button></span>
-          <button onClick={onClose} className="flex h-[50px] items-center rounded-[10px] border border-line bg-surface-2 px-[18px] font-semibold md:h-[38px]">Done</button>
+          <span className="flex-1 text-[12.5px] text-muted">{tx("All links: {link}", { link: <button className="text-link" onClick={() => { onClose(); openSettings("sharing"); }}>{t("Settings › Sharing")}</button> })}</span>
+          <button onClick={onClose} className="flex h-[50px] items-center rounded-[10px] border border-line bg-surface-2 px-[18px] font-semibold md:h-[38px]">{t("Done")}</button>
         </div>
       </div>
     </Overlay>
@@ -163,7 +164,7 @@ function Overlay({ open, onClose, children }: { open: boolean; onClose: () => vo
   if (!open) return null;
   return (
     <div className="fade-in fixed inset-0 z-50" style={{ background: "rgba(5,6,8,.6)" }} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" className="sheet-in safe-b absolute inset-x-0 bottom-0 max-h-[90dvh] overflow-y-auto rounded-t-[14px] bg-surface-2 md:inset-x-auto md:bottom-auto md:right-[70px] md:top-[52px] md:w-[562px] md:max-w-[calc(100vw-32px)] md:rounded-[14px] md:border md:border-line md:shadow-[0_24px_64px_rgba(0,0,0,.5)]">
+      <div role="dialog" aria-modal="true" className="sheet-in safe-b absolute inset-x-0 bottom-0 max-h-[90dvh] overflow-y-auto rounded-t-[14px] bg-surface-2 md:inset-x-auto md:bottom-auto md:end-[70px] md:top-[52px] md:w-[562px] md:max-w-[calc(100vw-32px)] md:rounded-[14px] md:border md:border-line md:shadow-[0_24px_64px_rgba(0,0,0,.5)]">
         {children}
       </div>
     </div>
@@ -184,7 +185,7 @@ export function Toggle({ on, onChange, disabled }: { on: boolean; onChange: (v: 
   return (
     <button role="switch" aria-checked={on} disabled={disabled} onClick={() => onChange(!on)}
       className={cx("relative mt-1 h-[26px] w-[46px] shrink-0 rounded-full transition-colors disabled:cursor-not-allowed md:h-[22px] md:w-[38px]", on ? "bg-accent" : "bg-line")}>
-      <span className={cx("absolute top-[3px] size-5 rounded-full transition-all md:size-4", on ? "left-[23px] bg-accent-fg md:left-[19px]" : "left-[3px] bg-muted")} />
+      <span className={cx("absolute top-[3px] size-5 rounded-full transition-all md:size-4", on ? "start-[23px] bg-accent-fg md:start-[19px]" : "start-[3px] bg-muted")} />
     </button>
   );
 }
@@ -199,29 +200,29 @@ function BlogSection({ note, off }: { note: Note; off: boolean }) {
   const field = "rounded-md border border-line bg-bg px-2.5 focus:border-accent focus:outline-none";
   return (
     <div className={cx("rounded-[12px] border border-line bg-surface", off && "opacity-45")}>
-      <Row icon={<Globe size={16} />} c="var(--success)" title="Publish to blog" hint="On /blog and in RSS, with a readable URL. Markdown notes only." on={on} disabled={off}
+      <Row icon={<Globe size={16} />} c="var(--success)" title={t("Publish to blog")} hint={t("On /blog and in RSS, with a readable URL. Markdown notes only.")} on={on} disabled={off}
         onChange={async (v) => {
           await updateNote(note.id, { published: v ? 1 : 0, slug, props: { ...note.props, excerpt } });
           await syncNow();
-          if (v) toast(`Published to ${getSettings().blogName || "your blog"}`, { label: "View", run: () => window.open(url, "_blank") });
-          else toast("Unpublished");
+          if (v) toast(getSettings().blogName ? t("Published to {blog}", { blog: getSettings().blogName }) : t("Published to your blog"), { label: t("View"), run: () => window.open(url, "_blank") });
+          else toast(t("Unpublished"));
         }} />
       {on && (
         <div className="flex flex-col gap-2.5 px-3.5 pb-3.5">
-          <label className="flex flex-col gap-[5px]"><span className="text-[12px] font-medium text-muted">Slug</span>
-            <div className={cx(field, "flex h-[46px] items-center font-mono text-[12.5px] focus-within:border-accent md:h-[38px]")}>
+          <label className="flex flex-col gap-[5px]"><span className="text-[12px] font-medium text-muted">{t("Slug")}</span>
+            <div dir="ltr" className={cx(field, "flex h-[46px] items-center font-mono text-[12.5px] focus-within:border-accent md:h-[38px]")}>
               <span className="text-muted">/blog/</span>
               <input className="min-w-0 flex-1 bg-transparent outline-none" value={slug} onChange={(e) => setSlug(slugify(e.target.value))} onBlur={() => updateNote(note.id, { slug })} />
             </div>
           </label>
-          <label className="flex flex-col gap-[5px]"><span className="text-[12px] font-medium text-muted">Excerpt</span>
-            <textarea dir="auto" rows={2} className={cx(field, "resize-none py-2 text-[13px] leading-[19px]")} value={excerpt} placeholder="One or two sentences for the blog index and RSS." onChange={(e) => setExcerpt(e.target.value)} onBlur={() => updateNote(note.id, { props: { ...note.props, excerpt } })} />
+          <label className="flex flex-col gap-[5px]"><span className="text-[12px] font-medium text-muted">{t("Excerpt")}</span>
+            <textarea dir="auto" rows={2} className={cx(field, "resize-none py-2 text-[13px] leading-[19px]")} value={excerpt} placeholder={t("One or two sentences for the blog index and RSS.")} onChange={(e) => setExcerpt(e.target.value)} onBlur={() => updateNote(note.id, { props: { ...note.props, excerpt } })} />
           </label>
           <div className="flex items-center gap-2 text-[12.5px]">
             <CircleCheck size={14} className="shrink-0 text-ok" />
-            <a href={url} target="_blank" rel="noreferrer" className="truncate font-mono text-link">{bareUrl(url)}</a>
+            <a href={url} target="_blank" rel="noreferrer" dir="ltr" className="truncate font-mono text-link">{bareUrl(url)}</a>
             <span className="flex-1" />
-            <button aria-label="Copy blog link" className={copied ? "text-ok" : "text-muted hover:text-ink"} onClick={async () => { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>{copied ? <Check size={14} /> : <Copy size={14} />}</button>
+            <button aria-label={t("Copy blog link")} className={copied ? "text-ok" : "text-muted hover:text-ink"} onClick={async () => { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>{copied ? <Check size={14} /> : <Copy size={14} />}</button>
           </div>
         </div>
       )}

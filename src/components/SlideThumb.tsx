@@ -2,13 +2,15 @@
 // normal / invert / accent variants, drawn at 320 × 180 and scaled. Used by the layout picker; `SlideFrame` wraps a
 // real rendered slide (SlideStage) in the same frame (radius W/32, 1 px ring, 2 px accent ring when selected).
 import type { CSSProperties, ReactNode } from "react";
+import { t, tk } from "../lib/i18n";
 import { activeTheme, useSettings } from "../lib/settings";
 
 export const LAYOUT_LABELS: [string, string][] = [
-  ["title", "Title"], ["section", "Section"], ["default", "Default"], ["center", "Center"], ["two-cols", "Two columns"], ["image-left", "Image left"],
-  ["image-right", "Image right"], ["cards", "Cards"], ["stat", "Big number"], ["quote", "Quote"], ["full", "Full image"], ["blank", "Blank"],
+  ["title", tk("Title")], ["section", tk("Section")], ["default", tk("Default")], ["center", tk("Center")], ["two-cols", tk("Two columns")], ["image-left", tk("Image left")],
+  ["image-right", tk("Image right")], ["cards", tk("Cards")], ["stat", tk("Big number")], ["quote", tk("Quote")], ["full", tk("Full image")], ["blank", tk("Blank")],
 ];
-export const layoutLabel = (k: string) => LAYOUT_LABELS.find(([x]) => x === k)?.[1] ?? "Auto";
+/** Translated layout name (LAYOUT_LABELS holds the English keys). */
+export const layoutLabel = (k: string) => t(LAYOUT_LABELS.find(([x]) => x === k)?.[1] ?? tk("Auto"));
 export type Variant = "normal" | "invert" | "accent";
 export const variantOf = (cls = ""): Variant => (/\baccent\b/.test(cls) ? "accent" : /\binvert\b/.test(cls) ? "invert" : "normal");
 

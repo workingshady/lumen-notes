@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:120px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227">
+  <div style="display:flex;align-items:center;gap:16px">
+    <div style="width:40px;height:40px;border-radius:11px;background:#161A21;border:1px solid #2A303B;position:relative"><div style="position:absolute;left:14px;top:9px;width:11px;height:11px;border-radius:50%;background:#F2A93B;box-shadow:0 0 14px rgba(242,169,59,.7)"></div><div style="position:absolute;left:9px;right:9px;bottom:11px;height:2px;background:#E8E6E1;border-radius:1px"></div></div>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 07b Code · Script · Mermaid · API</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 2</span></div><div style="font-size:14px;color:#9A9890">The side panel shared by canvas and whiteboard, the Mermaid import, and Settings › Developer.</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R2 · 1D</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Code panel &amp; script console</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">One side panel, two tabs: <b style="color:#E8E6E1">&lt;/&gt; JSON</b> and <b style="color:#E8E6E1">&gt;_ Script</b>. Right side on desktop, bottom sheet on phone. Same for .canvas and .excalidraw.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-1H</span><span>Code panel · Desktop · error state</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="canvas" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+            <div style="height:48px;padding:0 12px 0 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><span style="font-size:15px"><dc-import name="LumenGlyph" glyph="whiteboard" size="{{ 13 }}" hint-size="13px,13px"></dc-import></span><span style="color:var(--mu)">Whiteboards</span><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="font-weight:600;white-space:nowrap">Study plan — November</span><span style="flex:1"></span><span style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span>Saved</span></div>
+            <div style="flex:1;display:flex;min-height:0">
+              <div style="flex:1;position:relative"><dc-import name="WhiteboardBoard" ox="{{ 20 }}" oy="{{ 90 }}" scale="{{ 0.8 }}" selected="{{ true }}" panel="code" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></div>
+              <div style="width:480px;flex-shrink:0;border-left:1px solid var(--bd);background:var(--sf);display:flex;flex-direction:column">
+                <div style="height:44px;padding:0 8px;display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--bd)"><span style="height:32px;padding:0 12px;border-radius:8px;background:var(--sf2);display:flex;align-items:center;gap:6px;font-weight:600"><i class="icon-code" style="font-size:14px;color:var(--ac)"></i>JSON</span><span style="height:32px;padding:0 12px;display:flex;align-items:center;gap:6px;color:var(--mu)"><i class="icon-square-terminal" style="font-size:14px"></i>Script</span><span style="flex:1"></span><i class="icon-x" style="font-size:16px;color:var(--mu);padding:0 8px"></i></div>
+                <div style="padding:10px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd)">
+                  <span style="font-weight:600">Excalidraw</span><span style="font:500 11.5px 'JetBrains Mono',monospace;color:var(--mu)">.excalidraw · v2</span><span style="flex:1"></span>
+                  <span style="height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);color:var(--mu);display:flex;align-items:center;opacity:.5">Apply</span>
+                  <span style="width:28px;height:28px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><i class="icon-download" style="font-size:14px"></i></span>
+                </div>
+                <div style="margin:10px 12px 0;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--da) 12%,transparent);border:1px solid color-mix(in srgb,var(--da) 35%,transparent);display:flex;align-items:center;gap:8px;color:var(--da);font-size:12.5px;font-weight:500"><i class="icon-circle-x" style="font-size:14px"></i>Line 15: unexpected “}” after trailing comma<span style="flex:1"></span><span style="color:var(--tx);font-weight:500;text-decoration:underline;text-underline-offset:3px">Go to line</span></div>
+                <div style="flex:1;overflow:hidden;padding:10px 0;font:400 12.5px/21px 'JetBrains Mono',monospace">
+                  <sc-for list="{{ exJson }}" as="l" hint-placeholder-count="26"><div style="display:flex;background:{{ l.bg }}"><span style="width:44px;flex-shrink:0;text-align:right;padding-right:14px;color:{{ l.nc }};font-size:11px">{{ l.n }}</span><span style="white-space:pre;text-decoration:{{ l.dec }}"><sc-for list="{{ l.seg }}" as="s" hint-placeholder-count="3"><span style="color:{{ s.c }}">{{ s.t }}</span></sc-for></span></div></sc-for>
+                </div>
+                <div style="height:32px;padding:0 12px;display:flex;align-items:center;gap:10px;border-top:1px solid var(--bd);font-size:11.5px;color:var(--mu)"><span>Board keeps last valid state</span><span style="flex:1"></span><span>Ln 15, Col 5</span></div>
+              </div>
+            </div>
+          </div>
+          <div style="position:absolute;left:1052px;top:118px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">1</div>
+        </div>
+        <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>Header: format name · validation chip (green “Valid ✓” or red message) · Apply · Download. Apply is disabled while invalid; when valid, edits can auto-apply (toggle in ⋯). Selection on the board highlights its JSON object (amber band) and vice versa.</span></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-1I</span><span>Script console · Desktop · Examples open</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="canvas" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+            <div style="height:48px;padding:0 12px 0 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><span style="font-size:15px"><dc-import name="LumenGlyph" glyph="whiteboard" size="{{ 13 }}" hint-size="13px,13px"></dc-import></span><span style="color:var(--mu)">Whiteboards</span><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="font-weight:600;white-space:nowrap">Study plan — November</span><span style="flex:1"></span><span style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span>Saved</span></div>
+            <div style="flex:1;display:flex;min-height:0">
+              <div style="flex:1;position:relative"><dc-import name="WhiteboardBoard" ox="{{ 20 }}" oy="{{ 90 }}" scale="{{ 0.8 }}" panel="script" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></div>
+              <div style="width:480px;flex-shrink:0;border-left:1px solid var(--bd);background:var(--sf);display:flex;flex-direction:column;position:relative">
+                <div style="height:44px;padding:0 8px;display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--bd)"><span style="height:32px;padding:0 12px;display:flex;align-items:center;gap:6px;color:var(--mu)"><i class="icon-code" style="font-size:14px"></i>JSON</span><span style="height:32px;padding:0 12px;border-radius:8px;background:var(--sf2);display:flex;align-items:center;gap:6px;font-weight:600"><i class="icon-square-terminal" style="font-size:14px;color:var(--ac)"></i>Script</span><span style="flex:1"></span><i class="icon-x" style="font-size:16px;color:var(--mu);padding:0 8px"></i></div>
+                <div style="padding:10px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd)">
+                  <span style="height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--ac);background:var(--sf2);display:flex;align-items:center;gap:6px"><i class="icon-book-open" style="font-size:13px;color:var(--mu)"></i>Examples<i class="icon-chevron-up" style="font-size:12px;color:var(--mu)"></i></span>
+                  <span style="flex:1"></span><span style="font-size:11.5px;color:var(--mu)">board · sk · note</span>
+                  <span style="height:30px;padding:0 12px;border-radius:8px;background:var(--ac);color:var(--af);display:flex;align-items:center;gap:6px;font-weight:600"><i class="icon-play" style="font-size:12px"></i>Run <span style="font:500 11px 'JetBrains Mono',monospace;opacity:.65">⌘↵</span></span>
+                </div>
+                <div style="flex:1;overflow:hidden;padding:12px 0;font:400 12.5px/21px 'JetBrains Mono',monospace">
+                  <sc-for list="{{ script }}" as="l" hint-placeholder-count="14"><div style="display:flex;background:{{ l.bg }}"><span style="width:40px;flex-shrink:0;text-align:right;padding-right:12px;color:var(--mu);opacity:.5;font-size:11px">{{ l.n }}</span><span style="white-space:pre"><sc-for list="{{ l.seg }}" as="s" hint-placeholder-count="3"><span style="color:{{ s.c }}">{{ s.t }}</span></sc-for></span></div></sc-for>
+                </div>
+                <div style="border-top:1px solid var(--bd);background:var(--bg);padding:10px 14px;display:flex;flex-direction:column;gap:4px;font:400 12px/19px 'JetBrains Mono',monospace;color:var(--mu)">
+                  <div style="display:flex;align-items:center;font:600 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;padding-bottom:2px"><span style="flex:1">Output</span><span style="font-weight:500;text-transform:none;letter-spacing:0">Clear</span></div>
+                  <span>› read 6 items from note “This week”</span>
+                  <span>› board.add · 1 frame + 6 stickies · colours cycled</span>
+                  <span style="color:var(--da)"><dc-import name="LumenGlyph" glyph="x" size="{{ 15 }}" hint-size="15px,15px"></dc-import> item 7: text is empty — skipped</span>
+                  <span style="color:var(--ok)">✓ done · 6 stickies in frame “Week 3” · 41 ms · ⌘Z undoes all</span>
+                </div>
+                <div style="position:absolute;left:12px;top:92px;width:300px;border-radius:12px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 16px 40px rgba(0,0,0,.45);padding:6px;display:flex;flex-direction:column;gap:2px">
+                  <sc-for list="{{ examples }}" as="e" hint-placeholder-count="3"><div style="padding:9px 10px;border-radius:8px;display:flex;gap:10px;background:{{ e.bg }}"><i class="{{ e.i }}" style="font-size:15px;color:var(--mu);margin-top:1px"></i><div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:500">{{ e.t }}</span><span style="font-size:12px;color:var(--mu)">{{ e.d }}</span></div></div></sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="position:absolute;left:1400px;top:150px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">2</div>
+        </div>
+        <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">2</b><span>Run is the panel's single amber action. Output strip: monospace, muted, with ✓ done / <dc-import name="LumenGlyph" glyph="x" size="{{ 15 }}" hint-size="15px,15px"></dc-import> error lines in semantic colour. Picking an example replaces the editor (previous script kept in history). Scripts run sandboxed against the board API only.</span></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-1J</span><span>Code panel · Phone sheet · valid</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--da:#EF6B6B;--in:#7AA2F7;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:300px;position:relative"><dc-import name="WhiteboardBoard" ox="{{ -20 }}" oy="{{ 10 }}" scale="{{ 0.5 }}" chrome="{{ false }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></div>
+          <div style="flex:1;background:var(--sf);border-radius:14px 14px 0 0;border-top:1px solid var(--bd);display:flex;flex-direction:column;margin-top:-14px;position:relative">
+            <div style="display:flex;justify-content:center;padding:10px 0 4px"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+            <div style="padding:6px 16px 10px;display:flex;align-items:center;gap:8px"><div style="display:flex;padding:3px;border-radius:10px;background:var(--bg);border:1px solid var(--bd)"><span style="height:34px;padding:0 12px;border-radius:7px;background:var(--sf2);display:flex;align-items:center;gap:6px;font-weight:600;font-size:13px"><i class="icon-code" style="font-size:14px;color:var(--ac)"></i>JSON</span><span style="height:34px;padding:0 12px;display:flex;align-items:center;gap:6px;color:var(--mu);font-size:13px"><i class="icon-square-terminal" style="font-size:14px"></i>Script</span></div><span style="flex:1"></span><span style="height:28px;padding:0 10px;border-radius:999px;background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok);display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600">Valid ✓</span></div>
+            <div style="flex:1;overflow:hidden;margin:0 12px;border-radius:10px;background:var(--bg);border:1px solid var(--bd);padding:8px 0;font:400 12px/20px 'JetBrains Mono',monospace">
+              <sc-for list="{{ exJsonPhone }}" as="l" hint-placeholder-count="18"><div style="display:flex;background:{{ l.bg }}"><span style="width:30px;flex-shrink:0;text-align:right;padding-right:8px;color:var(--mu);opacity:.5;font-size:10.5px">{{ l.n }}</span><span style="white-space:pre"><sc-for list="{{ l.seg }}" as="s" hint-placeholder-count="3"><span style="color:{{ s.c }}">{{ s.t }}</span></sc-for></span></div></sc-for>
+            </div>
+            <div style="padding:12px 12px;display:flex;gap:10px"><span style="width:52px;height:52px;border-radius:12px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><i class="icon-download" style="font-size:18px"></i></span><span style="flex:1;height:52px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px">Apply</span></div>
+            <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-1K</span><span>Script console · Phone sheet</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:240px;position:relative"><dc-import name="WhiteboardBoard" ox="{{ -20 }}" oy="{{ 0 }}" scale="{{ 0.5 }}" chrome="{{ false }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></div>
+          <div style="flex:1;background:var(--sf);border-radius:14px 14px 0 0;border-top:1px solid var(--bd);display:flex;flex-direction:column;margin-top:-14px;position:relative">
+            <div style="display:flex;justify-content:center;padding:10px 0 4px"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+            <div style="padding:6px 16px 10px;display:flex;align-items:center;gap:8px"><div style="display:flex;padding:3px;border-radius:10px;background:var(--bg);border:1px solid var(--bd)"><span style="height:34px;padding:0 12px;display:flex;align-items:center;gap:6px;color:var(--mu);font-size:13px"><i class="icon-code" style="font-size:14px"></i>JSON</span><span style="height:34px;padding:0 12px;border-radius:7px;background:var(--sf2);display:flex;align-items:center;gap:6px;font-weight:600;font-size:13px"><i class="icon-square-terminal" style="font-size:14px;color:var(--ac)"></i>Script</span></div><span style="flex:1"></span><span style="height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-size:13px">Examples<i class="icon-chevron-down" style="font-size:13px;color:var(--mu)"></i></span></div>
+            <div style="flex:1;overflow:hidden;margin:0 12px;border-radius:10px;background:var(--bg);border:1px solid var(--bd);padding:8px 0;font:400 12px/20px 'JetBrains Mono',monospace">
+              <sc-for list="{{ scriptPhone }}" as="l" hint-placeholder-count="10"><div style="display:flex"><span style="width:28px;flex-shrink:0;text-align:right;padding-right:8px;color:var(--mu);opacity:.5;font-size:10.5px">{{ l.n }}</span><span style="white-space:pre-wrap;padding-right:8px"><sc-for list="{{ l.seg }}" as="s" hint-placeholder-count="3"><span style="color:{{ s.c }}">{{ s.t }}</span></sc-for></span></div></sc-for>
+            </div>
+            <div style="margin:10px 12px 0;padding:8px 12px;border-radius:10px;background:var(--bg);font:400 11.5px/18px 'JetBrains Mono',monospace;color:var(--mu);display:flex;flex-direction:column"><span>› board.add · 7 elements</span><span style="color:var(--ok)">✓ done · 41 ms</span></div>
+            <div style="padding:12px 12px"><span style="height:52px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:15px"><i class="icon-play" style="font-size:14px"></i>Run</span></div>
+            <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+          </div>
+        </div>
+        <div style="max-width:412px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Sheet snaps at 60% (board stays visible so you see the result) and full height. Drag the handle down to dismiss; the script is kept.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R2 · 1E</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Mermaid → whiteboard</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Text on the left, live drawing on the right, one button that turns it into shapes you can move.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-1L</span><span>Mermaid dialog · Desktop</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);font-size:13px">
+          <dc-import name="WhiteboardBoard" ox="{{ 120 }}" oy="{{ 140 }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+          <div style="position:absolute;inset:0;background:rgba(5,6,8,.62)"></div>
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:1040px;height:620px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden">
+            <div style="height:56px;padding:0 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><i class="icon-workflow" style="font-size:17px;color:var(--mu)"></i><span style="font-size:16px;font-weight:650;flex:1">Mermaid → whiteboard</span><span style="height:26px;padding:0 10px;border-radius:999px;background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok);display:flex;align-items:center;font-size:12px;font-weight:600">flowchart · valid ✓</span><i class="icon-x" style="font-size:18px;color:var(--mu);margin-left:6px"></i></div>
+            <div style="flex:1;display:grid;grid-template-columns:400px 1fr;min-height:0">
+              <div style="border-right:1px solid var(--bd);background:var(--bg);padding:14px 0;font:400 13px/22px 'JetBrains Mono',monospace;font-variant-ligatures:none">
+                <sc-for list="{{ mermaid }}" as="l" hint-placeholder-count="11"><div style="display:flex"><span style="width:40px;text-align:right;padding-right:14px;color:var(--mu);opacity:.5;font-size:11px">{{ l.n }}</span><span style="white-space:pre"><sc-for list="{{ l.seg }}" as="s" hint-placeholder-count="3"><span style="color:{{ s.c }}">{{ s.t }}</span></sc-for></span></div></sc-for>
+              </div>
+              <div style="position:relative;background-image:linear-gradient(color-mix(in srgb,var(--mu) 9%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--mu) 9%,transparent) 1px,transparent 1px);background-size:24px 24px;font-family:Caveat,cursive;font-size:21px;font-weight:600">
+                <span style="position:absolute;left:14px;top:12px;font:500 11.5px Inter;color:var(--mu);white-space:nowrap">Live preview · hand-drawn style</span>
+                <div style="position:absolute;left:250px;top:50px;width:140px;height:52px;border:2px solid var(--tx);border-radius:8px;display:flex;align-items:center;justify-content:center;transform:rotate(-.6deg)">Lecture</div>
+                <div style="position:absolute;left:250px;top:150px;width:140px;height:52px;border:2px solid var(--tx);border-radius:8px;display:flex;align-items:center;justify-content:center;transform:rotate(.5deg);background:color-mix(in srgb,#d0ebff 20%,transparent)">Notes</div>
+                <div style="position:absolute;left:282px;top:236px;width:76px;height:76px;border:2px solid var(--tx);transform:rotate(45deg)"></div><span style="position:absolute;left:262px;top:258px;width:116px;text-align:center">Clear?</span>
+                <div style="position:absolute;left:90px;top:360px;width:140px;height:52px;border:2px solid var(--tx);border-radius:26px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,#d3f9d8 25%,transparent)">Flashcards</div>
+                <div style="position:absolute;left:410px;top:360px;width:150px;height:52px;border:2px solid var(--tx);border-radius:8px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,#ffc9c9 22%,transparent)">Ask in forum</div>
+                <span style="position:absolute;left:318px;top:102px;width:2px;height:46px;background:var(--tx)"></span>
+                <span style="position:absolute;left:318px;top:202px;width:2px;height:30px;background:var(--tx)"></span>
+                <span style="position:absolute;left:160px;top:274px;width:110px;height:2px;background:var(--tx)"></span><span style="position:absolute;left:160px;top:274px;width:2px;height:84px;background:var(--tx)"></span><span style="position:absolute;left:170px;top:300px;font-size:18px">yes</span>
+                <span style="position:absolute;left:372px;top:274px;width:112px;height:2px;background:var(--tx)"></span><span style="position:absolute;left:484px;top:274px;width:2px;height:84px;background:var(--tx)"></span><span style="position:absolute;left:446px;top:300px;font-size:18px">no</span>
+              </div>
+            </div>
+            <div style="height:64px;padding:0 20px;display:flex;align-items:center;gap:18px;border-top:1px solid var(--bd);font-family:Inter,system-ui,sans-serif">
+              <span style="display:flex;align-items:center;gap:8px"><span style="width:30px;height:18px;border-radius:9px;background:var(--ac);position:relative"><span style="position:absolute;right:3px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--af)"></span></span>Hand-drawn style</span>
+              <span style="display:flex;align-items:center;gap:8px"><span style="width:30px;height:18px;border-radius:9px;background:var(--ac);position:relative"><span style="position:absolute;right:3px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--af)"></span></span>Wrap in a frame</span>
+              <span style="flex:1"></span>
+              <span style="height:38px;padding:0 14px;border-radius:10px;display:flex;align-items:center;color:var(--mu)">Cancel</span>
+              <span style="height:38px;padding:0 16px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;gap:8px;font-weight:600"><i class="icon-shapes" style="font-size:15px"></i>Add as editable shapes</span>
+            </div>
+          </div>
+        </div>
+        <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Preview re-renders 250 ms after typing stops; invalid syntax shows the red chip and keeps the last good drawing. Supported: flowchart, sequence, class, state. Inserted shapes are grouped and selected so they can be moved in one drag.</span></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-1M</span><span>Mermaid · Phone · preview tab</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ok:#6BCB8B;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--sf);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 4px 0 20px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd)"><span style="flex:1;font-weight:650;font-size:17px">Mermaid → whiteboard</span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-x" style="font-size:20px"></i></span></div>
+          <div style="padding:12px 16px;display:flex;align-items:center;gap:10px"><div style="flex:1;display:grid;grid-template-columns:1fr 1fr;padding:3px;border-radius:10px;background:var(--bg);border:1px solid var(--bd)"><span style="height:38px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Code</span><span style="height:38px;border-radius:7px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:600">Preview</span></div><span style="height:28px;padding:0 10px;border-radius:999px;background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok);display:flex;align-items:center;font-size:12px;font-weight:600">valid ✓</span></div>
+          <div style="flex:1;margin:0 16px;border-radius:12px;background:var(--bg);border:1px solid var(--bd);position:relative;font-family:Caveat,cursive;font-size:19px;font-weight:600">
+            <div style="position:absolute;left:50%;margin-left:-60px;top:40px;width:120px;height:46px;border:2px solid var(--tx);border-radius:8px;display:flex;align-items:center;justify-content:center">Lecture</div>
+            <span style="position:absolute;left:50%;top:86px;width:2px;height:40px;background:var(--tx)"></span>
+            <div style="position:absolute;left:50%;margin-left:-60px;top:126px;width:120px;height:46px;border:2px solid var(--tx);border-radius:8px;display:flex;align-items:center;justify-content:center">Notes</div>
+            <span style="position:absolute;left:50%;top:172px;width:2px;height:34px;background:var(--tx)"></span>
+            <div style="position:absolute;left:50%;margin-left:-32px;top:214px;width:64px;height:64px;border:2px solid var(--tx);transform:rotate(45deg)"></div><span style="position:absolute;left:50%;margin-left:-40px;top:232px;width:80px;text-align:center">Clear?</span>
+            <div style="position:absolute;left:24px;top:330px;width:124px;height:46px;border:2px solid var(--tx);border-radius:23px;display:flex;align-items:center;justify-content:center">Flashcards</div>
+            <div style="position:absolute;right:24px;top:330px;width:136px;height:46px;border:2px solid var(--tx);border-radius:8px;display:flex;align-items:center;justify-content:center">Ask in forum</div>
+          </div>
+          <div style="padding:12px 16px"><span style="height:52px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:15px"><i class="icon-shapes" style="font-size:16px"></i>Add as editable shapes</span></div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R2 · 1F</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Settings › Developer</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Endpoints are public knowledge; the token is not. It stays hidden until you ask for it.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">R2-1N</span><span>Developer / API sheet · Desktop</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+          <div style="width:220px;flex-shrink:0;border-right:1px solid var(--bd);padding:20px 10px;display:flex;flex-direction:column;gap:2px">
+            <span style="padding:0 10px 12px;font-size:18px;font-weight:650">Settings</span>
+            <sc-for list="{{ setNav }}" as="n" hint-placeholder-count="8"><div style="height:34px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:10px;background:{{ n.bg }};color:{{ n.c }};font-weight:{{ n.fw }}"><i class="{{ n.i }}" style="font-size:15px;color:{{ n.ic }}"></i>{{ n.l }}</div></sc-for>
+          </div>
+          <div style="flex:1;padding:28px 40px;display:flex;flex-direction:column;gap:22px;max-width:860px">
+            <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:22px;font-weight:650;letter-spacing:-.02em">Developer</span><span style="color:var(--mu)">Read and write your notes, canvases and whiteboards from scripts and agents.</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px"><span style="font-weight:600">Base URL</span><div style="height:40px;border-radius:8px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:10px;padding:0 6px 0 12px;font-family:'JetBrains Mono',monospace"><span style="flex:1">https://nightshift.pages.dev</span><span style="height:28px;padding:0 10px;border-radius:6px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-family:Inter,system-ui,sans-serif"><i class="icon-copy" style="font-size:13px"></i>Copy</span></div></div>
+            <div style="display:flex;flex-direction:column;gap:8px"><span style="font-weight:600">Endpoints</span>
+              <div style="border-radius:12px;border:1px solid var(--bd);overflow:hidden">
+                <sc-for list="{{ endpoints }}" as="e" hint-placeholder-count="4">
+                  <div style="min-height:52px;padding:8px 8px 8px 14px;display:flex;align-items:center;gap:12px;border-top:{{ e.bt }};background:var(--sf)">
+                    <span style="display:flex;gap:4px;width:92px"><sc-for list="{{ e.m }}" as="m" hint-placeholder-count="2"><span style="padding:0 6px;border-radius:5px;font:600 11px/20px 'JetBrains Mono',monospace;background:{{ m.bg }};color:{{ m.c }}">{{ m.t }}</span></sc-for></span>
+                    <span style="font-family:'JetBrains Mono',monospace;width:260px">{{ e.p }}</span>
+                    <span style="flex:1;color:var(--mu)">{{ e.d }}</span>
+                    <span style="width:32px;height:32px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><i class="icon-copy" style="font-size:14px"></i></span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px"><span style="font-weight:600">Access token</span>
+              <div style="height:44px;border-radius:8px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:10px;padding:0 6px 0 12px"><i class="icon-key-round" style="font-size:15px;color:var(--mu)"></i><span style="flex:1;font-family:'JetBrains Mono',monospace;letter-spacing:.06em;color:var(--mu)">lmn_••••••••••••••••••••••3f9a</span><span style="height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px"><i class="icon-eye" style="font-size:14px"></i>Reveal</span><span style="height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;opacity:.45"><i class="icon-copy" style="font-size:14px"></i>Copy token</span></div>
+              <div style="border-radius:10px;background:color-mix(in srgb,var(--wa) 9%,transparent);border:1px solid color-mix(in srgb,var(--wa) 30%,transparent);padding:12px 14px;display:flex;gap:10px;line-height:20px"><i class="icon-triangle-alert" style="font-size:16px;color:var(--wa);margin-top:2px"></i><div style="flex:1;display:flex;flex-direction:column;gap:4px"><span><b style="font-weight:600">This token gives full access.</b> Anyone with it can read, change and delete every note, canvas and whiteboard. Treat it like your passcode.</span><span style="color:var(--mu);font-size:12.5px">Created 2 Nov · last used today 21:10 from 102.x.x.x</span></div><span style="height:30px;padding:0 10px;border-radius:8px;color:var(--da);display:flex;align-items:center;gap:6px;align-self:flex-start;font-weight:500"><i class="icon-rotate-ccw" style="font-size:13px"></i>Regenerate</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;color:var(--mu)"><i class="icon-chevron-right" style="font-size:14px"></i><span style="color:var(--tx);font-weight:500">Example request</span><span style="font-size:12px">curl · fetch · Python</span></div>
+          </div>
+          <div style="position:absolute;left:1108px;top:614px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">1</div>
+        </div>
+        <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>Reveal asks for the passcode, shows the token for 30 s, and enables Copy token. Copying shows “Copied — clears from clipboard in 60 s”. Regenerate invalidates the old token immediately (confirm dialog).</span></div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  tok(line, mode) {
+    const seg = [];
+    if (mode === 'json') {
+      const re = /("(?:[^"\\]|\\.)*")(\s*:)?|(-?\d+(?:\.\d+)?)|([^"\d-]+|-)/g; let m;
+      while ((m = re.exec(line))) { if (m[1]) { seg.push({ t:m[1], c:m[2]?'var(--in)':'var(--ln)' }); if (m[2]) seg.push({ t:m[2], c:'var(--mu)' }); } else if (m[3]) seg.push({ t:m[3], c:'#E8893A' }); else seg.push({ t:m[4], c:'var(--mu)' }); }
+    } else if (mode === 'js') {
+      const re = /(\/\/.*$)|('(?:[^'\\]|\\.)*')|\b(const|for|of|await|return|if)\b|\b(board|sk|note)\b|(\.\w+)(?=\()|([^'\/]+?(?=\b(?:const|for|of|await|return|if|board|sk|note)\b|'|\/\/|\.\w+\(|$)|.)/g; let m;
+      while ((m = re.exec(line))) { if (m[0] === '') { re.lastIndex++; continue; }
+        if (m[1]) seg.push({ t:m[1], c:'var(--mu)' }); else if (m[2]) seg.push({ t:m[2], c:'#E3B341' }); else if (m[3]) seg.push({ t:m[3], c:'var(--le)' }); else if (m[4]) seg.push({ t:m[4], c:'var(--ln)' }); else if (m[5]) seg.push({ t:m[5], c:'var(--in)' }); else seg.push({ t:m[0], c:'var(--tx)' }); }
+    } else {
+      const re = /(-->|---|\|[^|]*\|)|(\b(?:flowchart|TD|LR)\b)|(\w+)(?=[\[\(\{])|([\[\(\{].*?[\]\)\}])|(.)/g; let m;
+      while ((m = re.exec(line))) { if (m[1]) seg.push({ t:m[1], c:'var(--mu)' }); else if (m[2]) seg.push({ t:m[2], c:'var(--le)' }); else if (m[3]) seg.push({ t:m[3], c:'var(--in)' }); else if (m[4]) seg.push({ t:m[4], c:'#E3B341' }); else seg.push({ t:m[5], c:'var(--tx)' }); }
+    }
+    return seg;
+  }
+  renderVals() {
+    const ex = `{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "lumen",
+  "elements": [
+    {
+      "id": "sticky-3",
+      "type": "rectangle",
+      "x": 432, "y": 98,
+      "width": 160, "height": 128,
+      "backgroundColor": "#d0ebff",
+      "roundness": { "type": 3 },
+      "customData": { "lumen": "sticky" },
+    },
+    {
+      "id": "sticky-3-text",
+      "type": "text",
+      "text": "Ask: why does ReLU help?",
+      "containerId": "sticky-3",
+      "fontFamily": 1
+    },
+    {
+      "id": "frame-week3",
+      "type": "frame",
+      "name": "Week 3",`;
+    const exJson = ex.split('\n').map((l,i) => ({ n:i+1, seg:this.tok(l,'json'), bg: i===14 ? 'color-mix(in srgb,var(--da) 14%,transparent)' : (i>=5&&i<=13 ? 'color-mix(in srgb,var(--ac) 8%,transparent)' : 'transparent'), nc: i===14 ? 'var(--da)' : 'color-mix(in srgb,var(--mu) 50%,transparent)', dec: i===13 ? 'underline wavy var(--da)' : 'none' }));
+    const exJsonPhone = ex.replace('"sticky" },', '"sticky" }').split('\n').slice(0,18).map((l,i) => ({ n:i+1, seg:this.tok(l,'json'), bg: i>=5&&i<=13 ? 'color-mix(in srgb,var(--ac) 8%,transparent)' : 'transparent' }));
+    const src = `// Example: Stickies from list
+const items = await note.list('This week');
+const frame = sk.frame({ name: 'Week 3' });
+const colours = sk.stickyColours;
+
+const stickies = items
+  .filter((text) => text)
+  .map((text, i) => sk.sticky({
+    text,
+    colour: colours[i % 6],
+    frameId: frame.id,
+  }));
+board.add([frame, ...stickies]);`;
+    const script = src.split('\n').map((l,i) => ({ n:i+1, seg:this.tok(l,'js'), bg:'transparent' }));
+    const scriptPhone = src.split('\n').slice(1,13).map((l,i) => ({ n:i+2, seg:this.tok(l,'js') }));
+    const examples = [['icon-git-fork','Mind map from headings','Each ## heading becomes a branch',0],['icon-sticky-note','Stickies from list','One sticky per bullet, colours cycled',1],['icon-workflow','Flowchart from Mermaid','Turns a ```mermaid block into shapes',0]]
+      .map(([i,t,d,h]) => ({ i, t, d, bg:h?'var(--bg)':'transparent' }));
+    const mm = `flowchart TD
+  A[Lecture] --> B[Notes]
+  B --> C{Clear?}
+  C -->|yes| D([Flashcards])
+  C -->|no| E[Ask in forum]
+  E --> B
+
+  %% colours are mapped to
+  %% sticky paper tones`;
+    const mermaid = mm.split('\n').map((l,i) => ({ n:i+1, seg: l.trim().startsWith('%%') ? [{ t:l, c:'var(--mu)' }] : this.tok(l,'mm') }));
+    const setNav = [['palette','Appearance'],['pen-tool','Branding'],['refresh-cw','Sync'],['rss','Blog'],['sparkles','AI'],['code','Developer',1],['database','Data'],['info','About']]
+      .map(([i,l,a]) => ({ i:'icon-'+i, l, bg:a?'var(--sf2)':'transparent', c:a?'var(--tx)':'var(--mu)', ic:a?'var(--ac)':'var(--mu)', fw:a?600:450 }));
+    const M = { GET:'var(--in)', PUT:'var(--wa)', POST:'var(--ok)' };
+    const endpoints = [[['GET','PUT'],'/api/notes/:id','Markdown + front-matter'],[['GET','PUT'],'/api/canvas/:id','JSON Canvas 1.0 body'],[['GET','PUT'],'/api/whiteboard/:id','Excalidraw scene'],[['POST'],'/api/whiteboard/:id/elements','Append elements (stickies, shapes)']]
+      .map(([ms,p,d],i) => ({ m:ms.map(t => ({ t, c:M[t], bg:`color-mix(in srgb, ${M[t]} 14%, transparent)` })), p, d, bt:i?'1px solid var(--bd)':'none' }));
+    return { exJson, exJsonPhone, script, scriptPhone, examples, mermaid, setNav, endpoints };
+  }
+}
+</script>
+</body>
+</html>

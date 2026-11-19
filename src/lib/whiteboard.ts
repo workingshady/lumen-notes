@@ -3,6 +3,7 @@
 // { "skeleton": [...] } (Excalidraw element skeletons) which the app converts and merges on next open.
 import type { JsonCanvas } from "../../shared/types";
 import { colorOf } from "./canvas";
+import { t } from "./i18n";
 
 export interface Scene {
   type: "excalidraw";
@@ -22,7 +23,7 @@ export function parseScene(text: string): { scene: Scene; error: string | null }
   if (!text.trim()) return { scene: { ...EMPTY_SCENE }, error: null };
   try {
     const s = JSON.parse(text) as Scene;
-    if (!s || !Array.isArray(s.elements)) return { scene: { ...EMPTY_SCENE }, error: "Missing `elements` array" };
+    if (!s || !Array.isArray(s.elements)) return { scene: { ...EMPTY_SCENE }, error: t("Missing {key} array", { key: "`elements`" }) };
     return { scene: { ...EMPTY_SCENE, ...s }, error: null };
   } catch (e) {
     return { scene: { ...EMPTY_SCENE }, error: `JSON: ${(e as Error).message}` };

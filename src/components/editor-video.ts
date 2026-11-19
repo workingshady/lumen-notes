@@ -4,6 +4,7 @@
 import { Prec } from "@codemirror/state";
 import { Decoration, EditorView, MatchDecorator, ViewPlugin, keymap, type DecorationSet, type ViewUpdate } from "@codemirror/view";
 import { flashcardInsert, formatTime, timestampAt, timestampInsert, TypingPause } from "../lib/video-notes";
+import { t } from "../lib/i18n";
 import { toast } from "../lib/store";
 import { currentPlayer, indexOf, PLAYER_SEL, seekNote, twinOf, videoRegistry, type VideoCtl } from "./video-players";
 
@@ -32,14 +33,14 @@ function resume() {
 /** Insert a timestamp (or a flashcard line) for `ctl` (default: the current player) at the caret. */
 export function insertVideoMark(kind: "timestamp" | "card", ctl: VideoCtl | null = currentPlayer(), v: EditorView | null = videoEditor()): boolean {
   if (!v) return false;
-  if (!ctl) { toast("Play the video first, then add a timestamp."); return true; }
+  if (!ctl) { toast(t("Play the video first, then add a timestamp.")); return true; }
   const doc = v.state.doc.toString();
-  const t = Math.floor(ctl.time());
-  const r = (kind === "card" ? flashcardInsert : timestampInsert)(doc, v.state.selection.main.head, t, indexOf(ctl));
+  const secs = Math.floor(ctl.time());
+  const r = (kind === "card" ? flashcardInsert : timestampInsert)(doc, v.state.selection.main.head, secs, indexOf(ctl));
   v.dispatch({ changes: { from: r.at, insert: r.text }, selection: { anchor: r.caret }, scrollIntoView: true, userEvent: "input.video" });
   v.focus();
   if (pauseTyping.get()) { typing.inserted(ctl.playing()); pausedCtl = null; }
-  showInserted(v, r.caret, formatTime(t), kind);
+  showInserted(v, r.caret, formatTime(secs), kind);
   return true;
 }
 
@@ -56,8 +57,8 @@ function showInserted(v: EditorView, pos: number, label: string, kind: "timestam
     el.className = "vn-inserted";
     el.setAttribute("role", "status");
     const b = document.createElement("b"); b.textContent = label;
-    const i = document.createElement("i"); i.textContent = kind === "card" ? "· type the question" : "· Alt+T";
-    el.append(b, kind === "card" ? "Flashcard at this moment" : "Inserted from the playing video", i);
+    const i = document.createElement("i"); i.textContent = kind === "card" ? t("· type the question") : "· Alt+T";
+    el.append(b, kind === "card" ? t("Flashcard at this moment") : t("Inserted from the playing video"), i);
     el.style.left = `${Math.max(8, Math.min(innerWidth - 340, c.left - 8))}px`;
     el.style.top = `${Math.min(innerHeight - 48, c.bottom + 10)}px`;
     document.body.append(el);
@@ -68,7 +69,7 @@ function showInserted(v: EditorView, pos: number, label: string, kind: "timestam
 
 const tsDeco = new MatchDecorator({
   regexp: /(?<!\\)\[(?:\d{1,2}:[0-5]\d:[0-5]\d|\d{1,3}:[0-5]\d)\](?:\(#video-\d{1,2}\))?(?![([])/g,
-  decoration: () => Decoration.mark({ class: "cm-vts", attributes: { title: "Ctrl/Cmd+click to play from here" } }),
+  decoration: () => Decoration.mark({ class: "cm-vts", attributes: { title: t("Ctrl/Cmd+click to play from here") } }),
 });
 
 /** CodeMirror extension (one per editor). */
@@ -128,7 +129,7 @@ export function videoNotes() {
         const ts = timestampAt(line.text, pos - line.from);
         if (!ts) return false;
         e.preventDefault();
-        if (!seekNote(ts.video, ts.seconds)) toast("No video in this note to play.");
+        if (!seekNote(ts.video, ts.seconds)) toast(t("No video in this note to play."));
         return true;
       },
     }),

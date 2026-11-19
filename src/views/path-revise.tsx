@@ -11,6 +11,7 @@ import { openNote, useVault } from "../lib/store";
 import { ago, conceptNotes, conceptResources, RES_GLYPH, until } from "./path-res";
 import { stageLabel } from "./path-ui";
 import { usePhone } from "./spaces-util";
+import { fmtNum, isRtl, t } from "../lib/i18n";
 
 const SERIF = { fontFamily: "'Source Serif 4', Georgia, serif" };
 
@@ -39,17 +40,17 @@ export function Revise({ path, note, save, onOpen, keep }: { path: BuiltPath; no
       <div className={cx("flex flex-col gap-4", phone ? "w-full" : "w-[640px]")}>
         {cur ? (
           <>
-            <div className="flex flex-wrap items-center gap-2 text-muted"><span className="font-semibold text-learn">Revise · {done + 1} of {total}</span><span>·</span><span>{lastSeen ? `last seen ${ago(lastSeen, today)}` : "first revision"} · interval {cur.def.interval || 1} d</span></div>
+            <div className="flex flex-wrap items-center gap-2 text-muted"><span className="font-semibold text-learn">{t("Revise · {n} of {total}", { n: done + 1, total })}</span><span>·</span><span>{lastSeen ? t("last seen {ago}", { ago: ago(lastSeen, today) }) : t("first revision")} · {t("interval {n} d", { n: cur.def.interval || 1 })}</span></div>
             <div className="flex flex-col gap-4 rounded-[14px] border border-line bg-surface px-7 py-6 max-md:px-4 max-md:py-4">
               <div className="flex items-center gap-2.5">
                 <Glyph name="s-revise" size={18} color="var(--learn)" />
-                <button onClick={() => onOpen(cur.key)} className="text-left text-[24px] font-[650] tracking-[-.02em]" dir="auto">{cur.def.name}</button>
+                <button onClick={() => onOpen(cur.key)} className="text-start text-[24px] font-[650] tracking-[-.02em]" dir="auto">{cur.def.name}</button>
                 <span className="flex-1" />
                 {!phone && <span className="text-[12px] text-muted">{stageLabel(path, cur)}</span>}
               </div>
               {cur.coverage.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  <span className="self-center text-[12px] text-muted">Taught in</span>
+                  <span className="self-center text-[12px] text-muted">{t("Taught in")}</span>
                   {cur.coverage.slice(0, 6).map((x, k) => (
                     <span key={k} className="flex h-[26px] items-center gap-1.5 overflow-hidden rounded-[6px] bg-surface-2 pe-[9px] text-[12px]" title={`${x.course.spaceName} › ${x.module} › ${x.topic.name}`}>
                       <span className="w-[3px] self-stretch" style={{ background: x.course.color }} /><span dir="auto">{abbrevCourse(x.course.spaceName, 14)} · {abbrevCourse(x.module, 14)}</span>
@@ -58,16 +59,16 @@ export function Revise({ path, note, save, onOpen, keep }: { path: BuiltPath; no
                 </div>
               )}
               <div className="flex flex-col gap-1.5 rounded-[10px] bg-bg px-[18px] py-4">
-                <span className="text-[12px] text-muted">Recall, then check</span>
-                <span style={SERIF} className="text-[19px] leading-[28px]" dir="auto">{card ? card.q : `Explain ${cur.def.name} in two sentences: what it is, an example, and where it's used.`}</span>
-                {card && (show ? <span className="mt-1 border-t border-line pt-2 text-[14px] leading-[22px]" dir="auto">{card.a}</span> : <button onClick={() => setShow(true)} className="self-start text-[12.5px] text-link">Show answer</button>)}
+                <span className="text-[12px] text-muted">{t("Recall, then check")}</span>
+                <span style={SERIF} className="text-[19px] leading-[28px]" dir="auto">{card ? card.q : t("Explain {name} in two sentences: what it is, an example, and where it's used.", { name: cur.def.name })}</span>
+                {card && (show ? <span className="mt-1 border-t border-line pt-2 text-[14px] leading-[22px]" dir="auto">{card.a}</span> : <button onClick={() => setShow(true)} className="self-start text-[12.5px] text-link">{t("Show answer")}</button>)}
               </div>
               {(lessons.length > 0 || links.length > 0) && (
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-[12px] text-muted">Resources</span>
+                  <span className="text-[12px] text-muted">{t("Resources")}</span>
                   {lessons.slice(0, 3).map(({ title, note: n }) => (
-                    <button key={title} onClick={() => n && openNote(n.id)} className="flex items-center gap-2 text-left hover:text-link">
-                      <Glyph name={n?.type === "pdf" ? "pdf" : "lesson"} size={15} color="var(--muted)" /><span className="min-w-0 flex-1 truncate" dir="auto">{title}</span><span className="text-[12px] text-muted">{n ? ago(new Date(n.updatedAt).toISOString().slice(0, 10), today).replace(" days", " d") : ""}</span>
+                    <button key={title} onClick={() => n && openNote(n.id)} className="flex items-center gap-2 text-start hover:text-link">
+                      <Glyph name={n?.type === "pdf" ? "pdf" : "lesson"} size={15} color="var(--muted)" /><span className="min-w-0 flex-1 truncate" dir="auto">{title}</span><span className="text-[12px] text-muted">{n ? ago(new Date(n.updatedAt).toISOString().slice(0, 10), today, true) : ""}</span>
                     </button>
                   ))}
                   {links.slice(0, Math.max(1, 4 - lessons.length)).map((r) => (
@@ -79,30 +80,30 @@ export function Revise({ path, note, save, onOpen, keep }: { path: BuiltPath; no
               )}
               <div className="grid grid-cols-2 gap-2.5">
                 <button onClick={() => rate(false)} className="flex h-12 flex-col items-center justify-center rounded-[10px]" style={{ background: "color-mix(in srgb,var(--danger) 10%,var(--surface))", border: "1px solid color-mix(in srgb,var(--danger) 30%,transparent)" }}>
-                  <b className="font-semibold text-bad">Again</b><span className="text-[11.5px] text-muted">back to 1 day</span>
+                  <b className="font-semibold text-bad">{t("Again")}</b><span className="text-[11.5px] text-muted">{t("back to 1 day")}</span>
                 </button>
                 <button onClick={() => rate(true)} className="flex h-12 flex-col items-center justify-center rounded-[10px]" style={{ background: "color-mix(in srgb,var(--success) 10%,var(--surface))", border: "1px solid color-mix(in srgb,var(--success) 30%,transparent)" }}>
-                  <b className="font-semibold text-ok">Got it</b><span className="text-[11.5px] text-muted">next in {nextInterval(cur)} {nextInterval(cur) === 1 ? "day" : "days"}</span>
+                  <b className="font-semibold text-ok">{t("Got it")}</b><span className="text-[11.5px] text-muted">{t("next in {n} day|next in {n} days", { n: nextInterval(cur) })}</span>
                 </button>
               </div>
             </div>
           </>
         ) : (
-          <div className="rounded-[14px] border border-line bg-surface p-6 text-center text-[13px] text-muted">{done ? `Done: ${done} revised. ` : ""}Nothing to revise right now. Learned concepts come back after 1, 3, 7, 14, 30, 60 and 120 days.</div>
+          <div className="rounded-[14px] border border-line bg-surface p-6 text-center text-[13px] text-muted">{done ? t("Done: {n} revised.", { n: done }) + " " : ""}{t("Nothing to revise right now. Learned concepts come back after 1, 3, 7, 14, 30, 60 and 120 days.")}</div>
         )}
       </div>
       <div className={cx("flex flex-col gap-2.5", phone ? "w-full" : "w-[260px]")}>
-        <span className="font-semibold">Coming up</span>
+        <span className="font-semibold">{t("Coming up")}</span>
         {later.slice(0, 8).map((c) => {
           const u = until(c.def.review!, today);
           return (
-            <button key={c.key} onClick={() => onOpen(c.key)} className="flex items-center gap-2.5 rounded-[8px] bg-surface px-2.5 py-2 text-left hover:bg-surface-2">
-              <span className="min-w-0 flex-1 truncate" dir="auto">{c.def.name}</span><span className="text-[12px]" style={{ color: u === "today" ? "var(--learn)" : "var(--muted)" }}>{u}</span>
+            <button key={c.key} onClick={() => onOpen(c.key)} className="flex items-center gap-2.5 rounded-[8px] bg-surface px-2.5 py-2 text-start hover:bg-surface-2">
+              <span className="min-w-0 flex-1 truncate" dir="auto">{c.def.name}</span><span className="text-[12px]" style={{ color: u === t("today") ? "var(--learn)" : "var(--muted)" }}>{u}</span>
             </button>
           );
         })}
-        {!later.length && <span className="text-[12.5px] text-muted">Nothing scheduled yet.</span>}
-        <span className="text-[12px] leading-[18px] text-muted">Intervals: {REVIEW_LADDER.join(" → ")} days. Again resets to 1.</span>
+        {!later.length && <span className="text-[12.5px] text-muted">{t("Nothing scheduled yet.")}</span>}
+        <span className="text-[12px] leading-[18px] text-muted">{t("Intervals: {list} days. Again resets to 1.", { list: REVIEW_LADDER.map((x) => fmtNum(x)).join(isRtl() ? " ← " : " → ") })}</span>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { db } from "../lib/db";
 import { buildPath, resolveCourses, REVIEW_LADDER, type BuiltPath } from "../lib/path";
 import { useVault } from "../lib/store";
 import { Glyph } from "./Glyph";
+import { t } from "../lib/i18n";
 
 const CSS = `@keyframes lm-moment-in{from{opacity:0;transform:translateY(4px) scale(.97)}to{opacity:1;transform:none}}
 @keyframes lm-moment-ring{from{box-shadow:0 0 0 0 var(--lm-ring)}to{box-shadow:0 0 0 var(--lm-ring-w) var(--lm-ring)}}
@@ -45,7 +46,7 @@ export function MasteredMoment({ title, sub }: { title: ReactNode; sub?: ReactNo
         style={{ background: "color-mix(in srgb, var(--success) 16%, transparent)", ["--lm-ring" as string]: "color-mix(in srgb, var(--success) 8%, transparent)", ["--lm-ring-w" as string]: "6px", boxShadow: "0 0 0 6px color-mix(in srgb, var(--success) 8%, transparent)" }}>
         <Glyph name="s-mastered" size={26} color="var(--success)" />
       </span>
-      <span className="font-semibold">{title}</span>
+      <span className="font-semibold" dir="auto">{title}</span>
       {sub && <span className="text-[12px] text-muted">{sub}</span>}
     </span>
   );
@@ -61,7 +62,7 @@ export function StreakMoment({ days, sub, cells = 14 }: { days: number; sub?: Re
         {Array.from({ length: n }, (_, i) => <span key={i} className={i === n - 1 ? "lm-moment-cell" : undefined}
           style={{ width: 14, height: 14, borderRadius: 3, background: i === n - 1 ? "var(--accent)" : "color-mix(in srgb, var(--success) 65%, var(--surface-2))" }} />)}
       </span>
-      <span className="font-semibold">{days} {days === 1 ? "day" : "days"} in a row</span>
+      <span className="font-semibold">{t("{n} day in a row|{n} days in a row", { n: days })}</span>
       {sub && <span className="text-[12px] text-muted">{sub}</span>}
     </span>
   );
@@ -141,11 +142,11 @@ function pathMoment(path: BuiltPath, before: PathState): boolean {
   if (mastered) {
     const streak = Math.max(1, REVIEW_LADDER.indexOf(mastered.def.interval));
     const days = mastered.def.review ? Math.max(0, Math.round((new Date(mastered.def.review + "T12:00:00").getTime() - Date.now()) / 86_400_000)) : mastered.def.interval;
-    showMoment({ kind: "mastered", title: `${mastered.def.name} · mastered`, sub: `${streak} ${streak === 1 ? "revision" : "revisions"} in a row · next in ${days} ${days === 1 ? "day" : "days"}` });
+    showMoment({ kind: "mastered", title: t("{name} · mastered", { name: mastered.def.name }), sub: `${t("{n} revision in a row|{n} revisions in a row", { n: streak })} · ${t("next in {n} day|next in {n} days", { n: days })}` });
     return true;
   }
   const opened = path.concepts.filter((c) => c.status !== "locked" && before.get(c.key)?.locked);
-  if (opened.length) showMoment({ kind: "unlock", label: opened.length === 1 ? `${opened[0].def.name} is open` : `${opened[0].def.name} and ${opened.length - 1} more are open` });
+  if (opened.length) showMoment({ kind: "unlock", label: opened.length === 1 ? t("{name} is open", { name: opened[0].def.name }) : t("{name} and {n} more are open", { name: opened[0].def.name, n: opened.length - 1 }) });
   return opened.length > 0;
 }
 
@@ -185,7 +186,7 @@ export function useStreakMoment() {
     if (before !== false || !info.counted || info.streak < 2) return;
     const key = "lumen.streakMoment", today = dayKey(Date.now());
     try { if (localStorage.getItem(key) === today) return; localStorage.setItem(key, today); } catch { /* private mode: show anyway */ }
-    const why = info.timers ? `${info.timers} timer ${info.timers === 1 ? "session" : "sessions"}` : info.reviews ? `${info.reviews} ${info.reviews === 1 ? "review" : "reviews"}` : "an edit";
-    showMoment({ kind: "streak", days: info.streak, sub: `Today counted after ${why}` }, 2400);
+    const why = info.timers ? t("{n} timer session|{n} timer sessions", { n: info.timers }) : info.reviews ? t("{n} review|{n} reviews", { n: info.reviews }) : t("an edit");
+    showMoment({ kind: "streak", days: info.streak, sub: t("Today counted after {why}", { why }) }, 2400);
   }, [info]);
 }

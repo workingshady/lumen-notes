@@ -12,4 +12,6 @@ Send them to Claude Design **in this order, in the same project**. Each follow-u
 
 | 5 | [CLAUDE_DESIGN_UPDATE_04.md](CLAUDE_DESIGN_UPDATE_04.md) | Everything built after the round 1–3 handoff, each with what it does, how it works and what to design: learning paths (collapsible header, tabs, stages, skill tree, matrix, concept sheet), roadmap drag-and-drop, project hub, diagrams + export, chooser, slash/insert gallery/blocks/paste, Read-mode layout blocks and tables, slides, Focus, Bases, Ask vault, FSRS, navigation, accounts, settings, big vaults. Plus an icon system replacing every emoji, assets (thumbnails, chart style, empty states, share images) and new features (PDF reader + highlights, cloze + image occlusion, Today plan, dashboards, multi-group bases, unlinked mentions, smart folders, video timestamps). Note: update 03 was never designed; 04 covers it |
 
-Next round: add `CLAUDE_DESIGN_UPDATE_05.md` and a row here.
+| 6 | [CLAUDE_DESIGN_UPDATE_05.md](CLAUDE_DESIGN_UPDATE_05.md) | AI tutor modes (explain / Socratic / Feynman), Ask as a multi-turn chat, full Arabic interface, imports (Anki, Notion, Obsidian), accounts (profile, Google sign-in, registration) with active and not-yet-active states |
+
+Next round: add `CLAUDE_DESIGN_UPDATE_06.md` and a row here.

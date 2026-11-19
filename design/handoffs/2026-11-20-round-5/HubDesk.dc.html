@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:absolute;inset:0;display:flex;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:13px;overflow:hidden">
+  <div style="display:{{ sideShow }};height:100%"><dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,100%" style="height:100%"></dc-import></div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <div style="padding:{{ hp }};display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <dc-import name="LumenGlyph" glyph="project" size="{{ 22 }}" color="#E8893A" tile="#E8893A" hint-size="38px,38px"></dc-import>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:{{ h1 }};font-weight:650;letter-spacing:-.02em;white-space:nowrap">Study Buddy app</span><span style="color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Project · ships 30 Jan · 61 tasks</span></div>
+        <span style="height:26px;padding:0 10px;border-radius:999px;background:color-mix(in srgb,var(--wa) 14%,transparent);color:var(--wa);display:flex;align-items:center;gap:6px;font-weight:600;font-size:12px;white-space:nowrap"><span style="width:7px;height:7px;border-radius:50%;background:var(--wa)"></span>At risk</span>
+        <span style="display:{{ deskOnly }};height:34px;padding:0 14px;border-radius:10px;background:var(--ac);color:var(--af);align-items:center;font-weight:600;white-space:nowrap">{{ primary }}</span>
+      </div>
+      <div style="display:flex;gap:14px;font-size:12.5px;overflow:hidden;white-space:nowrap"><sc-for list="{{ links }}" as="l" hint-placeholder-count="4"><span style="display:flex;align-items:center;gap:6px;color:var(--ln)"><dc-import name="LumenGlyph" glyph="link-card" size="{{ 14 }}" hint-size="14px,14px"></dc-import>{{ l }}</span></sc-for></div>
+      <div style="display:flex;gap:18px;border-bottom:1px solid var(--bd);overflow:hidden;white-space:nowrap"><sc-for list="{{ tabs }}" as="t" hint-placeholder-count="7"><span style="padding:0 2px 10px;box-shadow:{{ t.sh }};color:{{ t.c }};font-weight:{{ t.w }};display:flex;gap:6px;align-items:center">{{ t.l }}<span style="font-size:11px;color:var(--mu);font-weight:500">{{ t.k }}</span></span></sc-for></div>
+    </div>
+
+    <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;padding:{{ bp }};display:grid;grid-template-columns:{{ ovCols }};gap:14px;align-content:start">
+        <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:16px;display:flex;flex-direction:column;gap:12px"><span style="font-weight:600">Progress</span>
+          <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px"><span style="width:38%;background:var(--ok)"></span><span style="width:13%;background:var(--in)"></span><span style="width:7%;background:var(--wa)"></span><span style="flex:1;background:var(--sf2)"></span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--mu);font-size:12.5px"><span><b style="color:var(--tx);font-weight:600">23</b> done</span><span><b style="color:var(--tx);font-weight:600">8</b> doing</span><span><b style="color:var(--tx);font-weight:600">4</b> review</span><span><b style="color:var(--tx);font-weight:600">26</b> todo</span><span>~41d estimated left</span></div></div>
+        <div style="border-radius:14px;background:color-mix(in srgb,var(--wa) 8%,var(--sf));border:1px solid color-mix(in srgb,var(--wa) 30%,transparent);padding:16px;display:flex;flex-direction:column;gap:8px"><span style="font-weight:600;display:flex;align-items:center;gap:8px"><dc-import name="LumenGlyph" glyph="c-warning" size="{{ 16 }}" color="var(--wa)" hint-size="16px,16px"></dc-import>Why at risk</span><span style="line-height:19px">3 must-have requirements have no tasks (REQ-4, REQ-7, REQ-9). The sync epic started 5 days late.</span></div>
+        <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:12px 16px;display:flex;flex-direction:column"><span style="font-weight:600;padding-bottom:6px">Due this week</span><sc-for list="{{ due }}" as="c" hint-placeholder-count="4"><div style="min-height:36px;display:flex;align-items:center;gap:10px;border-top:1px solid var(--bd)"><dc-import name="LumenGlyph" glyph="{{ c.g }}" size="{{ 16 }}" color="{{ c.gc }}" hint-size="16px,16px"></dc-import><span style="flex:1">{{ c.t }}</span><span style="color:var(--mu);font-size:12px">{{ c.d }}</span></div></sc-for></div>
+        <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:12px 16px;display:flex;flex-direction:column"><span style="font-weight:600;padding-bottom:6px">Docs</span><sc-for list="{{ docs }}" as="d" hint-placeholder-count="4"><div style="min-height:36px;display:flex;align-items:center;gap:10px;border-top:1px solid var(--bd)"><dc-import name="LumenGlyph" glyph="{{ d.g }}" size="{{ 16 }}" color="{{ d.c }}" hint-size="16px,16px"></dc-import><span style="flex:1">{{ d.t }}</span><span style="font-size:12px;color:{{ d.c }}">{{ d.s }}</span></div></sc-for></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isDocs }}">
+      <div style="flex:1;padding:{{ bp }};display:flex;flex-direction:column;gap:14px">
+        <div style="border-radius:12px;border:1px solid var(--bd);background:var(--sf);padding:12px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px">
+          <span style="height:26px;padding:0 10px;border-radius:999px;background:color-mix(in srgb,var(--wa) 14%,transparent);color:var(--wa);display:flex;align-items:center;gap:6px;font-weight:600;font-size:12px"><dc-import name="LumenGlyph" glyph="d-review" size="{{ 14 }}" hint-size="14px,14px"></dc-import>In review</span>
+          <span style="color:var(--mu)">RFC</span><span style="display:flex;align-items:center;gap:6px"><dc-import name="LumenGlyph" glyph="owner" size="{{ 14 }}" color="var(--mu)" hint-size="14px,14px"></dc-import>Amir</span><span style="color:var(--mu)">2 h ago</span><span style="flex:1"></span>
+          <div style="display:{{ deskOnly }};gap:2px;padding:3px;border-radius:8px;background:var(--bg);border:1px solid var(--bd);font-size:12px"><sc-for list="{{ docStates }}" as="s" hint-placeholder-count="5"><span style="height:24px;padding:0 8px;border-radius:6px;display:flex;align-items:center;gap:5px;background:{{ s.bg }};color:{{ s.c }};font-weight:{{ s.w }}"><dc-import name="LumenGlyph" glyph="{{ s.g }}" size="{{ 12 }}" hint-size="12px,12px"></dc-import>{{ s.l }}</span></sc-for></div>
+        </div>
+        <article style="max-width:680px;font-family:'Source Serif 4',Georgia,serif;font-size:{{ rfs }};line-height:1.75;display:flex;flex-direction:column;gap:12px"><h1 style="margin:0;font-size:{{ dh1 }};line-height:1.2;font-weight:700">RFC: Offline-first card sync</h1><p style="margin:0">Each client keeps a local log and pushes batches when online. Conflicts resolve per card: newest review wins, history kept.</p><p style="margin:0;font-family:Inter,sans-serif;font-size:13px;color:var(--mu)">Covers REQ-2 · REQ-5 · 6 tasks link here</p><p style="margin:0;opacity:.5">Alternatives considered: CRDT per deck, server-authoritative merge…</p></article>
+        <div style="display:{{ deskOnly }};gap:8px;flex-wrap:wrap"><span style="color:var(--mu);align-self:center">New doc:</span><sc-for list="{{ templates }}" as="t" hint-placeholder-count="8"><span style="height:28px;padding:0 10px;border-radius:7px;border:1px solid var(--bd);display:flex;align-items:center">{{ t }}</span></sc-for></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isBoard }}">
+      <div style="flex:1;padding:{{ bp }};display:flex;flex-direction:column;gap:12px;min-height:0">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="height:28px;padding:0 10px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;gap:6px"><dc-import name="LumenGlyph" glyph="epic" size="{{ 14 }}" color="var(--mu)" hint-size="14px,14px"></dc-import>Epic: sync</span><span style="height:28px;padding:0 10px;border-radius:6px;border:1px dashed var(--bd);color:var(--mu);display:flex;align-items:center">+ Filter</span><span style="flex:1"></span><span style="color:var(--mu)">18 cards · ~24d</span></div>
+        <div style="flex:1;display:grid;grid-template-columns:{{ boardCols }};gap:10px;min-height:0;overflow:hidden">
+          <sc-for list="{{ cols }}" as="c" hint-placeholder-count="6">
+            <div style="border-radius:12px;background:var(--sf);padding:8px;display:flex;flex-direction:column;gap:8px;box-shadow:{{ c.ring }};min-width:0">
+              <div style="display:flex;align-items:center;gap:6px;padding:4px 4px 2px;font-weight:600;white-space:nowrap"><dc-import name="LumenGlyph" glyph="{{ c.g }}" size="{{ 16 }}" color="{{ c.gc }}" hint-size="16px,16px"></dc-import>{{ c.n }}<span style="color:var(--mu);font-weight:400">{{ c.k }}</span><span style="flex:1"></span><span style="font-size:11px;color:var(--mu);font-weight:400">{{ c.est }}</span></div>
+              <sc-for list="{{ c.cards }}" as="t" hint-placeholder-count="2">
+                <div style="border-radius:10px;background:var(--sf2);border:{{ t.bd }};padding:10px;display:flex;flex-direction:column;gap:7px;transform:{{ t.tf }};box-shadow:{{ t.sh }}">
+                  <span style="font-weight:500;line-height:18px">{{ t.t }}</span>
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;font-size:11px">
+                    <span style="display:{{ t.pS }};align-items:center;gap:3px;padding:0 5px;border-radius:5px;line-height:18px;background:{{ t.pBg }};color:{{ t.pC }}"><dc-import name="LumenGlyph" glyph="{{ t.pG }}" size="{{ 11 }}" hint-size="11px,11px"></dc-import>{{ t.p }}</span>
+                    <span style="display:{{ t.eS }};align-items:center;gap:3px;padding:0 5px;border-radius:5px;line-height:18px;background:var(--bg);color:var(--mu)"><dc-import name="LumenGlyph" glyph="estimate" size="{{ 11 }}" hint-size="11px,11px"></dc-import>{{ t.e }}</span>
+                    <span style="display:{{ t.dS }};align-items:center;gap:3px;padding:0 5px;border-radius:5px;line-height:18px;background:var(--bg);color:{{ t.dC }}"><dc-import name="LumenGlyph" glyph="due" size="{{ 11 }}" hint-size="11px,11px"></dc-import>{{ t.d }}</span>
+                    <span style="display:{{ t.rS }};padding:0 5px;border-radius:5px;line-height:18px;background:color-mix(in srgb,var(--in) 14%,transparent);color:var(--in);font-family:'JetBrains Mono',monospace">{{ t.r }}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mu)"><span style="width:18px;height:18px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:9px;color:var(--tx)">{{ t.o }}</span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">#epic/{{ t.ep }}</span><dc-import name="LumenGlyph" glyph="note" size="{{ 11 }}" hint-size="11px,11px"></dc-import></div>
+                </div>
+              </sc-for>
+              <span style="padding:4px 6px;color:var(--mu)">+ Add</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isReq }}">
+      <div style="flex:1;padding:{{ bp }};display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ moscow }}" as="m" hint-placeholder-count="4"><div style="flex:1;min-width:110px;border-radius:10px;background:var(--sf);border:1px solid var(--bd);padding:10px 12px;display:flex;flex-direction:column;gap:2px"><span style="color:var(--mu);font-size:12px">{{ m.l }}</span><span style="font-size:20px;font-weight:650">{{ m.n }}</span></div></sc-for></div>
+        <div style="border:1px solid var(--bd);border-radius:12px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:{{ reqCols }};height:34px;align-items:center;background:var(--sf);font-size:12px;font-weight:600;color:var(--mu)"><span style="padding:0 12px">Requirement</span><span style="padding:0 12px">Priority</span><span style="display:{{ deskOnly }};padding:0 12px">Tasks</span><span style="padding:0 12px">Status</span></div>
+          <sc-for list="{{ reqs }}" as="r" hint-placeholder-count="7"><div style="display:grid;grid-template-columns:{{ reqCols }};min-height:44px;align-items:center;border-top:1px solid var(--bd)">
+            <span style="padding:6px 12px;display:flex;flex-direction:column;gap:2px"><span style="font:500 11.5px 'JetBrains Mono',monospace;color:var(--in)">{{ r.id }}</span><span>{{ r.t }}</span></span>
+            <span style="padding:0 12px;color:{{ r.pc }};font-weight:600;font-size:12px">{{ r.p }}</span>
+            <span style="display:{{ deskOnly }};padding:0 12px;gap:4px;align-items:center;flex-wrap:wrap"><sc-for list="{{ r.dots }}" as="d" hint-placeholder-count="3"><dc-import name="LumenGlyph" glyph="{{ d.g }}" size="{{ 14 }}" color="{{ d.c }}" hint-size="14px,14px"></dc-import></sc-for><span style="color:var(--mu);font-size:12px;margin-left:4px">{{ r.tk }}</span></span>
+            <span style="padding:0 12px"><span style="display:inline-flex;align-items:center;gap:6px;padding:0 8px;border-radius:999px;line-height:22px;font-size:12px;font-weight:500;background:{{ r.sbg }};color:{{ r.sc }}">{{ r.s }}</span></span>
+          </div></sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isTimeline }}">
+      <div style="flex:1;padding:{{ bp }};display:flex;flex-direction:column">
+        <div style="display:grid;grid-template-columns:{{ ganttCols }};height:30px;align-items:center;border-bottom:1px solid var(--bd);color:var(--mu);font-size:12px"><span>Epic / task</span><div style="display:grid;grid-template-columns:repeat(6,1fr)"><span>Dec 1</span><span>Dec 8</span><span>Dec 15</span><span>Jan 5</span><span>Jan 12</span><span>Jan 26</span></div></div>
+        <div style="position:relative;flex:1">
+          <div style="position:absolute;left:calc({{ ganttL }} + (100% - {{ ganttL }}) * .12);top:0;bottom:0;width:2px;background:var(--ac)"></div>
+          <sc-for list="{{ gantt }}" as="g" hint-placeholder-count="9"><div style="display:grid;grid-template-columns:{{ ganttCols }};height:40px;align-items:center;border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent)"><span style="display:flex;align-items:center;gap:8px;font-weight:{{ g.w }};padding-left:{{ g.ind }};white-space:nowrap;overflow:hidden"><dc-import name="LumenGlyph" glyph="{{ g.g }}" size="{{ 14 }}" color="{{ g.gc }}" hint-size="14px,14px"></dc-import>{{ g.t }}</span><div style="position:relative;height:100%"><span style="position:absolute;left:{{ g.x }};width:{{ g.wd }};top:{{ g.top }};height:{{ g.h }};border-radius:6px;background:{{ g.f }};border:1px solid {{ g.b }}"></span></div></div></sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isDiagrams }}">
+      <div style="flex:1;padding:{{ bp }};display:grid;grid-template-columns:{{ ovCols }};gap:14px;align-content:start">
+        <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:14px;display:flex;flex-direction:column;gap:10px"><span style="font-weight:600;display:flex;align-items:center;gap:8px"><dc-import name="LumenGlyph" glyph="mermaid" size="{{ 16 }}" hint-size="16px,16px"></dc-import>Requirements → tasks</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 30px;font-size:12px;position:relative"><sc-for list="{{ flow }}" as="f" hint-placeholder-count="6"><span style="padding:6px 10px;border-radius:7px;border:1px solid {{ f.b }};background:var(--bg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.t }}</span></sc-for></div></div>
+        <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:14px;display:flex;flex-direction:column;gap:10px"><span style="font-weight:600;display:flex;align-items:center;gap:8px"><dc-import name="LumenGlyph" glyph="moc" size="{{ 16 }}" hint-size="16px,16px"></dc-import>Epic mind map</span>
+          <div style="display:flex;align-items:center;gap:16px"><span style="padding:8px 12px;border-radius:999px;background:var(--sf2);font-weight:600">Study Buddy</span><div style="display:flex;flex-direction:column;gap:6px;border-left:1.5px solid var(--mu);padding-left:12px"><sc-for list="{{ epics }}" as="e" hint-placeholder-count="5"><span style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:2px;background:{{ e.c }}"></span>{{ e.n }}<span style="color:var(--mu);font-size:12px">{{ e.k }}</span></span></sc-for></div></div></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isAssistant }}">
+      <div style="flex:1;padding:{{ bp }};display:flex;flex-direction:column;gap:12px;max-width:760px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ asks }}" as="a" hint-placeholder-count="5"><span style="height:32px;padding:0 12px;border-radius:8px;border:1px solid {{ a.b }};background:{{ a.bg }};display:flex;align-items:center;font-weight:{{ a.w }}">{{ a.l }}</span></sc-for></div>
+        <div style="border-radius:12px;background:var(--sf);border:1px solid var(--bd);padding:14px 16px;display:flex;flex-direction:column;gap:10px;line-height:20px">
+          <span style="font-weight:600">Weekly status · 13–19 Nov</span>
+          <span><b style="font-weight:600">Done (6):</b> offline queue, card diff, login screen, 3 bug fixes.</span>
+          <span><b style="font-weight:600">Slipping:</b> sync conflict UI (est. 3d, started 5d late). REQ-4, REQ-7, REQ-9 have no tasks.</span>
+          <span><b style="font-weight:600">Next:</b> split REQ-7 into tasks; review RFC with Sara.</span>
+          <span style="font-size:12px;color:var(--mu)">From 9 notes in this project · nothing is changed until you insert it</span>
+          <div style="display:flex;gap:8px"><span style="height:30px;padding:0 12px;border-radius:8px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">Insert as note</span><span style="height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center">Copy</span></div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;tab&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;overview&quot;,&quot;docs&quot;,&quot;board&quot;,&quot;req&quot;,&quot;timeline&quot;,&quot;diagrams&quot;,&quot;assistant&quot;],&quot;default&quot;:&quot;overview&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const tab = this.props.tab ?? 'overview', p = !!this.props.phone;
+    const TABS = [['overview','Overview',''],['docs','Docs','8'],['board','Board','61'],['req','Requirements','12'],['timeline','Timeline',''],['diagrams','Diagrams','2'],['assistant','Assistant','']];
+    const tabs = TABS.map(([k,l,n]) => ({ l, k:n, sh:k===tab?'inset 0 -2px 0 var(--ac)':'none', c:k===tab?'var(--tx)':'var(--mu)', w:k===tab?600:450 }));
+    const DS = { draft:['d-draft','var(--mu)','Draft'], review:['d-review','var(--wa)','In review'], approved:['d-approved','var(--ok)','Approved'], superseded:['d-superseded','var(--mu)','Superseded'], rejected:['d-rejected','var(--da)','Rejected'] };
+    const docs = [['PRD: Study Buddy v1','approved'],['RFC: Offline-first card sync','review'],['ADR-3: SQLite on device','approved'],['Meeting 14 Nov','draft']].map(([t,s]) => ({ t, g:DS[s][0], c:DS[s][1], s:DS[s][2] }));
+    const docStates = Object.entries(DS).map(([k,[g,c,l]]) => ({ g, l, bg:k==='review'?'var(--sf2)':'transparent', c:k==='review'?c:'var(--mu)', w:k==='review'?600:450 }));
+    const TK = { backlog:['t-backlog','var(--mu)'], todo:['t-todo','var(--tx)'], doing:['t-doing','var(--in)'], review:['t-review','var(--wa)'], done:['t-done','var(--ok)'], cancelled:['t-cancelled','var(--mu)'] };
+    const due = [['Sync conflict screen','doing','Wed'],['Card diff tests','review','Thu'],['Push notifications spike','todo','Fri'],['Offline banner copy','done','Mon']].map(([t,s,d]) => ({ t, g:TK[s][0], gc:TK[s][1], d }));
+    const PR = { p1:['p1','var(--da)'], p2:['p2','var(--wa)'], p3:['p3','var(--mu)'] };
+    const C = (t,o={}) => ({ t, p:o.p||'', pS:o.p?'inline-flex':'none', pG:o.p?PR[o.p][0]:'p3', pC:o.p?PR[o.p][1]:'', pBg:o.p?`color-mix(in srgb, ${PR[o.p][1]} 14%, transparent)`:'', e:o.e||'', eS:o.e?'inline-flex':'none', d:o.d||'', dS:o.d?'inline-flex':'none', dC:o.late?'var(--da)':'var(--mu)', r:o.r||'', rS:o.r?'inline-block':'none', o:o.o||'AH', ep:o.ep||'sync',
+      bd:o.drag?'1px solid var(--ac)':'1px solid transparent', tf:o.drag?'rotate(2deg)':'none', sh:o.drag?'0 14px 30px rgba(0,0,0,.4)':'none' });
+    let cols = [
+      ['backlog','Backlog','14','',[C('Shared decks',{e:'5d',ep:'social',r:'REQ-11'})]],
+      ['todo','Todo','12','~19d',[C('Push notifications spike',{p:'p2',e:'1d',d:'Fri',r:'REQ-6'}),C('Deck export as .apkg',{e:'2d',ep:'import'})]],
+      ['doing','Doing','8','~11d',[C('Sync conflict screen',{p:'p1',e:'3d',d:'Wed',late:1,r:'REQ-5',o:'SK'}),C('Offline queue retry',{e:'1d',r:'REQ-2'})]],
+      ['review','Review','4','~3d',[C('Card diff tests',{p:'p2',e:'1d',d:'Thu',drag:!p,r:'REQ-2'})]],
+      ['done','Done','23','',[C('Login screen',{ep:'auth'})]],
+      ['cancelled','Cancelled','3','',[C('Web push (dropped)',{ep:'notify'})]]
+    ].map(([k,n,cnt,est,cards]) => ({ g:TK[k][0], gc:TK[k][1], n, k:cnt, est, cards, ring: k==='review'&&!p?'inset 0 0 0 1.5px color-mix(in srgb,var(--ac) 60%,transparent)':'none' }));
+    if (p) cols = cols.slice(2,3);
+    const MP = { Must:'var(--da)', Should:'var(--wa)', Could:'var(--in)', "Won't":'var(--mu)' };
+    const RS = { met:['Met','var(--ok)'], prog:['In progress','var(--in)'], plan:['Planned','var(--mu)'], none:['No tasks','var(--wa)'] };
+    const reqs = [['REQ-1','Sign in with email link','Must','met',['done','done']],['REQ-2','Works fully offline','Must','prog',['done','doing','review']],['REQ-4','Delete account and data','Must','none',[]],['REQ-5','Resolve sync conflicts per card','Must','prog',['doing']],['REQ-6','Daily review reminder','Should','plan',['todo']],['REQ-7','Study group invites','Must','none',[]],['REQ-11','Shared decks','Could','plan',['backlog']]]
+      .map(([id,t,pp,s,ts]) => ({ id, t, p:pp, pc:MP[pp], s:RS[s][0], sc:RS[s][1], sbg:`color-mix(in srgb, ${RS[s][1]} 14%, transparent)`, dots: ts.map(x => ({ g:TK[x][0], c:TK[x][1] })), tk: ts.length ? ts.length+' tasks' : '—' }));
+    const moscow = [['Must','5 · 2 met'],['Should','4'],['Could','2'],["Won't",'1']].map(([l,n]) => ({ l, n }));
+    const G = (t,x,wd,o={}) => ({ t, x, wd, g:o.ep?'epic':TK[o.s||'todo'][0], gc:o.ep?'var(--tx)':TK[o.s||'todo'][1], w:o.ep?600:450, ind:o.ep?'0':'18px', top:o.ep?'15px':'11px', h:o.ep?'10px':'18px', f:o.ep?'var(--sf2)':(o.s==='done'?'color-mix(in srgb,var(--ok) 30%,var(--sf))':o.s==='doing'?'color-mix(in srgb,var(--in) 30%,var(--sf))':'var(--sf)'), b:o.late?'var(--da)':'var(--bd)' });
+    const gantt = [G('Epic: sync','0%','70%',{ep:1}),G('Offline queue retry','0%','14%',{s:'done'}),G('Sync conflict screen','8%','22%',{s:'doing',late:1}),G('Card diff tests','14%','10%',{s:'review'}),G('Epic: notify','30%','40%',{ep:1}),G('Push notifications spike','26%','10%',{s:'todo'}),G('Daily reminder','40%','24%',{s:'todo'}),G('Epic: social','60%','40%',{ep:1}),G('Shared decks','64%','30%',{s:'backlog'})];
+    const flow = [['REQ-2 Works offline','var(--in)'],['Offline queue retry','var(--ok)'],['REQ-5 Sync conflicts','var(--in)'],['Sync conflict screen','var(--in)'],['REQ-7 Group invites','var(--wa)'],['no tasks yet','var(--wa)']].map(([t,b]) => ({ t, b }));
+    const epics = [['sync','#39C5CF','12'],['auth','#57AB5A','6'],['notify','#E8893A','9'],['social','#A371F7','8'],['import','#E3B341','4']].map(([n,c,k]) => ({ n:'#epic/'+n, c, k }));
+    const asks = [['Plan from a goal',0],['Weekly status',1],['Next actions',0],['Risks',0],['Decision summary',0]].map(([l,on]) => ({ l, b:on?'var(--ac)':'var(--bd)', bg:on?'color-mix(in srgb,var(--ac) 12%,transparent)':'transparent', w:on?600:450 }));
+    const on = k => tab === k;
+    return { tabs, docs, docStates, due, cols, reqs, moscow, gantt, flow, epics, asks,
+      links: ['github.com/amir/study-buddy','PR #142','Figma: v1 flows','SB-88 (Jira)'].slice(0, p ? 2 : 4),
+      templates: ['PRD','RFC','ADR','Requirements','Action plan','Meeting notes','Spec','Draft'],
+      primary: { overview:'New task', docs:'New doc', board:'Quick add', req:'New requirement', timeline:'Export', diagrams:'New diagram', assistant:'Ask' }[tab],
+      isOverview:on('overview'), isDocs:on('docs'), isBoard:on('board'), isReq:on('req'), isTimeline:on('timeline'), isDiagrams:on('diagrams'), isAssistant:on('assistant'),
+      sideShow: p?'none':'block', deskOnly: p?'none':'flex', hp: p?'12px 16px 0':'20px 32px 0', bp: p?'14px 16px':'18px 32px', h1: p?'17px':'20px',
+      ovCols: p?'1fr':'1.2fr 1fr', boardCols: p?'1fr':'repeat(6,minmax(0,1fr))', reqCols: p?'1.6fr .7fr 1fr':'2.2fr .8fr 1.2fr 1fr', ganttCols: p?'130px 1fr':'240px 1fr', ganttL: p?'130px':'240px', rfs: p?'16px':'17px', dh1: p?'24px':'32px' };
+  }
+}
+</script>
+</body>
+</html>

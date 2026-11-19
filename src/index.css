@@ -42,6 +42,27 @@ body {
 :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); border-radius: 8px; }
 input:focus-visible, textarea:focus-visible, .cm-content:focus-visible, [contenteditable]:focus-visible { box-shadow: none; }
 button { cursor: pointer; }
+
+/* ---------------------------------------------------------------- Arabic interface (docs/I18N.md)
+   Direction follows the language (lib/i18n.ts sets <html dir lang>). UI type tuned for Arabic: 14/22, Plex Sans Arabic first. */
+:root[lang="ar"] { --font-sans: "IBM Plex Sans Arabic", Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+:root[lang="ar"] body { font-size: 14px; line-height: 22px; }
+:root[lang="ar"][data-density="compact"] body { font-size: 13.5px; }
+/* Glyphs that imply direction mirror in RTL (back/forward, chevrons, arrows, undo/redo, indent, timeline);
+   neutral ones (play, check, search) don't. Opt out with .no-flip (e.g. a media "next" or physical "align left"). */
+[dir="rtl"] :is(.lucide-chevron-right, .lucide-chevron-left, .lucide-chevrons-right, .lucide-chevrons-left, .lucide-arrow-right, .lucide-arrow-left,
+  .lucide-arrow-up-right, .lucide-arrow-up-left, .lucide-arrow-down-right, .lucide-arrow-down-left, .lucide-move-right, .lucide-move-left,
+  .lucide-corner-down-left, .lucide-corner-down-right, .lucide-corner-up-left, .lucide-corner-up-right, .lucide-undo, .lucide-redo, .lucide-undo-2, .lucide-redo-2,
+  .lucide-reply, .lucide-forward, .lucide-send, .lucide-send-horizontal, .lucide-log-out, .lucide-log-in, .lucide-external-link, .lucide-square-arrow-out-up-right,
+  .lucide-indent, .lucide-outdent, .lucide-indent-increase, .lucide-indent-decrease, .lucide-list-indent-increase, .lucide-list-indent-decrease,
+  .lucide-panel-left, .lucide-panel-right, .lucide-panel-left-close, .lucide-panel-left-open, .lucide-panel-right-close, .lucide-panel-right-open,
+  .lucide-step-forward, .lucide-step-back, .lucide-skip-forward, .lucide-skip-back, .lucide-text-quote, .lucide-quote, .lucide-history, .lucide-rotate-ccw, .lucide-rotate-cw,
+  .lucide-trending-up, .lucide-trending-down, .lucide-gantt-chart, .lucide-chart-gantt, .lucide-milestone, .lucide-signpost, .lucide-route, [data-glyph="chevron-right"]):not(.no-flip) { transform: scaleX(-1); }
+/* A chevron turned by a rotate-* utility (expanders) already points down/up: don't mirror it twice. */
+[dir="rtl"] :is(.lucide-chevron-right, .lucide-chevron-left, [data-glyph="chevron-right"])[class*="rotate-"] { transform: none; }
+/* LTR islands inside the Arabic shell: code, URLs, shortcuts, numbers in tables. */
+[dir="rtl"] :is(code, kbd, pre, .ltr, input[type="url"], input[type="email"]) { direction: ltr; unicode-bidi: isolate; }
+[dir="rtl"] .ltr { text-align: start; }
 .muted { color: var(--muted); }
 .safe-b { padding-bottom: env(safe-area-inset-bottom); }
 .safe-t { padding-top: env(safe-area-inset-top); }

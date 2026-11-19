@@ -2,6 +2,7 @@
 import type { Note } from "../../shared/types";
 import type { GlyphName } from "../lib/glyphs";
 import type { BuiltConcept } from "../lib/path";
+import { t } from "../lib/i18n";
 
 export interface Res { label: string; url: string; kind: "video" | "article" | "book" | "course" | "file" | "link"; from: string }
 export const kindOf = (u: string): Res["kind"] =>
@@ -9,13 +10,13 @@ export const kindOf = (u: string): Res["kind"] =>
 export const RES_GLYPH: Record<Res["kind"], GlyphName> = { video: "k-video", article: "k-article", book: "k-book", course: "course", file: "pdf", link: "link-card" };
 
 export function conceptResources(c: BuiltConcept, notes: Map<string, Note>): Res[] {
-  const out: Res[] = c.def.resources.map((r) => ({ ...r, kind: kindOf(r.url), from: "Path" }));
+  const out: Res[] = c.def.resources.map((r) => ({ ...r, kind: kindOf(r.url), from: t("Path") }));
   const seen = new Set(out.map((r) => r.url));
   const lessonTitles = new Set([...c.def.notes, ...c.coverage.map((x) => x.topic.note ?? x.topic.name)]);
-  for (const t of lessonTitles) {
-    const n = notes.get(t.toLowerCase());
+  for (const lt of lessonTitles) {
+    const n = notes.get(lt.toLowerCase());
     if (!n || n.type === "canvas" || n.type === "whiteboard") continue;
-    const course = c.coverage.find((x) => (x.topic.note ?? x.topic.name).toLowerCase() === t.toLowerCase())?.course.spaceName ?? "Note";
+    const course = c.coverage.find((x) => (x.topic.note ?? x.topic.name).toLowerCase() === lt.toLowerCase())?.course.spaceName ?? t("Note");
     for (const m of n.body.matchAll(/\[([^\]]+)\]\((https?:[^)\s]+|att:[^)\s]+)\)|(?:^|\s)(https?:\/\/[^\s)]+)/gm)) {
       const url = m[2] ?? m[3];
       if (!url || seen.has(url)) continue;
@@ -37,12 +38,12 @@ export function resourceCount(c: BuiltConcept, byTitle: Map<string, Note>) {
   return conceptResources(c, byTitle).length + conceptNotes(c, byTitle).filter((x) => x.note).length;
 }
 
-export function ago(iso: string | null, today: string) {
+export function ago(iso: string | null, today: string, short = false) {
   if (!iso) return "";
   const d = Math.round((new Date(today + "T12:00").getTime() - new Date(iso + "T12:00").getTime()) / 864e5);
-  return d <= 0 ? "today" : d === 1 ? "yesterday" : `${d} days ago`;
+  return d <= 0 ? t("today") : d === 1 ? t("yesterday") : short ? t("{n} d ago", { n: d }) : t("{n} day ago|{n} days ago", { n: d });
 }
 export function until(iso: string, today: string) {
   const d = Math.round((new Date(iso + "T12:00").getTime() - new Date(today + "T12:00").getTime()) / 864e5);
-  return d <= 0 ? "today" : d === 1 ? "tomorrow" : `in ${d} d`;
+  return d <= 0 ? t("today") : d === 1 ? t("tomorrow") : t("in {n} d", { n: d });
 }

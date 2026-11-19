@@ -3,6 +3,7 @@
 // diagram canvas (file in the diagrams folder), and a saved diagram whose block changed updates its file.
 import { db } from "./db";
 import { diagramFiles, fileFor, mermaidBlocks, saveDiagramFile, saveDiagramToCanvas } from "./diagrams";
+import { t } from "./i18n";
 import { getSettings } from "./settings";
 import { getVault, toast } from "./store";
 
@@ -39,8 +40,8 @@ async function run(noteId: string) {
         updated++;
       }
     }
-    if (added) toast(`${added} new diagram${added === 1 ? "" : "s"} saved to the canvas`, canvasId ? { label: "Open", run: () => void import("./store").then((s) => s.openNote(canvasId)) } : undefined);
-    else if (updated) toast(`${updated} diagram file${updated === 1 ? "" : "s"} updated`);
+    if (added) toast(t("{n} new diagram saved to the canvas|{n} new diagrams saved to the canvas", { n: added }), canvasId ? { label: t("Open"), run: () => void import("./store").then((s) => s.openNote(canvasId)) } : undefined);
+    else if (updated) toast(t("{n} diagram file updated|{n} diagram files updated", { n: updated }));
   } catch (e) {
     console.warn("diagram auto-save failed", e);
   } finally { running.delete(noteId); }

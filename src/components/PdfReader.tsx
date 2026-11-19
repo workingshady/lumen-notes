@@ -12,6 +12,7 @@ import { highlightsMarkdown, hlLink, isoNow, newHlId, parseHighlights, pdfMeta, 
 import { normRects, unionRect } from "../lib/pdf-geom";
 import { addHighlightToCanvas, appendFlashcard, deleteHighlight, noteFromAll, noteFromHighlight, saveAreaImage, saveHighlight, saveReading, takePdfJump } from "../lib/pdf-note";
 import { openNote, setUI, toast } from "../lib/store";
+import { fmtNum, t, tx } from "../lib/i18n";
 import { ReaderBack } from "./reader-bar";
 import { Glyph } from "./Glyph";
 import { CanvasPickSheet, FlashcardSheet, HighlightBar, PasswordPrompt, PopMenu, type MenuItem } from "./pdf-dialogs";
@@ -60,7 +61,7 @@ export function PdfReader({ note }: { note: Note }) {
     }).then((x) => {
       if (dead) { void x.destroy(); return; }
       d = x; setDoc(x); setLoad({ kind: "ready" });
-    }).catch((e: unknown) => { if (!dead) setLoad({ kind: "error", msg: e instanceof Error ? e.message : "Couldn't open this PDF.", password: e instanceof PdfError && e.kind === "password" }); });
+    }).catch((e: unknown) => { if (!dead) setLoad({ kind: "error", msg: e instanceof Error ? e.message : t("Couldn't open this PDF."), password: e instanceof PdfError && e.kind === "password" }); });
     return () => { dead = true; pwResolve.current?.(null); void d?.destroy(); };
   }, [meta.file, reload]);
   const pages = doc?.numPages ?? 0;
@@ -295,7 +296,7 @@ export function PdfReader({ note }: { note: Note }) {
         const h: Highlight = { id: newHlId(), color, page: b.page, quote: el ? textInRect(el, b.rect).slice(0, 400) : "", image, tags: [], rects: [b.rect], created: isoNow() };
         await saveHighlight(note.id, h);
         return h;
-      } catch { toast("Couldn't capture that area"); return null; }
+      } catch { toast(t("Couldn't capture that area")); return null; }
     }
     const h: Highlight = { id: newHlId(), color, page: b.sel.page, quote: b.sel.quote, tags: [], rects: b.sel.rects, ...(b.sel.text ? { text: b.sel.text } : {}), created: isoNow() };
     await saveHighlight(note.id, h);
@@ -321,7 +322,7 @@ export function PdfReader({ note }: { note: Note }) {
     const h = await target(); setBar(null);
     if (!h) return;
     const n = await noteFromHighlight(note, h);
-    toast(`Note created: ${n.title}`, { label: "Open", run: () => openNote(n.id, "edit") });
+    toast(t("Note created: {title}", { title: n.title }), { label: t("Open"), run: () => openNote(n.id, "edit") });
   };
   const actCard = async () => { const h = await target(); setBar(null); if (h) setCard(h); };
   const actCopy = async () => {
@@ -329,16 +330,16 @@ export function PdfReader({ note }: { note: Note }) {
     const h = b?.kind === "edit" ? highlights.find((x) => x.id === b.id) : undefined;
     const quote = b?.kind === "new" ? b.sel.quote : b?.kind === "area" ? (pageEl(b.page) ? textInRect(pageEl(b.page)!, b.rect) : "") : h?.quote ?? "";
     const p = b?.kind === "new" ? b.sel.page : b?.kind === "area" ? b.page : h?.page ?? page;
-    toast(await copy(`“${quote}” (${note.title}, p. ${p})`) ? "Quote copied" : "Couldn't copy");
+    toast(await copy(`“${quote}” (${note.title}, p. ${p})`) ? t("Quote copied") : t("Couldn't copy"));
   };
-  const actLink = async () => { const h = await target(); setBar(null); if (h) toast(await copy(hlLink(note.title, h)) ? "Link copied. Paste it into any note." : "Couldn't copy"); };
+  const actLink = async () => { const h = await target(); setBar(null); if (h) toast(await copy(hlLink(note.title, h)) ? t("Link copied. Paste it into any note.") : t("Couldn't copy")); };
   const actDelete = async () => {
     const b = barRef.current;
     const h = b?.kind === "edit" ? highlights.find((x) => x.id === b.id) : undefined;
     setBar(null);
     if (!h) return;
     await deleteHighlight(note.id, h.id);
-    toast("Highlight deleted", { label: "Undo", run: () => void saveHighlight(note.id, h) });
+    toast(t("Highlight deleted"), { label: t("Undo"), run: () => void saveHighlight(note.id, h) });
   };
   const actMeta = (comment: string, tags: string[]) => {
     const b = barRef.current;
@@ -371,9 +372,9 @@ export function PdfReader({ note }: { note: Note }) {
   const [tab, setTab] = useState<RailTab>("thumbs");
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement;
+      const tgt = e.target as HTMLElement;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") { e.preventDefault(); openSearch(); return; }
-      if (t.closest("input,textarea,select,[contenteditable=true]") || card || canvasFor || sheet || menu || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (tgt.closest("input,textarea,select,[contenteditable=true]") || card || canvasFor || sheet || menu || e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); goto(page + 1); }
       else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); goto(page - 1); }
       else if (e.key === "Home") { e.preventDefault(); goto(1); }
@@ -389,9 +390,9 @@ export function PdfReader({ note }: { note: Note }) {
   // ---------------------------------------------------------------- render
   const ready = load.kind === "ready" && sizes.length > 0;
   const [pageField, setPageField] = useState<string | null>(null);
-  const fitLabel = zoom.mode === "width" ? "Fit width" : zoom.mode === "page" ? "Fit page" : `${pct}%`;
-  const allNote = async () => { if (!highlights.length) return; const n = await noteFromAll(note, highlights); setSheet(null); toast(`Created “${n.title}”`, { label: "Open", run: () => openNote(n.id, "read") }); };
-  const exportMd = () => download(`${note.title} highlights.md`, highlightsMarkdown(note.title, highlights), "text/markdown");
+  const fitLabel = zoom.mode === "width" ? t("Fit width") : zoom.mode === "page" ? t("Fit page") : t("{n}%", { n: pct });
+  const allNote = async () => { if (!highlights.length) return; const n = await noteFromAll(note, highlights); setSheet(null); toast(t("Created “{title}”", { title: n.title }), { label: t("Open"), run: () => openNote(n.id, "read") }); };
+  const exportMd = () => download(t("{title} highlights.md", { title: note.title }), highlightsMarkdown(note.title, highlights), "text/markdown");
   const onHl = (h: Highlight) => { flashHl(h); setSheet(null); };
   const rail = (
     <PdfRail doc={doc} pages={pages} page={page} tab={tab} setTab={setTab} outline={outline} highlights={highlights} title={note.title} hitPages={hitPages} invert={invert}
@@ -400,40 +401,40 @@ export function PdfReader({ note }: { note: Note }) {
   const hlPanel = (sheetMode: boolean) => <HlPanel highlights={highlights} title={note.title} onHl={onHl} onAllNote={allNote} onExport={exportMd} sheet={sheetMode} />;
   const barH = bar?.kind === "edit" ? highlights.find((h) => h.id === bar.id) : undefined;
   // Edit: the note's Markdown (highlights, reading position); Read in the note header comes back here.
-  const editItem: MenuItem = { label: "Edit as Markdown", hint: phone ? undefined : "Ctrl+E", run: () => setUI({ mode: "edit" }) };
+  const editItem: MenuItem = { label: t("Edit as Markdown"), hint: phone ? undefined : "Ctrl+E", run: () => setUI({ mode: "edit" }) };
   const moreItems: MenuItem[] = phone ? [
     editItem,
     "-",
-    { label: "Highlights", hint: String(highlights.length), run: () => setSheet("highlights") },
-    { label: "Pages and outline", run: () => { setTab("thumbs"); setSheet("rail"); } },
-    { label: "Find in document", run: openSearch },
+    { label: t("Highlights"), hint: fmtNum(highlights.length), run: () => setSheet("highlights") },
+    { label: t("Pages and outline"), run: () => { setTab("thumbs"); setSheet("rail"); } },
+    { label: t("Find in document"), run: openSearch },
     "-",
-    { label: "Scroll", on: !single, run: () => setSingle(false) },
-    { label: "Single page", on: single, run: () => setSingle(true) },
-    { label: "Fit width", on: zoom.mode === "width", run: () => setZoom({ mode: "width", scale }) },
-    { label: "Zoom in", hint: `${pct}%`, run: () => zoomBy(1.2) },
-    { label: "Zoom out", run: () => zoomBy(1 / 1.2) },
+    { label: t("Scroll"), on: !single, run: () => setSingle(false) },
+    { label: t("Single page"), on: single, run: () => setSingle(true) },
+    { label: t("Fit width"), on: zoom.mode === "width", run: () => setZoom({ mode: "width", scale }) },
+    { label: t("Zoom in"), hint: t("{n}%", { n: pct }), run: () => zoomBy(1.2) },
+    { label: t("Zoom out"), run: () => zoomBy(1 / 1.2) },
     "-",
-    { label: "Dark pages", on: invert, run: () => setInvert(!invert) },
-    { label: "Export highlights as Markdown", run: exportMd },
+    { label: t("Dark pages"), on: invert, run: () => setInvert(!invert) },
+    { label: t("Export highlights as Markdown"), run: exportMd },
   ] : [
     editItem,
     "-",
-    { label: "Pages sidebar", on: railOpen, run: () => setRailOpen(!railOpen) },
-    { label: "Highlights panel", on: panel, hint: String(highlights.length), run: () => setPanel(!panel) },
+    { label: t("Pages sidebar"), on: railOpen, run: () => setRailOpen(!railOpen) },
+    { label: t("Highlights panel"), on: panel, hint: fmtNum(highlights.length), run: () => setPanel(!panel) },
     "-",
-    { label: "Dark pages", on: invert, hint: "images kept", run: () => setInvert(!invert) },
-    { label: "Make a note from all highlights", run: () => void allNote() },
-    { label: "Export highlights as Markdown", run: exportMd },
+    { label: t("Dark pages"), on: invert, hint: t("images kept"), run: () => setInvert(!invert) },
+    { label: t("Make a note from all highlights"), run: () => void allNote() },
+    { label: t("Export highlights as Markdown"), run: exportMd },
   ];
   const fitItems: MenuItem[] = [
-    { label: "Fit width", on: zoom.mode === "width", run: () => setZoom({ mode: "width", scale }) },
-    { label: "Fit page", on: zoom.mode === "page", run: () => setZoom({ mode: "page", scale }) },
+    { label: t("Fit width"), on: zoom.mode === "width", run: () => setZoom({ mode: "width", scale }) },
+    { label: t("Fit page"), on: zoom.mode === "page", run: () => setZoom({ mode: "page", scale }) },
     "-",
-    ...ZOOMS.map((z) => ({ label: `${z}%`, on: zoom.mode === "custom" && pct === z, run: () => setZoom({ mode: "custom", scale: (z / 100) * PT }) })),
+    ...ZOOMS.map((z) => ({ label: t("{n}%", { n: z }), on: zoom.mode === "custom" && pct === z, run: () => setZoom({ mode: "custom", scale: (z / 100) * PT }) })),
     "-",
-    { label: "Zoom in", hint: "+", run: () => zoomBy(1.15) },
-    { label: "Zoom out", hint: "−", run: () => zoomBy(1 / 1.15) },
+    { label: t("Zoom in"), hint: "+", run: () => zoomBy(1.15) },
+    { label: t("Zoom out"), hint: "−", run: () => zoomBy(1 / 1.15) },
   ];
   const tb = "flex h-7 items-center gap-1.5 rounded-[7px] border border-line px-2.5 text-[13px] text-ink hover:bg-surface-2";
   const loadParts = load.kind === "loading" && load.total > PART ? Math.ceil(load.total / PART) : 0;
@@ -447,50 +448,50 @@ export function PdfReader({ note }: { note: Note }) {
         <Glyph name="pdf" size={18} color="var(--danger)" />
         <span dir="auto" className="min-w-0 flex-1 truncate font-semibold">{note.title}</span>
         {!phone && (
-          <span className="flex items-center gap-1.5 text-muted" title="Furthest point read (saved with the note)">
-            <span className="h-1 w-20 rounded-[2px] bg-surface-2"><span className="block h-full rounded-[2px] bg-ink" style={{ width: `${furthest}%` }} /></span>{furthest}%
+          <span className="flex items-center gap-1.5 text-muted" title={t("Furthest point read (saved with the note)")}>
+            <span className="h-1 w-20 rounded-[2px] bg-surface-2"><span className="block h-full rounded-[2px] bg-ink" style={{ width: `${furthest}%` }} /></span><span className="tabular-nums">{t("{n}%", { n: furthest })}</span>
           </span>
         )}
         {!phone && (
-          <div className="flex gap-[2px] rounded-[9px] border border-line bg-surface p-[3px] text-[12px]" role="radiogroup" aria-label="Page layout">
+          <div className="flex gap-[2px] rounded-[9px] border border-line bg-surface p-[3px] text-[12px]" role="radiogroup" aria-label={t("Page layout")}>
             {([[false, "Scroll"], [true, "Single"]] as const).map(([v, l]) => (
-              <button key={l} role="radio" aria-checked={single === v} onClick={() => setSingle(v)} className={cx("flex h-6 items-center rounded-[6px] px-[9px]", single === v ? "bg-surface-2 font-semibold text-ink" : "text-muted hover:text-ink")}>{l}</button>
+              <button key={l} role="radio" aria-checked={single === v} onClick={() => setSingle(v)} className={cx("flex h-6 items-center rounded-[6px] px-[9px]", single === v ? "bg-surface-2 font-semibold text-ink" : "text-muted hover:text-ink")}>{v ? t("Single") : t("Scroll")}</button>
             ))}
           </div>
         )}
         {!phone && (
           <span className="relative">
             <button className={tb} aria-haspopup="menu" onClick={() => setMenu(menu === "fit" ? null : "fit")}>{fitLabel}<span aria-hidden className="text-[9px]">▾</span></button>
-            {menu === "fit" && <PopMenu items={fitItems} onClose={() => setMenu(null)} className="right-0 top-9" />}
+            {menu === "fit" && <PopMenu items={fitItems} onClose={() => setMenu(null)} className="end-0 top-9" />}
           </span>
         )}
-        <span className="flex items-center font-mono text-[12px] text-muted">
-          <input aria-label="Page" inputMode="numeric" className="w-[3ch] bg-transparent text-end text-muted outline-none focus:text-ink" style={{ width: `${Math.max(1, String(pageField ?? page).length) + 0.4}ch` }}
+        <span className="flex items-center font-mono text-[12px] text-muted" dir="ltr">
+          <input aria-label={t("Page")} inputMode="numeric" className="w-[3ch] bg-transparent text-end text-muted outline-none focus:text-ink" style={{ width: `${Math.max(1, String(pageField ?? page).length) + 0.4}ch` }}
             value={pageField ?? String(page)} onFocus={(e) => { setPageField(String(page)); e.target.select(); }} onChange={(e) => setPageField(e.target.value.replace(/\D/g, ""))}
             onBlur={() => setPageField(null)} onKeyDown={(e) => { if (e.key === "Enter") { goto(Number(pageField) || page); (e.target as HTMLInputElement).blur(); } else if (e.key === "Escape") (e.target as HTMLInputElement).blur(); }} />
           <span>&nbsp;/ {pages || meta.pages || "–"}</span>
         </span>
-        <button aria-pressed={area} title={area ? "Area on: drag a box over a figure" : "Area: highlight a figure or a paragraph as an image"} onClick={() => { setArea(!area); setBar(null); }}
+        <button aria-pressed={area} title={area ? t("Area on: drag a box over a figure") : t("Area: highlight a figure or a paragraph as an image")} onClick={() => { setArea(!area); setBar(null); }}
           className={cx("flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5", area ? "border-accent bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]" : "border-line hover:bg-surface-2")}>
-          <Glyph name="occlusion" size={14} />{!phone && "Area"}
+          <Glyph name="occlusion" size={14} />{!phone && t("Area@@region")}
         </button>
         {!phone && (
-          <button aria-label="Find in document (Ctrl+F)" title="Find in document (Ctrl+F)" aria-pressed={search} onClick={() => (search ? setSearch(false) : openSearch())}
+          <button aria-label={t("Find in document (Ctrl+F)")} title={t("Find in document (Ctrl+F)")} aria-pressed={search} onClick={() => (search ? setSearch(false) : openSearch())}
             className={cx("flex size-7 items-center justify-center rounded-[7px] border", search ? "border-accent" : "border-line hover:bg-surface-2")}><Glyph name="query" size={14} /></button>
         )}
         <span className="relative">
-          <button aria-label="PDF menu" aria-haspopup="menu" onClick={() => setMenu(menu === "more" ? null : "more")} className={cx("flex items-center justify-center rounded-[7px] text-[16px] text-muted hover:text-ink", phone ? "size-11" : "h-7 w-6")}>⋯</button>
-          {menu === "more" && <PopMenu items={moreItems} onClose={() => setMenu(null)} className="right-0 top-9" />}
+          <button aria-label={t("PDF menu")} aria-haspopup="menu" onClick={() => setMenu(menu === "more" ? null : "more")} className={cx("flex items-center justify-center rounded-[7px] text-[16px] text-muted hover:text-ink", phone ? "size-11" : "h-7 w-6")}>⋯</button>
+          {menu === "more" && <PopMenu items={moreItems} onClose={() => setMenu(null)} className="end-0 top-9" />}
         </span>
       </div>
       {search && (
         <div className={cx("flex h-11 shrink-0 items-center gap-2.5 border-b border-line bg-surface", phone ? "px-3" : "px-5")}>
-          <input ref={qRef} dir="auto" autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find in document" aria-label="Find in document"
+          <input ref={qRef} dir="auto" autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Find in document")} aria-label={t("Find in document")}
             className={cx("h-[30px] min-w-0 rounded-[6px] border border-accent bg-bg px-2.5 text-ink outline-none", phone ? "flex-1" : "w-[280px]")}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); stepHit(e.shiftKey ? -1 : 1); } else if (e.key === "Escape") { setSearch(false); setQ(""); } }} />
-          <span className="truncate whitespace-nowrap text-muted">{searching ? "Searching…" : q.trim().length >= 2 ? (hits.length ? `${hitIdx + 1} of ${hits.length} · ${hitPages.size === 1 ? "page" : "pages"} ${[...hitPages].slice(0, 6).join(", ")}${hitPages.size > 6 ? "…" : ""}` : "No matches") : ""}</span>
-          <button aria-label="Previous match" onClick={() => stepHit(-1)} className="flex size-7 items-center justify-center rounded-[6px] hover:bg-surface-2"><ArrowUp size={15} /></button>
-          <button aria-label="Next match" onClick={() => stepHit(1)} className="flex size-7 items-center justify-center rounded-[6px] hover:bg-surface-2"><ArrowDown size={15} /></button>
+          <span className="truncate whitespace-nowrap text-muted">{searching ? t("Searching…") : q.trim().length >= 2 ? (hits.length ? t("{i} of {total} · page {list}|{i} of {total} · pages {list}", { i: hitIdx + 1, total: hits.length, n: hitPages.size, list: [...hitPages].slice(0, 6).map((p) => fmtNum(p)).join(t(", ")) + (hitPages.size > 6 ? "…" : "") }) : t("No matches")) : ""}</span>
+          <button aria-label={t("Previous match")} onClick={() => stepHit(-1)} className="flex size-7 items-center justify-center rounded-[6px] hover:bg-surface-2"><ArrowUp size={15} /></button>
+          <button aria-label={t("Next match")} onClick={() => stepHit(1)} className="flex size-7 items-center justify-center rounded-[6px] hover:bg-surface-2"><ArrowDown size={15} /></button>
         </div>
       )}
 
@@ -503,10 +504,10 @@ export function PdfReader({ note }: { note: Note }) {
             </div>
           ) : load.kind === "error" ? (
             <div className="mx-auto mt-[14vh] flex max-w-[400px] flex-col items-center gap-3 px-6 text-center">
-              <div className="text-[16px] font-semibold">{load.password ? "This PDF is locked" : "Couldn't open this PDF"}</div>
+              <div className="text-[16px] font-semibold">{load.password ? t("This PDF is locked") : t("Couldn't open this PDF")}</div>
               <div className="text-[13px] leading-5 text-muted">{load.msg}</div>
-              <button className="h-9 rounded-[9px] bg-accent px-4 font-semibold text-accent-fg" onClick={() => setReload((r) => r + 1)}>{load.password ? "Enter password" : "Try again"}</button>
-              <div className="text-[12px] text-muted">Highlights are kept in the note. Press Edit to see them as Markdown.</div>
+              <button className="h-9 rounded-[9px] bg-accent px-4 font-semibold text-accent-fg" onClick={() => setReload((r) => r + 1)}>{load.password ? t("Enter password") : t("Try again")}</button>
+              <div className="text-[12px] text-muted">{t("Highlights are kept in the note. Press Edit to see them as Markdown.")}</div>
             </div>
           ) : !ready ? (
             <div className="absolute inset-0 flex justify-center overflow-hidden" style={{ paddingTop: TOP }}>
@@ -514,8 +515,8 @@ export function PdfReader({ note }: { note: Note }) {
                 <span className="h-4 w-[40%] rounded-[4px] bg-surface-2" />
                 {["100%", "96%", "92%", "100%", "88%", "95%", "70%", "98%"].map((w, i) => <span key={i} className="h-[9px] rounded-[4px] bg-surface-2" style={{ width: w }} />)}
                 <span className="mt-auto text-[12px] text-muted">
-                  {load.kind === "loading" && loadParts ? `Loading part ${Math.min(loadParts, Math.floor(load.loaded / PART) + 1)} of ${loadParts} · ${mb(load.loaded)} of ${mb(load.total)} MB`
-                    : load.kind === "loading" && load.loaded > 0 ? `Loading · ${mb(load.loaded)} MB` : "Opening…"}
+                  {load.kind === "loading" && loadParts ? t("Loading part {part} of {parts} · {done} of {size} MB", { part: Math.min(loadParts, Math.floor(load.loaded / PART) + 1), parts: loadParts, done: mb(load.loaded), size: mb(load.total) })
+                    : load.kind === "loading" && load.loaded > 0 ? t("Loading · {done} MB", { done: mb(load.loaded) }) : t("Opening…")}
                 </span>
               </div>
             </div>
@@ -545,13 +546,13 @@ export function PdfReader({ note }: { note: Note }) {
           {ready && !hasText && (
             <div className="absolute left-1/2 top-[14px] z-20 flex h-9 max-w-[calc(100%-24px)] -translate-x-1/2 items-center gap-2 overflow-hidden whitespace-nowrap rounded-full border border-line bg-surface-2 px-3.5">
               <Glyph name="c-info" size={15} color="var(--info)" />
-              <span className="truncate">Scanned PDF: no text to select. Use <button className="font-semibold" onClick={() => setArea(true)}>Area</button> to highlight figures and paragraphs.</span>
+              <span className="truncate">{tx("Scanned PDF: no text to select. Use {area} to highlight figures and paragraphs.", { area: <button className="font-semibold" onClick={() => setArea(true)}>{t("Area@@region")}</button> })}</span>
             </div>
           )}
           {ready && resume > 0 && (
             <div className="absolute bottom-5 left-1/2 z-20 flex h-10 max-w-[calc(100%-24px)] -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-[10px] border border-line bg-surface-2 pe-2 ps-3.5 shadow-[0_12px_28px_rgba(0,0,0,.4)]">
-              <span className="truncate">Continue where you left off · p. {resume} ({meta.progress}%)</span>
-              <button className="flex h-7 items-center rounded-[7px] bg-accent px-2.5 font-semibold text-accent-fg" onClick={() => { goto(resume); setResume(0); }}>Continue</button>
+              <span className="truncate">{t("Continue where you left off · p. {page} ({pct}%)", { page: resume, pct: meta.progress })}</span>
+              <button className="flex h-7 items-center rounded-[7px] bg-accent px-2.5 font-semibold text-accent-fg" onClick={() => { goto(resume); setResume(0); }}>{t("Continue")}</button>
             </div>
           )}
           {bar && (bar.kind !== "edit" || barH) && (
@@ -567,9 +568,9 @@ export function PdfReader({ note }: { note: Note }) {
       {phone && <Sheet open={sheet === "rail"} onClose={() => setSheet(null)} title={note.title}><div className="-mx-4 -mb-4 h-[62dvh]">{rail}</div></Sheet>}
       {phone && <Sheet open={sheet === "highlights"} onClose={() => setSheet(null)}><div className="-mx-4 -mb-4 h-[66dvh]">{hlPanel(true)}</div></Sheet>}
       <FlashcardSheet open={!!card} onClose={() => setCard(null)} quote={card?.quote ?? ""} pdfTitle={note.title}
-        onSave={async (tgt, fq, fa) => { if (!card) return; const n = await appendFlashcard(tgt, fq, fa, note, card); setCard(null); toast(`Card added to “${n.title}”`, { label: "Open", run: () => openNote(n.id, "edit") }); }} />
+        onSave={async (tgt, fq, fa) => { if (!card) return; const n = await appendFlashcard(tgt, fq, fa, note, card); setCard(null); toast(t("Card added to “{title}”", { title: n.title }), { label: t("Open"), run: () => openNote(n.id, "edit") }); }} />
       <CanvasPickSheet open={!!canvasFor} onClose={() => setCanvasFor(null)} spaceId={note.spaceId}
-        onPick={async (id) => { if (!canvasFor) return; await addHighlightToCanvas(id, note, canvasFor); setCanvasFor(null); toast("Added to the canvas", { label: "Open", run: () => openNote(id) }); }} />
+        onPick={async (id) => { if (!canvasFor) return; await addHighlightToCanvas(id, note, canvasFor); setCanvasFor(null); toast(t("Added to the canvas"), { label: t("Open"), run: () => openNote(id) }); }} />
     </div>
   );
 }

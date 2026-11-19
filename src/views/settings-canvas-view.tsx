@@ -166,7 +166,7 @@ export default function CanvasView({ canvas, refs, minimap = true }: { canvas: J
           : n.type === "link" ? <LinkCard key={n.id} n={n} /> : null)}
       </div>
       {minimap && view && size.w > 600 && (
-        <div className="absolute bottom-4 right-4 h-[112px] w-[176px] overflow-hidden rounded-[10px] border border-line bg-surface">
+        <div className="absolute bottom-4 end-4 h-[112px] w-[176px] overflow-hidden rounded-[10px] border border-line bg-surface">
           {nodes.map((n) => {
             const c = colorOf(n.color);
             if (n.type !== "group" && groups.some((g) => n.x >= g.x && n.y >= g.y && n.x + n.width <= g.x + g.width && n.y + n.height <= g.y + g.height)) return null;

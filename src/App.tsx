@@ -22,7 +22,8 @@ import { cx, IconButton } from "./components/ui";
 import { LumenMark } from "./components/LumenMark";
 import { OfflineBanner } from "./components/ws-sync";
 import { readNativeShare, readWebShare, ShareSheet, useShared } from "./components/ws-share";
-import { num, tr, useRtl } from "./components/ws-dir";
+import { num, useRtl } from "./components/ws-dir";
+import { digits, t, tx, useLang } from "./lib/i18n";
 import { Home } from "./views/Home";
 import { needsWelcome, Welcome } from "./views/Welcome";
 import { lazy, Suspense } from "react";
@@ -49,6 +50,7 @@ const Loading = () => {
 };
 
 export default function App() {
+  useLang(); // re-render the whole tree when the interface language / digits change (live switch)
   const [path, setPath] = useState(location.pathname);
   useEffect(() => {
     const f = () => setPath(location.pathname);
@@ -140,7 +142,7 @@ function useBackGesture(wide: boolean) {
         // 5 · first page on a phone: swipe again to exit
         if (Date.now() - lastExit.current < 2000) { sessionStorage.removeItem("lumen.navGuard"); history.back(); return; }
         lastExit.current = Date.now();
-        toast("Swipe back again to close Lumen", undefined, { ms: 2000, variant: "pill", icon: "none" });
+        toast(t("Swipe back again to close Lumen"), undefined, { ms: 2000, variant: "pill", icon: "none" });
         keepPlace();
       }
     };
@@ -229,7 +231,7 @@ function Workspace() {
             <main className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
               <div className="min-h-0 flex-1"><Suspense fallback={<Loading />}>{main}</Suspense></div>
               {wide && notesView && (
-                <IconButton label={ui.list ? "Hide note list" : "Show note list"} className="absolute bottom-3 end-3 z-20 border border-line bg-surface opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100" onClick={() => setUI({ list: !ui.list })}><Menu size={16} /></IconButton>
+                <IconButton label={ui.list ? t("Hide note list") : t("Show note list")} className="absolute bottom-3 end-3 z-20 border border-line bg-surface opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100" onClick={() => setUI({ list: !ui.list })}><Menu size={16} /></IconButton>
               )}
             </main>
           )}
@@ -250,9 +252,9 @@ function Workspace() {
       <Splash ready={v.ready} />
       {DEMO && (
         <div className="fixed bottom-[76px] start-3 z-[70] flex items-center md:bottom-12 gap-2 rounded-full border border-[color-mix(in_srgb,var(--learn)_45%,transparent)] bg-[color-mix(in_srgb,var(--learn)_14%,var(--bg))] py-0.5 pe-1 ps-2.5 text-[11.5px] font-medium text-learn shadow-sm">
-          Demo data
-          <button onClick={async () => { await setMeta("demoSeeded", 0); location.reload(); }} className="rounded-full px-1.5 hover:bg-surface-2" title="Reset demo data">Reset</button>
-          <button onClick={() => setDemo(false)} className="rounded-full bg-surface px-2 text-ink hover:bg-surface-2">Exit</button>
+          {t("Demo data")}
+          <button onClick={async () => { await setMeta("demoSeeded", 0); location.reload(); }} className="rounded-full px-1.5 hover:bg-surface-2" title={t("Reset demo data")}>{t("Reset")}</button>
+          <button onClick={() => setDemo(false)} className="rounded-full bg-surface px-2 text-ink hover:bg-surface-2">{t("Exit")}</button>
         </div>
       )}
     </div>
@@ -264,9 +266,9 @@ function PickNote() {
   if (ui.filter === "paths") return <Suspense fallback={null}><PathsList /></Suspense>;
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2.5 px-10 text-center">
-      <span className="text-[16px] font-semibold">Pick a note</span>
-      <span className="max-w-[340px] text-[13px] leading-5 text-muted">Or press <kbd className="rounded-[4px] border border-line px-[5px] font-mono text-[11px]">Ctrl K</kbd> to search, <kbd className="rounded-[4px] border border-line px-[5px] font-mono text-[11px]">Ctrl Alt N</kbd> for a new note.</span>
-      <button className="mt-2 flex h-9 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 text-[13px] font-semibold text-accent-fg" onClick={async () => openNote((await createNote({ spaceId: ui.spaceId === "all" ? "inbox" : ui.spaceId, folderId: ui.folderId })).id, "edit")}><Plus size={14} />New note</button>
+      <span className="text-[16px] font-semibold">{t("Pick a note")}</span>
+      <span className="max-w-[340px] text-[13px] leading-5 text-muted">{tx("Or press {search} to search, {newNote} for a new note.", { search: <kbd className="rounded-[4px] border border-line px-[5px] font-mono text-[11px]">Ctrl K</kbd>, newNote: <kbd className="rounded-[4px] border border-line px-[5px] font-mono text-[11px]">Ctrl Alt N</kbd> })}</span>
+      <button className="mt-2 flex h-9 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 text-[13px] font-semibold text-accent-fg" onClick={async () => openNote((await createNote({ spaceId: ui.spaceId === "all" ? "inbox" : ui.spaceId, folderId: ui.folderId })).id, "edit")}><Plus size={14} />{t("New note")}</button>
     </div>
   );
 }
@@ -299,23 +301,23 @@ function Toasts() {
   const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-[84px] z-[60] flex flex-col items-center gap-2 px-4 md:bottom-6">
-      {ts.map((t) => t.variant === "pill" ? (
-        <div key={t.id} role="status" className="pointer-events-auto flex h-10 items-center rounded-[20px] bg-ink px-4 text-[14px] font-medium text-bg fade-in" dir="auto">{t.text}</div>
+      {ts.map((x) => x.variant === "pill" ? (
+        <div key={x.id} role="status" className="pointer-events-auto flex h-10 items-center rounded-[20px] bg-ink px-4 text-[14px] font-medium text-bg fade-in" dir="auto">{x.text}</div>
       ) : (
-        <div key={t.id} role="status" className="pointer-events-auto relative flex w-full max-w-[420px] items-center gap-3 overflow-hidden rounded-[10px] border border-line bg-surface-2 px-3.5 py-3 text-[13px] shadow-[0_12px_32px_rgba(0,0,0,.4)] fade-in">
-          {t.icon && TOAST_ICON[t.icon]}
+        <div key={x.id} role="status" className="pointer-events-auto relative flex w-full max-w-[420px] items-center gap-3 overflow-hidden rounded-[10px] border border-line bg-surface-2 px-3.5 py-3 text-[13px] shadow-[0_12px_32px_rgba(0,0,0,.4)] fade-in">
+          {x.icon && TOAST_ICON[x.icon]}
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className={cx(t.sub && "font-semibold")} dir="auto">{t.text}</span>
-            {t.sub && <span className="text-[12px] text-muted">{t.sub}</span>}
+            <span className={cx(x.sub && "font-semibold")} dir="auto">{x.text}</span>
+            {x.sub && <span className="text-[12px] text-muted" dir="auto">{x.sub}</span>}
           </div>
-          {t.action && (t.actionStyle === "button" ? (
-            <button className="flex h-7 shrink-0 items-center rounded-[8px] border border-line px-2.5 font-semibold" onClick={() => { t.action!.run(); dismissToast(t.id); }}>
-              {t.action.label}{/undo/i.test(t.action.label) && <span className="ms-1.5 hidden font-mono text-[11px] font-medium text-muted md:inline">{mac ? "⌘Z" : "Ctrl Z"}</span>}
+          {x.action && (x.actionStyle === "button" ? (
+            <button className="flex h-7 shrink-0 items-center rounded-[8px] border border-line px-2.5 font-semibold" onClick={() => { x.action!.run(); dismissToast(x.id); }}>
+              {x.action.label}{(/undo/i.test(x.action.label) || x.action.label === t("Undo")) && <span className="ms-1.5 hidden font-mono text-[11px] font-medium text-muted md:inline">{mac ? "⌘Z" : "Ctrl Z"}</span>}
             </button>
           ) : (
-            <button className="shrink-0 font-medium text-link" onClick={() => { t.action!.run(); dismissToast(t.id); }}>{t.action.label}</button>
+            <button className="shrink-0 font-medium text-link" onClick={() => { x.action!.run(); dismissToast(x.id); }}>{x.action.label}</button>
           ))}
-          {t.action && t.actionStyle === "button" && <span className="absolute bottom-0 start-0 h-0.5 bg-muted opacity-60" style={{ animation: `toastbar ${t.ms}ms linear forwards` }} />}
+          {x.action && x.actionStyle === "button" && <span className="absolute bottom-0 start-0 h-0.5 bg-muted opacity-60" style={{ animation: `toastbar ${x.ms}ms linear forwards` }} />}
         </div>
       ))}
       <style>{"@keyframes toastbar { from { width: 100%; } to { width: 0%; } }"}</style>
@@ -332,22 +334,22 @@ function TabBar({ due, onNew, rtl }: { due: number; onNew: () => void; rtl: bool
       <button key={k} onClick={onClick} className={cx("flex flex-col items-center gap-[3px]", on ? "text-ink" : "text-muted")}>
         <span className="relative flex h-7 w-14 items-center justify-center rounded-[14px]" style={{ background: on ? "color-mix(in srgb, var(--accent) 18%, transparent)" : "transparent" }}>
           {icon}
-          {!!badge && <span className="absolute -top-[3px] end-1.5 h-4 min-w-[18px] rounded-lg bg-learn px-1 text-center text-[10px] font-bold leading-4 text-[#14101C]">{badge > 99 ? "99+" : num(badge, rtl)}</span>}
+          {!!badge && <span className="absolute -top-[3px] end-1.5 h-4 min-w-[18px] rounded-lg bg-learn px-1 text-center text-[10px] font-bold leading-4 text-[#14101C]">{badge > 99 ? digits("99+") : num(badge, rtl)}</span>}
         </span>
-        <span className={cx("text-[11px]", on ? "font-semibold" : "font-medium")}>{tr(label, rtl)}</span>
+        <span className={cx("text-[11px]", on ? "font-semibold" : "font-medium")}>{label}</span>
       </button>
     );
   };
   return (
     <nav className="safe-b shrink-0 border-t border-line bg-surface">
       <div className="grid h-16 grid-cols-5 items-center">
-        {tab("home", <House size={20} />, "Home", () => setUI({ view: "home", sidebar: false }))}
-        {tab("notes", <FileText size={20} />, "Notes", () => setUI({ view: "notes", noteId: null, sidebar: false }))}
+        {tab("home", <House size={20} />, t("Home"), () => setUI({ view: "home", sidebar: false }))}
+        {tab("notes", <FileText size={20} />, t("Notes"), () => setUI({ view: "notes", noteId: null, sidebar: false }))}
         <div className="flex justify-center">
-          <button aria-label="New…" onClick={onNew} className="-mt-[26px] flex size-14 items-center justify-center rounded-[18px] bg-accent text-accent-fg" style={{ boxShadow: "0 0 0 5px var(--bg)" }}><Plus size={26} /></button>
+          <button aria-label={t("New…")} onClick={onNew} className="-mt-[26px] flex size-14 items-center justify-center rounded-[18px] bg-accent text-accent-fg" style={{ boxShadow: "0 0 0 5px var(--bg)" }}><Plus size={26} /></button>
         </div>
-        {tab("review", <Layers size={20} />, "Review", () => setUI({ view: "review", sidebar: false }), due)}
-        {tab("more", <LayoutGrid size={20} />, "More", () => setUI({ view: "settings", sidebar: false }))}
+        {tab("review", <Layers size={20} />, t("Review"), () => setUI({ view: "review", sidebar: false }), due)}
+        {tab("more", <LayoutGrid size={20} />, t("More"), () => setUI({ view: "settings", sidebar: false }))}
       </div>
     </nav>
   );

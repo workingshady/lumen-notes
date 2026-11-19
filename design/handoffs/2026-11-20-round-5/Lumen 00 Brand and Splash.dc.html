@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 44 }}" hint-size="44px,44px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 00 Brand, icons &amp; splash</span></div><div style="font-size:14px;color:#9A9890">A lamp on a desk at night: one warm flame, a soft cone of light, a steady line.</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">MARK</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">The mark</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Rounded tile (r 16/64). A flame-drop light source, a cone of light at 30% fading to nothing, and the desk/page line. Below 32 px the cone and glow drop out and the flame becomes a dot.</p></div>
+    <div style="display:flex;gap:40px;flex-wrap:wrap">
+      <div style="width:440px;height:440px;border-radius:20px;background:#0F1115;display:flex;align-items:center;justify-content:center;position:relative"><dc-import name="LumenMark" size="{{ 260 }}" hint-size="260px,260px"></dc-import><span style="position:absolute;left:20px;bottom:16px;font:500 12px 'JetBrains Mono',monospace;color:#9AA0AA">Lamplight</span></div>
+      <div style="width:440px;height:440px;border-radius:20px;background:#FAF8F3;display:flex;align-items:center;justify-content:center;position:relative"><dc-import name="LumenMark" size="{{ 260 }}" tile="light" hint-size="260px,260px"></dc-import><span style="position:absolute;left:20px;bottom:16px;font:500 12px 'JetBrains Mono',monospace;color:#6A655C">Paper</span></div>
+      <div style="width:440px;height:440px;border-radius:20px;background:#0F1115;position:relative;overflow:hidden">
+        <div style="position:absolute;left:60px;top:60px"><dc-import name="LumenMark" size="{{ 320 }}" hint-size="320px,320px"></dc-import></div>
+        <div style="position:absolute;left:60px;top:60px;width:320px;height:320px;background-image:linear-gradient(rgba(242,92,154,.2) 1px,transparent 1px),linear-gradient(90deg,rgba(242,92,154,.2) 1px,transparent 1px);background-size:40px 40px;outline:1px solid rgba(242,92,154,.45)"></div>
+        <span style="position:absolute;left:60px;top:34px;font:500 11px 'JetBrains Mono',monospace;color:#F25C9A">64u tile · 8u grid · clear space ¼ tile</span>
+        <span style="position:absolute;left:60px;top:392px;font:500 11px 'JetBrains Mono',monospace;color:#F25C9A">flame cy 22u · cone to y 45u · desk 40 × 3.5u at y 44u</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:28px;align-items:flex-end;flex-wrap:wrap">
+      <sc-for list="{{ sizes }}" as="s" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;gap:10px;align-items:center"><dc-import name="LumenMark" size="{{ s.n }}" glyph="{{ s.g }}" cone="{{ s.c }}" glow="{{ s.c }}" hint-size="64px,64px"></dc-import><span style="font:500 11px 'JetBrains Mono',monospace;color:#9A9890">{{ s.l }}</span></div></sc-for>
+      <span style="width:1px;height:96px;background:#3A3D44;margin:0 12px"></span>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:center"><dc-import name="LumenMark" size="{{ 64 }}" tile="accent" hint-size="64px,64px"></dc-import><span style="font:500 11px 'JetBrains Mono',monospace;color:#9A9890">amber tile</span></div>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:center"><dc-import name="LumenMark" size="{{ 64 }}" tile="mono" hint-size="64px,64px"></dc-import><span style="font:500 11px 'JetBrains Mono',monospace;color:#9A9890">mono</span></div>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:center"><div style="background:#FAF8F3;border-radius:12px"><dc-import name="LumenMark" size="{{ 64 }}" tile="monoDark" hint-size="64px,64px"></dc-import></div><span style="font:500 11px 'JetBrains Mono',monospace;color:#9A9890">mono · dark</span></div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">LOCKUPS</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Wordmark &amp; lockups</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">“lumen”, lowercase, Inter Semibold, tracking −4.5%. Mark = 1.15× x-height block; gap = ⅓ mark.</p></div>
+    <div style="display:grid;grid-template-columns:repeat(3,440px);gap:24px">
+      <div style="height:200px;border-radius:20px;background:#0F1115;display:flex;align-items:center;justify-content:center;gap:20px"><dc-import name="LumenMark" size="{{ 60 }}" hint-size="60px,60px"></dc-import><span style="font-size:54px;font-weight:600;letter-spacing:-.045em;line-height:1">lumen</span></div>
+      <div style="height:200px;border-radius:20px;background:#FAF8F3;display:flex;align-items:center;justify-content:center;gap:20px;color:#1F1D1A"><dc-import name="LumenMark" size="{{ 60 }}" tile="light" hint-size="60px,60px"></dc-import><span style="font-size:54px;font-weight:600;letter-spacing:-.045em;line-height:1">lumen</span></div>
+      <div style="height:200px;border-radius:20px;background:#0F1115;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px"><dc-import name="LumenMark" size="{{ 72 }}" hint-size="72px,72px"></dc-import><span style="font-size:32px;font-weight:600;letter-spacing:-.045em;line-height:1">lumen</span></div>
+      <div style="height:120px;border-radius:20px;background:#161A21;display:flex;align-items:center;justify-content:center;gap:10px"><dc-import name="LumenMark" size="{{ 28 }}" hint-size="28px,28px"></dc-import><span style="font-size:20px;font-weight:600;letter-spacing:-.04em">lumen</span><span style="font:500 11px 'JetBrains Mono',monospace;color:#9AA0AA;margin-left:16px">app header · 28</span></div>
+      <div style="height:120px;border-radius:20px;background:#0F1115;display:flex;align-items:center;justify-content:center"><span style="font-size:28px;font-weight:600;letter-spacing:-.045em">lumen</span><span style="font:500 11px 'JetBrains Mono',monospace;color:#9AA0AA;margin-left:16px">wordmark ≥ 72 px wide</span></div>
+      <div style="height:120px;border-radius:20px;background:#FAF8F3;display:flex;align-items:center;justify-content:center;gap:12px;color:#1F1D1A"><span style="font-family:'Source Serif 4',serif;font-size:20px;font-weight:700">Night Shift Notes</span><span style="font-size:12px;color:#6A655C;display:flex;align-items:center;gap:6px">written in <dc-import name="LumenMark" size="{{ 16 }}" tile="light" glyph="dot" cone="{{ false }}" glow="{{ false }}" hint-size="16px,16px"></dc-import>lumen</span></div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">ANDROID · R3</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">App icon, themed icon &amp; favicon</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Adaptive icon: background #0F1115; foreground glyph (no tile) inside the 66 dp safe zone of the 108 dp canvas, so every launcher mask keeps flame and desk intact. Monochrome layer for Android 13+ themed icons.</p></div>
+    <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:center"><div style="width:216px;height:216px;background:repeating-linear-gradient(45deg,#2A2D33 0 6px,#25282D 6px 12px);position:relative;display:flex;align-items:center;justify-content:center"><div style="position:absolute;left:42px;top:42px;width:132px;height:132px;border-radius:50%;border:1.5px dashed #F25C9A"></div><dc-import name="LumenMark" size="{{ 132 }}" tile="glyph" hint-size="132px,132px"></dc-import></div><span style="font:500 11px 'JetBrains Mono',monospace;color:#9A9890">foreground · 108 dp · safe 66 dp</span></div>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:center"><div style="width:216px;height:216px;background:#0F1115"></div><span style="font:500 11px 'JetBrains Mono',monospace;color:#9A9890">background · #0F1115</span></div>
+      <div style="display:grid;grid-template-columns:repeat(4,96px);gap:12px 24px;justify-items:center">
+        <sc-for list="{{ masks }}" as="m" hint-placeholder-count="6"><div style="display:flex;flex-direction:column;gap:8px;align-items:center"><div style="width:96px;height:96px;border-radius:{{ m.r }};background:{{ m.bg }};overflow:hidden;display:flex;align-items:center;justify-content:center"><dc-import name="LumenMark" size="{{ 60 }}" tile="{{ m.t }}" hint-size="60px,60px"></dc-import></div><span style="font:500 11px 'JetBrains Mono',monospace;color:#9A9890">{{ m.l }}</span></div></sc-for>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:center;grid-column:span 2"><div style="height:96px;display:flex;gap:12px;align-items:flex-end"><dc-import name="LumenMark" size="{{ 48 }}" glyph="dot" cone="{{ false }}" hint-size="48px,48px"></dc-import><dc-import name="LumenMark" size="{{ 32 }}" glyph="dot" cone="{{ false }}" glow="{{ false }}" hint-size="32px,32px"></dc-import><dc-import name="LumenMark" size="{{ 16 }}" glyph="dot" cone="{{ false }}" glow="{{ false }}" hint-size="16px,16px"></dc-import></div><span style="font:500 11px 'JetBrains Mono',monospace;color:#9A9890">favicon · PWA 48 / 32 / 16</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SPLASH · R3</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Splash &amp; launch</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Plain #0F1115, the mark centred, no text. The lamp “warms up” (glow 0 → 45% in 240 ms, ease-out), then the UI fades in underneath. Launches under 300 ms skip it.</p></div>
+    <div style="display:flex;gap:64px;align-items:flex-start;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:14px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">S1</span> Splash · Desktop / PWA 1440</div>
+        <div style="width:1440px;height:900px;border-radius:12px;background:radial-gradient(420px 420px at 50% 50%, rgba(242,169,59,.06), transparent 70%), #0F1115;display:flex;align-items:center;justify-content:center"><dc-import name="LumenMark" size="{{ 112 }}" tile="glyph" hint-size="112px,112px"></dc-import></div></div>
+      <div style="display:flex;flex-direction:column;gap:14px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">S2</span> Splash · Android 412</div>
+        <div style="width:412px;height:915px;border-radius:28px;background:#0F1115;position:relative;display:flex;align-items:center;justify-content:center"><div style="position:absolute;top:0;left:0;right:0;height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500;opacity:.55"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div><dc-import name="LumenMark" size="{{ 128 }}" tile="glyph" hint-size="128px,128px"></dc-import></div></div>
+      <div style="display:flex;flex-direction:column;gap:14px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">S3</span> Launch storyboard</div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <sc-for list="{{ story }}" as="f" hint-placeholder-count="3"><div style="display:flex;gap:16px;align-items:center"><div style="width:200px;height:125px;border-radius:10px;background:{{ f.bg }};display:flex;align-items:center;justify-content:center;opacity:{{ f.o }}"><dc-import name="LumenMark" size="{{ 40 }}" tile="glyph" glow="{{ f.glow }}" cone="{{ f.glow }}" hint-size="40px,40px"></dc-import></div><span style="font-size:13px;color:#CFCBC3;line-height:20px;width:260px"><b style="color:#F25C9A">{{ f.t }}</b> — {{ f.d }}</span></div></sc-for>
+        </div></div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      sizes: [[96,'flame',true,'96'],[64,'flame',true,'64'],[40,'flame',true,'40'],[32,'dot',false,'32 · dot'],[16,'dot',false,'16']].map(([n,g,c,l]) => ({ n, g, c, l })),
+      masks: [['50%','#0F1115','glyph','circle'],['30%','#0F1115','glyph','squircle'],['22%','#0F1115','glyph','rounded'],['50% 50% 50% 14%','#0F1115','glyph','teardrop'],['50%','#DCE3F2','monoDark','themed · light'],['50%','#26324A','mono','themed · dark']].map(([r,bg,t,l]) => ({ r, bg, t, l })),
+      story: [['#0F1115',false,1,'0 ms','splash: lamp unlit, desk line only at rest.'],['radial-gradient(120px 120px at 50% 50%, rgba(242,169,59,.12), transparent 70%), #0F1115',true,1,'+240 ms','flame glows, cone fades in (ease-out).'],['#161A21',true,.55,'+480 ms','UI cross-fades in; mark hands off to Home.']]
+        .map(([bg,glow,o,t,d]) => ({ bg, glow, o, t, d }))
+    };
+  }
+}
+</script>
+</body>
+</html>

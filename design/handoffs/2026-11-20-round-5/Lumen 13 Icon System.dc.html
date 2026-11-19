@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:96px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:1760px;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 13 Icon system</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 4</span></div><div style="font-size:14px;color:#9A9890">No emoji anywhere. One family: 24 grid, 1.75 stroke, round caps. Used at 16 · 20 · 24, plain or on a 14% tinted tile.</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · B · RULES</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Grid, sizes, tiles</h2></div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap">
+      <div style="width:360px;height:360px;border-radius:14px;background:#0F1115;position:relative;display:flex;align-items:center;justify-content:center">
+        <div style="position:absolute;left:60px;top:60px;width:240px;height:240px;background-image:linear-gradient(rgba(242,92,154,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(242,92,154,.18) 1px,transparent 1px);background-size:10px 10px;outline:1px solid rgba(242,92,154,.45)"></div>
+        <div style="position:absolute;left:80px;top:80px;width:200px;height:200px;outline:1px dashed rgba(242,92,154,.6)"></div>
+        <dc-import name="LumenGlyph" glyph="lesson" size="{{ 240 }}" stroke="{{ 1.75 }}" color="#E8E6E1" hint-size="240px,240px"></dc-import>
+        <span style="position:absolute;left:60px;bottom:22px;font:500 11px 'JetBrains Mono',monospace;color:#F25C9A">24 grid · 2 px padding · 1.75 stroke</span>
+      </div>
+      <div style="flex:1;min-width:600px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="border-radius:14px;background:#0F1115;padding:24px;display:flex;flex-direction:column;gap:18px;color:#E8E6E1">
+          <span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:#9AA0AA">Lamplight</span>
+          <div style="display:flex;gap:28px;align-items:flex-end"><sc-for list="{{ sizes }}" as="s" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:8px;align-items:center"><dc-import name="LumenGlyph" glyph="flashcards" size="{{ s }}" hint-size="24px,24px"></dc-import><span style="font:500 11px 'JetBrains Mono',monospace;color:#9AA0AA">{{ s }}</span></div></sc-for>
+            <span style="width:1px;height:48px;background:#2A303B"></span>
+            <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="6"><dc-import name="LumenGlyph" glyph="{{ t.n }}" size="{{ 20 }}" color="{{ t.d }}" tile="{{ t.d }}" hint-size="35px,35px"></dc-import></sc-for>
+          </div>
+          <span style="color:#9AA0AA;line-height:19px">16 in dense lists and chips · 20 in menus, sidebar, cards · 24 in headers and empty states. Tile = glyph colour at 14% fill, radius 28% of tile.</span>
+        </div>
+        <div style="border-radius:14px;background:#FAF8F3;padding:24px;display:flex;flex-direction:column;gap:18px;color:#1F1D1A">
+          <span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:#6A655C">Paper</span>
+          <div style="display:flex;gap:28px;align-items:flex-end"><sc-for list="{{ sizes }}" as="s" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:8px;align-items:center"><dc-import name="LumenGlyph" glyph="flashcards" size="{{ s }}" color="#1F1D1A" hint-size="24px,24px"></dc-import><span style="font:500 11px 'JetBrains Mono',monospace;color:#6A655C">{{ s }}</span></div></sc-for>
+            <span style="width:1px;height:48px;background:#E4DFD3"></span>
+            <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="6"><dc-import name="LumenGlyph" glyph="{{ t.n }}" size="{{ 20 }}" color="{{ t.l }}" tile="{{ t.l }}" hint-size="35px,35px"></dc-import></sc-for>
+          </div>
+          <span style="color:#6A655C;line-height:19px">Colour = meaning only. Green done, amber review due, red delete, blue learning/links, violet flashcards/practice. Courses and folders use the 6 presets.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="6">
+    <section style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:14px"><span style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ g.k }}</span><h2 style="margin:0;font-size:26px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ g.t }}</h2><span style="color:#9A9890">{{ g.d }}</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="border-radius:14px;background:#0F1115;padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px">
+          <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="12"><div style="height:84px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#E8E6E1"><dc-import name="LumenGlyph" glyph="{{ i.n }}" size="{{ 24 }}" color="{{ i.d }}" hint-size="24px,24px"></dc-import><span style="font-size:11.5px;color:#9AA0AA;text-align:center">{{ i.l }}</span></div></sc-for>
+        </div>
+        <div style="border-radius:14px;background:#FAF8F3;padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px">
+          <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="12"><div style="height:84px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#1F1D1A"><dc-import name="LumenGlyph" glyph="{{ i.n }}" size="{{ 24 }}" color="{{ i.lc }}" hint-size="24px,24px"></dc-import><span style="font-size:11.5px;color:#6A655C;text-align:center">{{ i.l }}</span></div></sc-for>
+        </div>
+      </div>
+    </section>
+  </sc-for>
+
+  <section style="display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · B · PICKER</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Space icon picker</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Replaces the emoji picker. ~48 subject glyphs, shapes and two-letter initials, a search field and one colour row. Popover on desktop, sheet on phone.</p></div>
+    <div style="display:flex;gap:56px;align-items:flex-start">
+      <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;width:380px;border-radius:14px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 16px 40px rgba(0,0,0,.45);padding:12px;display:flex;flex-direction:column;gap:12px;color:var(--tx)">
+        <div style="height:34px;border-radius:6px;background:var(--bg);border:1px solid var(--ac);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--mu)"><dc-import name="LumenGlyph" glyph="query" size="{{ 16 }}" hint-size="16px,16px"></dc-import><span style="color:var(--tx)">ne</span><span style="width:1.5px;height:16px;background:var(--ac);margin-left:-6px"></span></div>
+        <div style="display:flex;gap:8px;align-items:center"><sc-for list="{{ presets }}" as="p" hint-placeholder-count="6"><span style="width:22px;height:22px;border-radius:50%;background:{{ p.c }};box-shadow:{{ p.ring }}"></span></sc-for><span style="flex:1"></span><span style="font-size:12px;color:var(--mu)">Colour</span></div>
+        <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Subjects</span>
+        <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px">
+          <sc-for list="{{ pick }}" as="p" hint-placeholder-count="24"><span style="height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:{{ p.bg }};box-shadow:{{ p.ring }};color:{{ p.c }}"><dc-import name="LumenGlyph" glyph="{{ p.n }}" size="{{ 20 }}" hint-size="20px,20px"></dc-import></span></sc-for>
+        </div>
+        <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Shapes · initials</span>
+        <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px">
+          <sc-for list="{{ shapes }}" as="p" hint-placeholder-count="8"><span style="height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--tx)"><dc-import name="LumenGlyph" glyph="{{ p }}" size="{{ 20 }}" hint-size="20px,20px"></dc-import></span></sc-for>
+          <sc-for list="{{ initials }}" as="p" hint-placeholder-count="4"><span style="height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:650;font-size:13px;color:var(--tx);border:1px dashed var(--bd)">{{ p }}</span></sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding-top:10px;border-top:1px solid var(--bd)"><dc-import name="LumenGlyph" glyph="neural" size="{{ 20 }}" color="#A371F7" tile="#A371F7" hint-size="35px,35px"></dc-import><span style="flex:1;font-weight:600">AI Engineer</span><span style="color:var(--mu);font-size:12px">preview</span></div>
+      </div>
+      <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;width:412px;height:915px;border-radius:28px;background:var(--bg);position:relative;overflow:hidden;color:var(--tx);font-size:14px">
+        <div style="position:absolute;inset:0;background:rgba(5,6,8,.6)"></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:var(--sf);border-radius:14px 14px 0 0;padding:10px 16px 0;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;justify-content:center"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+          <div style="display:flex;align-items:center;gap:12px"><dc-import name="LumenGlyph" glyph="neural" size="{{ 24 }}" color="#A371F7" tile="#A371F7" hint-size="42px,42px"></dc-import><span style="font-size:18px;font-weight:650;flex:1">Space icon</span></div>
+          <div style="height:48px;border-radius:10px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--mu)"><dc-import name="LumenGlyph" glyph="query" size="{{ 18 }}" hint-size="18px,18px"></dc-import>Search icons</div>
+          <div style="display:flex;gap:12px;justify-content:space-between"><sc-for list="{{ presets }}" as="p" hint-placeholder-count="6"><span style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:50%;background:{{ p.c }};box-shadow:{{ p.ring }}"></span></span></sc-for></div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">
+            <sc-for list="{{ pick }}" as="p" hint-placeholder-count="24"><span style="height:52px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:{{ p.bg }};box-shadow:{{ p.ring }};color:{{ p.c }}"><dc-import name="LumenGlyph" glyph="{{ p.n }}" size="{{ 22 }}" hint-size="22px,22px"></dc-import></span></sc-for>
+          </div>
+          <span style="height:52px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600">Done</span>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · B · BEFORE / AFTER</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Emoji out, glyphs in</h2></div>
+    <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;color:var(--tx)">
+      <sc-for list="{{ ba }}" as="b" hint-placeholder-count="3">
+        <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:14px">
+          <span style="font-weight:600">{{ b.t }}</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:2px;opacity:.55"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);padding-bottom:6px">Before</span><sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="4"><div style="height:32px;padding:0 8px;border-radius:6px;display:flex;align-items:center;gap:8px"><span style="font-size:14px;width:20px;text-align:center">{{ r.e }}</span>{{ r.l }}</div></sc-for></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ac);padding-bottom:6px">After</span><sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="4"><div style="height:32px;padding:0 8px;border-radius:6px;display:flex;align-items:center;gap:8px;background:{{ r.bg }}"><dc-import name="LumenGlyph" glyph="{{ r.g }}" size="{{ 16 }}" color="{{ r.c }}" tile="{{ r.t }}" tileScale="{{ 1.5 }}" hint-size="24px,24px"></dc-import>{{ r.l }}</div></sc-for></div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const D = { ok:['#6BCB8B','#1F8A4C'], wa:['#E8B34A','#A86A00'], da:['#EF6B6B','#C42B2B'], in:['#7AA2F7','#2F5BD3'], le:['#B48EF0','#7A4BD1'], mu:['#9AA0AA','#6A655C'], tx:['#E8E6E1','#1F1D1A'] };
+    const it = (n, l, c = 'tx') => ({ n, l, d: D[c][0], lc: D[c][1] });
+    const groups = [
+      ['B1','Note types','16 kinds — list, tree, tabs, chooser', [['note','Note'],['lesson','Lesson'],['journal','Journal'],['flashcards','Flashcards','le'],['slides','Slides'],['post','Post'],['canvas','Canvas'],['whiteboard','Whiteboard'],['roadmap','Roadmap'],['moc','Map of content'],['path','Learning path'],['diagram','Diagram'],['base','Base'],['pdf','PDF'],['highlight','Highlight'],['dashboard','Dashboard']]],
+      ['B2','Space kinds · course kinds','switcher, new space, course chips', [['project','Project'],['area','Area'],['course','Course'],['resource','Resource'],['archive','Archive','mu'],['k-video','Video course'],['k-book','Book'],['k-lecture','Lecture'],['k-notebook','Notebook'],['k-paper','Paper'],['k-podcast','Podcast'],['k-article','Article']]],
+      ['B3','Slash commands','~60 — shown 52; same glyph in the slash menu, insert gallery and block menu', [['text','Text'],['h1','Heading 1'],['h2','Heading 2'],['h3','Heading 3'],['list','Bullets'],['numbered','Numbered'],['task','Tasks'],['quote','Quote'],['code','Code'],['math-block','Math'],['divider','Divider'],['table','Table'],['mermaid','Mermaid'],['columns-2','2 columns'],['columns-3','3 columns'],['sidebar-main','Sidebar + main'],['tabs','Tabs'],['expand','Expand'],['wide','Wide'],['full','Full width'],['aside','Aside'],['center','Center'],['box','Panel'],['image','Image'],['video','Video'],['audio','Audio'],['file','File'],['pdf','PDF'],['link-card','Link card'],['embed','Embed'],['wikilink','Link to note'],['block-embed','Block embed'],['include','Include'],['query','Query'],['toc','Contents'],['status-pill','Status pill'],['date','Date'],['voice','Voice note'],['cloze','Cloze','le'],['occlusion','Image occlusion','le'],['timestamp','Timestamp'],['flashcards','Flashcard','le'],['diagram','Diagram'],['canvas','Canvas'],['whiteboard','Whiteboard'],['base','Base view'],['dashboard','Chart'],['smart-folder','Smart folder'],['highlight','Highlight'],['graph','Local graph'],['export','Export'],['path','Path']]],
+      ['B4','Callouts','10 types, colour carries meaning', [['c-note','Note'],['c-info','Info','in'],['c-tip','Tip','ok'],['c-success','Success','ok'],['c-warning','Warning','wa'],['c-danger','Danger','da'],['c-question','Question','le'],['c-example','Example'],['c-quote','Quote','mu'],['c-abstract','Abstract']]],
+      ['B5','Statuses','learning + documents', [['s-todo','Todo','mu'],['s-learning','Learning','in'],['s-done','Done','ok'],['s-skipped','Skipped','mu'],['s-locked','Locked','mu'],['s-mastered','Mastered','ok'],['s-revise','To revise','wa'],['d-draft','Draft','mu'],['d-review','In review','wa'],['d-approved','Approved','ok'],['d-superseded','Superseded','mu'],['d-rejected','Rejected','da']]],
+      ['B6','Tasks · workspaces · views','project hub, chooser, bases', [['t-backlog','Backlog','mu'],['t-todo','Todo'],['t-doing','Doing','in'],['t-review','Review','wa'],['t-done','Done','ok'],['t-cancelled','Cancelled','mu'],['p1','Priority 1','da'],['p2','Priority 2','wa'],['p3','Priority 3','mu'],['estimate','Estimate'],['due','Due'],['start','Start'],['owner','Owner'],['epic','Epic'],['requirement','Requirement'],['graph','Graph'],['export','Export'],['v-table','Table'],['v-board','Board'],['v-gallery','Gallery'],['v-list','List'],['v-calendar','Calendar']]]
+    ].map(([k,t,d,items]) => ({ k:'R4 · '+k, t, d, items: items.map(a => it(...a)) }));
+    const tiles = [['course','#A371F7','#7A4BD1'],['flashcards','#B48EF0','#7A4BD1'],['s-done','#6BCB8B','#1F8A4C'],['s-revise','#E8B34A','#A86A00'],['c-danger','#EF6B6B','#C42B2B'],['s-learning','#7AA2F7','#2F5BD3']].map(([n,d,l]) => ({ n, d, l }));
+    const presets = ['#E5534B','#E8893A','#E3B341','#57AB5A','#39C5CF','#A371F7'].map((c,i) => ({ c, ring: i===5 ? '0 0 0 2px #1D222B, 0 0 0 4px #E8E6E1' : 'none' }));
+    const pickN = ['math','code','language','neural','eye','nlp','robot-arm','database','cloud','book','flask','globe','music','health','money','briefcase','home','course','project','area','resource','moc','path','base'];
+    const pick = pickN.map(n => ({ n, bg: n==='neural' ? 'color-mix(in srgb,#A371F7 18%,transparent)' : 'transparent', ring: n==='neural' ? 'inset 0 0 0 1.5px #A371F7' : 'none', c: n==='neural' ? '#A371F7' : (['nlp','neural'].includes(n) ? '#E8E6E1' : '#E8E6E1') }));
+    const shapes = ['shape-circle','shape-square','shape-triangle','shape-diamond','shape-hex','shape-star','shape-wave','shape-spark'];
+    const initials = ['AI','ML','AR','CS'];
+    const row = (e,g,l,c,t,sel) => ({ e, g, l, c, t: t||'', bg: sel ? '#1D222B' : 'transparent' });
+    const ba = [
+      { t:'Space switcher', rows:[row('🧠','neural','AI Engineer','#A371F7','#A371F7',1), row('🕌','language','Arabic Grammar','#39C5CF','#39C5CF'), row('🚀','project','Thesis','#E8893A','#E8893A'), row('📚','book','Math reference','#E3B341','#E3B341')] },
+      { t:'Note list / tree', rows:[row('📝','lesson','Gradient descent','#E8E6E1'), row('🗂️','flashcards','Backprop cards','#B48EF0'), row('🧩','canvas','Study board','#E8E6E1'), row('🖍️','whiteboard','Study plan','#E8E6E1')] },
+      { t:'Sidebar footer · blog', rows:[row('🦉','owl','Night Shift Notes','#E8E6E1','#E8E6E1'), row('📥','inbox','Inbox','#E8E6E1'), row('⭐','s-mastered','Mastered','#6BCB8B'), row('🔁','s-revise','To revise · 3','#E8B34A')] }
+    ];
+    return { sizes:[16,20,24], tiles, groups, presets, pick, shapes, initials, ba };
+  }
+}
+</script>
+</body>
+</html>

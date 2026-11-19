@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 import { createRoot } from "react-dom/client";
 import { addFile, resolveAtt } from "../lib/attachments";
 import { attId, clampBox, nextBoxId, noteImages, occlusionCardCount, safeImageUrl, type Occlusion, type OcclusionBox, type OcclusionMode } from "../lib/occlusion";
+import { fmtNum, t } from "../lib/i18n";
 import { toast } from "../lib/store";
 import { Glyph } from "./Glyph";
 import { Button, cx, IconButton, inputCls } from "./ui";
@@ -34,7 +35,7 @@ export function OcclusionImage({ data, target, revealed, className }: { data: Oc
   const tset = new Set(target);
   return (
     <div className={cx("occl-review relative inline-block max-w-full select-none", className)}>
-      {url ? <img src={url} alt={data.alt ?? "Image occlusion"} draggable={false} className="block max-h-[52dvh] max-w-full md:max-h-[300px]" /> : <div className="flex h-40 w-72 items-center justify-center text-[13px] text-muted">Loading image…</div>}
+      {url ? <img src={url} alt={data.alt ?? t("Image occlusion")} draggable={false} className="block max-h-[52dvh] max-w-full md:max-h-[300px]" /> : <div className="flex h-40 w-72 items-center justify-center text-[13px] text-muted">{t("Loading image…")}</div>}
       {url && data.boxes.map((b) => {
         const isT = tset.has(b.id);
         const cls = isT ? (revealed ? "occl-r-shown" : "occl-r-target") : data.mode === "hide-all" ? "occl-r-hidden" : "occl-r-other";
@@ -99,15 +100,15 @@ export function OcclusionEditor({ initial, noteBody = "", onSave, onClose }: Edi
   }, [nat, stage]);
 
   const close = useCallback(() => {
-    if (dirty.current && !confirm("Discard changes to these boxes?")) return;
+    if (dirty.current && !confirm(t("Discard changes to these boxes?"))) return;
     onClose();
   }, [onClose]);
   const save = () => { onSave({ ...o, boxes: o.boxes.map((b) => clampBox(b)) }); onClose(); };
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement;
-      if (t.closest("input,textarea,select")) { if (e.key === "Escape") t.blur(); return; }
+      const tg = e.target as HTMLElement;
+      if (tg.closest("input,textarea,select")) { if (e.key === "Escape") tg.blur(); return; }
       if (e.key === "Escape") { e.preventDefault(); if (sel) setSel(null); else close(); }
       else if ((e.key === "Delete" || e.key === "Backspace") && sel) { e.preventDefault(); remove(sel); }
       else if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); save(); }
@@ -235,26 +236,26 @@ export function OcclusionEditor({ initial, noteBody = "", onSave, onClose }: Edi
   const pick = (src: string) => { edit((x) => ({ ...x, image: src })); setNat(null); setView({ s: 1, tx: 0, ty: 0 }); setPicking(false); };
   async function upload(f: File | undefined) {
     if (!f) return;
-    if (!f.type.startsWith("image/")) { toast("Choose an image file"); return; }
+    if (!f.type.startsWith("image/")) { toast(t("Choose an image file")); return; }
     try { const md = await addFile(f); const id = /\(att:([\w-]+)\)/.exec(md)?.[1]; if (id) pick(`att:${id}`); } catch (err) { toast((err as Error).message); }
   }
 
   const selBox = o.boxes.find((b) => b.id === sel);
   const list = (
     <div className="flex flex-col gap-1">
-      {!o.boxes.length && <p className="px-1 py-2 text-[13px] text-muted">Drag on the image to draw a box over each label. Each box becomes one card.</p>}
+      {!o.boxes.length && <p className="px-1 py-2 text-[13px] text-muted">{t("Drag on the image to draw a box over each label. Each box becomes one card.")}</p>}
       {o.boxes.map((b, i) => (
         <div key={b.id} onClick={() => setSel(b.id)} className={cx("group flex flex-col gap-1.5 rounded-[8px]", sel === b.id ? "bg-surface-2" : "hover:bg-[color-mix(in_srgb,var(--surface-2)_50%,transparent)]")}>
           <div className="flex min-h-9 items-center gap-2.5 px-2">
-            <span className="occl-num static" style={{ background: sel === b.id ? "var(--accent)" : "var(--learn)" }}>{i + 1}</span>
-            <input dir="auto" aria-label={`Label for box ${i + 1}`} placeholder="Label (the answer)" value={b.label ?? ""} onChange={(e) => setBox(b.id, (x) => ({ ...x, label: e.target.value || undefined }))} className="h-8 min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-muted" />
-            <IconButton label="Delete box" className={cx("size-9 md:size-7", sel !== b.id && "md:opacity-0 md:group-hover:opacity-100")} onClick={(e) => { e.stopPropagation(); remove(b.id); }}><Trash2 size={14} /></IconButton>
+            <span className="occl-num static" style={{ background: sel === b.id ? "var(--accent)" : "var(--learn)" }}>{fmtNum(i + 1)}</span>
+            <input dir="auto" aria-label={t("Label for box {n}", { n: i + 1 })} placeholder={t("Label (the answer)")} value={b.label ?? ""} onChange={(e) => setBox(b.id, (x) => ({ ...x, label: e.target.value || undefined }))} className="h-8 min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-muted" />
+            <IconButton label={t("Delete box")} className={cx("size-9 md:size-7", sel !== b.id && "md:opacity-0 md:group-hover:opacity-100")} onClick={(e) => { e.stopPropagation(); remove(b.id); }}><Trash2 size={14} /></IconButton>
           </div>
           {sel === b.id && (
             <div className="flex items-center gap-1.5 pb-1.5 pe-2 ps-9">
-              <input dir="auto" aria-label="Group" placeholder="Group (optional)" value={b.group ?? ""} onChange={(e) => setBox(b.id, (x) => ({ ...x, group: e.target.value.trim() || undefined }))} className={cx(inputCls, "h-9 min-w-0 flex-1 text-[13px]")} />
-              <IconButton label="Move up" className="size-9 md:size-8" disabled={i === 0} onClick={(e) => { e.stopPropagation(); reorder(b.id, -1); }}><ArrowUp size={15} /></IconButton>
-              <IconButton label="Move down" className="size-9 md:size-8" disabled={i === o.boxes.length - 1} onClick={(e) => { e.stopPropagation(); reorder(b.id, 1); }}><ArrowDown size={15} /></IconButton>
+              <input dir="auto" aria-label={t("Group@@noun")} placeholder={t("Group (optional)")} value={b.group ?? ""} onChange={(e) => setBox(b.id, (x) => ({ ...x, group: e.target.value.trim() || undefined }))} className={cx(inputCls, "h-9 min-w-0 flex-1 text-[13px]")} />
+              <IconButton label={t("Move up")} className="size-9 md:size-8" disabled={i === 0} onClick={(e) => { e.stopPropagation(); reorder(b.id, -1); }}><ArrowUp size={15} /></IconButton>
+              <IconButton label={t("Move down")} className="size-9 md:size-8" disabled={i === o.boxes.length - 1} onClick={(e) => { e.stopPropagation(); reorder(b.id, 1); }}><ArrowDown size={15} /></IconButton>
             </div>
           )}
         </div>
@@ -263,38 +264,38 @@ export function OcclusionEditor({ initial, noteBody = "", onSave, onClose }: Edi
   );
 
   const modeCtl = (
-    <div role="radiogroup" aria-label="Card mode" className="flex gap-[2px] self-start rounded-[8px] border border-line bg-surface p-[3px] text-[12px]">
-      {([["hide-one", "Hide one", "Hide one, show others"], ["hide-all", "Hide all", "Hide all, guess one"]] as [OcclusionMode, string, string][]).map(([v, l, t]) => (
-        <button key={v} role="radio" aria-checked={o.mode === v} title={t} onClick={() => edit((x) => ({ ...x, mode: v }))}
+    <div role="radiogroup" aria-label={t("Card mode")} className="flex gap-[2px] self-start rounded-[8px] border border-line bg-surface p-[3px] text-[12px]">
+      {([["hide-one", t("Hide one"), t("Hide one, show others")], ["hide-all", t("Hide all"), t("Hide all, guess one")]] as [OcclusionMode, string, string][]).map(([v, l, tip]) => (
+        <button key={v} role="radio" aria-checked={o.mode === v} title={tip} onClick={() => edit((x) => ({ ...x, mode: v }))}
           className={cx("flex h-6 items-center rounded-[6px] px-[9px]", o.mode === v ? "bg-surface-2 font-semibold text-ink" : "text-muted hover:text-ink")}>{l}</button>
       ))}
     </div>
   );
 
   return (
-    <div className="occl-editor fixed inset-0 z-[60] flex flex-col bg-bg text-ink fade-in" role="dialog" aria-modal="true" aria-label="Image occlusion">
+    <div className="occl-editor fixed inset-0 z-[60] flex flex-col bg-bg text-ink fade-in" role="dialog" aria-modal="true" aria-label={t("Image occlusion")}>
       <div className="safe-t flex h-14 shrink-0 items-center gap-2.5 border-b border-line px-2 text-[13px] md:h-12 md:px-4">
-        <IconButton label="Close" className="size-11 md:size-7" onClick={close}><X size={16} /></IconButton>
+        <IconButton label={t("Close")} className="size-11 md:size-7" onClick={close}><X size={16} /></IconButton>
         <Glyph name="occlusion" size={16} color="var(--learn)" />
-        <span className="min-w-0 flex-1 truncate font-semibold">Image occlusion{o.alt ? ` · ${o.alt}` : ""}</span>
+        <span className="min-w-0 flex-1 truncate font-semibold">{t("Image occlusion")}{o.alt ? <> · <bdi dir="auto">{o.alt}</bdi></> : ""}</span>
         <div className="hidden md:block">{modeCtl}</div>
         {!picking && (
           <span className="hidden items-center gap-1 text-muted md:flex">
-            <button aria-label="Zoom out" className="px-1 hover:text-ink" onClick={() => zoomBy(0.8)}>−</button>
-            <button title="Fit" className="tabular-nums hover:text-ink" onClick={() => setView({ s: 1, tx: 0, ty: 0 })}>{Math.round(view.s * 100)}%</button>
-            <button aria-label="Zoom in" className="px-1 hover:text-ink" onClick={() => zoomBy(1.25)}>+</button>
+            <button aria-label={t("Zoom out")} className="px-1 hover:text-ink" onClick={() => zoomBy(0.8)}>−</button>
+            <button title={t("Fit")} className="tabular-nums hover:text-ink" onClick={() => setView({ s: 1, tx: 0, ty: 0 })}>{fmtNum(Math.round(view.s * 100))}%</button>
+            <button aria-label={t("Zoom in")} className="px-1 hover:text-ink" onClick={() => zoomBy(1.25)}>+</button>
           </span>
         )}
-        {!picking && <button className="hidden text-muted hover:text-ink md:flex md:items-center md:gap-1" onClick={() => setPicking(true)}><ImagePlus size={14} />Image</button>}
-        <button onClick={save} disabled={!o.image} className="flex h-10 items-center whitespace-nowrap rounded-[8px] bg-accent px-3 font-semibold text-accent-fg disabled:opacity-50 md:h-[30px]">Done · {cards} {cards === 1 ? "card" : "cards"}</button>
+        {!picking && <button className="hidden text-muted hover:text-ink md:flex md:items-center md:gap-1" onClick={() => setPicking(true)}><ImagePlus size={14} />{t("Image")}</button>}
+        <button onClick={save} disabled={!o.image} className="flex h-10 items-center whitespace-nowrap rounded-[8px] bg-accent px-3 font-semibold text-accent-fg disabled:opacity-50 md:h-[30px]">{t("Done · {n} card|Done · {n} cards", { n: cards })}</button>
       </div>
 
       {picking ? (
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           <div className="mx-auto flex max-w-[640px] flex-col gap-5">
             <div>
-              <div className="text-[17px] font-semibold">Choose an image</div>
-              <p className="mt-1 text-[13px] text-muted">Use an image from this note, a PDF area capture, a new upload or a link.</p>
+              <div className="text-[17px] font-semibold">{t("Choose an image")}</div>
+              <p className="mt-1 text-[13px] text-muted">{t("Use an image from this note, a PDF area capture, a new upload or a link.")}</p>
             </div>
             {images.length > 0 && (
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
@@ -302,12 +303,12 @@ export function OcclusionEditor({ initial, noteBody = "", onSave, onClose }: Edi
               </div>
             )}
             <div className="flex flex-wrap gap-2">
-              <Button size="lg" onClick={() => fileRef.current?.click()}><ImagePlus size={17} />Upload image</Button>
-              {o.image && <Button size="lg" variant="ghost" onClick={() => setPicking(false)}>Keep current image</Button>}
+              <Button size="lg" onClick={() => fileRef.current?.click()}><ImagePlus size={17} />{t("Upload image")}</Button>
+              {o.image && <Button size="lg" variant="ghost" onClick={() => setPicking(false)}>{t("Keep current image")}</Button>}
             </div>
-            <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); const u = urlIn.trim(); if (safeImageUrl(u) || attId(u)) pick(u); else toast("Enter an https:// image link"); }}>
-              <input value={urlIn} onChange={(e) => setUrlIn(e.target.value)} placeholder="https://… image link" className={cx(inputCls, "h-11 flex-1")} dir="ltr" />
-              <Button size="lg" type="submit">Use link</Button>
+            <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); const u = urlIn.trim(); if (safeImageUrl(u) || attId(u)) pick(u); else toast(t("Enter an https:// image link")); }}>
+              <input value={urlIn} onChange={(e) => setUrlIn(e.target.value)} placeholder={t("https://… image link")} className={cx(inputCls, "h-11 flex-1")} dir="ltr" />
+              <Button size="lg" type="submit">{t("Use link")}</Button>
             </form>
             <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} />
           </div>
@@ -334,38 +335,38 @@ export function OcclusionEditor({ initial, noteBody = "", onSave, onClose }: Edi
                   </div>
                 </div>
               )}
-              {!url && <div className="absolute inset-0 flex items-center justify-center text-[13px] text-muted">Loading image…</div>}
+              {!url && <div className="absolute inset-0 flex items-center justify-center text-[13px] text-muted">{t("Loading image…")}</div>}
             </div>
             {/* floating tools */}
             <div className="absolute start-3 top-3 z-10 flex gap-1 rounded-[10px] border border-line bg-surface p-1 shadow-lg">
-              <IconButton label="Draw boxes" active={tool === "draw"} className="size-10 md:size-8" onClick={() => setTool("draw")}><SquareDashed size={16} /></IconButton>
-              <IconButton label="Pan" active={tool === "pan"} className="size-10 md:size-8" onClick={() => setTool("pan")}><Hand size={16} /></IconButton>
+              <IconButton label={t("Draw boxes")} active={tool === "draw"} className="size-10 md:size-8" onClick={() => setTool("draw")}><SquareDashed size={16} /></IconButton>
+              <IconButton label={t("Pan")} active={tool === "pan"} className="size-10 md:size-8" onClick={() => setTool("pan")}><Hand size={16} /></IconButton>
               <span className="my-1 w-px bg-line md:hidden" />
-              <IconButton label="Zoom out" className="size-10 md:hidden" onClick={() => zoomBy(0.8)}><Minus size={16} /></IconButton>
-              <IconButton label="Fit" className="size-10 md:hidden" onClick={() => setView({ s: 1, tx: 0, ty: 0 })}><Maximize size={15} /></IconButton>
-              <IconButton label="Zoom in" className="size-10 md:hidden" onClick={() => zoomBy(1.25)}><Plus size={16} /></IconButton>
-              {selBox && <><span className="my-1 w-px bg-line" /><IconButton label="Delete box" className="size-10 md:size-8" onClick={() => remove(selBox.id)}><Trash2 size={15} /></IconButton></>}
+              <IconButton label={t("Zoom out")} className="size-10 md:hidden" onClick={() => zoomBy(0.8)}><Minus size={16} /></IconButton>
+              <IconButton label={t("Fit")} className="size-10 md:hidden" onClick={() => setView({ s: 1, tx: 0, ty: 0 })}><Maximize size={15} /></IconButton>
+              <IconButton label={t("Zoom in")} className="size-10 md:hidden" onClick={() => zoomBy(1.25)}><Plus size={16} /></IconButton>
+              {selBox && <><span className="my-1 w-px bg-line" /><IconButton label={t("Delete box")} className="size-10 md:size-8" onClick={() => remove(selBox.id)}><Trash2 size={15} /></IconButton></>}
             </div>
           </div>
           {/* desktop side panel */}
           <aside className="hidden w-[260px] shrink-0 flex-col gap-2 border-s border-line bg-surface p-[14px] text-[13px] md:flex">
-            <span className="font-semibold">Boxes · {o.boxes.length}</span>
+            <span className="font-semibold">{t("Boxes · {n}", { n: o.boxes.length })}</span>
             <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">{list}</div>
-            <p className="text-[12px] leading-[17px] text-muted">Drag to draw · drag a box to move · corners resize · Delete removes · labels are the answers. Same group = one card.</p>
+            <p className="text-[12px] leading-[17px] text-muted">{t("Drag to draw · drag a box to move · corners resize · Delete removes · labels are the answers. Same group = one card.")}</p>
           </aside>
           {/* phone bottom sheet */}
           <div className={cx("safe-b flex shrink-0 flex-col border-t border-line bg-surface md:hidden", sheet ? "h-[52dvh]" : "")}>
             <button className="flex h-14 w-full items-center gap-3 px-4 text-[14px]" onClick={() => setSheet((s) => !s)} aria-expanded={sheet}>
               <span className="h-1 w-9 rounded-[2px] bg-line" />
-              <span className="font-semibold">{o.boxes.length} {o.boxes.length === 1 ? "box" : "boxes"}</span>
-              <span className="text-muted">· {cards} {cards === 1 ? "card" : "cards"}</span>
+              <span className="font-semibold">{t("{n} box|{n} boxes", { n: o.boxes.length })}</span>
+              <span className="text-muted">· {t("{n} card|{n} cards", { n: cards })}</span>
               <span className="flex-1" />
-              <span className="text-[13px] text-accent">{sheet ? "Hide" : "Edit list"}</span>
+              <span className="text-[13px] text-accent">{sheet ? t("Hide") : t("Edit list")}</span>
             </button>
             {sheet && (
               <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-4">
                 {modeCtl}
-                <Button variant="ghost" className="self-start" onClick={() => setPicking(true)}><ImagePlus size={15} />Change image</Button>
+                <Button variant="ghost" className="self-start" onClick={() => setPicking(true)}><ImagePlus size={15} />{t("Change image")}</Button>
                 {list}
               </div>
             )}
@@ -380,7 +381,7 @@ function PickTile({ src, alt, active, onPick }: { src: string; alt: string; acti
   const url = useImageSrc(src);
   return (
     <button onClick={onPick} className={cx("flex aspect-[4/3] items-center justify-center overflow-hidden rounded-[10px] border bg-surface p-1", active ? "border-accent" : "border-line hover:border-muted")} title={alt || src}>
-      {url ? <img src={url} alt={alt} className="max-h-full max-w-full object-contain" /> : <span className="text-[12px] text-muted">Loading…</span>}
+      {url ? <img src={url} alt={alt} className="max-h-full max-w-full object-contain" /> : <span className="text-[12px] text-muted">{t("Loading…")}</span>}
     </button>
   );
 }

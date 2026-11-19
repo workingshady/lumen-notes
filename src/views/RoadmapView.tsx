@@ -21,16 +21,17 @@ import { PhoneTopicSheet, TopicSheet } from "./roadmap-sheet";
 import { Timeline } from "./roadmap-timeline";
 import { Tree } from "./roadmap-tree";
 import { usePhone } from "./spaces-util";
+import { fmtNum, t, tk, tx } from "../lib/i18n";
 
 /** Progress ring: success arc on a surface-2 track, transparent centre so it sits on any background. */
 export function Ring({ pct, size = 44 }: { pct: number; size?: number }) {
   const sw = Math.max(3, Math.round(size * 0.1));
   const r = size / 2 - sw / 2, c = 2 * Math.PI * r;
   return (
-    <svg width={size} height={size} className="-rotate-90 shrink-0" aria-label={`${pct}% done`}>
+    <svg width={size} height={size} className="-rotate-90 shrink-0" aria-label={t("{pct}% done", { pct })}>
       <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--surface-2)" strokeWidth={sw} fill="none" />
       <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--success)" strokeWidth={sw} fill="none" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} />
-      <text x="50%" y="50%" transform={`rotate(90 ${size / 2} ${size / 2})`} textAnchor="middle" dominantBaseline="central" fontSize={size >= 52 ? 13 : size >= 48 ? 12 : 11} fontWeight={650} fill="var(--text)">{pct}%</text>
+      <text x="50%" y="50%" transform={`rotate(90 ${size / 2} ${size / 2})`} textAnchor="middle" dominantBaseline="central" fontSize={size >= 52 ? 13 : size >= 48 ? 12 : 11} fontWeight={650} fill="var(--text)">{fmtNum(pct)}%</text>
     </svg>
   );
 }
@@ -82,7 +83,7 @@ function useJustUnlocked(mods: Module[]) {
     if (!unlocked.length) return;
     setFresh(new Set(unlocked));
     const names = mods.flatMap((m) => m.topics).filter((t) => unlocked.includes(t.name.toLowerCase())).map((t) => t.name);
-    toast(names.length === 1 ? `${names[0]} is now open.` : `${names.length} topics are now open.`);
+    toast(names.length === 1 ? t("{name} is now open.", { name: names[0] }) : t("{n} topics are now open.", { n: names.length }));
     const id = setTimeout(() => setFresh(new Set()), 900);
     return () => clearTimeout(id);
   }, [mods]);
@@ -90,13 +91,13 @@ function useJustUnlocked(mods: Module[]) {
 }
 
 export type RoadmapViewKind = "outline" | "tree" | "timeline";
-const VIEWS: { v: RoadmapViewKind; l: string; g: GlyphName }[] = [{ v: "outline", l: "Outline", g: "roadmap" }, { v: "tree", l: "Skill tree", g: "graph" }, { v: "timeline", l: "Timeline", g: "v-calendar" }];
+const VIEWS: { v: RoadmapViewKind; l: string; g: GlyphName }[] = [{ v: "outline", l: tk("Outline"), g: "roadmap" }, { v: "tree", l: tk("Skill tree"), g: "graph" }, { v: "timeline", l: tk("Timeline"), g: "v-calendar" }];
 
 /** Outline / Skill tree / Timeline: underline tabs on desktop (design 15A), a full-width segmented control on phones (15H). */
 export function ViewSwitch({ view, onView, phone }: { view: RoadmapViewKind; onView: (v: RoadmapViewKind) => void; phone?: boolean }) {
   if (phone) return (
     <div role="tablist" className="grid grid-cols-3 rounded-[10px] border border-line bg-surface p-[3px] text-[14px]">
-      {VIEWS.map(({ v: k, l }) => <button key={k} role="tab" aria-selected={view === k} onClick={() => onView(k)} className={cx("h-9 rounded-[7px]", view === k ? "bg-surface-2 font-semibold" : "text-muted")}>{l}</button>)}
+      {VIEWS.map(({ v: k, l }) => <button key={k} role="tab" aria-selected={view === k} onClick={() => onView(k)} className={cx("h-9 rounded-[7px]", view === k ? "bg-surface-2 font-semibold" : "text-muted")}>{t(l)}</button>)}
     </div>
   );
   return (
@@ -104,7 +105,7 @@ export function ViewSwitch({ view, onView, phone }: { view: RoadmapViewKind; onV
       {VIEWS.map(({ v: k, l, g }) => (
         <button key={k} role="tab" aria-selected={view === k} onClick={() => onView(k)}
           className={cx("flex items-center gap-1.5 whitespace-nowrap px-0.5 pb-3", view === k ? "font-semibold text-ink shadow-[inset_0_-2px_0_var(--accent)]" : "font-[450] text-muted hover:text-ink")}>
-          <Glyph name={g} size={16} />{l}
+          <Glyph name={g} size={16} />{t(l)}
         </button>
       ))}
     </div>
@@ -143,10 +144,10 @@ export function RoadmapView({ note, compact, target, view: cView, onView, header
   const write = (body: string) => { if (body !== note.body) void updateNote(note.id, { body }); };
   const addNeed = (topicLine: number, prereqLine: number) => {
     const md = addTopicNeed(note.body, topicLine, prereqLine);
-    const t = all.find((x) => x.line === topicLine), d = all.find((x) => x.line === prereqLine);
-    if (md === note.body) { if (t && d && t.line !== d.line && !t.needs.some((n) => n.toLowerCase() === d.name.toLowerCase())) toast(`Can't link: ${d.name} already needs ${t.name}, so this would make a loop.`); return; }
+    const tp = all.find((x) => x.line === topicLine), d = all.find((x) => x.line === prereqLine);
+    if (md === note.body) { if (tp && d && tp.line !== d.line && !tp.needs.some((n) => n.toLowerCase() === d.name.toLowerCase())) toast(t("Can't link: {a} already needs {b}, so this would make a loop.", { a: d.name, b: tp.name })); return; }
     write(md);
-    announce(`${t?.name} now needs ${d?.name}`);
+    announce(t("{a} now needs {b}", { a: tp?.name ?? "", b: d?.name ?? "" }));
   };
   /** New topic (palette drop, link dropped on the canvas, "+ Topic"): optionally needing another one; it opens selected. */
   const createTopic = (module: number | null, needs?: Topic) => {
@@ -158,19 +159,19 @@ export function RoadmapView({ note, compact, target, view: cView, onView, header
     if (needs && line !== null) md = setTopicNeeds(md, line, [needs.name]);
     write(md);
     setSelKey(name.toLowerCase());
-    announce(`Added ${name}${needs ? `, needs ${needs.name}` : ""}`);
+    announce(needs ? t("Added {name}, needs {b}", { name, b: needs.name }) : t("Added {name}", { name }));
   };
-  const remove = (t: Topic) => {
-    write(deleteTopic(note.body, t.line));
-    if (selKey === t.name.toLowerCase()) setSelKey(null);
-    announce(`Deleted ${t.name}`);
+  const remove = (tp: Topic) => {
+    write(deleteTopic(note.body, tp.line));
+    if (selKey === tp.name.toLowerCase()) setSelKey(null);
+    announce(t("Deleted {name}", { name: tp.name }));
   };
   const ops: TopicOps = {
     body: note.body, write, mods, spaceId: note.spaceId, remove,
     rename: (t, name) => { const md = renameTopic(note.body, t.line, name); write(md); if (md !== note.body) setSelKey(name.trim().replace(/[()]/g, "").toLowerCase()); },
     setStatus: (t, s) => write(setTopicStatus(note.body, t.line, s)),
     open: (t, mode) => void openTopicNote(note, t, v.byTitle, mode),
-    link: (t, n) => { write(linkTopicNote(note.body, t.line, n.title)); announce(`${t.name} linked to ${n.title}`); },
+    link: (tp, n) => { write(linkTopicNote(note.body, tp.line, n.title)); announce(t("{a} linked to {b}", { a: tp.name, b: n.title })); },
   };
   // Delete / Backspace removes the selected node in the skill tree (inline confirm)
   useEffect(() => {
@@ -179,7 +180,7 @@ export function RoadmapView({ note, compact, target, view: cView, onView, header
       const el = e.target as HTMLElement;
       if ((e.key === "Delete" || e.key === "Backspace") && !/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && !el.isContentEditable) {
         e.preventDefault();
-        confirm(<>Delete topic “<b dir="auto">{selected.name}</b>”? Topics that need it stop needing it.</>, "Delete", () => remove(selected));
+        confirm(tx("Delete topic “{name}”? Topics that need it stop needing it.", { name: <b dir="auto">{selected.name}</b> }), t("Delete"), () => remove(selected));
       }
     };
     addEventListener("keydown", k);
@@ -189,7 +190,7 @@ export function RoadmapView({ note, compact, target, view: cView, onView, header
   const pickNote = (n: Note) => {
     if (used.has(n.title.toLowerCase())) return;
     write(mods.length ? addTopic(note.body, mods.length - 1, n.title, { note: n.title }) : addModule(note.body, "Module 1", [{ name: n.title, note: n.title }]));
-    announce(`Added ${n.title}`);
+    announce(t("Added {name}", { name: n.title }));
   };
   const addAll = (ns: Note[]) => {
     let md = note.body;
@@ -197,7 +198,7 @@ export function RoadmapView({ note, compact, target, view: cView, onView, header
     const last = roadmap(md).length - 1;
     for (const n of ns) md = addTopic(md, last, n.title, { note: n.title });
     write(md);
-    announce(`Added ${ns.length} topics`);
+    announce(t("Added {n} topics", { n: ns.length }));
   };
   const p = progress(mods);
 
@@ -206,22 +207,22 @@ export function RoadmapView({ note, compact, target, view: cView, onView, header
       <style>{RM_STYLE}</style>
       <div className={cx("flex h-full min-h-0 flex-col text-[13px] leading-[normal]", !compact && "relative")}>
         {phone ? (
-          <div className="px-4 pb-2.5 pt-1">{empty ? <p className="text-[15px] font-semibold">Create roadmap</p> : <ViewSwitch view={view} onView={setView} phone />}</div>
+          <div className="px-4 pb-2.5 pt-1">{empty ? <p className="text-[15px] font-semibold">{t("Create roadmap")}</p> : <ViewSwitch view={view} onView={setView} phone />}</div>
         ) : (
           <div className={cx("flex flex-col gap-[19px] px-8", (!!header || !compact) && "pt-[22px]")}>
             {header}
             <div className="flex items-center gap-3.5 border-b border-line">
               <ViewSwitch view={view} onView={setView} />
               <span className="flex-1" />
-              {!compact && !header && <span className="flex items-center gap-2 pb-3 text-[12px] text-muted"><span className="h-1.5 w-[150px] overflow-hidden rounded-[3px] bg-surface-2"><span className="block h-full bg-ok" style={{ width: `${p.pct}%` }} /></span>{p.done} of {p.total} done</span>}
+              {!compact && !header && <span className="flex items-center gap-2 pb-3 text-[12px] text-muted"><span className="h-1.5 w-[150px] overflow-hidden rounded-[3px] bg-surface-2"><span className="block h-full bg-ok" style={{ width: `${p.pct}%` }} /></span>{t("{done} of {total} done", { done: p.done, total: p.total })}</span>}
               {view === "outline" && !empty && (
                 <button onClick={() => fold.setAll(!fold.allOpen)} className="flex items-center gap-1.5 pb-3 text-muted hover:text-ink">
-                  <Glyph name={fold.allOpen ? "wide" : "expand"} size={16} />{fold.allOpen ? "Collapse all" : "Expand all"}
+                  <Glyph name={fold.allOpen ? "wide" : "expand"} size={16} />{fold.allOpen ? t("Collapse all") : t("Expand all")}
                 </button>
               )}
               {view === "outline" && (
-                <button onClick={toggleTray} aria-pressed={tray} title="Drag notes in to make them topics" className={cx("flex items-center gap-1.5 pb-3 hover:text-ink", tray ? "text-ink" : "text-muted")}>
-                  <Glyph name="file" size={16} />Notes tray
+                <button onClick={toggleTray} aria-pressed={tray} title={t("Drag notes in to make them topics")} className={cx("flex items-center gap-1.5 pb-3 hover:text-ink", tray ? "text-ink" : "text-muted")}>
+                  <Glyph name="file" size={16} />{t("Notes tray")}
                 </button>
               )}
             </div>
@@ -233,7 +234,7 @@ export function RoadmapView({ note, compact, target, view: cView, onView, header
               ? <PhoneOutline mods={mods} sel={sel ?? undefined} onSelect={select} ops={ops} fold={fold} fresh={fresh} onNotes={() => setPhoneTray(true)} />
               : empty ? <Builder mods={mods} ops={ops} />
                 : <Outline mods={mods} sel={sel ?? undefined} onSelect={select} ops={ops} fold={fold} fresh={fresh} />)}
-            {view === "tree" && <ReactFlowProvider><Tree mods={mods} sel={sel} phone={phone} fold={fold} fresh={fresh} onSelect={select} onConnect={addNeed} onCreate={createTopic} onRemoveNeed={(t, n) => { write(removeTopicNeed(note.body, t.line, n)); announce(`${t.name} no longer needs ${n}`); }} onEditLinks={(f, said) => { write(f(note.body)); announce(said); }} /></ReactFlowProvider>}
+            {view === "tree" && <ReactFlowProvider><Tree mods={mods} sel={sel} phone={phone} fold={fold} fresh={fresh} onSelect={select} onConnect={addNeed} onCreate={createTopic} onRemoveNeed={(tp, n) => { write(removeTopicNeed(note.body, tp.line, n)); announce(t("{a} no longer needs {b}", { a: tp.name, b: n })); }} onEditLinks={(f, said) => { write(f(note.body)); announce(said); }} /></ReactFlowProvider>}
             {view === "timeline" && <Timeline mods={mods} target={target} onSelect={select} onDue={(t, due) => write(setTopicDue(note.body, t.line, due))} fresh={fresh} />}
           </div>
           {tray && <RoadmapTray spaceId={note.spaceId} used={used} onPick={pickNote} builder={empty} onAddAll={addAll} />}

@@ -16,14 +16,13 @@ import { activeTheme, setSettings } from "../lib/settings";
 import { splitSlides } from "../components/Slides";
 import { LumenMark } from "../components/LumenMark";
 import { cx, STATUS_COLOR } from "../components/ui";
+import { fmtDate, fmtRelative, t, tk, tx } from "../lib/i18n";
 /** "12 min ago" · "3 h ago" · "3 d ago" · "7 Nov" (design copy for public pages). */
-function relTime(t: number) {
-  const d = Date.now() - t;
-  if (d < 60_000) return "just now";
-  if (d < 3_600_000) return `${Math.floor(d / 60_000)} min ago`;
-  if (d < 86_400_000) return `${Math.floor(d / 3_600_000)} h ago`;
-  if (d < 7 * 86_400_000) return `${Math.floor(d / 86_400_000)} d ago`;
-  return new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+function relTime(ts: number) {
+  const d = Date.now() - ts;
+  if (d < 60_000) return t("just now");
+  if (d < 7 * 86_400_000) return fmtRelative(ts);
+  return fmtDate(ts, { day: "numeric", month: "short" });
 }
 import { Canvas2D, type GLink, type GNode } from "./GraphView";
 
@@ -74,7 +73,9 @@ type NoteData = { kind: "note"; blog: Brand; note: PubNote };
 
 const go = (path: string) => { history.pushState(null, "", path); dispatchEvent(new PopStateEvent("popstate")); };
 const SERIF = "'Source Serif 4', Georgia, serif";
-const KIND: Partial<Record<NoteType, string>> = { note: "Note", lesson: "Lesson", journal: "Journal", flashcards: "Flashcards", slides: "Slides", post: "Post", canvas: "Canvas", whiteboard: "Whiteboard", roadmap: "Roadmap", moc: "Map of content" };
+const KIND: Partial<Record<NoteType, string>> = { note: tk("Note"), lesson: tk("Lesson"), journal: tk("Journal"), flashcards: tk("Flashcards"), slides: tk("Slides"), post: tk("Post"), canvas: tk("Canvas"), whiteboard: tk("Whiteboard"), roadmap: tk("Roadmap"), moc: tk("Map of content") };
+const SPACE_KIND: Record<string, string> = { project: tk("Project"), area: tk("Area"), course: tk("Course"), resource: tk("Resource"), archive: tk("Archive") };
+const STATUS_LABEL: Record<string, string> = { todo: tk("To do"), learning: tk("Learning"), review: tk("Review"), mastered: tk("Mastered") };
 const isBoard = (t: NoteType) => t === "canvas" || t === "whiteboard";
 
 function useTheme() {
@@ -82,7 +83,7 @@ function useTheme() {
   return { dark, toggle: () => { setSettings({ theme: dark ? "paper" : "lamplight" }); setDark(!dark); } };
 }
 const ThemeBtn = ({ dark, toggle, className }: { dark: boolean; toggle: () => void; className?: string }) => (
-  <button aria-label={dark ? "Light theme" : "Dark theme"} onClick={toggle} className={cx("flex size-[34px] shrink-0 items-center justify-center rounded-[8px] border border-line hover:bg-surface", className)}>{dark ? <Sun size={15} /> : <Moon size={15} />}</button>
+  <button aria-label={dark ? t("Light theme") : t("Dark theme")} onClick={toggle} className={cx("flex size-[34px] shrink-0 items-center justify-center rounded-[8px] border border-line hover:bg-surface", className)}>{dark ? <Sun size={15} /> : <Moon size={15} />}</button>
 );
 const BrandName = ({ blog }: { blog: Brand }) => <span className="truncate text-[16px] font-bold" style={{ fontFamily: SERIF }}><AvatarGlyph value={blog.avatar} size={14} style={{ verticalAlign: "-1px" }} /> {blog.name}</span>;
 
@@ -101,7 +102,7 @@ export function Shared({ path }: { path: string }) {
 
   const bar = data.kind === "space" && noteId ? (
     <a href={`/s/${token}`} onClick={(e) => { e.preventDefault(); go(`/s/${token}`); }} className="flex min-w-0 flex-1 items-center gap-1.5 text-muted hover:text-ink">
-      <ArrowLeft size={16} className="shrink-0" />Back to overview<span className="hidden truncate opacity-60 md:inline">· <SpaceIcon space={data.space} size={15} style={{ verticalAlign: "-3px" }} /> {data.space.name}</span>
+      <ArrowLeft size={16} className="shrink-0" />{t("Back to overview")}<span className="hidden truncate opacity-60 md:inline">· <SpaceIcon space={data.space} size={15} style={{ verticalAlign: "-3px" }} /> {data.space.name}</span>
     </a>
   ) : <span className="flex min-w-0 flex-1"><BrandName blog={data.blog} /></span>;
 
@@ -109,7 +110,7 @@ export function Shared({ path }: { path: string }) {
     <div className="flex min-h-full flex-col bg-bg text-[14px] leading-[normal] text-ink md:text-[13.5px]">
       <div className="safe-t sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2.5 border-b border-line bg-bg px-5 md:h-[60px] md:px-10">
         {bar}
-        {data.kind === "space" && !noteId && <span className="hidden items-center gap-1.5 text-[12px] text-muted md:flex"><Eye size={13} />Read-only</span>}
+        {data.kind === "space" && !noteId && <span className="hidden items-center gap-1.5 text-[12px] text-muted md:flex"><Eye size={13} />{t("Read-only")}</span>}
         <ThemeBtn {...theme} />
       </div>
       <div className="flex-1 px-5 md:px-10">
@@ -119,7 +120,7 @@ export function Shared({ path }: { path: string }) {
       </div>
       <footer className="safe-b mt-12 flex items-center gap-2.5 border-t border-line px-4 py-[13px] text-[12.5px] text-muted md:px-10">
         <span className="flex size-[26px] items-center justify-center rounded-full bg-surface-2"><AvatarGlyph value={data.blog.avatar} size={15} /></span>
-        <span className="flex-1">Shared from <b className="font-semibold text-ink">{data.blog.name}</b> · read-only</span>
+        <span className="flex-1">{tx("Shared from {name} · read-only", { name: <b dir="auto" className="font-semibold text-ink">{data.blog.name}</b> })}</span>
       </footer>
     </div>
   );
@@ -128,14 +129,14 @@ export function Shared({ path }: { path: string }) {
 // ------------------------------------------------------------------ states
 function Unavailable() {
   const [name, setName] = useState("");
-  useEffect(() => { document.title = "Link unavailable"; publicApi<{ blog: Brand }>("/public/posts").then((d) => setName(d.blog.name)).catch(() => {}); }, []);
+  useEffect(() => { document.title = t("Link unavailable"); publicApi<{ blog: Brand }>("/public/posts").then((d) => setName(d.blog.name)).catch(() => {}); }, []);
   return (
     <div className="relative flex min-h-dvh flex-col items-center justify-center gap-3 bg-bg px-10 text-center text-[15px] text-ink md:gap-3.5">
       <span className="flex size-14 items-center justify-center rounded-[16px] bg-surface-2 text-muted"><Lock size={24} /></span>
-      <span className="mt-1.5 text-[26px] font-bold md:text-[30px]" style={{ fontFamily: SERIF }}>Link unavailable</span>
-      <span className="max-w-[360px] leading-6 text-muted">This link doesn't exist or was turned off by its owner.</span>
-      {name && <a href="/blog" className="mt-2 font-medium text-link">Visit {name} →</a>}
-      <span className="absolute bottom-7 flex items-center gap-2 text-[12.5px] text-muted"><LumenMark size={18} tile="light" glyph="dot" cone={false} glow={false} />written in lumen</span>
+      <span className="mt-1.5 text-[26px] font-bold md:text-[30px]" style={{ fontFamily: SERIF }}>{t("Link unavailable")}</span>
+      <span className="max-w-[360px] leading-6 text-muted">{t("This link doesn't exist or was turned off by its owner.")}</span>
+      {name && <a href="/blog" className="mt-2 font-medium text-link">{t("Visit {name} →", { name })}</a>}
+      <span className="absolute bottom-7 flex items-center gap-2 text-[12.5px] text-muted"><LumenMark size={18} tile="light" glyph="dot" cone={false} glow={false} />{t("written in lumen")}</span>
     </div>
   );
 }
@@ -162,7 +163,7 @@ function Loading() {
 function ProgressRing({ pct, size }: { pct: number; size: number }) {
   return (
     <div className="flex shrink-0 items-center justify-center rounded-full" style={{ width: size, height: size, background: `conic-gradient(var(--success) 0 ${pct}%, var(--surface-2) ${pct}% 100%)` }}>
-      <div className="flex items-center justify-center rounded-full bg-bg font-bold" style={{ width: size - 14, height: size - 14, fontSize: size > 70 ? 16 : 13 }}>{pct}%</div>
+      <div className="flex items-center justify-center rounded-full bg-bg font-bold" style={{ width: size - 14, height: size - 14, fontSize: size > 70 ? 16 : 13 }}>{t("{n}%", { n: pct })}</div>
     </div>
   );
 }
@@ -185,14 +186,14 @@ function SpaceViewer({ token, data }: { token: string; data: SpaceData }) {
         <div className="flex flex-1 items-start gap-4">
           <span className="flex size-[52px] shrink-0 items-center justify-center rounded-[14px] border md:size-16" style={{ background: `color-mix(in srgb, ${c} 18%, transparent)`, borderColor: `color-mix(in srgb, ${c} 50%, transparent)` }}><SpaceIcon space={sp} size={15} color={c} /></span>
           <div className="flex min-w-0 flex-col gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-muted">{sp.kind}</span>
+            <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-muted">{SPACE_KIND[sp.kind] ? t(SPACE_KIND[sp.kind]) : sp.kind}</span>
             <h1 dir="auto" className="text-[28px] font-bold leading-[1.1] tracking-[-.02em] md:text-[38px]">{sp.name}</h1>
             {sp.description && <p dir="auto" className="max-w-[560px] leading-normal text-muted">{sp.description}</p>}
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1.5 text-[12.5px] text-muted">
               {sp.props.goal && <span dir="auto" className="flex items-center gap-1.5"><Target size={13} />{sp.props.goal}</span>}
-              {due && <span className="flex items-center gap-1.5"><Target size={13} />Finish by {dueOk ? dueDate!.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : due}</span>}
-              {sp.props.url && <a className="flex items-center gap-1.5 text-link" href={sp.props.url} target="_blank" rel="noreferrer"><GraduationCap size={13} />{(() => { try { return new URL(sp.props.url).hostname.replace(/^www\./, ""); } catch { return "Course page"; } })()} ↗</a>}
-              <span className="flex items-center gap-1.5"><FileText size={13} />{data.notes.length + (data.roadmap ? 1 : 0)} notes</span>
+              {due && <span className="flex items-center gap-1.5"><Target size={13} />{t("Finish by {date}", { date: dueOk ? fmtDate(dueDate!, { day: "numeric", month: "short" }) : due })}</span>}
+              {sp.props.url && <a className="flex items-center gap-1.5 text-link" href={sp.props.url} target="_blank" rel="noreferrer"><GraduationCap size={13} />{(() => { try { return new URL(sp.props.url).hostname.replace(/^www\./, ""); } catch { return t("Course page"); } })()} ↗</a>}
+              <span className="flex items-center gap-1.5"><FileText size={13} />{t("{n} note|{n} notes", { n: data.notes.length + (data.roadmap ? 1 : 0) })}</span>
             </div>
           </div>
         </div>
@@ -200,31 +201,31 @@ function SpaceViewer({ token, data }: { token: string; data: SpaceData }) {
           <div className="flex items-center gap-3">
             <div className="md:hidden"><ProgressRing pct={p.pct} size={64} /></div>
             <div className="hidden md:block"><ProgressRing pct={p.pct} size={84} /></div>
-            <span className="flex flex-col gap-0.5 text-[12px] text-muted"><b className="text-[13px] font-semibold text-ink">{p.done} of {p.total} topics</b>{daysLeft !== null && daysLeft >= 0 && `${daysLeft} days left`}</span>
+            <span className="flex flex-col gap-0.5 text-[12px] text-muted"><b className="text-[13px] font-semibold text-ink">{t("{done} of {total} topics", { done: p.done, total: p.total })}</b>{daysLeft !== null && daysLeft >= 0 && t("{n} day left|{n} days left", { n: daysLeft })}</span>
           </div>
         )}
       </header>
       <div className="flex gap-5 border-b border-line">
-        {(["overview", "graph"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={cx("pb-2.5 capitalize", tab === t ? "font-semibold text-ink shadow-[inset_0_-2px_0_var(--accent)]" : "text-muted hover:text-ink")}>{t}</button>
+        {(["overview", "graph"] as const).map((tb) => (
+          <button key={tb} onClick={() => setTab(tb)} className={cx("pb-2.5", tab === tb ? "font-semibold text-ink shadow-[inset_0_-2px_0_var(--accent)]" : "text-muted hover:text-ink")}>{tb === "overview" ? t("Overview") : t("Graph")}</button>
         ))}
       </div>
       {tab === "overview" ? (
         <div className="flex flex-col gap-5 md:gap-[26px]">
           {mods.length > 0 && (
             <section className="flex flex-col gap-2.5">
-              <span className="text-[15px] font-[650]">Roadmap</span>
+              <span className="text-[15px] font-[650]">{t("Roadmap")}</span>
               <RoadmapReadOnly body={data.roadmap!.body} titles={data.notes} onOpen={open} />
             </section>
           )}
           <section className="flex flex-col gap-2.5">
-            <span className="text-[15px] font-[650]">Notes</span>
+            <span className="text-[15px] font-[650]">{t("Notes")}</span>
             <div className="grid gap-3 md:grid-cols-2">
               {notes.map((n) => (
                 <a key={n.id} href={`/s/${token}/${n.id}`} onClick={(e) => { e.preventDefault(); open(n.id); }} className="flex flex-col gap-1.5 rounded-[12px] border border-line bg-surface p-3.5 hover:border-accent">
                   <div className="flex items-center gap-2"><span className="size-[7px] shrink-0 rounded-full" style={{ background: n.status ? STATUS_COLOR[n.status] : "var(--muted)" }} /><span dir="auto" className="flex-1 truncate font-semibold">{n.title}</span></div>
-                  <span dir="auto" className="line-clamp-2 h-9 text-[12.5px] leading-[18px] text-muted">{n.type === "canvas" ? "Canvas board" : n.type === "whiteboard" ? "Whiteboard" : n.excerpt}</span>
-                  <span className="text-[11.5px] text-muted">{KIND[n.type] ?? "Note"} · {relTime(n.updatedAt)}</span>
+                  <span dir="auto" className="line-clamp-2 h-9 text-[12.5px] leading-[18px] text-muted">{n.type === "canvas" ? t("Canvas board") : n.type === "whiteboard" ? t("Whiteboard") : n.excerpt}</span>
+                  <span className="text-[11.5px] text-muted">{t(KIND[n.type] ?? "Note")} · {relTime(n.updatedAt)}</span>
                 </a>
               ))}
             </div>
@@ -250,8 +251,8 @@ function SpaceGraph({ token, notes }: { token: string; notes: ListItem[] }) {
   return (
     <div className="relative h-[420px] overflow-hidden rounded-[14px] border border-line bg-surface md:h-[480px]">
       <Canvas2D nodes={nodes} links={links} focus={null} onOpen={(id) => go(`/s/${token}/${id}`)} />
-      <div className="pointer-events-none absolute bottom-3 left-3.5 flex flex-wrap gap-3 text-[12px] text-muted">
-        {(["todo", "learning", "review", "mastered"] as Status[]).map((s) => <span key={s} className="flex items-center gap-1.5 capitalize"><span className="size-2 rounded-full" style={{ background: STATUS_COLOR[s] }} />{s}</span>)}
+      <div className="pointer-events-none absolute bottom-3 start-3.5 flex flex-wrap gap-3 text-[12px] text-muted">
+        {(["todo", "learning", "review", "mastered"] as Status[]).map((s) => <span key={s} className="flex items-center gap-1.5"><span className="size-2 rounded-full" style={{ background: STATUS_COLOR[s] }} />{t(STATUS_LABEL[s])}</span>)}
       </div>
     </div>
   );
@@ -286,7 +287,7 @@ function BoardInline({ note, refsPath }: { note: PubNote; refsPath?: string }) {
 
 const Meta = ({ note, extra }: { note: PubNote; extra?: ReactNode }) => (
   <div className="flex flex-wrap gap-x-2.5 gap-y-1.5 font-sans text-[13px] text-muted">
-    <span>Updated {relTime(note.updatedAt)}</span>{extra}
+    <span>{t("Updated {when}", { when: relTime(note.updatedAt) })}</span>{extra}
     {note.tags.map((t) => <span key={t} className="text-link">#{t}</span>)}
   </div>
 );
@@ -316,18 +317,18 @@ function Article({ note, onWiki }: { note: PubNote; onWiki?: (t: string) => void
     <div className="flex justify-center gap-14 pt-6 md:pt-14">
       {toc.length > 1 && (
         <aside className="sticky top-[100px] hidden w-[200px] shrink-0 flex-col gap-2.5 self-start pt-[140px] text-[13px] lg:flex">
-          <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-muted">On this page</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-muted">{t("On this page")}</span>
           {toc.map((h) => (
             <button key={h.line} dir="auto" onClick={() => ref.current?.querySelector(`[data-line="${h.line}"]`)?.scrollIntoView({ behavior: "smooth" })}
-              className={cx("flex items-center gap-2 text-left", h.level === 3 && "pl-3", active === h.line ? "font-semibold text-ink" : "text-muted hover:text-ink")}>
-              {active === h.line && <span className="-ml-2.5 h-4 w-0.5 shrink-0 bg-accent" />}{h.text}
+              className={cx("flex items-center gap-2 text-start", h.level === 3 && "ps-3", active === h.line ? "font-semibold text-ink" : "text-muted hover:text-ink")}>
+              {active === h.line && <span className="-ms-2.5 h-4 w-0.5 shrink-0 bg-accent" />}{h.text}
             </button>
           ))}
         </aside>
       )}
       <article ref={ref} className="flex w-full max-w-[680px] min-w-0 flex-col gap-4 md:gap-5" style={{ fontFamily: SERIF }}>
         <h1 dir="auto" className="text-[32px] font-bold leading-[1.15] tracking-[-.02em] md:text-[46px]">{note.title}</h1>
-        <Meta note={note} extra={note.type !== "roadmap" && <><span>·</span><span>{readingMinutes(note.body)} min read</span>{note.tags.length > 0 && <span>·</span>}</>} />
+        <Meta note={note} extra={note.type !== "roadmap" && <><span>·</span><span>{t("{n} min read", { n: readingMinutes(note.body) })}</span>{note.tags.length > 0 && <span>·</span>}</>} />
         {note.type === "roadmap" ? <div className="font-sans"><RoadmapReadOnly body={note.body} titles={[]} /></div>
           : <Markdown body={withoutTitle(note.body, note.title)} onWiki={onWiki} className="!max-w-none" style={{ "--read-font": SERIF, "--read-size": "17px", lineHeight: "30px" } as React.CSSProperties} />}
       </article>
@@ -380,17 +381,17 @@ function RoadmapReadOnly({ body, titles, onOpen }: { body: string; titles: ListI
             <div className="flex items-center gap-3">
               <span dir="auto" className="flex-1 font-semibold">{m.name}</span>
               <span className="h-[5px] w-[60px] overflow-hidden rounded-[3px] bg-surface-2 md:w-[200px]"><span className="block h-full bg-ok" style={{ width: `${p.pct}%` }} /></span>
-              <span className="w-[34px] text-right text-[12px] tabular-nums text-muted">{p.done}/{p.total}</span>
+              <span className="w-[34px] text-end text-[12px] tabular-nums text-muted">{t("{done}/{total}", { done: p.done, total: p.total })}</span>
             </div>
             <div className="flex flex-wrap gap-1.5 max-md:gap-2">
-              {m.topics.map((t) => {
-                const linked = titles.find((n) => n.title.toLowerCase() === (t.note ?? t.name).toLowerCase());
+              {m.topics.map((tp) => {
+                const linked = titles.find((n) => n.title.toLowerCase() === (tp.note ?? tp.name).toLowerCase());
                 return (
-                  <span key={t.line} className={cx("flex h-[30px] items-center gap-[7px] whitespace-nowrap rounded-[8px] border border-line bg-bg pl-2.5 text-[12.5px]", linked && onOpen ? "pr-1.5" : "pr-2.5", t.locked && "opacity-45")}>
-                    <span className="box-border flex size-3 shrink-0 items-center justify-center rounded-full" style={TOPIC_DOT[t.status]}>{t.status === "done" && <Check size={9} strokeWidth={3} className="text-bg" />}</span>
-                    <span dir="auto" className={cx(t.status === "skipped" && "line-through")}>{t.name}</span>
-                    {t.locked && <Lock size={11} className="text-muted" />}
-                    {linked && onOpen && <button onClick={() => onOpen(linked.id)} title="Open lesson" className="flex size-[22px] items-center justify-center rounded-[6px] bg-surface-2 text-link"><FileText size={12} /></button>}
+                  <span key={tp.line} className={cx("flex h-[30px] items-center gap-[7px] whitespace-nowrap rounded-[8px] border border-line bg-bg ps-2.5 text-[12.5px]", linked && onOpen ? "pe-1.5" : "pe-2.5", tp.locked && "opacity-45")}>
+                    <span className="box-border flex size-3 shrink-0 items-center justify-center rounded-full" style={TOPIC_DOT[tp.status]}>{tp.status === "done" && <Check size={9} strokeWidth={3} className="text-bg" />}</span>
+                    <span dir="auto" className={cx(tp.status === "skipped" && "line-through")}>{tp.name}</span>
+                    {tp.locked && <Lock size={11} className="text-muted" />}
+                    {linked && onOpen && <button onClick={() => onOpen(linked.id)} title={t("Open lesson")} className="flex size-[22px] items-center justify-center rounded-[6px] bg-surface-2 text-link"><FileText size={12} /></button>}
                   </span>
                 );
               })}
@@ -407,8 +408,8 @@ function slideInfo(md: string) {
   const first = md.split("\n").map((l) => l.trim()).find((l) => l && !/^(<!--|note:)/i.test(l)) ?? "";
   const img = /!\[([^\]]*)\]\(([^)]*)\)/.exec(first);
   const head = /^#{1,3}\s+(.+)$/m.exec(md)?.[1]
-    ?? (img ? img[1] || img[2].replace(/^att:/, "") : /^https?:\/\//.test(first) ? (/youtu\.?be|vimeo/.test(first) ? "Video" : first.replace(/^https?:\/\/(www\.)?/, "")) : first.replace(/^[-*>\s]+/, ""));
-  const media = /youtu\.?be|vimeo|\.(mp4|webm|mov|mp3|m4a)\b|```mermaid/i.test(md) ? "Media" : /!\[/.test(md) ? "Image" : "";
+    ?? (img ? img[1] || img[2].replace(/^att:/, "") : /^https?:\/\//.test(first) ? (/youtu\.?be|vimeo/.test(first) ? t("Video") : first.replace(/^https?:\/\/(www\.)?/, "")) : first.replace(/^[-*>\s]+/, ""));
+  const media = /youtu\.?be|vimeo|\.(mp4|webm|mov|mp3|m4a)\b|```mermaid/i.test(md) ? t("Media") : /!\[/.test(md) ? t("Image") : "";
   return { head: head.slice(0, 80), media };
 }
 function SlidesPage({ note }: { note: PubNote }) {
@@ -418,23 +419,23 @@ function SlidesPage({ note }: { note: PubNote }) {
     <div className="mx-auto flex w-full max-w-[960px] flex-col gap-[22px] pt-6 md:pt-12">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:gap-5">
         <div className="flex flex-1 flex-col gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-muted">Slides · {slides.length}</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-muted">{t("Slides · {n}", { n: slides.length })}</span>
           <h1 dir="auto" className="text-[30px] font-bold leading-[1.15] tracking-[-.02em] md:text-[40px]" style={{ fontFamily: SERIF }}>{note.title}</h1>
-          <Meta note={note} extra={<><span>·</span><span>~{Math.max(1, Math.round(slides.length * 1.25))} min talk</span></>} />
+          <Meta note={note} extra={<><span>·</span><span>{t("~{n} min talk", { n: Math.max(1, Math.round(slides.length * 1.25)) })}</span></>} />
         </div>
-        <button onClick={() => setPresent(0)} className="flex h-12 items-center justify-center gap-2.5 rounded-[10px] bg-accent px-[22px] text-[15px] font-semibold text-accent-fg"><Play size={16} />Present</button>
+        <button onClick={() => setPresent(0)} className="flex h-12 items-center justify-center gap-2.5 rounded-[10px] bg-accent px-[22px] text-[15px] font-semibold text-accent-fg"><Play size={16} />{t("Present")}</button>
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
         {slides.map((s, i) => {
           const info = slideInfo(s);
           return (
-            <button key={i} onClick={() => setPresent(i)} className="flex flex-col gap-1.5 text-left">
+            <button key={i} onClick={() => setPresent(i)} className="flex flex-col gap-1.5 text-start">
               <div className="relative box-border flex aspect-video w-full flex-col gap-2 overflow-hidden rounded-[8px] bg-[#0F1115] p-3 text-[#E8E6E1] hover:ring-2 hover:ring-accent md:p-4">
                 <span dir="auto" className="line-clamp-2 text-[12px] font-bold md:text-[14px]">{info.head}</span>
                 <span className="h-1 w-[70%] rounded-sm bg-[#9AA0AA] opacity-40" /><span className="h-1 w-[55%] rounded-sm bg-[#9AA0AA] opacity-40" />
-                {info.media && <span className="absolute bottom-2.5 right-2.5 rounded-[5px] bg-white/[.12] px-[7px] py-px text-[10.5px]">{info.media}</span>}
+                {info.media && <span className="absolute bottom-2.5 end-2.5 rounded-[5px] bg-white/[.12] px-[7px] py-px text-[10.5px]">{info.media}</span>}
               </div>
-              <span className="text-[12px] text-muted">{i + 1} / {slides.length}</span>
+              <span className="text-[12px] text-muted">{t("{i} / {n}", { i: i + 1, n: slides.length })}</span>
             </button>
           );
         })}
@@ -471,19 +472,19 @@ function MiniSlides({ title, slides, start, onExit }: { title: string; slides: s
         </div>
       </div>
       <div className="relative hidden h-16 items-center justify-center gap-4 text-[13px] text-[#9AA0AA] md:flex">
-        <span className="absolute left-6 truncate">{title}</span>
-        <button aria-label="Previous" disabled={i === 0} onClick={prev} className={cx(nav, "size-10")}><ChevronLeft size={18} /></button>
-        <span className="tabular-nums text-[#E8E6E1]">{i + 1} / {slides.length}</span>
-        <button aria-label="Next" disabled={i === slides.length - 1} onClick={next} className={cx(nav, "size-10")}><ChevronRight size={18} /></button>
-        <button onClick={onExit} className="absolute right-6 hover:text-[#E8E6E1]">F fullscreen · Esc exit</button>
+        <span dir="auto" className="absolute start-6 truncate">{title}</span>
+        <button aria-label={t("Previous")} disabled={i === 0} onClick={prev} className={cx(nav, "size-10")}><ChevronLeft size={18} /></button>
+        <span className="tabular-nums text-[#E8E6E1]">{t("{i} / {n}", { i: i + 1, n: slides.length })}</span>
+        <button aria-label={t("Next")} disabled={i === slides.length - 1} onClick={next} className={cx(nav, "size-10")}><ChevronRight size={18} /></button>
+        <button onClick={onExit} className="absolute end-6 hover:text-[#E8E6E1]">{t("F fullscreen · Esc exit")}</button>
       </div>
       <div className="safe-b flex flex-col md:hidden">
         <div className="flex items-center gap-3 px-4 pb-4">
-          <button aria-label="Previous" disabled={i === 0} onClick={prev} className={cx(nav, "h-[52px] flex-1 rounded-[12px]")}><ChevronLeft size={20} /></button>
-          <span className="w-[60px] text-center text-[14px] tabular-nums">{i + 1} / {slides.length}</span>
-          <button aria-label="Next" disabled={i === slides.length - 1} onClick={next} className={cx(nav, "h-[52px] flex-1 rounded-[12px]")}><ChevronRight size={20} /></button>
+          <button aria-label={t("Previous")} disabled={i === 0} onClick={prev} className={cx(nav, "h-[52px] flex-1 rounded-[12px]")}><ChevronLeft size={20} /></button>
+          <span className="w-[60px] text-center text-[14px] tabular-nums">{t("{i} / {n}", { i: i + 1, n: slides.length })}</span>
+          <button aria-label={t("Next")} disabled={i === slides.length - 1} onClick={next} className={cx(nav, "h-[52px] flex-1 rounded-[12px]")}><ChevronRight size={20} /></button>
         </div>
-        <div className="flex items-center justify-center gap-3 px-4 pb-2 text-[12px] text-[#9AA0AA]">Swipe to move · rotate for full screen<button onClick={onExit} className="text-[#E8E6E1] underline">Exit</button></div>
+        <div className="flex items-center justify-center gap-3 px-4 pb-2 text-[12px] text-[#9AA0AA]">{t("Swipe to move · rotate for full screen")}<button onClick={onExit} className="text-[#E8E6E1] underline">{t("Exit")}</button></div>
       </div>
     </div>
   );
@@ -499,25 +500,25 @@ function FlashcardsPage({ note }: { note: PubNote }) {
   return (
     <div className="mx-auto flex max-w-[760px] flex-col gap-[22px] pt-6 md:pt-10">
       <div className="flex flex-col gap-1.5">
-        <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-learn">Flashcards · {cards.length}</span>
+        <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-learn">{t("Flashcards · {n}", { n: cards.length })}</span>
         <h1 dir="auto" className="text-[26px] font-bold tracking-[-.02em] md:text-[36px]" style={{ fontFamily: SERIF }}>{note.title}</h1>
       </div>
       {c ? (
         <>
           <div className="flex flex-col gap-4 rounded-[14px] border border-line bg-surface px-5 py-5 shadow-[var(--sh,none)] md:px-[26px] md:py-[22px]">
             <div className="flex items-center text-[12.5px] text-muted">
-              <span className="flex items-center gap-1.5 font-semibold text-learn"><Layers size={13} />Practice</span><span className="flex-1" />{i + 1} / {cards.length}
+              <span className="flex items-center gap-1.5 font-semibold text-learn"><Layers size={13} />{t("Practice")}</span><span className="flex-1" />{t("{i} / {n}", { i: i + 1, n: cards.length })}
             </div>
             <button onClick={() => setFlip((f) => !f)} className="flex min-h-[180px] flex-col items-center justify-center gap-3 text-center">
               <Markdown body={c.q} className={cx("!m-0 !max-w-none text-center [&_p]:m-0", flip ? "text-muted" : "font-semibold")} style={{ "--read-font": SERIF, "--read-size": flip ? "19px" : "26px" } as React.CSSProperties} />
               {flip ? (
                 <><span className="h-px w-2/3 bg-line" /><Markdown body={c.a} className="!m-0 !max-w-none text-center font-semibold" style={{ "--read-size": "22px" } as React.CSSProperties} /></>
-              ) : <span className="flex h-9 items-center gap-2 rounded-full border border-dashed border-line px-4 text-[13px] text-muted"><Eye size={14} />Tap to reveal</span>}
+              ) : <span className="flex h-9 items-center gap-2 rounded-full border border-dashed border-line px-4 text-[13px] text-muted"><Eye size={14} />{t("Tap to reveal")}</span>}
             </button>
             <div className="flex items-center gap-2.5">
-              <button disabled={i === 0} onClick={() => move(-1)} className="flex h-[52px] items-center justify-center gap-1.5 rounded-[12px] border border-line px-3.5 disabled:opacity-40 max-md:flex-1 md:h-[38px] md:rounded-[10px]"><ChevronLeft size={15} />Previous</button>
-              <span className="hidden flex-1 text-center text-[12px] text-muted md:block">Practice mode — nothing is saved</span>
-              <button disabled={i === cards.length - 1} onClick={() => move(1)} className="flex h-[52px] items-center justify-center gap-1.5 rounded-[12px] bg-accent px-4 font-semibold text-accent-fg disabled:opacity-40 max-md:flex-1 md:h-[38px] md:rounded-[10px]">Next<ChevronRight size={15} /></button>
+              <button disabled={i === 0} onClick={() => move(-1)} className="flex h-[52px] items-center justify-center gap-1.5 rounded-[12px] border border-line px-3.5 disabled:opacity-40 max-md:flex-1 md:h-[38px] md:rounded-[10px]"><ChevronLeft size={15} />{t("Previous")}</button>
+              <span className="hidden flex-1 text-center text-[12px] text-muted md:block">{t("Practice mode — nothing is saved")}</span>
+              <button disabled={i === cards.length - 1} onClick={() => move(1)} className="flex h-[52px] items-center justify-center gap-1.5 rounded-[12px] bg-accent px-4 font-semibold text-accent-fg disabled:opacity-40 max-md:flex-1 md:h-[38px] md:rounded-[10px]">{t("Next")}<ChevronRight size={15} /></button>
             </div>
           </div>
           <div className="flex flex-col">
@@ -541,11 +542,11 @@ function ZoomBar({ ex }: { ex: ExApi | null }) {
   const zoom = (f: number) => { if (!ex) return; const v = Math.min(30, Math.max(0.1, Math.round(ex.getAppState().zoom.value * f * 10) / 10)); ex.updateScene({ appState: { zoom: { value: v } } }); };
   const b = "flex size-[30px] items-center justify-center rounded-[7px] hover:bg-surface-2 disabled:opacity-40";
   return (
-    <div className="absolute bottom-4 left-4 z-10 hidden items-center gap-0.5 rounded-[10px] border border-line bg-surface p-[3px] md:flex">
-      <button aria-label="Zoom out" title="Zoom out" disabled={!ex} onClick={() => zoom(1 / 1.2)} className={b}><Minus size={14} /></button>
-      <button title="Reset to 100%" disabled={!ex} onClick={() => ex?.updateScene({ appState: { zoom: { value: 1 } } })} className="w-10 text-center text-[12px] tabular-nums">{Math.round(z * 100)}%</button>
-      <button aria-label="Zoom in" title="Zoom in" disabled={!ex} onClick={() => zoom(1.2)} className={b}><Plus size={14} /></button>
-      <button aria-label="Fit to screen" title="Fit to screen" disabled={!ex} onClick={() => ex?.scrollToContent(undefined, { fitToContent: true, animate: true })} className={b}><Scan size={14} /></button>
+    <div className="absolute bottom-4 start-4 z-10 hidden items-center gap-0.5 rounded-[10px] border border-line bg-surface p-[3px] md:flex">
+      <button aria-label={t("Zoom out")} title={t("Zoom out")} disabled={!ex} onClick={() => zoom(1 / 1.2)} className={b}><Minus size={14} /></button>
+      <button title={t("Reset to 100%")} disabled={!ex} onClick={() => ex?.updateScene({ appState: { zoom: { value: 1 } } })} className="w-10 text-center text-[12px] tabular-nums">{t("{n}%", { n: Math.round(z * 100) })}</button>
+      <button aria-label={t("Zoom in")} title={t("Zoom in")} disabled={!ex} onClick={() => zoom(1.2)} className={b}><Plus size={14} /></button>
+      <button aria-label={t("Fit to screen")} title={t("Fit to screen")} disabled={!ex} onClick={() => ex?.scrollToContent(undefined, { fitToContent: true, animate: true })} className={b}><Scan size={14} /></button>
     </div>
   );
 }
@@ -557,14 +558,14 @@ function BoardBody({ note, onApi, ex, refsPath }: { note: PubNote; onApi?: (a: E
       <style>{".lumen-board .excalidraw .layer-ui__wrapper__footer-left,.lumen-board .excalidraw .layer-ui__wrapper__footer-right,.lumen-board .excalidraw .App-menu_top,.lumen-board .excalidraw .exit-view-mode{display:none!important}.lumen-board .excalidraw{--color-surface-low:transparent}"}</style>
       <div className="lumen-board absolute inset-0"><Suspense fallback={null}><BoardViewer body={note.body} onApi={onApi ?? (() => {})} /></Suspense></div>
       <ZoomBar ex={ex ?? null} />
-      <span className="pointer-events-none absolute left-1/2 top-4 z-10 hidden h-[30px] -translate-x-1/2 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-[12.5px] text-muted md:flex"><Hand size={13} />View only · drag to pan, pinch or ⌘ scroll to zoom</span>
+      <span className="pointer-events-none absolute left-1/2 top-4 z-10 hidden h-[30px] -translate-x-1/2 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-[12.5px] text-muted md:flex"><Hand size={13} />{t("View only · drag to pan, pinch or ⌘ scroll to zoom")}</span>
     </>
   );
   const { canvas, error } = parseCanvas(note.body);
   return (
     <>
       {error ? <div className="render-error absolute inset-4">{error}</div> : <CanvasView canvas={canvas} refs={refs} />}
-      <span className="pointer-events-none absolute left-5 top-4 hidden h-[30px] md:flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-[12.5px] text-muted"><Eye size={13} />Preview · opens in Lumen or Obsidian</span>
+      <span className="pointer-events-none absolute start-5 top-4 hidden h-[30px] md:flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-[12.5px] text-muted"><Eye size={13} />{t("Preview · opens in Lumen or Obsidian")}</span>
     </>
   );
 }
@@ -577,19 +578,19 @@ function BoardPage({ blog, note, theme, refsPath }: { blog: Brand; note: PubNote
   const [ex, setEx] = useState<ExApi | null>(null);
   const [busy, setBusy] = useState(false);
   const png = async () => { setBusy(true); try { await boardPng(note, ex); } finally { setBusy(false); } };
-  const label = isCanvas ? "Download .canvas" : "Download .excalidraw";
+  const label = isCanvas ? t("Download .canvas") : t("Download .excalidraw");
   return (
     <div className="flex h-dvh flex-col bg-bg text-[14px] leading-[normal] text-ink">
       <div className={cx("safe-t hidden h-[60px] shrink-0 items-center gap-3.5 border-b border-line px-10 md:flex", !isCanvas && "bg-surface")}>
         <BrandName blog={blog} /><span className="text-muted">/</span>
         <span dir="auto" className="flex-1 truncate font-semibold"><Glyph name={isCanvas ? "canvas" : "whiteboard"} size={15} style={{ verticalAlign: "-3px" }} /> {note.title}</span>
         {isCanvas ? <button onClick={() => downloadBoard(note)} className="flex h-[38px] items-center gap-2 rounded-[10px] bg-accent px-3.5 font-semibold text-accent-fg"><Download size={15} />{label}</button>
-          : <button onClick={png} disabled={busy} title="Download as PNG image" className="flex h-[38px] items-center gap-2 rounded-[10px] border border-line px-3.5 disabled:opacity-60">{busy ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}PNG</button>}
+          : <button onClick={png} disabled={busy} title={t("Download as PNG image")} className="flex h-[38px] items-center gap-2 rounded-[10px] border border-line px-3.5 disabled:opacity-60">{busy ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}PNG</button>}
         <ThemeBtn {...theme} />
       </div>
       <div className={cx("safe-t flex items-center gap-2 border-b border-line px-5 pb-3.5 pt-2.5 md:hidden", !isCanvas && "bg-surface")}>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="text-[12px] text-muted">{blog.name} · {isCanvas ? "canvas" : "whiteboard · view only"}</span>
+          <span className="text-[12px] text-muted">{blog.name} · {isCanvas ? t("canvas") : t("whiteboard · view only")}</span>
           <span dir="auto" className="truncate text-[18px] font-[650]"><Glyph name={isCanvas ? "canvas" : "whiteboard"} size={15} style={{ verticalAlign: "-1px" }} /> {note.title}</span>
         </div>
       </div>

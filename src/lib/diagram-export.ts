@@ -5,6 +5,7 @@
 // Browser limits: a canvas side ≤ 32,767 px and area ≤ 268,435,456 px (Chrome/Safari), so large scales are reduced.
 import { DIAGRAM_EXPORT_DEFAULTS, getSettings, setSettings, type DiagramExportPrefs } from "./settings";
 import { renderMermaidForExport } from "./markdown";
+import { t } from "./i18n";
 
 export type { DiagramExportPrefs };
 export const MAX_SIDE = 32_767, MAX_AREA = 268_435_456;
@@ -58,7 +59,7 @@ export async function buildSvg(src: string, p: DiagramExportPrefs): Promise<Buil
   const raw = await renderMermaidForExport(src, p.theme, p.svgText);
   const doc = new DOMParser().parseFromString(raw, "image/svg+xml");
   const svg = doc.documentElement;
-  if (svg.nodeName !== "svg") throw new Error("Mermaid did not return an SVG");
+  if (svg.nodeName !== "svg") throw new Error(t("Mermaid did not return an SVG"));
   const vb = (svg.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
   let [x, y, w, h] = vb.length === 4 && vb.every(Number.isFinite) ? vb : [0, 0, parseFloat(svg.getAttribute("width") ?? "800"), parseFloat(svg.getAttribute("height") ?? "600")];
   const pad = Math.max(0, p.padding);
@@ -109,7 +110,7 @@ export async function rasterize(b: BuiltSvg, p: DiagramExportPrefs): Promise<{ b
     ctx.drawImage(img, 0, 0, W, H);
     const type = p.format === "jpeg" ? "image/jpeg" : p.format === "webp" ? "image/webp" : "image/png";
     const blob = await new Promise<Blob | null>((res) => cv.toBlob(res, type, p.format === "png" ? undefined : p.quality));
-    if (!blob) throw new Error("The browser could not encode the image (too large?)");
+    if (!blob) throw new Error(t("The browser could not encode the image (too large?)"));
     return { blob, width: W, height: H, scale };
   } finally { URL.revokeObjectURL(url); }
 }
@@ -135,7 +136,7 @@ export async function downloadBlob(blob: Blob, name: string) {
 }
 /** Copy a PNG to the clipboard (Chrome 76+, Firefox 127+, Safari 13.1+). */
 export async function copyImage(blob: Blob) {
-  if (!("ClipboardItem" in window) || !navigator.clipboard?.write) throw new Error("This browser can't copy images; download instead.");
+  if (!("ClipboardItem" in window) || !navigator.clipboard?.write) throw new Error(t("This browser can't copy images; download instead."));
   await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
 }
 
@@ -147,5 +148,5 @@ export interface ExportJob { name: string; title: string; build: (p: DiagramExpo
 /** Open the export dialog (DiagramExport.tsx listens). */
 export function openExport(job: ExportJob) { dispatchEvent(new CustomEvent("lumen:export", { detail: job })); }
 export function openDiagramExport(src: string, name = "diagram") {
-  openExport({ name, title: "Export diagram", src, themable: true, build: (p) => buildSvg(src, p) });
+  openExport({ name, title: t("Export diagram"), src, themable: true, build: (p) => buildSvg(src, p) });
 }

@@ -3,6 +3,7 @@
 // arrows move by day / week; exact values in the tooltip and the data table.
 import { useMemo, useRef, useState } from "react";
 import type { Dataset } from "../../lib/dashboard";
+import { t } from "../../lib/i18n";
 import { ChartEmpty, fmt, rovingKeys, Tooltip, useSize, type Tip } from "./common";
 
 type SeriesData = Extract<Dataset, { kind: "series" }>;
@@ -25,7 +26,7 @@ export function Heatmap({ data, label, color = "var(--chart-c6)" }: { data: Seri
   const cw = Math.max(3, (box.w - gap * (weeks - 1)) / weeks), ch = Math.max(3, (box.h - gap * 6) / 7);
   const pos = (i: number) => { const k = i + lead; return { x: Math.floor(k / 7) * (cw + gap), y: (k % 7) * (ch + gap) }; };
   const fIdx = focusIdx ?? days.length - 1;
-  const tip: Tip | null = active !== null ? { x: pos(active).x + cw, y: pos(active).y, title: days[active].c.long, rows: [{ label: data.series[0]?.label ?? "Value", value: fmt(days[active].v, data.unit) }] } : null;
+  const tip: Tip | null = active !== null ? { x: pos(active).x + cw, y: pos(active).y, title: days[active].c.long, rows: [{ label: data.series[0]?.label ?? t("Value"), value: fmt(days[active].v, data.unit) }] } : null;
   const total = days.reduce((a, d) => a + d.v, 0);
   return (
     <div ref={box.ref} className="relative h-full min-h-0" dir="ltr" onMouseLeave={() => setActive(null)}>

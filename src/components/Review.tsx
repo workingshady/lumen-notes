@@ -14,10 +14,11 @@ import { Preview } from "./Preview";
 import { cardLine, openNoteAtLine } from "./study-nav";
 import { cx } from "./ui";
 import { EmptyState } from "./EmptyState";
+import { fmtNum, t, tk, tx } from "../lib/i18n";
 
 interface Item { note: Note; fc: Flashcard; card: Card }
 
-const hintLine = <div className="text-center text-[12.5px] text-muted"><span className="hidden md:inline"><span className="mr-1.5 rounded-[4px] border border-line px-2 py-0.5 font-mono text-[11px] font-medium">Space</span>to show answer</span><span className="md:hidden">Tap to show answer</span></div>;
+const HintLine = () => <div className="text-center text-[12.5px] text-muted"><span className="hidden md:inline">{tx("{key} to show answer", { key: <span dir="ltr" className="me-1.5 rounded-[4px] border border-line px-2 py-0.5 font-mono text-[11px] font-medium">Space</span> })}</span><span className="md:hidden">{t("Tap to show answer")}</span></div>;
 
 /** Cloze and image-occlusion card faces (lib/cloze.ts, lib/occlusion.ts). */
 function SpecialCard({ fc, note, flipped, md }: { fc: Flashcard; note: Note; flipped: boolean; md: (body: string) => Pick<Note, "id" | "body" | "spaceId"> }) {
@@ -27,7 +28,7 @@ function SpecialCard({ fc, note, flipped, md }: { fc: Flashcard; note: Note; fli
     return (
       <div key={flipped ? "back" : "front"} className="flex flex-1 flex-col items-center justify-center gap-3 fade-in">
         <OcclusionImage data={fc.occlusion.data} target={fc.occlusion.target} revealed={flipped} />
-        {flipped ? (label ? <div className="text-center text-[20px] font-semibold md:text-[24px]" dir="auto">{label}</div> : null) : hintLine}
+        {flipped ? (label ? <div className="text-center text-[20px] font-semibold md:text-[24px]" dir="auto">{label}</div> : null) : <HintLine />}
       </div>
     );
   }
@@ -36,11 +37,11 @@ function SpecialCard({ fc, note, flipped, md }: { fc: Flashcard; note: Note; fli
   const total = nums.size || ((fc.cloze?.block ?? "").match(/==[^=]+==/g) ?? []).length;
   return (
     <div key={flipped ? "back" : "front"} className="flex flex-1 flex-col fade-in">
-      {total > 1 && <div className="pt-2 text-center text-[12px] text-muted">{flipped ? "Answer shown" : `Card ${fc.cloze!.n} of ${total} from this sentence`}</div>}
+      {total > 1 && <div className="pt-2 text-center text-[12px] text-muted">{flipped ? t("Answer shown") : t("Card {n} of {total} from this sentence", { n: fc.cloze!.n, total })}</div>}
       <div className="flex flex-1 items-center justify-center px-2 md:px-5">
         <Preview note={md(flipped ? sides.back : sides.front)} className="review-cloze !m-0 w-full !max-w-none text-center !text-[19px] !leading-[30px] md:!text-[23px] md:!leading-[36px]" />
       </div>
-      {!flipped && hintLine}
+      {!flipped && <HintLine />}
     </div>
   );
 }
@@ -73,18 +74,18 @@ export function useDueCards(notes: Note[], includeNew = true) {
 }
 
 const GRADES = [
-  { n: "Again", c: "var(--danger)" },
-  { n: "Hard", c: "var(--warning)" },
-  { n: "Good", c: "var(--success)" },
-  { n: "Easy", c: "var(--info)" },
+  { n: tk("Again"), c: "var(--danger)" },
+  { n: tk("Hard"), c: "var(--warning)" },
+  { n: tk("Good"), c: "var(--success)" },
+  { n: tk("Easy"), c: "var(--info)" },
 ] as const;
 const tint = (c: string) => ({ background: `color-mix(in srgb, ${c} 10%, var(--surface))`, borderColor: `color-mix(in srgb, ${c} 30%, transparent)` });
-const Kbd = ({ children }: { children: React.ReactNode }) => <span className="mr-1.5 rounded-[4px] border border-line px-2 py-0.5 font-mono text-[11px] font-medium">{children}</span>;
+const Kbd = ({ children }: { children: React.ReactNode }) => <span dir="ltr" className="me-1.5 rounded-[4px] border border-line px-2 py-0.5 font-mono text-[11px] font-medium">{children}</span>;
 const DAY = 86_400_000;
 /** One-line answers: the first sentence is the headline, the rest the explanation ("The step size. θ ← …"). */
 const headline = (a: string) => (a.includes("\n") ? a : a.replace(/^(.{3,120}?[.!?])\s+(?=\S)/, "$1\n\n"));
-/** "tomorrow", "today", "in 3 days" for the empty state's next-due line. */
-const nextWhen = (t: number) => { const d = Math.round((new Date(t).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / DAY); return d <= 0 ? "later today" : d === 1 ? "tomorrow" : `in ${d} days`; };
+/** The empty state's next-due sentence. */
+const nextWhen = (at: number) => { const d = Math.round((new Date(at).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / DAY); return d <= 0 ? t("No cards due. Next ones later today.") : d === 1 ? t("No cards due. Next ones tomorrow.") : t("No cards due. Next ones in {n} day.|No cards due. Next ones in {n} days.", { n: d }); };
 const dayKey = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
 
 /** Days in a row with study activity (edits, timer sessions, reviews), ending today or yesterday. Same rule as Home's streak. */
@@ -190,7 +191,7 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
     await save("card", { ...cur.card, suspended: 1 });
     setFlipped(false);
     setQueue((q) => q!.slice(1).filter((x) => x.card.id !== cur.card.id));
-    toast("Card suspended · U to undo");
+    toast(t("Card suspended · U to undo"));
   }
 
   async function undo() {
@@ -240,15 +241,15 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
 
   if (!queue) return null;
   const close = onExit && (
-    <button onClick={onExit} aria-label="Close review" className="flex size-11 shrink-0 items-center justify-center rounded-[8px] text-ink hover:bg-surface-2 md:size-8 md:text-muted md:hover:text-ink"><X className="size-5 md:size-[18px]" /></button>
+    <button onClick={onExit} aria-label={t("Close review")} className="flex size-11 shrink-0 items-center justify-center rounded-[8px] text-ink hover:bg-surface-2 md:size-8 md:text-muted md:hover:text-ink"><X className="size-5 md:size-[18px]" /></button>
   );
   if (!cur) {
     if (!done) return (
       <div className="relative h-full">
-        {close && <div className="absolute left-2 top-1.5 md:left-6 md:top-3">{close}</div>}
+        {close && <div className="absolute start-2 top-1.5 md:start-6 md:top-3">{close}</div>}
         {upcoming.length
-          ? <EmptyState className="h-full" glyph="flashcards" text={`No cards due. Next ones ${nextWhen(upcoming[0].card.due)}.`} action={{ label: "Practice anyway", onClick: practice }} />
-          : <EmptyState className="h-full" glyph="flashcards" text="No cards yet. Write Question :: Answer in any note." action={onExit ? { label: "Back to Home", onClick: onExit } : undefined} />}
+          ? <EmptyState className="h-full" glyph="flashcards" text={nextWhen(upcoming[0].card.due)} action={{ label: t("Practice anyway"), onClick: practice }} />
+          : <EmptyState className="h-full" glyph="flashcards" text={t("No cards yet. Write Question :: Answer in any note.")} action={onExit ? { label: t("Back to Home"), onClick: onExit } : undefined} />}
       </div>
     );
     const total = stats.reduce((a, b) => a + b, 0) || 1;
@@ -260,24 +261,24 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
         <div className="flex w-full max-w-[520px] flex-col gap-6 [line-height:normal] fade-in">
           <div className="flex flex-col items-center gap-2 text-center">
             <span className="flex size-[52px] items-center justify-center rounded-full text-ok" style={{ background: "color-mix(in srgb, var(--success) 16%, transparent)" }}><Check size={26} /></span>
-            <span className="mt-2 text-[26px] font-[650] tracking-[-.02em]">Session complete</span>
-            <span className="text-[14px] text-muted">{done} {done === 1 ? "card" : "cards"} in {mins} min{streak > 0 && ` · streak now ${streak} ${streak === 1 ? "day" : "days"}`}</span>
+            <span className="mt-2 text-[26px] font-[650] tracking-[-.02em]">{t("Session complete")}</span>
+            <span className="text-[14px] text-muted">{t("{n} card in {mins} min|{n} cards in {mins} min", { n: done, mins })}{streak > 0 && <> · {t("streak now {n} day|streak now {n} days", { n: streak })}</>}</span>
           </div>
           <div className="flex flex-col gap-3.5 rounded-[14px] border border-line bg-surface p-5">
             <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-[5px]">
               {GRADES.map((g, k) => stats[k] ? <span key={g.n} style={{ width: `${(stats[k] / total) * 100}%`, background: g.c }} /> : null)}
             </div>
             <div className="grid grid-cols-4 gap-2 text-[12.5px]">
-              {GRADES.map((g, k) => <span key={g.n} className="flex flex-col gap-0.5"><b className="text-[18px] font-[650]">{stats[k]}</b><span style={{ color: g.c }}>{g.n}</span></span>)}
+              {GRADES.map((g, k) => <span key={g.n} className="flex flex-col gap-0.5"><b className="text-[18px] font-[650]">{fmtNum(stats[k])}</b><span style={{ color: g.c }}>{t(g.n)}</span></span>)}
             </div>
             <div className="flex flex-col gap-2 border-t border-line pt-3 text-[13px] text-muted">
-              {hardest && <span className="flex justify-between gap-4"><span className="shrink-0">Hardest card</span><span className="truncate text-ink" dir="auto">{hardest.q.replace(/[*_`#$]/g, "").split("\n")[0]}</span></span>}
-              <span className="flex justify-between gap-4"><span>Next review</span><span className="text-ink">{nextDue ? `Tomorrow · ${nextDue} ${nextDue === 1 ? "card" : "cards"}` : "Nothing due tomorrow"}</span></span>
+              {hardest && <span className="flex justify-between gap-4"><span className="shrink-0">{t("Hardest card")}</span><span className="truncate text-ink" dir="auto">{hardest.q.replace(/[*_`#$]/g, "").split("\n")[0]}</span></span>}
+              <span className="flex justify-between gap-4"><span>{t("Next review")}</span><span className="text-ink">{nextDue ? t("Tomorrow · {n} card|Tomorrow · {n} cards", { n: nextDue }) : t("Nothing due tomorrow")}</span></span>
             </div>
           </div>
           <div className="flex gap-2.5">
-            <button className="flex h-11 flex-1 items-center justify-center rounded-[10px] bg-accent text-[14px] font-semibold text-accent-fg hover:brightness-110" onClick={() => (onExit ? onExit() : go("home"))}>Back to Home</button>
-            {redo > 0 && <button className="flex h-11 items-center rounded-[10px] border border-line px-4 text-[14px] hover:bg-surface" onClick={redoAgain}>Redo {redo} “Again” {redo === 1 ? "card" : "cards"}</button>}
+            <button className="flex h-11 flex-1 items-center justify-center rounded-[10px] bg-accent text-[14px] font-semibold text-accent-fg hover:brightness-110" onClick={() => (onExit ? onExit() : go("home"))}>{t("Back to Home")}</button>
+            {redo > 0 && <button className="flex h-11 items-center rounded-[10px] border border-line px-4 text-[14px] hover:bg-surface" onClick={redoAgain}>{t("Redo {n} “Again” card|Redo {n} “Again” cards", { n: redo })}</button>}
           </div>
         </div>
       </div>
@@ -306,14 +307,14 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
       <div className="safe-t flex h-14 shrink-0 items-center gap-2 px-2 text-[14px] md:hidden">
         {close ?? <span className="w-2" />}
         <span className="h-1 flex-1 overflow-hidden rounded-[2px] bg-surface-2"><span className="block h-full bg-learn transition-all" style={{ width: pct }} /></span>
-        <span className="px-3 font-semibold tabular-nums">{pos} / {total}</span>
+        <span className="px-3 font-semibold tabular-nums" dir="ltr">{fmtNum(pos)} / {fmtNum(total)}</span>
       </div>
       {/* Desktop top bar */}
       <div className="hidden h-14 shrink-0 items-center gap-4 px-6 text-[13px] md:flex">
         {close}
-        <span className="truncate text-muted">{title ?? cur.note.title}</span>
+        <span className="truncate text-muted" dir="auto">{title ?? cur.note.title}</span>
         <span className="flex-1" />
-        <span className="font-semibold tabular-nums">{pos} <span className="font-normal text-muted">/ {total}</span></span>
+        <span className="font-semibold tabular-nums" dir="ltr">{fmtNum(pos)} <span className="font-normal text-muted">/ {fmtNum(total)}</span></span>
       </div>
       <div className="hidden h-[3px] shrink-0 bg-surface-2 md:block"><div className="h-full bg-learn transition-all" style={{ width: pct }} /></div>
 
@@ -322,12 +323,12 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
           className={cx("review-card flex min-h-0 w-full flex-1 cursor-pointer flex-col overflow-y-auto rounded-[14px] border border-line bg-surface p-5 md:h-[400px] md:w-[680px] md:max-w-full md:flex-none md:px-9 md:py-7", flipped && "gap-4 md:gap-[18px]")}>
           <div className="flex items-center gap-1.5 text-[12px] text-muted md:gap-2">
             <Layers size={13} className="shrink-0 text-learn" />
-            <span className="truncate">{cur.note.title}</span>
-            {folder && <><span className="opacity-50">·</span><span className="truncate">{folder}</span></>}
+            <span className="truncate" dir="auto">{cur.note.title}</span>
+            {folder && <><span className="opacity-50">·</span><span className="truncate" dir="auto">{folder}</span></>}
             <span className="flex-1" />
             {flipped
-              ? <button onClick={() => openNote(cur.note.id)} className="hidden shrink-0 items-center gap-1 hover:text-ink md:flex"><ArrowUpRight size={12} />Open note</button>
-              : cur.card.reps === 0 && <span className="shrink-0">New</span>}
+              ? <button onClick={() => openNote(cur.note.id)} className="hidden shrink-0 items-center gap-1 hover:text-ink md:flex"><ArrowUpRight size={12} />{t("Open note")}</button>
+              : cur.card.reps === 0 && <span className="shrink-0">{t("New")}</span>}
           </div>
           {cur.fc.kind ? (
             <SpecialCard fc={cur.fc} note={cur.note} flipped={flipped} md={md} />
@@ -344,7 +345,7 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
               <div className="flex flex-1 items-center justify-center px-2 md:px-5">
                 <Preview note={md(cur.fc.q)} className="!m-0 w-full !max-w-none text-center !text-[22px] font-semibold !leading-[32px] tracking-[-.01em] md:!text-[30px] md:!leading-[42px]" />
               </div>
-              <div className="text-center text-[12.5px] text-muted"><span className="hidden md:inline"><Kbd>Space</Kbd>to show answer</span><span className="md:hidden">Tap to show answer</span></div>
+              <div className="text-center text-[12.5px] text-muted"><span className="hidden md:inline">{tx("{key} to show answer", { key: <Kbd>Space</Kbd> })}</span><span className="md:hidden">{t("Tap to show answer")}</span></div>
             </div>
           )}
         </div>
@@ -353,24 +354,24 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
             <div className="grid grid-cols-4 gap-2 md:grid-cols-[repeat(4,150px)] md:gap-2.5">
               {GRADES.map((g, k) => (
                 <button key={g.n} onClick={() => grade(k as Grade)} className="relative flex h-[68px] flex-col items-center justify-center gap-[3px] rounded-[12px] border transition-[filter] hover:brightness-125 md:h-16 md:gap-1 md:rounded-[10px]" style={tint(g.c)}>
-                  <span className="text-[14px] font-semibold" style={{ color: g.c }}>{g.n}</span>
+                  <span className="text-[14px] font-semibold" style={{ color: g.c }}>{t(g.n)}</span>
                   <span className="text-[12px] text-muted">{iv[k]}</span>
-                  <span className="absolute left-2 top-1.5 hidden font-mono text-[10px] font-medium text-muted md:block">{k + 1}</span>
+                  <span className="absolute start-2 top-1.5 hidden font-mono text-[10px] font-medium text-muted md:block">{k + 1}</span>
                 </button>
               ))}
             </div>
           ) : (
-            <button onClick={() => setFlipped(true)} className="h-[52px] w-full rounded-[12px] border border-line bg-surface-2 px-7 text-[14px] font-semibold hover:bg-surface md:h-12 md:w-auto md:rounded-[10px]">Show answer</button>
+            <button onClick={() => setFlipped(true)} className="h-[52px] w-full rounded-[12px] border border-line bg-surface-2 px-7 text-[14px] font-semibold hover:bg-surface md:h-12 md:w-auto md:rounded-[10px]">{t("Show answer")}</button>
           )}
         </div>
       </div>
       <div className="hidden h-11 shrink-0 items-center justify-between px-6 text-[12px] text-muted md:flex">
         {!flipped && <>
-          <span>{left} left in this {title ? "deck" : "session"} · about {Math.max(1, Math.round((left * 44) / 60))} min</span>
+          <span>{title ? t("{n} left in this deck · about {mins} min", { n: left, mins: Math.max(1, Math.round((left * 44) / 60)) }) : t("{n} left in this session · about {mins} min", { n: left, mins: Math.max(1, Math.round((left * 44) / 60)) })}</span>
           <span className="flex gap-3.5">
-            <button onClick={edit} className="hover:text-ink">E edit card</button>
-            <button onClick={() => void suspend()} className="hover:text-ink">S suspend</button>
-            <button onClick={() => void undo()} disabled={!history.current.length} className="hover:text-ink disabled:hover:text-muted">U undo</button>
+            <button onClick={edit} className="hover:text-ink">{t("E edit card")}</button>
+            <button onClick={() => void suspend()} className="hover:text-ink">{t("S suspend")}</button>
+            <button onClick={() => void undo()} disabled={!history.current.length} className="hover:text-ink disabled:hover:text-muted">{t("U undo")}</button>
           </span>
         </>}
       </div>

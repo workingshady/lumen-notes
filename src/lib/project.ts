@@ -12,22 +12,23 @@
 import type { Note } from "../../shared/types";
 import type { GlyphName } from "./glyphs";
 import { setFrontMatter, splitFrontMatter } from "./parse";
+import { t, tk } from "./i18n";
 
 export type DocKind = "prd" | "rfc" | "adr" | "requirements" | "plan" | "meeting" | "draft" | "spec";
 export type DocStatus = "draft" | "review" | "approved" | "superseded" | "rejected";
 export const DOC_KINDS: { kind: DocKind; label: string; short: string; glyph: GlyphName; hint: string }[] = [
-  { kind: "prd", label: "PRD", short: "PRD", glyph: "note", hint: "Product requirements: problem, users, goals, scope, metrics" },
-  { kind: "rfc", label: "RFC", short: "RFC", glyph: "note", hint: "Technical proposal: design, alternatives, rollout" },
-  { kind: "adr", label: "ADR", short: "ADR", glyph: "d-approved", hint: "One decision: context, options, decision, consequences" },
-  { kind: "requirements", label: "Requirements", short: "REQ", glyph: "requirement", hint: "Numbered requirements (REQ-1…) with MoSCoW priority" },
-  { kind: "plan", label: "Action plan", short: "Plan", glyph: "task", hint: "Steps as task cards with owners and dates" },
-  { kind: "meeting", label: "Meeting notes", short: "Meet", glyph: "journal", hint: "Agenda, notes, decisions, action items" },
-  { kind: "spec", label: "Spec", short: "Spec", glyph: "diagram", hint: "API, data model, diagrams" },
-  { kind: "draft", label: "Draft", short: "Draft", glyph: "d-draft", hint: "Anything not ready yet" },
+  { kind: "prd", label: "PRD", short: "PRD", glyph: "note", hint: tk("Product requirements: problem, users, goals, scope, metrics") },
+  { kind: "rfc", label: "RFC", short: "RFC", glyph: "note", hint: tk("Technical proposal: design, alternatives, rollout") },
+  { kind: "adr", label: "ADR", short: "ADR", glyph: "d-approved", hint: tk("One decision: context, options, decision, consequences") },
+  { kind: "requirements", label: tk("Requirements"), short: "REQ", glyph: "requirement", hint: tk("Numbered requirements (REQ-1…) with MoSCoW priority") },
+  { kind: "plan", label: tk("Action plan"), short: "Plan", glyph: "task", hint: tk("Steps as task cards with owners and dates") },
+  { kind: "meeting", label: tk("Meeting notes"), short: "Meet", glyph: "journal", hint: tk("Agenda, notes, decisions, action items") },
+  { kind: "spec", label: tk("Spec"), short: "Spec", glyph: "diagram", hint: tk("API, data model, diagrams") },
+  { kind: "draft", label: tk("Draft"), short: "Draft", glyph: "d-draft", hint: tk("Anything not ready yet") },
 ];
 export const DOC_STATUSES: DocStatus[] = ["draft", "review", "approved", "superseded", "rejected"];
 export const DOC_STATUS_COLOR: Record<DocStatus, string> = { draft: "var(--muted)", review: "var(--warning)", approved: "var(--success)", superseded: "var(--muted)", rejected: "var(--danger)" };
-export const DOC_STATUS_LABEL: Record<DocStatus, string> = { draft: "Draft", review: "In review", approved: "Approved", superseded: "Superseded", rejected: "Rejected" };
+export const DOC_STATUS_LABEL: Record<DocStatus, string> = { draft: tk("Draft"), review: tk("In review"), approved: tk("Approved"), superseded: tk("Superseded"), rejected: tk("Rejected") };
 export const DOC_STATUS_GLYPH: Record<DocStatus, GlyphName> = { draft: "d-draft", review: "d-review", approved: "d-approved", superseded: "d-superseded", rejected: "d-rejected" };
 
 export interface ProjectDoc { note: Note; kind: DocKind; status: DocStatus; owner: string; supersededBy: string; reason: string; approved: string }
@@ -48,12 +49,12 @@ export const setDocStatus = (body: string, s: DocStatus, today = new Date().toIS
 // ------------------------------------------------------------------ task cards
 export type CardStatus = "backlog" | "todo" | "doing" | "review" | "done" | "cancelled";
 export const CARD_COLUMNS: { s: CardStatus; label: string; mark: string; color: string; glyph: GlyphName }[] = [
-  { s: "backlog", label: "Backlog", mark: ">", color: "var(--muted)", glyph: "t-backlog" },
-  { s: "todo", label: "Todo", mark: " ", color: "var(--text)", glyph: "t-todo" },
-  { s: "doing", label: "Doing", mark: "/", color: "var(--info)", glyph: "t-doing" },
-  { s: "review", label: "Review", mark: "?", color: "var(--warning)", glyph: "t-review" },
-  { s: "done", label: "Done", mark: "x", color: "var(--success)", glyph: "t-done" },
-  { s: "cancelled", label: "Cancelled", mark: "-", color: "var(--muted)", glyph: "t-cancelled" },
+  { s: "backlog", label: tk("Backlog"), mark: ">", color: "var(--muted)", glyph: "t-backlog" },
+  { s: "todo", label: tk("Todo"), mark: " ", color: "var(--text)", glyph: "t-todo" },
+  { s: "doing", label: tk("Doing"), mark: "/", color: "var(--info)", glyph: "t-doing" },
+  { s: "review", label: tk("Review"), mark: "?", color: "var(--warning)", glyph: "t-review" },
+  { s: "done", label: tk("Done"), mark: "x", color: "var(--success)", glyph: "t-done" },
+  { s: "cancelled", label: tk("Cancelled"), mark: "-", color: "var(--muted)", glyph: "t-cancelled" },
 ];
 export const CARD_META = Object.fromEntries(CARD_COLUMNS.map((c) => [c.s, c])) as Record<CardStatus, (typeof CARD_COLUMNS)[number]>;
 const MARK_STATUS: Record<string, CardStatus> = { ">": "backlog", " ": "todo", "/": "doing", "?": "review", x: "done", X: "done", "-": "cancelled" };
@@ -113,8 +114,8 @@ export const initials = (owner: string) => {
 // ------------------------------------------------------------------ requirements + traceability
 export type Moscow = "must" | "should" | "could" | "wont";
 export const MOSCOW: { k: Moscow; label: string; color: string }[] = [
-  { k: "must", label: "Must", color: "var(--danger)" }, { k: "should", label: "Should", color: "var(--warning)" },
-  { k: "could", label: "Could", color: "var(--info)" }, { k: "wont", label: "Won't", color: "var(--muted)" },
+  { k: "must", label: tk("Must"), color: "var(--danger)" }, { k: "should", label: tk("Should"), color: "var(--warning)" },
+  { k: "could", label: tk("Could"), color: "var(--info)" }, { k: "wont", label: tk("Won't"), color: "var(--muted)" },
 ];
 export interface Requirement { id: string; priority: Moscow | null; text: string; doc: Note; line: number; tasks: TaskCard[]; state: "met" | "progress" | "planned" | "none" }
 const REQ_RE = /^\s*[-*+]\s+(?:\[[ xX/?>-]\]\s+)?(REQ-\d+)\s*(?:\((must|should|could|won'?t)\))?\s*[:—-]?\s*(.+)$/i;
@@ -160,7 +161,7 @@ export function ganttRows(cards: TaskCard[], today: string): GanttRow[] {
   const epics = [...byEpic].map(([e, cs]) => ({ e, cs: cs.map((c) => ({ c, s: cardSpan(c)! })).sort((a, b) => a.s.start.localeCompare(b.s.start)) }))
     .sort((a, b) => a.cs[0].s.start.localeCompare(b.cs[0].s.start));
   for (const { e, cs } of epics) {
-    rows.push({ kind: "epic", label: `Epic: ${e}`, start: cs[0].s.start, end: cs.map((x) => x.s.end).sort().at(-1)!, count: cs.length, late: false });
+    rows.push({ kind: "epic", label: t("Epic: {name}", { name: e }), start: cs[0].s.start, end: cs.map((x) => x.s.end).sort().at(-1)!, count: cs.length, late: false });
     for (const { c, s } of cs) rows.push({ kind: "task", label: c.text, start: s.start, end: s.end, card: c, late: isLate(c, today) });
   }
   return rows;
@@ -225,26 +226,26 @@ export function projectHealth(cards: TaskCard[], deadline: string | null, create
   const overdue = live.filter((c) => c.due && c.status !== "done" && c.due < today).length;
   const reasons: string[] = [];
   const mustNone = reqs.filter((r) => r.priority === "must" && r.state === "none").map((r) => r.id);
-  if (mustNone.length) reasons.push(`${mustNone.length} must-have requirement${mustNone.length === 1 ? " has" : "s have"} no tasks (${mustNone.join(", ")}).`);
-  if (overdue) reasons.push(`${overdue} task${overdue === 1 ? " is" : "s are"} past due.`);
+  if (mustNone.length) reasons.push(t("{n} must-have requirement has no tasks ({ids}).|{n} must-have requirements have no tasks ({ids}).", { n: mustNone.length, ids: mustNone.join(", ") }));
+  if (overdue) reasons.push(t("{n} task is past due.|{n} tasks are past due.", { n: overdue }));
   // epics with a card whose start date passed while it still waits in backlog/todo
   const epics = new Map<string, TaskCard[]>();
   for (const c of live) if (c.epic) epics.set(c.epic, [...(epics.get(c.epic) ?? []), c]);
   for (const [e, cs] of epics) {
     const late = cs.filter((c) => c.start && c.start < today && (c.status === "todo" || c.status === "backlog")).map((c) => Math.round((at(today) - at(c.start!)) / dayMs));
-    if (late.length) { const d = Math.max(...late); reasons.push(`The ${e} epic started ${d} day${d === 1 ? "" : "s"} late.`); }
+    if (late.length) { const d = Math.max(...late); reasons.push(t("The {name} epic started {n} day late.|The {name} epic started {n} days late.", { name: e, n: d })); }
   }
   let tone: HealthTone, timePct: number | undefined;
   if (!deadline) tone = reasons.length ? "warn" : "muted";
   else {
     const total = at(deadline) - createdAt, used = now - createdAt;
     timePct = total > 0 ? Math.min(1, Math.max(0, used / total)) : 1;
-    const gap = `${Math.round(timePct * 100)}% of the time is used, ${Math.round(pct * 100)}% of the work is done.`;
-    if (now > at(deadline) + dayMs && pct < 1) { tone = "bad"; reasons.unshift("The deadline has passed."); }
+    const gap = t("{a}% of the time is used, {b}% of the work is done.", { a: Math.round(timePct * 100), b: Math.round(pct * 100) });
+    if (now > at(deadline) + dayMs && pct < 1) { tone = "bad"; reasons.unshift(t("The deadline has passed.")); }
     else if (pct + 0.25 < timePct) { tone = "bad"; reasons.unshift(gap); }
     else if (pct + 0.1 < timePct) { tone = "warn"; reasons.unshift(gap); }
     else tone = mustNone.length || overdue || reasons.length ? "warn" : "ok";
   }
-  const label = tone === "ok" ? "On track" : tone === "warn" ? "At risk" : tone === "bad" ? "Behind" : "No deadline";
+  const label = tone === "ok" ? t("On track") : tone === "warn" ? t("At risk") : tone === "bad" ? t("Behind") : t("No deadline");
   return { label, tone, pct, overdue, timePct, reasons };
 }

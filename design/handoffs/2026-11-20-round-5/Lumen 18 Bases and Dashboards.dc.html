@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 18 Bases &amp; dashboards</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 4</span></div><div style="font-size:14px;color:#9A9890">A10 bases (five views, popovers, cell editors, drag), D5 notes in several groups, D4 dashboards with the Add tile flow.</div></div>
+  </div>
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="3">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ sec.k }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ sec.t }}</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">{{ sec.d }}</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+        <sc-for list="{{ sec.frames }}" as="f" hint-placeholder-count="5">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};--sh:{{ f.t.sh }};--c1:{{ f.t.c1 }};--c2:{{ f.t.c2 }};--c3:{{ f.t.c3 }};--c4:{{ f.t.c4 }};--c5:{{ f.t.c5 }};--c6:{{ f.t.c6 }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)">
+              <sc-if value="{{ f.isBase }}"><dc-import name="BaseDesk" view="{{ f.v }}" pop="{{ f.pop }}" multi="{{ f.multi }}" phone="{{ f.ph }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></sc-if>
+              <sc-if value="{{ f.isDash }}"><dc-import name="DashDesk" wizard="{{ f.wiz }}" edit="{{ f.edit }}" table="{{ f.tbl }}" phone="{{ f.ph }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></sc-if>
+            </div>
+            <div style="max-width:{{ f.w }};font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+
+  <section style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">R4-18T</span> New base · template picker</div>
+      <div style="width:720px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column;color:var(--tx)">
+        <div style="padding:18px 20px 6px;font-size:17px;font-weight:650">New from template</div>
+        <div style="padding:10px 20px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px"><sc-for list="{{ templates }}" as="t" hint-placeholder-count="6"><div style="border-radius:12px;border:{{ t.b }};background:{{ t.bg }};padding:12px;display:flex;flex-direction:column;gap:6px"><dc-import name="LumenGlyph" glyph="{{ t.g }}" size="{{ 18 }}" hint-size="18px,18px"></dc-import><span style="font-weight:600">{{ t.n }}</span><span style="font-size:12px;color:var(--mu);line-height:17px">{{ t.d }}</span></div></sc-for></div>
+        <div style="padding:14px 20px;display:flex;justify-content:flex-end;gap:8px"><span style="height:34px;padding:0 14px;display:flex;align-items:center;color:var(--mu)">Cancel</span><span style="height:34px;padding:0 16px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">Create base</span></div>
+      </div></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">R4-18U</span> Chart style · series order</div>
+      <div style="width:560px;border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:20px;display:flex;flex-direction:column;gap:14px;color:var(--tx)">
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px"><sc-for list="{{ series }}" as="s" hint-placeholder-count="6"><div style="display:flex;flex-direction:column;gap:6px"><div style="height:44px;border-radius:8px;display:flex;overflow:hidden"><span style="flex:1;background:{{ s.d }}"></span><span style="flex:1;background:{{ s.l }}"></span></div><span style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu)">c{{ s.n }} · {{ s.name }}</span></div></sc-for></div>
+        <span style="color:var(--mu);line-height:19px">Canvas presets in a fixed order; darker steps on light themes. Course series use their space colour. Text in charts is always ink or muted, never the series colour. Max 6 series and 12 categories (rest folded into “Other”).</span>
+      </div></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const CH_D = { c1:'#A371F7', c2:'#39C5CF', c3:'#E8893A', c4:'#57AB5A', c5:'#E3B341', c6:'#E5534B' };
+    const CH_L = { c1:'#7A4BD1', c2:'#13868F', c3:'#B55E14', c4:'#2F7D33', c5:'#9C7A10', c6:'#B83A33' };
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', inn:'#7AA2F7', le:'#B48EF0', sh:'none', ...CH_D };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', inn:'#2F5BD3', le:'#7A4BD1', sh:'0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .08)', ...CH_L };
+    const B = (id,l,v,pop,multi,t,n,ph=false) => ({ id, l, isBase:true, isDash:false, v, pop, multi, ph, wiz:0, edit:false, tbl:false, t, n, w: ph?'412px':'1440px', h: ph?'915px':'900px', r: ph?'28px':'12px' });
+    const Dd = (id,l,wiz,edit,tbl,t,n,ph=false) => ({ id, l, isBase:false, isDash:true, v:'table', pop:'none', multi:false, ph, wiz, edit, tbl, t, n, w: ph?'412px':'1440px', h: ph?'915px':'900px', r: ph?'28px':'12px' });
+    const sections = [
+      { k:'R4 · A10', t:'Bases · five views', d:'A base note holds Obsidian Bases YAML. Every toolbar change rewrites only the ```base block.', frames:[
+        B('R4-18A','Table · filter popover · Lamplight','table','filter',false,L,'Filter rows read like a sentence: where · property · operator · value. Groups of “any of” nest one level. Same operators as search.'),
+        B('R4-18B','Table · status cell editor · Paper','table','cell',false,P,'Cells edit in place: status opens a glyph menu, dates a picker, tags a chip input. Title, created, updated and folder are read-only.'),
+        B('R4-18C','Board · card dragged to To revise','board','none',false,L,'Dragging writes the group property. Drop slot is a dashed amber outline; the target column gets a faint ring.'),
+        B('R4-18D','Gallery · Paper','gallery','none',false,P,'Cover = first image in the note, else a striped placeholder. Two lines max.'),
+        B('R4-18E','List · grouped','list','none',false,L,'Densest view: glyph, title, course, due.'),
+        B('R4-18F','Calendar · by due date · view settings open','cal','view',false,L,'Pick the date property in View settings. Items carry the course colour bar.'),
+        B('R4-18G','Phone · table, 3 columns','table','none',false,L,'Fewer columns, horizontal scroll for the rest; toolbar wraps.',true),
+        B('R4-18H','Phone · board, one column at a time','board','none',false,P,'Swipe between columns; long-press a card to move it.',true)
+      ]},
+      { k:'R4 · D5', t:'A note in several groups', d:'When the group property has several values, the note shows in each group — and says so.', frames:[
+        B('R4-18I','Table · “also in 2 groups” marker','table','none',true,L,'A quiet chip on the row; hover lists the groups.'),
+        B('R4-18J','Board grouped by tag · moved toast','board','none',true,P,'Attention sits in #cv (ghost, being dragged), #llm and #nlp. Dropping into #nlp removes only #cv. View setting: “Several values: show in each group / first group only”.')
+      ]},
+      { k:'R4 · D4', t:'Dashboards', d:'A dashboard note is a 12-column grid of tiles over sessions, flashcards, paths, base views or notes.', frames:[
+        Dd('R4-18K','Dashboard · Lamplight','0',false,false,L,'Numbers with a delta (green good, red bad), stacked bars, line + dashed comparison, donut, ring, heatmap, mini table.'),
+        Dd('R4-18L','Dashboard · Paper · edit grid','0',true,false,P,'Edit shows the 12 columns; drag a tile or its corner to snap. Selected tile gets the amber outline and resize handle.'),
+        Dd('R4-18M','Bar tile as data table','0',false,true,L,'Every chart has a Table toggle (accessibility, copy-paste).'),
+        Dd('R4-18N','Add tile · 1 source','1',false,false,L,'Five sources. Live preview from step 2 on.'),
+        Dd('R4-18O','Add tile · 2 chart · Paper','2',false,false,P,'Eight chart types, glyph tiles.'),
+        Dd('R4-18P','Add tile · 3 fields','3',false,false,L,'Title, x, bucket, value, series, range, filter, running total. Preview updates as you type.'),
+        Dd('R4-18Q','Phone · dashboard','0',false,false,L,'Two columns; wide tiles span both.',true)
+      ]}
+    ].map(s => ({ ...s, frames: s.frames.map(f => ({ ...f, wiz: Number(f.wiz) || 0 })) }));
+    const templates = [['base','Base (database view)','Empty table of all notes',1],['v-board','Lessons by status × course','Board grouped by status, filtered to lessons'],['v-calendar','Due this month','Calendar by due date'],['flashcards','Cards by deck','Table of flashcard notes'],['pdf','Reading list','PDFs with progress'],['dashboard','Dashboard','Tiles over sessions and cards']].map(([g,n,d,on]) => ({ g, n, d, b: on?'1.5px solid #F2A93B':'1px solid #2A303B', bg: on?'color-mix(in srgb,#F2A93B 8%,#161A21)':'#161A21' }));
+    const series = [['1','purple','#A371F7','#7A4BD1'],['2','cyan','#39C5CF','#13868F'],['3','orange','#E8893A','#B55E14'],['4','green','#57AB5A','#2F7D33'],['5','yellow','#E3B341','#9C7A10'],['6','red','#E5534B','#B83A33']].map(([n,name,d,l]) => ({ n, name, d, l }));
+    return { sections, templates, series };
+  }
+}
+</script>
+</body>
+</html>

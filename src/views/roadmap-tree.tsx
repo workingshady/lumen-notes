@@ -13,10 +13,11 @@ import { setTopicLink, type Module, type Topic } from "../lib/parse";
 import { Glyph } from "../components/Glyph";
 import { DropTag, LinkMenu, LinkTip, PrereqDisplayPanel, PrereqDisplaySheet, dropBorder, dropLineColor, dropState, linkLook, prereqEdgeTypes, usePrereqDisplay, type DropState, type PrereqEdgeData } from "../components/prereq-ui";
 import { cx } from "../components/ui";
-import { checkLink, impliedLinks, linkMessage, needPath, type LinkKind } from "../lib/prereq-graph";
+import { arrow, checkLink, impliedLinks, LINK_LABEL, linkMessage, needPath, type LinkKind } from "../lib/prereq-graph";
 import { toast } from "../lib/store";
 import { announce, dragKind, endDrag, startDrag } from "./dnd-parts";
 import { StatusGlyph, type useModuleFold } from "./roadmap-parts";
+import { t as tr, useLang } from "../lib/i18n";
 
 type Fold = ReturnType<typeof useModuleFold>;
 
@@ -49,6 +50,7 @@ const PW = 150, PCOL = 170, PX0 = 16;
 
 type TData = { t: Topic; sel: boolean; dim: boolean; fresh: boolean; phone: boolean; w: number; drop: DropState };
 const TopicNode = memo(({ data }: NodeProps<RFNode<TData>>) => {
+  useLang();
   const { t, sel, dim, fresh, phone, w, drop } = data;
   const style: CSSProperties = {
     width: w, height: H,
@@ -65,9 +67,9 @@ const TopicNode = memo(({ data }: NodeProps<RFNode<TData>>) => {
       <Handle type="target" position={Position.Left} isConnectableStart={false} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", transform: "none", left: 0, top: 0, border: 0, background: "transparent", borderRadius: 10 }} />
       <div className={cx("box-border flex items-center gap-2 rounded-[10px] px-2.5 text-[13px]", fresh && "rm-unlock")} style={style}>
         <StatusGlyph t={t} />
-        <span className={cx("min-w-0 flex-1 truncate font-medium", phone && "text-[13px]")}>{t.name}</span>
+        <span className={cx("min-w-0 flex-1 truncate font-medium", phone && "text-[13px]")} dir="auto">{t.name}</span>
       </div>
-      <Handle type="source" position={Position.Right} title="Drag onto a topic to make this its prerequisite" className="lm-src"
+      <Handle type="source" position={Position.Right} title={tr("Drag onto a topic to make this its prerequisite")} className="lm-src"
         style={{ width: 10, height: 10, right: 0, transform: "translate(0,-50%)", background: "var(--accent)", border: "2px solid var(--bg)", cursor: "crosshair" }} />
     </div>
   );
@@ -75,16 +77,16 @@ const TopicNode = memo(({ data }: NodeProps<RFNode<TData>>) => {
 TopicNode.displayName = "TopicNode";
 
 type MData = { m: Module; count: number; onOpen: () => void; dim: boolean };
-const ModuleNode = memo(({ data }: NodeProps<RFNode<MData>>) => (
+const ModuleNode = memo(({ data }: NodeProps<RFNode<MData>>) => { useLang(); return (
   <div className="relative">
     <Handle type="target" position={Position.Left} isConnectable={false} style={{ opacity: 0, left: 0 }} />
-    <button onClick={(e) => { e.stopPropagation(); data.onOpen(); }} title="Expand module"
-      className="box-border flex h-[62px] w-[180px] flex-col justify-center gap-[3px] rounded-[10px] border border-dashed border-line bg-surface px-3 text-left text-[13px]" style={{ opacity: data.dim ? 0.35 : 1 }}>
-      <span className="truncate font-semibold" dir="auto">{data.m.name}</span><span className="text-[12px] text-muted">{data.count} topics · collapsed</span>
+    <button onClick={(e) => { e.stopPropagation(); data.onOpen(); }} title={tr("Expand module")}
+      className="box-border flex h-[62px] w-[180px] flex-col justify-center gap-[3px] rounded-[10px] border border-dashed border-line bg-surface px-3 text-start text-[13px]" style={{ opacity: data.dim ? 0.35 : 1 }}>
+      <span className="truncate font-semibold" dir="auto">{data.m.name}</span><span className="text-[12px] text-muted">{tr("{n} topic|{n} topics", { n: data.count })} · {tr("collapsed")}</span>
     </button>
     <Handle type="source" position={Position.Right} isConnectable={false} style={{ opacity: 0, right: 0 }} />
   </div>
-));
+); });
 ModuleNode.displayName = "ModuleNode";
 
 /**
@@ -158,10 +160,10 @@ function TreeControls({ right }: { right: number }) {
   const rf = useReactFlow();
   const b = "flex h-7 w-[30px] items-center justify-center rounded-[7px] text-[15px] hover:bg-surface-2";
   return (
-    <div className="absolute bottom-4 z-10 flex gap-0.5 rounded-[10px] border border-line bg-surface p-[3px]" style={{ right }}>
-      <button className={b} aria-label="Zoom in" onClick={() => void rf.zoomIn({ duration: 150 })}>+</button>
-      <button className={b} aria-label="Zoom out" onClick={() => void rf.zoomOut({ duration: 150 })}>−</button>
-      <button className={b} aria-label="Fit" onClick={() => void rf.fitView({ duration: 200, padding: 0.12 })}><Glyph name="full" size={14} /></button>
+    <div className="absolute bottom-4 z-10 flex gap-0.5 rounded-[10px] border border-line bg-surface p-[3px]" style={{ insetInlineEnd: right }}>
+      <button className={b} aria-label={tr("Zoom in")} onClick={() => void rf.zoomIn({ duration: 150 })}>+</button>
+      <button className={b} aria-label={tr("Zoom out")} onClick={() => void rf.zoomOut({ duration: 150 })}>−</button>
+      <button className={b} aria-label={tr("Fit")} onClick={() => void rf.fitView({ duration: 200, padding: 0.12 })}><Glyph name="full" size={14} /></button>
     </div>
   );
 }
@@ -288,18 +290,18 @@ export function Tree({ mods, sel, phone, fold, fresh, onSelect, onConnect, onCre
     setMenu({ x: Math.min(e.clientX - r.left + 12, r.width - 236), y: Math.min(e.clientY - r.top + 8, r.height - 210), from: l.from, to: l.to, kind: l.kind === "implied" ? "needs" : l.kind, id: l.id });
   };
   const edit = (f: (md: string) => string, said: string) => { if (onEditLinks) onEditLinks(f, said); setMenu(null); };
-  const setKind = (k: LinkKind) => menu && edit((md) => setTopicLink(md, menu.to.line, menu.from.name, k), `${menu.from.name} → ${menu.to.name}: ${k === "needs" ? "prerequisite" : k === "after" ? "recommended order" : "related"}`);
+  const setKind = (k: LinkKind) => menu && edit((md) => setTopicLink(md, menu.to.line, menu.from.name, k), `${menu.from.name}${arrow()}${menu.to.name}: ${tr(LINK_LABEL[k])}`);
   const removeLink = () => {
     if (!menu) return;
-    if (onEditLinks) edit((md) => setTopicLink(md, menu.to.line, menu.from.name, null), `Removed ${menu.from.name} → ${menu.to.name}`);
+    if (onEditLinks) edit((md) => setTopicLink(md, menu.to.line, menu.from.name, null), tr("Removed {link}", { link: `${menu.from.name}${arrow()}${menu.to.name}` }));
     else { onRemoveNeed(menu.to, menu.from.name); setMenu(null); }
   };
   const reverse = () => {
     if (!menu) return;
     const { from, to, kind } = menu;
     const without = (k: string) => (k === String(to.line) ? needsOf(k).filter((n) => n !== String(from.line)) : needsOf(k));
-    if (kind === "needs" && needPath(without, String(to.line), String(from.line))) { toast(`Can't reverse: ${to.name} still needs ${from.name} through other links, so this would make a loop.`, undefined, { icon: "error" }); return setMenu(null); }
-    edit((md) => setTopicLink(setTopicLink(md, to.line, from.name, null), from.line, to.name, kind), `Reversed: ${to.name} → ${from.name}`);
+    if (kind === "needs" && needPath(without, String(to.line), String(from.line))) { toast(tr("Can't reverse: {a} still needs {b} through other links, so this would make a loop.", { a: to.name, b: from.name }), undefined, { icon: "error" }); return setMenu(null); }
+    edit((md) => setTopicLink(setTopicLink(md, to.line, from.name, null), from.line, to.name, kind), tr("Reversed: {link}", { link: `${to.name}${arrow()}${from.name}` }));
   };
 
   // palette: drag "+ Topic" onto the canvas (new topic) or onto a node (new topic that needs it)
@@ -316,6 +318,7 @@ export function Tree({ mods, sel, phone, fold, fresh, onSelect, onConnect, onCre
   };
   const miniColor = (n: RFNode) => { const t = (n.data as TData).t; return !t ? "var(--border)" : t.status === "done" ? "var(--success)" : t.status === "learning" ? "var(--info)" : "var(--muted)"; };
   const inset = panel && !phone ? 300 : 0;
+  const { rtl } = useLang();
 
   return (
     <div ref={box} className="lm-flow absolute inset-0" style={{ backgroundImage: "radial-gradient(var(--border) 1px, transparent 1px)", backgroundSize: "20px 20px" }}
@@ -335,7 +338,7 @@ export function Tree({ mods, sel, phone, fold, fresh, onSelect, onConnect, onCre
           if (d?.over && d.over !== d.from) {
             const ck = checkLink(needsOf, d.from, d.over);
             const m = linkMessage(ck, nameOf, d.from, d.over);
-            if (ck.kind === "loop" && m) { toast(`Can't drop here: ${m.body}`, undefined, { icon: "error" }); announce(`${m.title}. ${m.body}`); }
+            if (ck.kind === "loop" && m) { toast(tr("Can't drop here: {why}", { why: m.body }), undefined, { icon: "error" }); announce(`${m.title}. ${m.body}`); }
             else if (ck.kind === "implied") setAsk({ from: d.from, to: d.over, ...tipAt(d.over) });
             return;
           }
@@ -350,50 +353,50 @@ export function Tree({ mods, sel, phone, fold, fresh, onSelect, onConnect, onCre
         <ViewportPortal>
           {/* one header per module, at its first column; click folds the module into a summary card (grouped only) */}
           {disp.group && mods.map((m, i) => (
-            <button key={i} onClick={() => fold.toggle(i)} title={fold.isOpen(i) ? "Collapse module" : "Expand module"}
+            <button key={i} onClick={() => fold.toggle(i)} title={fold.isOpen(i) ? tr("Collapse module") : tr("Expand module")}
               className="pointer-events-auto absolute flex max-w-[220px] items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-[.06em] text-muted hover:text-ink"
               style={{ left: 0, top: 14, transform: `translateX(${L.G.x0 + L.start[i] * L.G.col}px)` }}>
               <Glyph name={fold.isOpen(i) ? "expand" : "wide"} size={14} /><span className="truncate" dir="auto">{m.name}</span>
-              <span className="font-medium normal-case tracking-normal">{m.topics.length} topics</span>
+              <span className="font-medium normal-case tracking-normal">{tr("{n} topic|{n} topics", { n: m.topics.length })}</span>
             </button>
           ))}
         </ViewportPortal>
         {!phone && (
-          <MiniMap position="bottom-right" pannable zoomable nodeColor={miniColor} nodeBorderRadius={2} nodeStrokeWidth={0} maskColor="transparent" maskStrokeColor="var(--accent)" maskStrokeWidth={1.5}
-            style={{ width: 180, height: 110, margin: 16, marginRight: 16 + inset, borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", overflow: "hidden" }} />
+          <MiniMap position={rtl ? "bottom-left" : "bottom-right"} pannable zoomable nodeColor={miniColor} nodeBorderRadius={2} nodeStrokeWidth={0} maskColor="transparent" maskStrokeColor="var(--accent)" maskStrokeWidth={1.5}
+            style={{ width: 180, height: 110, margin: 16, [rtl ? "marginLeft" : "marginRight"]: 16 + inset, borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", overflow: "hidden" }} />
         )}
       </ReactFlow>
       {paletteOver === "pane" && <div className="pointer-events-none absolute inset-2 rounded-[14px] border-2 border-dashed border-accent/60" />}
       {!phone && (
-        <div className="absolute top-3.5 z-10 flex items-center gap-3.5 rounded-[8px] bg-bg px-2 py-1 text-[12px] text-muted" style={{ right: 16 + inset }}>
-          <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-ok" />done</span>
-          <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-[var(--info)]" />learning</span>
-          <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-[var(--muted)] opacity-50" />locked</span>
-          {!panel && <button onClick={() => setPanel(true)} className="flex h-6 items-center gap-1 rounded-[6px] border border-line px-2 hover:text-ink"><SlidersHorizontal size={12} />Display</button>}
+        <div className="absolute top-3.5 z-10 flex items-center gap-3.5 rounded-[8px] bg-bg px-2 py-1 text-[12px] text-muted" style={{ insetInlineEnd: 16 + inset }}>
+          <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-ok" />{tr("done")}</span>
+          <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-[var(--info)]" />{tr("learning")}</span>
+          <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-[var(--muted)] opacity-50" />{tr("locked")}</span>
+          {!panel && <button onClick={() => setPanel(true)} className="flex h-6 items-center gap-1 rounded-[6px] border border-line px-2 hover:text-ink"><SlidersHorizontal size={12} />{tr("Display")}</button>}
         </div>
       )}
-      {drag?.over && overMsg && overState && overState !== "valid" && (() => { const t = tipAt(drag.over); return <LinkTip state={overState} title={overMsg.title} body={overMsg.body} x={t.x} y={t.y} />; })()}
+      {drag?.over && overMsg && overState && overState !== "valid" && (() => { const tp = tipAt(drag.over); return <LinkTip state={overState} title={overMsg.title} body={overMsg.body} x={tp.x} y={tp.y} />; })()}
       {ask && (() => { const m = linkMessage(checkLink(needsOf, ask.from, ask.to), nameOf, ask.from, ask.to); return m ? <LinkTip state="implied" title={m.title} body={m.body} x={ask.x} y={ask.y} onAdd={() => { onConnect(Number(ask.to), Number(ask.from)); setAsk(null); }} onCancel={() => setAsk(null)} /> : null; })()}
       {menu && (
         <LinkMenu phone={phone} x={Math.max(8, menu.x)} y={Math.max(8, menu.y)} from={menu.from.name} to={menu.to.name} kind={onEditLinks ? menu.kind : null}
           onKind={onEditLinks ? setKind : undefined} onReverse={onEditLinks ? reverse : undefined} onRemove={removeLink} onClose={() => setMenu(null)} />
       )}
       {/* palette: drag onto the canvas / a topic, or click to add */}
-      <button data-palette draggable onDragStart={(e) => startDrag(e, "palette", "topic", "New topic")} onDragEnd={() => { endDrag(); setPaletteOver(null); }}
+      <button data-palette draggable onDragStart={(e) => startDrag(e, "palette", "topic", tr("New topic"))} onDragEnd={() => { endDrag(); setPaletteOver(null); }}
         onClick={() => onCreate(sel !== null ? L.all.find((t) => t.line === sel)?.module ?? null : null)}
-        title="Drag onto the canvas for a new topic, or onto a topic for a next step that needs it. Click to add."
-        className={cx("absolute z-10 flex h-[30px] cursor-grab items-center gap-1.5 rounded-full border border-dashed border-accent bg-surface px-3 font-semibold text-accent active:cursor-grabbing", phone ? "bottom-3 left-3" : "bottom-5 left-6")}>
-        + Topic {!phone && <span className="font-normal text-muted">drag onto canvas or a node</span>}
+        title={tr("Drag onto the canvas for a new topic, or onto a topic for a next step that needs it. Click to add.")}
+        className={cx("absolute z-10 flex h-[30px] cursor-grab items-center gap-1.5 rounded-full border border-dashed border-accent bg-surface px-3 font-semibold text-accent active:cursor-grabbing", phone ? "bottom-3 start-3" : "bottom-5 start-6")}>
+        {tr("+ Topic")} {!phone && <span className="font-normal text-muted">{tr("drag onto canvas or a node")}</span>}
       </button>
       {phone
         ? <>
-            <span className="pointer-events-none absolute right-14 top-3 flex h-7 items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 text-[12px] text-muted">swipe</span>
-            <button aria-label="Skill tree display" onClick={() => setSheet(true)} className="absolute right-3 top-2 z-10 flex size-9 items-center justify-center rounded-[10px] border border-line bg-surface"><SlidersHorizontal size={16} /></button>
+            <span className="pointer-events-none absolute end-14 top-3 flex h-7 items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 text-[12px] text-muted">{tr("swipe")}</span>
+            <button aria-label={tr("Skill tree display")} onClick={() => setSheet(true)} className="absolute end-3 top-2 z-10 flex size-9 items-center justify-center rounded-[10px] border border-line bg-surface"><SlidersHorizontal size={16} /></button>
           </>
         : <TreeControls right={208 + inset} />}
       {panel && !phone && (
         <PrereqDisplayPanel d={disp} set={setDisp} onClose={() => setPanel(false)} counts={counts}
-          o={{ groupLabel: "Group by module", bundleLabel: "Bundle links between modules", dimLabel: "Dim topics outside focus" }} />
+          o={{ groupLabel: tr("Group by module"), bundleLabel: tr("Bundle links between modules"), dimLabel: tr("Dim topics outside focus") }} />
       )}
       {sheet && phone && <PrereqDisplaySheet d={disp} set={setDisp} onClose={() => setSheet(false)} />}
     </div>

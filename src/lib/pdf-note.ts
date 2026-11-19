@@ -4,6 +4,7 @@ import type { Note } from "../../shared/types";
 import { addFile } from "./attachments";
 import { createNote, findOrCreateByTitle, updateNote } from "./actions";
 import { db, uid } from "./db";
+import { t } from "./i18n";
 import {
   flashcardLine, highlightsMarkdown, hlCanvasNode, hlNoteBody, newPdfBody, pdfMeta, removeHighlight, setPdfMeta, shortTitle, titleFromFile, upsertHighlight,
   type Highlight, type PdfMeta,
@@ -50,7 +51,7 @@ export async function openPdfFromCard(file: string, name: string): Promise<void>
   const cur = ui.noteId ? await db.notes.get(ui.noteId) : undefined;
   const existing = await pdfNoteFor(file);
   const n = existing ?? (await createPdfNote({ file, name, spaceId: cur?.spaceId ?? (ui.spaceId === "all" ? "inbox" : ui.spaceId), folderId: cur?.folderId ?? null }));
-  if (!existing) toast(`Created PDF note “${n.title}”`);
+  if (!existing) toast(t("Created PDF note “{title}”", { title: n.title }));
   openNote(n.id, "read");
 }
 
@@ -58,7 +59,7 @@ export async function openPdfFromCard(file: string, name: string): Promise<void>
 export async function addPdfFile(f: File, spaceId: string, folderId: string | null = null): Promise<Note> {
   const md = await addFile(f);
   const id = /\(att:([^)]+)\)/.exec(md)?.[1];
-  if (!id) throw new Error("Upload failed");
+  if (!id) throw new Error(t("Upload failed"));
   return createPdfNote({ file: `att:${id}`, name: f.name, spaceId, folderId });
 }
 
@@ -84,7 +85,7 @@ export const saveReading = (noteId: string, p: Partial<PdfMeta>) => editBody(not
 export async function saveAreaImage(blob: Blob, pdfTitle: string, page: number): Promise<string> {
   const md = await addFile(new File([blob], `${pdfTitle.replace(/[^\w-]+/g, "-").slice(0, 40)}-p${page}-area.png`, { type: "image/png" }));
   const id = /\(att:([^)]+)\)/.exec(md)?.[1];
-  if (!id) throw new Error("Couldn't save the image");
+  if (!id) throw new Error(t("Couldn't save the image"));
   return `att:${id}`;
 }
 

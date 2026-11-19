@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { api, forgetAccount, getAccount, getToken, setToken } from "./api";
 import { DEMO } from "./db";
 import { toast } from "./store";
+import { t } from "./i18n";
 import { useSync } from "./sync";
 
 const ID_KEY = "lumen.deviceId";
@@ -45,7 +46,7 @@ export async function reportDevice(force = false) {
     if (r.revoked) {
       setToken(null);
       forgetAccount(getAccount());
-      toast("This device was signed out from another device. Unlock again to sync.");
+      toast(t("This device was signed out from another device. Unlock again to sync."));
     }
   } catch { /* offline or older server: try again after the next sync */ }
 }

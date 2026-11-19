@@ -18,9 +18,10 @@ import { Board } from "./hub-board";
 import { addDays, addTask, cardDay, cardsOfDoc, dayMon, DocPill, menuRow, Popover, TaskGlyph, todayISO } from "./hub-parts";
 import { diagramNotes, Diagrams, Gantt, Requirements } from "./hub-plan";
 import { usePhone } from "./spaces-util";
+import { fmtNum, t as tr, tk, tx } from "../lib/i18n";
 
 type Tab = "overview" | "docs" | "board" | "requirements" | "timeline" | "diagrams" | "assistant";
-const PRIMARY: Record<Tab, string> = { overview: "New task", docs: "New doc", board: "Quick add", requirements: "New requirement", timeline: "Export", diagrams: "New diagram", assistant: "Ask" };
+const PRIMARY: Record<Tab, string> = { overview: tk("New task"), docs: tk("New doc"), board: tk("Quick add"), requirements: tk("New requirement"), timeline: tk("Export"), diagrams: tk("New diagram"), assistant: tk("Ask") };
 const TONE = { ok: "var(--success)", warn: "var(--warning)", bad: "var(--danger)", muted: "var(--muted)" } as const;
 
 export function ProjectHub({ sp, overview, more, color }: { sp: Space; overview: ReactNode; more?: ReactNode; color?: string; onSettings?: () => void }) {
@@ -39,10 +40,10 @@ export function ProjectHub({ sp, overview, more, color }: { sp: Space; overview:
   const deadline = sp.props.deadline || null;
   const health = projectHealth(cards, deadline, sp.props.start ? Date.parse(sp.props.start) : sp.createdAt, reqs);
   const tabs: { id: Tab; label: string; n?: number }[] = [
-    { id: "overview", label: "Overview" }, { id: "docs", label: "Docs", n: docs.length }, { id: "board", label: "Board", n: cards.length },
-    { id: "requirements", label: "Requirements", n: reqs.length }, { id: "timeline", label: "Timeline" }, { id: "diagrams", label: "Diagrams", n: diagramNotes(notes).length }, { id: "assistant", label: "Assistant" },
+    { id: "overview", label: tr("Overview") }, { id: "docs", label: tr("Docs"), n: docs.length }, { id: "board", label: tr("Board"), n: cards.length },
+    { id: "requirements", label: tr("Requirements"), n: reqs.length }, { id: "timeline", label: tr("Timeline") }, { id: "diagrams", label: tr("Diagrams"), n: diagramNotes(notes).length }, { id: "assistant", label: tr("Assistant") },
   ];
-  const sub = ["Project", deadline ? `ships ${dayMon(deadline)}` : null, `${cards.length} task${cards.length === 1 ? "" : "s"}`].filter(Boolean).join(" · ");
+  const sub = [tr("Project"), deadline ? tr("ships {date}", { date: dayMon(deadline) }) : null, tr("{n} task|{n} tasks", { n: cards.length })].filter(Boolean).join(" · ");
   const tone = TONE[health.tone];
   const primary = () => { if (tab === "assistant") assistant.current?.ask(); else setPop((x) => !x); };
 
@@ -52,14 +53,14 @@ export function ProjectHub({ sp, overview, more, color }: { sp: Space; overview:
         <div className="flex items-center gap-3">
           <SpaceIcon space={sp} size={22} tile color={color} />
           <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
-            <span className={cx("truncate whitespace-nowrap font-[650] tracking-[-.02em]", phone ? "text-[17px]" : "text-[20px]")} dir="auto" title={sp.props.goal ? `Goal: ${sp.props.goal}` : sp.description || undefined}>{sp.name}</span>
+            <span className={cx("truncate whitespace-nowrap font-[650] tracking-[-.02em]", phone ? "text-[17px]" : "text-[20px]")} dir="auto" title={sp.props.goal ? tr("Goal: {goal}", { goal: sp.props.goal }) : sp.description || undefined}>{sp.name}</span>
             <span className="truncate whitespace-nowrap text-muted">{sub}</span>
           </div>
-          <span title={health.reasons.join(" ") || `${Math.round(health.pct * 100)}% of tasks done`} className="flex h-[26px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[12px] font-semibold"
+          <span title={health.reasons.join(" ") || tr("{pct}% of tasks done", { pct: Math.round(health.pct * 100) })} className="flex h-[26px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[12px] font-semibold"
             style={{ background: `color-mix(in srgb, ${tone} 14%, transparent)`, color: tone }}><span className="size-[7px] rounded-full" style={{ background: tone }} />{health.label}</span>
           {!phone && (
             <span className="relative">
-              <button onClick={primary} className="flex h-[34px] items-center whitespace-nowrap rounded-[10px] bg-accent px-3.5 font-semibold text-accent-fg hover:brightness-110">{PRIMARY[tab]}</button>
+              <button onClick={primary} className="flex h-[34px] items-center whitespace-nowrap rounded-[10px] bg-accent px-3.5 font-semibold text-accent-fg hover:brightness-110">{tr(PRIMARY[tab])}</button>
               {pop && <PrimaryPopover tab={tab} sp={sp} notes={notes} cards={cards} reqs={reqs} docs={docs} onDone={(id) => { setPop(false); if (id) { pickDoc(id); } }} onClose={() => setPop(false)} />}
             </span>
           )}
@@ -70,7 +71,7 @@ export function ProjectHub({ sp, overview, more, color }: { sp: Space; overview:
           {tabs.map((t) => (
             <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
               className={cx("flex shrink-0 items-center gap-1.5 px-0.5 pb-2.5", tab === t.id ? "font-semibold text-ink shadow-[inset_0_-2px_0_var(--accent)]" : "font-[450] text-muted hover:text-ink")}>
-              {t.label}{!!t.n && <span className="text-[11px] font-medium text-muted">{t.n}</span>}
+              {t.label}{!!t.n && <span className="text-[11px] font-medium text-muted">{fmtNum(t.n)}</span>}
             </button>
           ))}
         </nav>
@@ -91,13 +92,13 @@ export function ProjectHub({ sp, overview, more, color }: { sp: Space; overview:
 // ------------------------------------------------------------------ primary action per tab
 function PrimaryPopover({ tab, sp, notes, cards, reqs, docs, onDone, onClose }: { tab: Tab; sp: Space; notes: Note[]; cards: TaskCard[]; reqs: Requirement[]; docs: ProjectDoc[]; onDone: (docId?: string) => void; onClose: () => void }) {
   const [prio, setPrio] = useState<Moscow>("must");
-  const cls = "right-0 top-full mt-1.5";
+  const cls = "end-0 top-full mt-1.5";
   if (tab === "overview" || tab === "board") return (
     <Popover onClose={onClose} className={cx(cls, "w-[360px] p-2.5")}>
       <form className="flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); const t = String(new FormData(e.currentTarget).get("t") ?? ""); if (t.trim()) void addTask(sp, notes, t).then(() => onDone()); }}>
-        <input name="t" autoFocus placeholder="Build upload endpoint !p1 ~2d due:2026-12-01 #epic/api REQ-1" aria-label="New task" dir="auto" className="h-9 rounded-[8px] border border-line bg-bg px-2.5 outline-none focus:border-accent" />
-        <span className="text-[11.5px] leading-4 text-muted">Goes to “{sp.name} tasks”. Markers: !p1 priority · ~3d estimate · due:/start: dates · #epic/name · @owner · REQ-n</span>
-        <button className="h-8 self-end rounded-[8px] bg-accent px-3 font-semibold text-accent-fg">Add task</button>
+        <input name="t" autoFocus placeholder={tr("Build upload endpoint !p1 ~2d due:2026-12-01 #epic/api REQ-1")} aria-label={tr("New task")} dir="auto" className="h-9 rounded-[8px] border border-line bg-bg px-2.5 outline-none focus:border-accent" />
+        <span className="text-[11.5px] leading-4 text-muted">{tr("Goes to “{name} tasks”. Markers: !p1 priority · ~3d estimate · due:/start: dates · #epic/name · @owner · REQ-n", { name: sp.name })}</span>
+        <button className="h-8 self-end rounded-[8px] bg-accent px-3 font-semibold text-accent-fg">{tr("Add task")}</button>
       </form>
     </Popover>
   );
@@ -106,7 +107,7 @@ function PrimaryPopover({ tab, sp, notes, cards, reqs, docs, onDone, onClose }: 
       {DOC_KINDS.map((d) => (
         <button key={d.kind} onClick={() => void newDoc(sp, d.kind).then((id) => onDone(id))} className={cx(menuRow, "items-start py-2")}>
           <Glyph name={d.glyph} size={16} color="var(--muted)" style={{ marginTop: 1 }} />
-          <span className="flex flex-col"><span className="font-medium">{d.label}</span><span className="text-[11.5px] text-muted">{d.hint}</span></span>
+          <span className="flex flex-col"><span className="font-medium">{tr(d.label)}</span><span className="text-[11.5px] text-muted">{tr(d.hint)}</span></span>
         </button>
       ))}
     </Popover>
@@ -114,9 +115,9 @@ function PrimaryPopover({ tab, sp, notes, cards, reqs, docs, onDone, onClose }: 
   if (tab === "requirements") return (
     <Popover onClose={onClose} className={cx(cls, "w-[380px] p-2.5")}>
       <form className="flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); const t = String(new FormData(e.currentTarget).get("t") ?? "").trim(); if (t) void addRequirement(sp, docs, reqs, prio, t).then(() => onDone()); }}>
-        <div className="flex gap-1">{MOSCOW.map((m) => <button type="button" key={m.k} onClick={() => setPrio(m.k)} className={cx("h-7 flex-1 rounded-[7px] border text-[12px]", prio === m.k ? "font-semibold" : "border-line text-muted")} style={prio === m.k ? { borderColor: m.color, color: m.color } : undefined}>{m.label}</button>)}</div>
-        <input name="t" autoFocus placeholder={`${nextReqId(reqs)}: The system shall…`} aria-label="New requirement" dir="auto" className="h-9 rounded-[8px] border border-line bg-bg px-2.5 outline-none focus:border-accent" />
-        <button className="h-8 self-end rounded-[8px] bg-accent px-3 font-semibold text-accent-fg">Add {nextReqId(reqs)}</button>
+        <div className="flex gap-1">{MOSCOW.map((m) => <button type="button" key={m.k} onClick={() => setPrio(m.k)} className={cx("h-7 flex-1 rounded-[7px] border text-[12px]", prio === m.k ? "font-semibold" : "border-line text-muted")} style={prio === m.k ? { borderColor: m.color, color: m.color } : undefined}>{tr(m.label)}</button>)}</div>
+        <input name="t" autoFocus placeholder={tr("{id}: The system shall…", { id: nextReqId(reqs) })} aria-label={tr("New requirement")} dir="auto" className="h-9 rounded-[8px] border border-line bg-bg px-2.5 outline-none focus:border-accent" />
+        <button className="h-8 self-end rounded-[8px] bg-accent px-3 font-semibold text-accent-fg">{tr("Add {id}", { id: nextReqId(reqs) })}</button>
       </form>
     </Popover>
   );
@@ -124,16 +125,16 @@ function PrimaryPopover({ tab, sp, notes, cards, reqs, docs, onDone, onClose }: 
     const g = ganttMermaid(cards, sp.name);
     return (
       <Popover onClose={onClose} className={cx(cls, "w-60")}>
-        <button disabled={!g} className={menuRow} onClick={() => { void navigator.clipboard?.writeText("```mermaid\n" + g + "\n```"); toast("Gantt copied as Mermaid"); onDone(); }}><Glyph name="mermaid" size={16} />Copy as Mermaid</button>
-        <button disabled={!g} className={menuRow} onClick={async () => { const n = await createNote({ title: `Timeline: ${sp.name}`, body: `# Timeline: ${sp.name}\n\nGenerated ${todayISO()} from task cards.\n\n\`\`\`mermaid\n${g}\n\`\`\`\n`, spaceId: sp.id, fm: { doc: "plan", docstatus: "draft" } }); onDone(); openNote(n.id); }}><Glyph name="export" size={16} />Save as doc</button>
+        <button disabled={!g} className={menuRow} onClick={() => { void navigator.clipboard?.writeText("```mermaid\n" + g + "\n```"); toast(tr("Gantt copied as Mermaid")); onDone(); }}><Glyph name="mermaid" size={16} />{tr("Copy as Mermaid")}</button>
+        <button disabled={!g} className={menuRow} onClick={async () => { const n = await createNote({ title: `Timeline: ${sp.name}`, body: `# Timeline: ${sp.name}\n\nGenerated ${todayISO()} from task cards.\n\n\`\`\`mermaid\n${g}\n\`\`\`\n`, spaceId: sp.id, fm: { doc: "plan", docstatus: "draft" } }); onDone(); openNote(n.id); }}><Glyph name="export" size={16} />{tr("Save as doc")}</button>
       </Popover>
     );
   }
   if (tab === "diagrams") return (
     <Popover onClose={onClose} className={cx(cls, "w-60")}>
-      <button className={menuRow} onClick={async () => { const n = await createNote({ title: `${sp.name} diagram`, body: `# ${sp.name} diagram\n\n\`\`\`mermaid\nflowchart LR\n  A[Client] --> B[API] --> C[(Database)]\n\`\`\`\n`, spaceId: sp.id }); onDone(); openNote(n.id, "edit"); }}><Glyph name="mermaid" size={16} />Mermaid diagram</button>
-      <button className={menuRow} onClick={async () => { const n = await createNote({ template: "canvas", title: `${sp.name} architecture`, spaceId: sp.id }); onDone(); openNote(n.id); }}><Glyph name="canvas" size={16} />Canvas</button>
-      <button className={menuRow} onClick={async () => { const n = await createNote({ template: "whiteboard", title: `${sp.name} whiteboard`, spaceId: sp.id }); onDone(); openNote(n.id); }}><Glyph name="whiteboard" size={16} />Whiteboard</button>
+      <button className={menuRow} onClick={async () => { const n = await createNote({ title: `${sp.name} diagram`, body: `# ${sp.name} diagram\n\n\`\`\`mermaid\nflowchart LR\n  A[Client] --> B[API] --> C[(Database)]\n\`\`\`\n`, spaceId: sp.id }); onDone(); openNote(n.id, "edit"); }}><Glyph name="mermaid" size={16} />{tr("Mermaid diagram")}</button>
+      <button className={menuRow} onClick={async () => { const n = await createNote({ template: "canvas", title: `${sp.name} architecture`, spaceId: sp.id }); onDone(); openNote(n.id); }}><Glyph name="canvas" size={16} />{tr("Canvas")}</button>
+      <button className={menuRow} onClick={async () => { const n = await createNote({ template: "whiteboard", title: `${sp.name} whiteboard`, spaceId: sp.id }); onDone(); openNote(n.id); }}><Glyph name="whiteboard" size={16} />{tr("Whiteboard")}</button>
     </Popover>
   );
   return null;
@@ -151,7 +152,7 @@ async function addRequirement(sp: Space, docs: ProjectDoc[], reqs: Requirement[]
   const reqDoc = docs.find((d) => d.kind === "requirements")?.note;
   if (reqDoc) await updateNote(reqDoc.id, { body: reqDoc.body.replace(/\s*$/, "\n") + line + "\n" });
   else await createNote({ title: `Requirements: ${sp.name}`, body: `# Requirements: ${sp.name}\n\n${line}\n`, spaceId: sp.id, fm: { doc: "requirements", docstatus: "draft" } });
-  toast(`Added ${nextReqId(reqs)}`);
+  toast(tr("Added {name}", { name: nextReqId(reqs) }));
 }
 
 // ------------------------------------------------------------------ links (repo, PRs, designs, docs: plain links)
@@ -166,23 +167,23 @@ function Links({ sp, phone }: { sp: Space; phone: boolean }) {
       {shown.map((l) => (
         <span key={l.url} className="group flex shrink-0 items-center gap-1.5 text-link">
           <Glyph name="link-card" size={14} />
-          <a href={l.url} target="_blank" rel="noreferrer" className="max-w-[240px] truncate hover:underline" title={`${l.url} · opens in a new tab`}>{l.label}</a>
-          {!phone && <button aria-label={`Remove link ${l.label}`} onClick={() => set(links.filter((x) => x.url !== l.url))} className="hidden text-muted hover:text-bad group-hover:block"><Glyph name="x" size={11} /></button>}
+          <a href={l.url} target="_blank" rel="noreferrer" className="max-w-[240px] truncate hover:underline" title={`${l.url} · ${tr("opens in a new tab")}`} dir="auto">{l.label}</a>
+          {!phone && <button aria-label={tr("Remove link {name}", { name: l.label })} onClick={() => set(links.filter((x) => x.url !== l.url))} className="hidden text-muted hover:text-bad group-hover:block"><Glyph name="x" size={11} /></button>}
         </span>
       ))}
       {!phone && (adding ? (
         <form className="flex items-center gap-1.5" onSubmit={(e) => {
           e.preventDefault();
           const f = new FormData(e.currentTarget); const url = String(f.get("u") ?? "").trim(), label = String(f.get("l") ?? "").trim();
-          if (!/^https?:\/\//.test(url)) return toast("Paste a full link (https://…)");
+          if (!/^https?:\/\//.test(url)) return toast(tr("Paste a full link (https://…)"));
           set([...links, { url, label: label || url.replace(/^https?:\/\/(www\.)?/, "").slice(0, 40) }]); setAdding(false);
         }}>
-          <input name="u" autoFocus placeholder="https://… (repo, PR, Figma, ticket)" className="h-7 w-64 rounded-[7px] border border-line bg-bg px-2 outline-none focus:border-accent" />
-          <input name="l" placeholder="Label" className="h-7 w-28 rounded-[7px] border border-line bg-bg px-2 outline-none focus:border-accent" />
-          <button className="h-7 rounded-[7px] bg-accent px-2.5 font-semibold text-accent-fg">Add</button>
-          <button type="button" onClick={() => setAdding(false)} className="text-muted">Cancel</button>
+          <input name="u" autoFocus placeholder={tr("https://… (repo, PR, Figma, ticket)")} dir="ltr" className="h-7 w-64 rounded-[7px] border border-line bg-bg px-2 outline-none focus:border-accent" />
+          <input name="l" placeholder={tr("Label")} className="h-7 w-28 rounded-[7px] border border-line bg-bg px-2 outline-none focus:border-accent" />
+          <button className="h-7 rounded-[7px] bg-accent px-2.5 font-semibold text-accent-fg">{tr("Add")}</button>
+          <button type="button" onClick={() => setAdding(false)} className="text-muted">{tr("Cancel")}</button>
         </form>
-      ) : <button onClick={() => setAdding(true)} title="Links only: nothing is connected to GitHub, Jira or Figma." className="shrink-0 text-muted hover:text-ink">+ Add link</button>)}
+      ) : <button onClick={() => setAdding(true)} title={tr("Links only: nothing is connected to GitHub, Jira or Figma.")} className="shrink-0 text-muted hover:text-ink">{tr("+ Add link")}</button>)}
     </div>
   );
 }
@@ -198,48 +199,48 @@ function Overview({ cards, docs, health, phone, onDoc, children }: { cards: Task
   const week = live.filter((c) => c.due && c.due >= addDays(today, -1) && c.due <= addDays(today, 7)).sort((a, b) => a.due!.localeCompare(b.due!)).slice(0, 6);
   const overdue = live.filter((c) => c.due && c.due < addDays(today, -1) && c.status !== "done");
   const tone = TONE[health.tone];
-  const why = health.tone === "ok" ? "On track" : health.tone === "muted" ? "No deadline" : `Why ${health.label.toLowerCase()}`;
+  const why = health.tone === "ok" ? tr("On track") : health.tone === "muted" ? tr("No deadline") : tr("Why {x}", { x: health.label.toLowerCase() });
   const card = "rounded-[14px] border border-line bg-surface";
   return (
     <div className="flex flex-col gap-3.5">
       <div className={cx("grid content-start gap-3.5", phone ? "grid-cols-1" : "grid-cols-[1.2fr_1fr]")}>
         <div className={cx(card, "flex flex-col gap-3 p-4")}>
-          <span className="font-semibold">Progress</span>
-          <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-[5px]" aria-label={`${done} done, ${doing} doing, ${review} review, ${todo} todo`}>
+          <span className="font-semibold">{tr("Progress")}</span>
+          <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-[5px]" aria-label={tr("{a} done, {b} doing, {c} review, {d} todo", { a: done, b: doing, c: review, d: todo })}>
             {done > 0 && <span className="bg-ok" style={{ width: `${(done / total) * 100}%` }} />}
             {doing > 0 && <span style={{ width: `${(doing / total) * 100}%`, background: "var(--info)" }} />}
             {review > 0 && <span style={{ width: `${(review / total) * 100}%`, background: "var(--warning)" }} />}
             <span className="flex-1 bg-surface-2" />
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[12.5px] text-muted">
-            <span><b className="font-semibold text-ink">{done}</b> done</span><span><b className="font-semibold text-ink">{doing}</b> doing</span>
-            <span><b className="font-semibold text-ink">{review}</b> review</span><span><b className="font-semibold text-ink">{todo}</b> todo</span>
-            {left > 0 && <span>~{Math.round(left)}d estimated left</span>}
+            <span>{tx("{n} done", { n: <b className="font-semibold text-ink">{fmtNum(done)}</b> })}</span><span>{tx("{n} doing", { n: <b className="font-semibold text-ink">{fmtNum(doing)}</b> })}</span>
+            <span>{tx("{n} review", { n: <b className="font-semibold text-ink">{fmtNum(review)}</b> })}</span><span>{tx("{n} todo", { n: <b className="font-semibold text-ink">{fmtNum(todo)}</b> })}</span>
+            {left > 0 && <span>{tr("~{n}d estimated left", { n: Math.round(left) })}</span>}
           </div>
         </div>
         <div className="flex flex-col gap-2 rounded-[14px] border p-4" style={{ background: `color-mix(in srgb, ${tone} 8%, var(--surface))`, borderColor: `color-mix(in srgb, ${tone} 30%, transparent)` }}>
           <span className="flex items-center gap-2 font-semibold"><Glyph name={health.tone === "ok" ? "c-success" : health.tone === "muted" ? "c-info" : "c-warning"} size={16} color={tone} />{why}</span>
-          <span className="leading-[19px]">{health.reasons.length ? health.reasons.join(" ") : health.tone === "ok" ? "Work done keeps pace with the time used, and every must-have requirement has tasks." : "Set a deadline in Space settings to track whether the project is on time."}</span>
+          <span className="leading-[19px]">{health.reasons.length ? health.reasons.join(" ") : health.tone === "ok" ? tr("Work done keeps pace with the time used, and every must-have requirement has tasks.") : tr("Set a deadline in Space settings to track whether the project is on time.")}</span>
         </div>
         <div className={cx(card, "flex flex-col px-4 py-3")}>
-          <span className="pb-1.5 font-semibold">Due this week</span>
+          <span className="pb-1.5 font-semibold">{tr("Due this week")}</span>
           {week.map((c) => (
-            <button key={c.key} onClick={() => openNote(c.note.id)} className="flex min-h-9 items-center gap-2.5 border-t border-line text-left">
+            <button key={c.key} onClick={() => openNote(c.note.id)} className="flex min-h-9 items-center gap-2.5 border-t border-line text-start">
               <TaskGlyph s={c.status} /><span className="min-w-0 flex-1 truncate" dir="auto">{c.text}</span><span className="text-[12px] text-muted">{cardDay(c.due!, today)}</span>
             </button>
           ))}
-          {!week.length && <span className="border-t border-line py-2 text-muted">Nothing due this week.</span>}
-          {overdue.length > 0 && <span className="border-t border-line pt-2 text-[12px] text-bad">{overdue.length} overdue from earlier</span>}
+          {!week.length && <span className="border-t border-line py-2 text-muted">{tr("Nothing due this week.")}</span>}
+          {overdue.length > 0 && <span className="border-t border-line pt-2 text-[12px] text-bad">{tr("{n} overdue from earlier", { n: overdue.length })}</span>}
         </div>
         <div className={cx(card, "flex flex-col px-4 py-3")}>
-          <span className="pb-1.5 font-semibold">Docs</span>
+          <span className="pb-1.5 font-semibold">{tr("Docs")}</span>
           {docs.slice(0, 5).map((d) => (
-            <button key={d.note.id} onClick={() => onDoc(d.note.id)} className="flex min-h-9 items-center gap-2.5 border-t border-line text-left">
+            <button key={d.note.id} onClick={() => onDoc(d.note.id)} className="flex min-h-9 items-center gap-2.5 border-t border-line text-start">
               <Glyph name={DOC_STATUS_GLYPH[d.status]} size={16} color={DOC_STATUS_COLOR[d.status]} /><span className="min-w-0 flex-1 truncate" dir="auto">{d.note.title}</span>
-              <span className="text-[12px]" style={{ color: DOC_STATUS_COLOR[d.status] }}>{DOC_STATUS_LABEL[d.status]}</span>
+              <span className="text-[12px]" style={{ color: DOC_STATUS_COLOR[d.status] }}>{tr(DOC_STATUS_LABEL[d.status])}</span>
             </button>
           ))}
-          {!docs.length && <span className="border-t border-line py-2 text-muted">No docs yet. Start with a PRD.</span>}
+          {!docs.length && <span className="border-t border-line py-2 text-muted">{tr("No docs yet. Start with a PRD.")}</span>}
         </div>
       </div>
       {children}
@@ -261,7 +262,7 @@ function Docs({ sp, docs, cards, sel, onSel, phone }: { sp: Space; docs: Project
   const setStatus = (doc: ProjectDoc, s: (typeof DOC_STATUSES)[number]) => void updateNote(doc.note.id, { body: setDocStatus(doc.note.body, s) });
   if (!d) return (
     <div className="flex flex-col gap-3.5">
-      <div className="rounded-[12px] border border-dashed border-line p-8 text-center text-muted">No docs yet. Start with a <b className="text-ink">PRD</b> (what and why), then an <b className="text-ink">RFC</b> (how), record decisions as <b className="text-ink">ADRs</b>, and turn the plan into task cards.</div>
+      <div className="rounded-[12px] border border-dashed border-line p-8 text-center text-muted">{tx("No docs yet. Start with a {prd} (what and why), then an {rfc} (how), record decisions as {adr}, and turn the plan into task cards.", { prd: <b className="text-ink">PRD</b>, rfc: <b className="text-ink">RFC</b>, adr: <b className="text-ink">ADRs</b> })}</div>
       <NewDocRow sp={sp} onSel={onSel} />
     </div>
   );
@@ -269,52 +270,52 @@ function Docs({ sp, docs, cards, sel, onSel, phone }: { sp: Space; docs: Project
   const reqIds = [...new Set([...d.note.body.matchAll(/\bREQ-\d+\b/g)].map((m) => m[0]))].slice(0, 6);
   const linked = cardsOfDoc(cards, d.note).length;
   const kind = DOC_KINDS.find((k) => k.kind === d.kind)!;
-  const ctx = d.status === "approved" && d.approved ? `Approved ${dayMon(d.approved)}` : d.status === "superseded" && d.supersededBy ? `→ ${d.supersededBy}` : d.status === "rejected" && d.reason ? d.reason : d.status === "review" && d.owner ? `${d.owner} reviewing` : "";
+  const ctx = d.status === "approved" && d.approved ? tr("Approved {date}", { date: dayMon(d.approved) }) : d.status === "superseded" && d.supersededBy ? `→ ${d.supersededBy}` : d.status === "rejected" && d.reason ? d.reason : d.status === "review" && d.owner ? tr("{name} reviewing", { name: d.owner }) : "";
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 rounded-[12px] border border-line bg-surface px-3.5 py-3">
         <DocPill s={d.status} />
         <span className="text-muted">{kind.short}</span>
         {owner ? (
-          <input autoFocus defaultValue={d.owner} aria-label="Owner" className="h-7 w-28 rounded-[6px] border border-accent bg-bg px-2 outline-none"
+          <input autoFocus defaultValue={d.owner} aria-label={tr("Owner")} className="h-7 w-28 rounded-[6px] border border-accent bg-bg px-2 outline-none"
             onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setOwner(false); }}
             onBlur={(e) => { setOwner(false); const v = e.target.value.trim(); if (v !== d.owner) void updateNote(d.note.id, { body: setFrontMatter(d.note.body, { owner: v }) }); }} />
         ) : (
-          <button onClick={() => setOwner(true)} title="Change owner" className="flex items-center gap-1.5 hover:text-ink"><Glyph name="owner" size={14} color="var(--muted)" />{d.owner ? d.owner[0].toUpperCase() + d.owner.slice(1) : <span className="text-muted">Add owner</span>}</button>
+          <button onClick={() => setOwner(true)} title={tr("Change owner")} className="flex items-center gap-1.5 hover:text-ink"><Glyph name="owner" size={14} color="var(--muted)" />{d.owner ? d.owner[0].toUpperCase() + d.owner.slice(1) : <span className="text-muted">{tr("Add owner")}</span>}</button>
         )}
         <span className="text-muted">{relTime(d.note.updatedAt)}</span>
         {ctx && <span className="text-muted" dir="auto">· {ctx}</span>}
         <span className="flex-1" />
         {!phone && (
-          <div role="radiogroup" aria-label="Doc status" className="flex gap-0.5 rounded-[8px] border border-line bg-bg p-[3px] text-[12px]">
+          <div role="radiogroup" aria-label={tr("Doc status")} className="flex gap-0.5 rounded-[8px] border border-line bg-bg p-[3px] text-[12px]">
             {DOC_STATUSES.map((s) => (
               <button key={s} role="radio" aria-checked={d.status === s} onClick={() => setStatus(d, s)} className={cx("flex h-6 items-center gap-[5px] rounded-[6px] px-2", d.status === s ? "bg-surface-2 font-semibold" : "font-[450] text-muted hover:text-ink")}
-                style={d.status === s ? { color: DOC_STATUS_COLOR[s] } : undefined}><Glyph name={DOC_STATUS_GLYPH[s]} size={12} />{DOC_STATUS_LABEL[s]}</button>
+                style={d.status === s ? { color: DOC_STATUS_COLOR[s] } : undefined}><Glyph name={DOC_STATUS_GLYPH[s]} size={12} />{tr(DOC_STATUS_LABEL[s])}</button>
             ))}
           </div>
         )}
         {phone && (
-          <select aria-label="Doc status" value={d.status} onChange={(e) => setStatus(d, e.target.value as ProjectDoc["status"])} className="h-7 rounded-[7px] border border-line bg-bg px-1.5 text-[12px]">
-            {DOC_STATUSES.map((s) => <option key={s} value={s}>{DOC_STATUS_LABEL[s]}</option>)}
+          <select aria-label={tr("Doc status")} value={d.status} onChange={(e) => setStatus(d, e.target.value as ProjectDoc["status"])} className="h-7 rounded-[7px] border border-line bg-bg px-1.5 text-[12px]">
+            {DOC_STATUSES.map((s) => <option key={s} value={s}>{tr(DOC_STATUS_LABEL[s])}</option>)}
           </select>
         )}
       </div>
       <article className="flex max-w-[680px] flex-col gap-3 font-serif leading-[1.75]" style={{ fontSize: phone ? 16 : 17 }}>
-        <h1 className="m-0 cursor-pointer font-bold leading-[1.2] hover:underline" style={{ fontSize: phone ? 24 : 32 }} onClick={() => openNote(d.note.id)} title="Open doc" dir="auto">{d.note.title}</h1>
+        <h1 className="m-0 cursor-pointer font-bold leading-[1.2] hover:underline" style={{ fontSize: phone ? 24 : 32 }} onClick={() => openNote(d.note.id)} title={tr("Open doc")} dir="auto">{d.note.title}</h1>
         {ps[0] && <p className="m-0" dir="auto">{ps[0]}</p>}
-        {(reqIds.length > 0 || linked > 0) && <p className="m-0 font-sans text-[13px] text-muted">{[reqIds.length ? `Covers ${reqIds.join(" · ")}` : null, linked ? `${linked} task${linked === 1 ? "" : "s"} link here` : null].filter(Boolean).join(" · ")}</p>}
+        {(reqIds.length > 0 || linked > 0) && <p className="m-0 font-sans text-[13px] text-muted">{[reqIds.length ? tr("Covers {ids}", { ids: reqIds.join(" · ") }) : null, linked ? tr("{n} task links here|{n} tasks link here", { n: linked }) : null].filter(Boolean).join(" · ")}</p>}
         {ps[1] && <p className="m-0 opacity-50" dir="auto">{ps[1].length > 160 ? ps[1].slice(0, 160) + "…" : ps[1]}</p>}
       </article>
       {!phone && <NewDocRow sp={sp} onSel={onSel} />}
       <section className="flex flex-col rounded-[12px] border border-line">
-        <span className="px-3.5 py-2 text-[12px] font-semibold text-muted">All docs · {docs.length}</span>
+        <span className="px-3.5 py-2 text-[12px] font-semibold text-muted">{tr("All docs · {n}", { n: docs.length })}</span>
         {docs.map((x) => (
-          <button key={x.note.id} onClick={() => onSel(x.note.id)} className={cx("flex min-h-10 items-center gap-2.5 border-t border-line px-3.5 text-left hover:bg-surface", x.note.id === d.note.id && "bg-surface")}>
+          <button key={x.note.id} onClick={() => onSel(x.note.id)} className={cx("flex min-h-10 items-center gap-2.5 border-t border-line px-3.5 text-start hover:bg-surface", x.note.id === d.note.id && "bg-surface")}>
             <Glyph name={DOC_STATUS_GLYPH[x.status]} size={16} color={DOC_STATUS_COLOR[x.status]} />
             <span className="w-10 shrink-0 text-[12px] text-muted">{DOC_KINDS.find((k) => k.kind === x.kind)?.short}</span>
             <span className="min-w-0 flex-1 truncate" dir="auto">{x.note.title}</span>
             {!phone && x.owner && <span className="text-[12px] text-muted">{x.owner}</span>}
-            <span className="text-[12px]" style={{ color: DOC_STATUS_COLOR[x.status] }}>{DOC_STATUS_LABEL[x.status]}</span>
+            <span className="text-[12px]" style={{ color: DOC_STATUS_COLOR[x.status] }}>{tr(DOC_STATUS_LABEL[x.status])}</span>
           </button>
         ))}
       </section>
@@ -322,11 +323,11 @@ function Docs({ sp, docs, cards, sel, onSel, phone }: { sp: Space; docs: Project
   );
 }
 function NewDocRow({ sp, onSel }: { sp: Space; onSel: (id: string) => void }) {
-  const label: Record<DocKind, string> = { prd: "PRD", rfc: "RFC", adr: "ADR", requirements: "Requirements", plan: "Action plan", meeting: "Meeting notes", spec: "Spec", draft: "Draft" };
+  const label: Record<DocKind, string> = { prd: "PRD", rfc: "RFC", adr: "ADR", requirements: tr("Requirements"), plan: tr("Action plan"), meeting: tr("Meeting notes"), spec: tr("Spec"), draft: tr("Draft") };
   return (
     <div className="flex flex-wrap gap-2">
-      <span className="self-center text-muted">New doc:</span>
-      {(Object.keys(label) as DocKind[]).map((k) => <button key={k} title={DOC_KINDS.find((x) => x.kind === k)?.hint} onClick={() => void newDoc(sp, k).then(onSel)} className="flex h-7 items-center rounded-[7px] border border-line px-2.5 hover:bg-surface">{label[k]}</button>)}
+      <span className="self-center text-muted">{tr("New doc:")}</span>
+      {(Object.keys(label) as DocKind[]).map((k) => <button key={k} title={tr(DOC_KINDS.find((x) => x.kind === k)?.hint ?? "")} onClick={() => void newDoc(sp, k).then(onSel)} className="flex h-7 items-center rounded-[7px] border border-line px-2.5 hover:bg-surface">{label[k]}</button>)}
     </div>
   );
 }

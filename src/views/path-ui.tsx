@@ -6,32 +6,33 @@ import { Glyph } from "../components/Glyph";
 import { cx } from "../components/ui";
 import type { GlyphName } from "../lib/glyphs";
 import { conceptState, filterCount, NO_FILTER, UNPLACED, type BuiltConcept, type BuiltPath, type ConceptState, type GroupBy, type PathFilter } from "../lib/path";
+import { fmtNum, t, tk } from "../lib/i18n";
 
 export type Tab = "stages" | "graph" | "matrix" | "timeline" | "revise";
 
 // ------------------------------------------------------------------ statuses (Lucide in cards, as the design does; glyphs in headers)
 export const ST: Record<ConceptState | "revise", { icon: LucideIcon; glyph: GlyphName; color: string; label: string }> = {
-  todo: { icon: Circle, glyph: "s-todo", color: "var(--muted)", label: "Todo" },
-  learning: { icon: CircleDot, glyph: "s-learning", color: "var(--info)", label: "Learning" },
-  learned: { icon: CircleCheck, glyph: "s-done", color: "var(--success)", label: "Learned" },
-  mastered: { icon: Star, glyph: "s-mastered", color: "var(--success)", label: "Mastered" },
-  locked: { icon: Lock, glyph: "s-locked", color: "var(--muted)", label: "Locked" },
-  revise: { icon: History, glyph: "s-revise", color: "var(--learn)", label: "To revise" },
+  todo: { icon: Circle, glyph: "s-todo", color: "var(--muted)", label: tk("Todo") },
+  learning: { icon: CircleDot, glyph: "s-learning", color: "var(--info)", label: tk("Learning") },
+  learned: { icon: CircleCheck, glyph: "s-done", color: "var(--success)", label: tk("Learned") },
+  mastered: { icon: Star, glyph: "s-mastered", color: "var(--success)", label: tk("Mastered") },
+  locked: { icon: Lock, glyph: "s-locked", color: "var(--muted)", label: tk("Locked") },
+  revise: { icon: History, glyph: "s-revise", color: "var(--learn)", label: tk("To revise") },
 };
 export const stOf = (c: BuiltConcept) => ST[conceptState(c)];
 export function StatusIcon({ c, size = 15, className }: { c: BuiltConcept; size?: number; className?: string }) {
   const s = stOf(c);
   const I = s.icon;
-  return <I size={size} strokeWidth={2} className={cx("shrink-0", className)} style={{ color: s.color }} aria-label={s.label} />;
+  return <I size={size} strokeWidth={2} className={cx("shrink-0", className)} style={{ color: s.color }} aria-label={t(s.label)} />;
 }
-export const stageLabel = (path: BuiltPath, c: BuiltConcept) => (c.placed ? `Step ${c.stageIndex + 1} · ${c.stage.replace(/^Stage \d+ · /, "")}` : UNPLACED);
-export const shortStage = (name: string) => name.replace(/^Stage \d+ · /, "");
+export const stageLabel = (path: BuiltPath, c: BuiltConcept) => (c.placed ? t("Step {n} · {name}", { n: c.stageIndex + 1, name: c.stage.replace(/^Stage \d+ · /, "") }) : t(UNPLACED));
+export const shortStage = (name: string) => (name === UNPLACED ? t(UNPLACED) : name.replace(/^Stage \d+ · /, ""));
 
 /** Progress ring (design: conic gradient, inner disc, % label). */
 export function Ring({ pct, size = 40, inner = 32, label = true }: { pct: number; size?: number; inner?: number; label?: boolean }) {
   return (
-    <span className="flex shrink-0 items-center justify-center rounded-full" style={{ width: size, height: size, background: `conic-gradient(var(--success) 0 ${pct}%, var(--surface-2) ${pct}% 100%)` }} aria-label={`${pct}% learned`}>
-      <span className="flex items-center justify-center rounded-full bg-bg text-[10.5px] font-[650]" style={{ width: inner, height: inner }}>{label ? `${pct}%` : ""}</span>
+    <span className="flex shrink-0 items-center justify-center rounded-full" style={{ width: size, height: size, background: `conic-gradient(var(--success) 0 ${pct}%, var(--surface-2) ${pct}% 100%)` }} aria-label={t("{pct}% learned", { pct })}>
+      <span className="flex items-center justify-center rounded-full bg-bg text-[10.5px] font-[650]" style={{ width: inner, height: inner }}>{label ? `${fmtNum(pct)}%` : ""}</span>
     </span>
   );
 }
@@ -61,37 +62,37 @@ export function Popover({ open, onClose, children, className, style }: { open: b
 }
 export function MenuItem({ on, children, onClick, hint }: { on?: boolean; children: ReactNode; onClick: () => void; hint?: ReactNode }) {
   return (
-    <button role="menuitemcheckbox" aria-checked={!!on} onClick={onClick} className="flex min-h-[32px] w-full items-center gap-2 rounded-[7px] px-2 text-left text-[13px] hover:bg-surface">
+    <button role="menuitemcheckbox" aria-checked={!!on} onClick={onClick} className="flex min-h-[32px] w-full items-center gap-2 rounded-[7px] px-2 text-start text-[13px] hover:bg-surface">
       <span className={cx("flex size-4 shrink-0 items-center justify-center rounded-[4px]", on ? "bg-accent text-accent-fg" : "border border-line")}>{on && <Check size={11} strokeWidth={3} />}</span>
       <span className="min-w-0 flex-1 truncate" dir="auto">{children}</span>
-      {hint && <span className="shrink-0 text-[11.5px] text-muted">{hint}</span>}
+      {hint !== undefined && hint !== "" && <span className="shrink-0 text-[11.5px] text-muted">{typeof hint === "number" ? fmtNum(hint) : hint}</span>}
     </button>
   );
 }
 
 // ------------------------------------------------------------------ tab bar (desktop underline tabs with glyph + count; phone pills)
 export const TABS: { k: Tab; l: string; g: GlyphName }[] = [
-  { k: "stages", l: "Stages", g: "v-board" }, { k: "graph", l: "Graph", g: "graph" }, { k: "matrix", l: "Matrix", g: "v-table" }, { k: "timeline", l: "Timeline", g: "v-calendar" }, { k: "revise", l: "Revise", g: "s-revise" },
+  { k: "stages", l: tk("Stages"), g: "v-board" }, { k: "graph", l: tk("Graph"), g: "graph" }, { k: "matrix", l: tk("Matrix"), g: "v-table" }, { k: "timeline", l: tk("Timeline"), g: "v-calendar" }, { k: "revise", l: tk("Revise"), g: "s-revise" },
 ];
-const Count = ({ n }: { n: number }) => <span className="inline-block rounded-full px-1.5 text-[11px] font-semibold leading-[17px]" style={{ background: "color-mix(in srgb,var(--learn) 16%,transparent)", color: "var(--learn)" }}>{n}</span>;
+const Count = ({ n }: { n: number }) => <span className="inline-block rounded-full px-1.5 text-[11px] font-semibold leading-[17px]" style={{ background: "color-mix(in srgb,var(--learn) 16%,transparent)", color: "var(--learn)" }}>{fmtNum(n)}</span>;
 export function TabBar({ tab, setTab, revise, phone }: { tab: Tab; setTab: (t: Tab) => void; revise: number; phone?: boolean }) {
   if (phone) return (
     <div role="tablist" className="flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-2.5 [scrollbar-width:none]">
-      {TABS.map((t) => (
-        <button key={t.k} role="tab" aria-selected={tab === t.k} onClick={() => setTab(t.k)}
+      {TABS.map((tb) => (
+        <button key={tb.k} role="tab" aria-selected={tab === tb.k} onClick={() => setTab(tb.k)}
           className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13px]"
-          style={{ background: tab === t.k ? "var(--surface-2)" : "transparent", border: `1px solid ${tab === t.k ? "var(--accent)" : "var(--border)"}`, fontWeight: tab === t.k ? 600 : 450 }}>
-          {t.l}{t.k === "revise" && revise > 0 && <Count n={revise} />}
+          style={{ background: tab === tb.k ? "var(--surface-2)" : "transparent", border: `1px solid ${tab === tb.k ? "var(--accent)" : "var(--border)"}`, fontWeight: tab === tb.k ? 600 : 450 }}>
+          {t(tb.l)}{tb.k === "revise" && revise > 0 && <Count n={revise} />}
         </button>
       ))}
     </div>
   );
   return (
     <div role="tablist" className="flex items-center gap-[18px]">
-      {TABS.map((t) => (
-        <button key={t.k} role="tab" aria-selected={tab === t.k} onClick={() => setTab(t.k)} className="flex items-center gap-1.5 pb-2.5 pt-2"
-          style={{ boxShadow: tab === t.k ? "inset 0 -2px 0 var(--accent)" : "none", fontWeight: tab === t.k ? 600 : 450, color: tab === t.k ? "var(--text)" : "var(--muted)" }}>
-          <Glyph name={t.g} size={15} />{t.l}{t.k === "revise" && revise > 0 && <Count n={revise} />}
+      {TABS.map((tb) => (
+        <button key={tb.k} role="tab" aria-selected={tab === tb.k} onClick={() => setTab(tb.k)} className="flex items-center gap-1.5 pb-2.5 pt-2"
+          style={{ boxShadow: tab === tb.k ? "inset 0 -2px 0 var(--accent)" : "none", fontWeight: tab === tb.k ? 600 : 450, color: tab === tb.k ? "var(--text)" : "var(--muted)" }}>
+          <Glyph name={tb.g} size={15} />{t(tb.l)}{tb.k === "revise" && revise > 0 && <Count n={revise} />}
         </button>
       ))}
     </div>
@@ -110,7 +111,7 @@ function FilterButton({ label, active, children, width = 260 }: { label: string;
         style={{ borderColor: active ? "var(--accent)" : "var(--border)", background: active ? "color-mix(in srgb,var(--accent) 10%,transparent)" : "transparent", color: active ? "var(--text)" : "var(--muted)" }}>
         {label}<ChevronDown size={12} className="text-muted" />
       </button>
-      <Popover open={open} onClose={() => setOpen(false)} className="right-0 top-full mt-1 max-h-[60vh] overflow-y-auto" style={{ width }}>{children(() => setOpen(false))}</Popover>
+      <Popover open={open} onClose={() => setOpen(false)} className="end-0 top-full mt-1 max-h-[60vh] overflow-y-auto" style={{ width }}>{children(() => setOpen(false))}</Popover>
     </div>
   );
 }
@@ -120,16 +121,16 @@ export function FilterRow({ path, f, setF, group, setGroup, collapseAll, onColla
   const [q, setQ] = useState("");
   const courseName = (k: string) => path.courses.find((c) => c.key === k)?.spaceName ?? k;
   const stages = path.stages.map((s) => s.name);
-  const cl = !f.courses.length ? `Course: all ${path.courses.length}` : f.courses.length === 1 ? `Course: ${courseName(f.courses[0])}` : `Course: ${f.courses.length} picked`;
-  const sl = !f.states.length && !f.overlapping && !f.revise && !f.unplaced ? "Status: any" : f.states.length === 1 && !f.revise && !f.overlapping && !f.unplaced ? `Status: ${ST[f.states[0]].label.toLowerCase()}` : `Status: ${f.states.length + Number(f.revise) + Number(f.overlapping) + Number(f.unplaced)} picked`;
-  const gl = !f.stages.length ? "Stage: all" : f.stages.length === 1 ? `Stage: ${shortStage(f.stages[0])}` : `Stage: ${f.stages.length} picked`;
+  const cl = !f.courses.length ? t("Course: all {n}", { n: path.courses.length }) : f.courses.length === 1 ? t("Course: {name}", { name: courseName(f.courses[0]) }) : t("Course: {n} picked", { n: f.courses.length });
+  const sl = !f.states.length && !f.overlapping && !f.revise && !f.unplaced ? t("Status: any") : f.states.length === 1 && !f.revise && !f.overlapping && !f.unplaced ? t("Status: {name}", { name: t(ST[f.states[0]].label).toLowerCase() }) : t("Status: {n} picked", { n: f.states.length + Number(f.revise) + Number(f.overlapping) + Number(f.unplaced) });
+  const gl = !f.stages.length ? t("Stage: all") : f.stages.length === 1 ? t("Stage: {name}", { name: shortStage(f.stages[0]) }) : t("Stage: {n} picked", { n: f.stages.length });
   return (
     <div className="flex items-center gap-2">
       <FilterButton label={cl} active={!!f.courses.length} width={300}>
         {() => (
           <>
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a course" autoFocus className="mb-1 h-8 w-full rounded-[7px] border border-line bg-bg px-2 text-[13px] outline-none focus:border-accent" />
-            <MenuItem on={!f.courses.length} onClick={() => setF({ ...f, courses: [] })} hint={path.courses.length}>All courses</MenuItem>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Find a course")} autoFocus className="mb-1 h-8 w-full rounded-[7px] border border-line bg-bg px-2 text-[13px] outline-none focus:border-accent" />
+            <MenuItem on={!f.courses.length} onClick={() => setF({ ...f, courses: [] })} hint={path.courses.length}>{t("All courses")}</MenuItem>
             {path.courses.filter((c) => !q || c.spaceName.toLowerCase().includes(q.toLowerCase())).map((c) => (
               <MenuItem key={c.key} on={f.courses.includes(c.key)} onClick={() => setF({ ...f, courses: toggle(f.courses, c.key) })}><span className="me-1.5 inline-block h-3 w-[3px] rounded-[2px] align-[-1px]" style={{ background: c.color }} />{c.spaceName}</MenuItem>
             ))}
@@ -139,36 +140,37 @@ export function FilterRow({ path, f, setF, group, setGroup, collapseAll, onColla
       <FilterButton label={sl} active={!!(f.states.length || f.revise || f.overlapping || f.unplaced)}>
         {() => (
           <>
-            <MenuItem on={!f.states.length} onClick={() => setF({ ...f, states: [] })}>Any status</MenuItem>
-            {STATES.map((s) => <MenuItem key={s} on={f.states.includes(s)} onClick={() => setF({ ...f, states: toggle(f.states, s) })}>{ST[s].label}</MenuItem>)}
+            <MenuItem on={!f.states.length} onClick={() => setF({ ...f, states: [] })}>{t("Any status")}</MenuItem>
+            {STATES.map((s) => <MenuItem key={s} on={f.states.includes(s)} onClick={() => setF({ ...f, states: toggle(f.states, s) })}>{t(ST[s].label)}</MenuItem>)}
             <div className="my-1 border-t border-line" />
-            <MenuItem on={f.revise} onClick={() => setF({ ...f, revise: !f.revise })}>To revise</MenuItem>
-            <MenuItem on={f.overlapping} onClick={() => setF({ ...f, overlapping: !f.overlapping })}>Only overlapping</MenuItem>
-            <MenuItem on={f.unplaced} onClick={() => setF({ ...f, unplaced: !f.unplaced })}>Not placed</MenuItem>
+            <MenuItem on={f.revise} onClick={() => setF({ ...f, revise: !f.revise })}>{t("To revise")}</MenuItem>
+            <MenuItem on={f.overlapping} onClick={() => setF({ ...f, overlapping: !f.overlapping })}>{t("Only overlapping")}</MenuItem>
+            <MenuItem on={f.unplaced} onClick={() => setF({ ...f, unplaced: !f.unplaced })}>{t("Not placed")}</MenuItem>
           </>
         )}
       </FilterButton>
       <FilterButton label={gl} active={!!f.stages.length}>
         {() => (
           <>
-            <MenuItem on={!f.stages.length} onClick={() => setF({ ...f, stages: [] })}>All stages</MenuItem>
+            <MenuItem on={!f.stages.length} onClick={() => setF({ ...f, stages: [] })}>{t("All stages")}</MenuItem>
             {stages.map((s, i) => <MenuItem key={s} on={f.stages.includes(s)} onClick={() => setF({ ...f, stages: toggle(f.stages, s) })} hint={s === UNPLACED ? "" : i + 1}>{shortStage(s)}</MenuItem>)}
           </>
         )}
       </FilterButton>
       <GroupMenu group={group} setGroup={setGroup} />
-      {filterCount(f) > 0 && <button onClick={() => setF(NO_FILTER)} className="whitespace-nowrap text-[12.5px] text-link">Clear</button>}
-      {onCollapseAll && <button onClick={onCollapseAll} className="ms-1 whitespace-nowrap text-[12.5px] text-muted hover:text-ink">{collapseAll ? "Expand all" : "Collapse all"}</button>}
+      {filterCount(f) > 0 && <button onClick={() => setF(NO_FILTER)} className="whitespace-nowrap text-[12.5px] text-link">{t("Clear")}</button>}
+      {onCollapseAll && <button onClick={onCollapseAll} className="ms-1 whitespace-nowrap text-[12.5px] text-muted hover:text-ink">{collapseAll ? t("Expand all") : t("Collapse all")}</button>}
     </div>
   );
 }
+const GROUP_LABEL: Record<GroupBy, string> = { stage: tk("Stage"), course: tk("Course"), status: tk("Status") };
 function GroupMenu({ group, setGroup }: { group: GroupBy; setGroup: (g: GroupBy) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
-      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex h-7 items-center gap-1.5 whitespace-nowrap rounded-[6px] border border-line px-2.5 text-[12.5px] text-ink">Group by {group}<ChevronDown size={12} className="text-muted" /></button>
-      <Popover open={open} onClose={() => setOpen(false)} className="right-0 top-full mt-1 w-[200px]">
-        {(["stage", "course", "status"] as GroupBy[]).map((g) => <MenuItem key={g} on={group === g} onClick={() => { setGroup(g); setOpen(false); }}>{g[0].toUpperCase() + g.slice(1)}</MenuItem>)}
+      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex h-7 items-center gap-1.5 whitespace-nowrap rounded-[6px] border border-line px-2.5 text-[12.5px] text-ink">{t("Group by {name}", { name: t(GROUP_LABEL[group]).toLowerCase() })}<ChevronDown size={12} className="text-muted" /></button>
+      <Popover open={open} onClose={() => setOpen(false)} className="end-0 top-full mt-1 w-[200px]">
+        {(["stage", "course", "status"] as GroupBy[]).map((g) => <MenuItem key={g} on={group === g} onClick={() => { setGroup(g); setOpen(false); }}>{t(GROUP_LABEL[g])}</MenuItem>)}
       </Popover>
     </div>
   );
@@ -186,28 +188,28 @@ export function FilterSheet({ path, f, setF, count, onClose }: { path: BuiltPath
   return (
     <>
       <div className="fixed inset-0 z-40" style={{ background: "rgba(5,6,8,.55)" }} onClick={onClose} />
-      <div role="dialog" aria-label="Filter" className="sheet-in safe-b fixed inset-x-0 bottom-0 z-50 flex max-h-[80dvh] min-h-[60dvh] flex-col rounded-t-[14px] bg-surface px-4 pt-2.5">
+      <div role="dialog" aria-label={t("Filter")} className="sheet-in safe-b fixed inset-x-0 bottom-0 z-50 flex max-h-[80dvh] min-h-[60dvh] flex-col rounded-t-[14px] bg-surface px-4 pt-2.5">
         <div className="flex justify-center pb-2.5"><span className="h-1 w-9 rounded-[2px] bg-line" /></div>
         <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto">
-          <span className="text-[18px] font-[650]">Filter</span>
-          <div className="flex flex-col gap-2"><span className="text-[12.5px] font-medium text-muted">Status</span>
-            <div className="flex flex-wrap gap-2">{STATES.map((s) => chip(ST[s].label, d.states.includes(s), () => setD({ ...d, states: toggle(d.states, s) }), s))}</div></div>
-          <div className="flex flex-col gap-2"><span className="text-[12.5px] font-medium text-muted">Course</span>
+          <span className="text-[18px] font-[650]">{t("Filter")}</span>
+          <div className="flex flex-col gap-2"><span className="text-[12.5px] font-medium text-muted">{t("Status")}</span>
+            <div className="flex flex-wrap gap-2">{STATES.map((s) => chip(t(ST[s].label), d.states.includes(s), () => setD({ ...d, states: toggle(d.states, s) }), s))}</div></div>
+          <div className="flex flex-col gap-2"><span className="text-[12.5px] font-medium text-muted">{t("Course")}</span>
             <div className="flex flex-wrap gap-2">
-              {chip(`All ${path.courses.length}`, !d.courses.length, () => setD({ ...d, courses: [] }), "all")}
+              {chip(t("All {n}", { n: path.courses.length }), !d.courses.length, () => setD({ ...d, courses: [] }), "all")}
               {courses.map((c) => chip(c.spaceName, d.courses.includes(c.key), () => setD({ ...d, courses: toggle(d.courses, c.key) }), c.key))}
-              {!more && path.courses.length > 3 && chip("More…", false, () => setMore(true), "more")}
+              {!more && path.courses.length > 3 && chip(t("More…"), false, () => setMore(true), "more")}
             </div></div>
-          <div className="flex flex-col gap-2"><span className="text-[12.5px] font-medium text-muted">Show</span>
+          <div className="flex flex-col gap-2"><span className="text-[12.5px] font-medium text-muted">{t("Show")}</span>
             <div className="flex flex-wrap gap-2">
-              {chip("Only overlapping", d.overlapping, () => setD({ ...d, overlapping: !d.overlapping }), "o")}
-              {chip("To revise", d.revise, () => setD({ ...d, revise: !d.revise }), "r")}
-              {chip("Not placed", d.unplaced, () => setD({ ...d, unplaced: !d.unplaced }), "u")}
+              {chip(t("Only overlapping"), d.overlapping, () => setD({ ...d, overlapping: !d.overlapping }), "o")}
+              {chip(t("To revise"), d.revise, () => setD({ ...d, revise: !d.revise }), "r")}
+              {chip(t("Not placed"), d.unplaced, () => setD({ ...d, unplaced: !d.unplaced }), "u")}
             </div></div>
         </div>
         <div className="flex gap-2.5 py-3">
-          <button onClick={() => setD(NO_FILTER)} className="flex h-[52px] items-center px-4 text-muted">Clear</button>
-          <button onClick={() => { setF(d); onClose(); }} className="flex h-[52px] flex-1 items-center justify-center rounded-[12px] bg-accent font-semibold text-accent-fg">Show {count(d)} concepts</button>
+          <button onClick={() => setD(NO_FILTER)} className="flex h-[52px] items-center px-4 text-muted">{t("Clear")}</button>
+          <button onClick={() => { setF(d); onClose(); }} className="flex h-[52px] flex-1 items-center justify-center rounded-[12px] bg-accent font-semibold text-accent-fg">{t("Show {n} concept|Show {n} concepts", { n: count(d) })}</button>
         </div>
       </div>
     </>
@@ -221,10 +223,10 @@ export function ConfirmBar({ text, ok, danger, onOk, onCancel, className }: { te
   const btn = useRef<HTMLButtonElement>(null);
   useEffect(() => { btn.current?.focus(); }, []);
   return (
-    <div role="alertdialog" aria-label="Confirm" className={cx("pdnd-confirm flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[13px]", className)}
+    <div role="alertdialog" aria-label={t("Confirm")} className={cx("pdnd-confirm flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[13px]", className)}
       style={{ background: `color-mix(in srgb, ${c} 10%, var(--surface))`, border: `1px solid color-mix(in srgb, ${c} 30%, transparent)` }}>
       <span className="min-w-0 flex-1" dir="auto">{text}</span>
-      <button onClick={onCancel} className="shrink-0 text-muted hover:text-ink">Cancel</button>
+      <button onClick={onCancel} className="shrink-0 text-muted hover:text-ink">{t("Cancel")}</button>
       <button ref={btn} onClick={onOk} className="flex h-[26px] shrink-0 items-center rounded-[7px] px-2.5 font-semibold" style={{ background: c, color: danger ? "#1A0B0B" : "var(--accent-fg)" }}>{ok}</button>
     </div>
   );

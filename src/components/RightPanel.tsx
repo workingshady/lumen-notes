@@ -17,15 +17,16 @@ import { getSelectionText, insertText, scrollEditorToLine } from "./Editor";
 import { AskVault } from "./AskVault";
 import { Preview } from "./Preview";
 import { Button, cx, STATUS_COLOR } from "./ui";
+import { digits, fmtDate, fmtNum, t, tk, tx } from "../lib/i18n";
 
 const SECTION = "px-1 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted";
 
 const TABS: { value: Exclude<Panel, null>; label: string; icon: ReactNode }[] = [
-  { value: "outline", label: "Outline", icon: <ListTree size={15} /> },
-  { value: "backlinks", label: "Links", icon: <Link2 size={15} /> },
-  { value: "properties", label: "Properties", icon: <SlidersHorizontal size={15} /> },
-  { value: "versions", label: "Versions", icon: <History size={15} /> },
-  { value: "ai", label: "AI", icon: <Sparkles size={15} /> },
+  { value: "outline", label: tk("Outline"), icon: <ListTree size={15} /> },
+  { value: "backlinks", label: tk("Links"), icon: <Link2 size={15} /> },
+  { value: "properties", label: tk("Properties"), icon: <SlidersHorizontal size={15} /> },
+  { value: "versions", label: tk("Versions"), icon: <History size={15} /> },
+  { value: "ai", label: tk("AI"), icon: <Sparkles size={15} /> },
 ];
 const useWidth = () => { const [w, setW] = useState(() => innerWidth); useEffect(() => { const f = () => setW(innerWidth); addEventListener("resize", f); return () => removeEventListener("resize", f); }, []); return w; };
 
@@ -35,21 +36,21 @@ export function RightPanel({ note }: { note: Note }) {
   if (!panel) return null;
   if (panel === "versions" && phone) return <PhoneVersions note={note} />;
   return (
-    <aside className={cx("fixed inset-0 z-40 flex flex-col bg-surface text-[13px] md:static md:z-auto md:shrink-0 md:border-l md:border-line fade-in", panel === "ai" ? "md:w-[340px]" : "md:w-[300px]")}>
+    <aside className={cx("fixed inset-0 z-40 flex flex-col bg-surface text-[13px] md:static md:z-auto md:shrink-0 md:border-s md:border-line fade-in", panel === "ai" ? "md:w-[340px]" : "md:w-[300px]")}>
       {/* Icon tabs; the active one expands to icon + label */}
       <div className="safe-t flex h-12 shrink-0 items-center gap-0.5 border-b border-line px-2">
         <div role="tablist" className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
-          {TABS.map((t) => {
-            const on = panel === t.value;
+          {TABS.map((tab) => {
+            const on = panel === tab.value;
             return (
-              <button key={t.value} role="tab" aria-selected={on} title={t.label} aria-label={t.label} onClick={() => setUI({ panel: t.value })}
+              <button key={tab.value} role="tab" aria-selected={on} title={t(tab.label)} aria-label={t(tab.label)} onClick={() => setUI({ panel: tab.value })}
                 className={cx("flex h-[30px] shrink-0 items-center justify-center gap-1.5 rounded-[6px]", on ? "bg-surface-2 px-2.5 font-semibold text-ink [&>svg]:text-accent" : "w-8 text-muted hover:bg-surface-2 hover:text-ink")}>
-                {t.icon}{on && t.label}
+                {tab.icon}{on && t(tab.label)}
               </button>
             );
           })}
         </div>
-        <button aria-label="Close panel" title="Close panel" className="flex size-8 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink md:hidden" onClick={() => setUI({ panel: null })}><X size={16} /></button>
+        <button aria-label={t("Close panel")} title={t("Close panel")} className="flex size-8 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink md:hidden" onClick={() => setUI({ panel: null })}><X size={16} /></button>
       </div>
       <div className={cx("min-h-0 flex-1 overflow-y-auto", panel === "versions" || panel === "properties" || panel === "ai" ? "" : "p-3")}>
         {panel === "outline" && <Outline note={note} />}
@@ -64,16 +65,16 @@ export function RightPanel({ note }: { note: Note }) {
 
 function Outline({ note }: { note: Note }) {
   const hs = useMemo(() => outline(note.body), [note.body]);
-  if (!hs.length) return <p className="px-1 text-[13px] text-muted">No headings yet. Use <code>#</code>, <code>##</code>, <code>###</code>.</p>;
+  if (!hs.length) return <p className="px-1 text-[13px] text-muted">{tx("No headings yet. Use {h1}, {h2}, {h3}.", { h1: <code>#</code>, h2: <code>##</code>, h3: <code>###</code> })}</p>;
   const min = Math.min(...hs.map((h) => h.level));
   return (
     <nav className="flex flex-col gap-px">
-      <div className={SECTION}>Outline · {hs.length}</div>
+      <div className={SECTION}>{t("Outline · {n}", { n: hs.length })}</div>
       {hs.map((h) => (
         <button key={h.line} dir="auto" onClick={() => { scrollEditorToLine(h.line); document.querySelector(`.prose [data-line="${h.line}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
-          className={cx("relative block w-full truncate rounded-[8px] py-1.5 pr-2 text-left text-[13px] hover:bg-surface-2 hover:text-ink", h.level === min ? "font-medium text-ink" : "text-muted")}
-          style={{ paddingLeft: 10 + (h.level - min) * 14 }}>
-          {h.level > min && <span className="absolute bottom-1 top-1 w-px bg-line" style={{ left: 4 + (h.level - min) * 14 }} />}
+          className={cx("relative block w-full truncate rounded-[8px] py-1.5 pe-2 text-start text-[13px] hover:bg-surface-2 hover:text-ink", h.level === min ? "font-medium text-ink" : "text-muted")}
+          style={{ paddingInlineStart: 10 + (h.level - min) * 14 }}>
+          {h.level > min && <span className="absolute bottom-1 top-1 w-px bg-line" style={{ insetInlineStart: 4 + (h.level - min) * 14 }} />}
           {h.text}
         </button>
       ))}
@@ -88,14 +89,14 @@ function Backlinks({ note }: { note: Note }) {
   // 20b D6: section label, then plain titles (folder / space in the tooltip)
   const List = ({ title, items, top }: { title: string; items: Note[]; top?: boolean }) => (
     <div className={cx("flex flex-col gap-2 px-0.5 py-2.5", top && "border-t border-line")} data-links={title}>
-      <div className="text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{title} · {items.length}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("{title} · {n}", { title, n: items.length })}</div>
       {items.length ? items.map((n) => (
         <button key={n.id} dir="auto" onClick={() => openNote(n.id)} title={v.folderMap.get(n.folderId ?? "")?.name ?? v.spaceMap.get(n.spaceId)?.name ?? ""}
           className="-mx-1.5 truncate rounded-[6px] px-1.5 text-start text-[13px] font-medium hover:bg-surface-2">{n.title}</button>
-      )) : <div className="text-[12.5px] text-muted">None</div>}
+      )) : <div className="text-[12.5px] text-muted">{t("None")}</div>}
     </div>
   );
-  return (<div className="-mt-2.5"><List title="Linked mentions" items={back} /><UnlinkedMentions note={note} /><List title="Links out" items={out} top /></div>);
+  return (<div className="-mt-2.5"><List title={t("Linked mentions")} items={back} /><UnlinkedMentions note={note} /><List title={t("Links out")} items={out} top /></div>);
 }
 
 // ------------------------------------------------------------------ unlinked mentions (design 04 §D6; logic in lib/mentions.ts)
@@ -141,12 +142,12 @@ function UnlinkedMentions({ note }: { note: Note }) {
       undo.push({ id: cur.id, before: cur.body, after: body });
       await updateNote(cur.id, { body });
     }
-    if (!count) return void toast("Nothing to link: the text changed", undefined, { icon: "info" });
-    toast(`Linked ${count} mention${count === 1 ? "" : "s"} in ${undo.length} note${undo.length === 1 ? "" : "s"}`, {
-      label: "Undo",
+    if (!count) return void toast(t("Nothing to link: the text changed"), undefined, { icon: "info" });
+    toast(t("Linked {n} mention in {notes}|Linked {n} mentions in {notes}", { n: count, notes: t("{n} note|{n} notes", { n: undo.length }) }), {
+      label: t("Undo"),
       run: async () => {
         for (const u of undo) { const cur = await db.notes.get(u.id); if (cur && cur.body === u.after) await updateNote(u.id, { body: u.before }); }
-        toast("Links removed", undefined, { icon: "check" });
+        toast(t("Links removed"), undefined, { icon: "check" });
       },
     }, { icon: "link" });
   }
@@ -168,12 +169,12 @@ function UnlinkedMentions({ note }: { note: Note }) {
     <div className={cx("group/m flex flex-col gap-1", muted && "opacity-60")}>
       <div className="flex items-center gap-1.5">
         <button dir="auto" onClick={() => openNote(g.src.id)} className="min-w-0 flex-1 truncate text-start text-[13px] font-medium hover:underline">{g.src.title}</button>
-        <button onClick={() => void setIgnored(g.src.title, !muted)} title={muted ? "Show this note's mentions again" : "Hide this note's mentions"} className={cx("shrink-0 text-[11.5px] text-muted hover:text-ink", !muted && "opacity-0 focus:opacity-100 group-hover/m:opacity-100 max-md:opacity-100")}>{muted ? "Unignore" : "Ignore"}</button>
+        <button onClick={() => void setIgnored(g.src.title, !muted)} title={muted ? t("Show this note's mentions again") : t("Hide this note's mentions")} className={cx("shrink-0 text-[11.5px] text-muted hover:text-ink", !muted && "opacity-0 focus:opacity-100 group-hover/m:opacity-100 max-md:opacity-100")}>{muted ? "Unignore" : "Ignore"}</button>
       </div>
       {!muted && g.ms.map((m, i) => (
         <span key={i} dir="auto" className="break-words text-[14px] leading-5 text-muted" style={{ fontFamily: "'Source Serif 4', Georgia, serif" }}>
           {m.before}<mark className="bg-transparent text-ink" style={{ borderBottom: "1.5px dashed var(--link)" }}>{m.match}</mark>{m.after}
-          <button onClick={() => void link([{ src: g.src, ms: [m] }])} title={`Link to “${note.title}”`} className="ms-1.5 font-sans text-[12px] text-link hover:underline">Link</button>
+          <button onClick={() => void link([{ src: g.src, ms: [m] }])} title={t("Link to “{title}”", { title: note.title })} className="ms-1.5 font-sans text-[12px] text-link hover:underline">{t("Link@@verb")}</button>
         </span>
       ))}
     </div>
@@ -182,24 +183,24 @@ function UnlinkedMentions({ note }: { note: Note }) {
   return (
     <div className="flex flex-col gap-2.5 border-t border-line px-0.5 py-2.5" data-mentions>
       <div className="flex items-center">
-        <div className="flex-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Unlinked mentions · {total}</div>
-        {total > 0 && !confirm && <button onClick={() => setConfirm(true)} className="flex h-[26px] items-center rounded-[7px] border border-line px-2.5 text-[12px] hover:bg-surface-2">Link all</button>}
+        <div className="flex-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("Unlinked mentions · {n}", { n: total })}</div>
+        {total > 0 && !confirm && <button onClick={() => setConfirm(true)} className="flex h-[26px] items-center rounded-[7px] border border-line px-2.5 text-[12px] hover:bg-surface-2">{t("Link all")}</button>}
       </div>
       {confirm && (
         <div className="flex flex-col gap-2 rounded-[10px] border border-line bg-surface-2 p-2.5 text-[12.5px]">
-          <span>Link {total} mention{total === 1 ? "" : "s"} in {shown.length} note{shown.length === 1 ? "" : "s"} to “<span dir="auto">{note.title}</span>”? You can undo it.</span>
+          <span>{tx("Link {n} mention in {notes} to “{title}”? You can undo it.|Link {n} mentions in {notes} to “{title}”? You can undo it.", { n: total, notes: t("{n} note|{n} notes", { n: shown.length }), title: <span dir="auto">{note.title}</span> })}</span>
           <div className="flex gap-2">
-            <Button variant="primary" onClick={() => { setConfirm(false); void link(shown); }}>Link all</Button>
-            <Button onClick={() => setConfirm(false)}>Cancel</Button>
+            <Button variant="primary" onClick={() => { setConfirm(false); void link(shown); }}>{t("Link all")}</Button>
+            <Button onClick={() => setConfirm(false)}>{t("Cancel")}</Button>
           </div>
         </div>
       )}
-      {!terms.length ? <div className="text-[12.5px] text-muted">Give this note a title to find mentions.</div>
-        : shown.length ? shown.map((g) => <Group key={g.src.id} g={g} />) : <div className="text-[12.5px] text-muted">None</div>}
+      {!terms.length ? <div className="text-[12.5px] text-muted">{t("Give this note a title to find mentions.")}</div>
+        : shown.length ? shown.map((g) => <Group key={g.src.id} g={g} />) : <div className="text-[12.5px] text-muted">{t("None")}</div>}
       {hidden.length > 0 && (
         <div className="flex flex-col gap-2">
           <button onClick={() => setShowIgnored((s) => !s)} className="flex h-7 items-center gap-1 text-[12px] text-muted hover:text-ink">
-            {showIgnored ? <ChevronDown size={12} /> : <ChevronRight size={12} />}{hidden.length} ignored note{hidden.length === 1 ? "" : "s"}
+            {showIgnored ? <ChevronDown size={12} /> : <ChevronRight size={12} />}{t("{n} ignored note|{n} ignored notes", { n: hidden.length })}
           </button>
           {showIgnored && hidden.map((g) => <Group key={g.src.id} g={g} muted />)}
         </div>
@@ -218,6 +219,9 @@ const kindOf = (k: string, v: string): PropKind => DOT_KEYS.test(k) ? "dots" : D
 const PROP_ICON: Record<string, ReactNode> = { course: <BookOpen size={13} />, book: <BookOpen size={13} />, difficulty: <Gauge size={13} />, status: <CircleDot size={13} />, type: <Tag size={13} />, tags: <Hash size={13} />, studied: <Timer size={13} /> };
 const iconFor = (k: string, kind: PropKind) => PROP_ICON[k.toLowerCase()] ?? (kind === "url" ? <Link size={13} /> : kind === "date" ? <Calendar size={13} /> : kind === "dots" ? <Gauge size={13} /> : <Text size={13} />);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+/** Display labels for status / type values (the stored values stay English). */
+const VAL_L: Record<string, string> = { todo: tk("To do"), learning: tk("Learning"), review: tk("Review"), mastered: tk("Mastered"), none: tk("None"), note: tk("Note"), lesson: tk("Lesson"), journal: tk("Journal"), flashcards: tk("Flashcards"), slides: tk("Slides"), post: tk("Post"), canvas: tk("Canvas"), whiteboard: tk("Whiteboard"), roadmap: tk("Roadmap"), moc: tk("Map of content"), path: tk("Path"), diagram: tk("Diagram"), base: tk("Base"), pdf: tk("PDF"), dashboard: tk("Dashboard") };
+const valLabel = (s: string) => (VAL_L[s] ? t(VAL_L[s]) : cap(s));
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 function parseDate(v: string): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v);
@@ -227,13 +231,13 @@ function parseDate(v: string): Date | null {
 }
 function showDate(v: string) {
   const d = parseDate(v);
-  if (!d) return { t: v, c: "var(--text)" };
+  if (!d) return { label: v, c: "var(--text)" };
   const days = Math.round((d.getTime() - new Date(ymd(new Date()) + "T00:00").getTime()) / 86400000);
   // "Wed 19 Nov" (year only when it isn't this year)
-  const t = days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${d.toLocaleDateString(undefined, { weekday: "short" })} ${d.getDate()} ${d.toLocaleDateString(undefined, { month: "short" })}${d.getFullYear() !== new Date().getFullYear() ? " " + d.getFullYear() : ""}`;
-  return { t, c: days < 0 ? "var(--danger)" : days <= 7 ? "var(--warning)" : "var(--text)" };
+  const label = days === 0 ? t("Today") : days === 1 ? t("Tomorrow") : fmtDate(d, { weekday: "short", day: "numeric", month: "short", ...(d.getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}) });
+  return { label, c: days < 0 ? "var(--danger)" : days <= 7 ? "var(--warning)" : "var(--text)" };
 }
-const studiedText = (min: number) => (min >= 60 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, "0")} min` : `${min} min`);
+const studiedText = (min: number) => (min >= 60 ? t("{h} h {m} min", { h: Math.floor(min / 60), m: digits(String(min % 60).padStart(2, "0")) }) : t("{n} min", { n: min }));
 
 function Properties({ note }: { note: Note }) {
   const v = useVault();
@@ -262,7 +266,7 @@ function Properties({ note }: { note: Note }) {
     </div>
   );
   const valBtn = (id: string, content: ReactNode, color = "var(--text)") => (
-    <button onClick={() => setEditing(id)} className="min-w-0 flex-1 truncate py-2 text-left" style={{ color }}>{content}</button>
+    <button onClick={() => setEditing(id)} className="min-w-0 flex-1 truncate py-2 text-start" style={{ color }}>{content}</button>
   );
   const field = "h-7 w-full rounded-[6px] border border-accent bg-bg px-2 text-ink outline-none";
   const TextEdit = ({ init, onDone, type = "text" }: { init: string; onDone: (v: string | null) => void; type?: string }) => (
@@ -280,7 +284,7 @@ function Properties({ note }: { note: Note }) {
   };
   const Chips = ({ opts, cur, onPick }: { opts: string[]; cur: string; onPick: (v: string) => void }) => (
     <div className="flex flex-wrap gap-1">
-      {opts.map((o) => <button key={o} onClick={() => { onPick(o); setEditing(null); }} className={cx("h-6 rounded-full border px-2 text-[12px] capitalize", o === cur ? "border-accent text-ink" : "border-line text-muted hover:text-ink")}>{o}</button>)}
+      {opts.map((o) => <button key={o} onClick={() => { onPick(o); setEditing(null); }} className={cx("h-6 rounded-full border px-2 text-[12px] capitalize", o === cur ? "border-accent text-ink" : "border-line text-muted hover:text-ink")}>{valLabel(o)}</button>)}
     </div>
   );
 
@@ -292,7 +296,7 @@ function Properties({ note }: { note: Note }) {
         if (kind === "dots") return <Row key={k} id={id} k={k} icon={iconFor(k, kind)}><Dots k={k} val={val} /><RemoveBtn onClick={() => setProp(k, null)} /></Row>;
         if (kind === "date") {
           const d = showDate(val);
-          return <Row key={k} id={id} k={k} icon={iconFor(k, kind)} edit={<TextEdit type="date" init={parseDate(val) ? ymd(parseDate(val)!) : ""} onDone={(x) => setProp(k, x)} />}>{valBtn(id, d.t, d.c)}<RemoveBtn onClick={() => setProp(k, null)} /></Row>;
+          return <Row key={k} id={id} k={k} icon={iconFor(k, kind)} edit={<TextEdit type="date" init={parseDate(val) ? ymd(parseDate(val)!) : ""} onDone={(x) => setProp(k, x)} />}>{valBtn(id, d.label, d.c)}<RemoveBtn onClick={() => setProp(k, null)} /></Row>;
         }
         if (kind === "url") {
           const href = /^https?:\/\//.test(val) ? val : `https://${val}`;
@@ -303,40 +307,40 @@ function Properties({ note }: { note: Note }) {
             </Row>
           );
         }
-        return <Row key={k} id={id} k={k} icon={iconFor(k, kind)} edit={<TextEdit init={val} onDone={(x) => setProp(k, x)} />}>{valBtn(id, val || <span className="text-muted">Empty</span>)}<RemoveBtn onClick={() => setProp(k, null)} /></Row>;
+        return <Row key={k} id={id} k={k} icon={iconFor(k, kind)} edit={<TextEdit init={val} onDone={(x) => setProp(k, x)} />}>{valBtn(id, val || <span className="text-muted">{t("Empty")}</span>)}<RemoveBtn onClick={() => setProp(k, null)} /></Row>;
       })}
       {md || note.status ? (
         <Row id="status" k="status" icon={<CircleDot size={13} />} edit={<Chips opts={[...STATUSES, "none"]} cur={note.status ?? "none"} onPick={(s) => void updateNote(note.id, { status: s === "none" ? null : (s as Note["status"]) })} />}>
-          {valBtn("status", note.status ? cap(note.status) : <span className="text-muted">None</span>, note.status ? STATUS_COLOR[note.status] : undefined)}
+          {valBtn("status", note.status ? valLabel(note.status) : <span className="text-muted">{t("None")}</span>, note.status ? STATUS_COLOR[note.status] : undefined)}
         </Row>
       ) : null}
       <Row id="type" k="type" icon={<Tag size={13} />} edit={<Chips opts={NOTE_TYPES.filter((t) => md ? !["canvas", "whiteboard", "diagram"].includes(t) : t === note.type)} cur={note.type} onPick={(t) => void updateNote(note.id, { type: t as Note["type"] })} />}>
-        {valBtn("type", note.type === "moc" ? "Map of content" : cap(note.type))}
+        {valBtn("type", valLabel(note.type))}
       </Row>
       <Row id="tags" k="tags" icon={<Hash size={13} />} edit={<TextEdit init={note.tags.join(" ")} onDone={(x) => void updateNote(note.id, { tags: [...new Set((x ?? "").split(/[\s,]+/).map((t) => t.replace(/^#/, "").toLowerCase()).filter(Boolean))] })} />}>
-        {valBtn("tags", note.tags.length ? note.tags.map((t) => `#${t}`).join("  ") : "Add tags", "var(--muted)")}
+        {valBtn("tags", note.tags.length ? note.tags.map((t) => `#${t}`).join("  ") : t("Add tags"), "var(--muted)")}
       </Row>
-      <Row id="studied" k="studied" icon={<Timer size={13} />}><span className="flex-1 truncate py-2" title="Study-timer minutes logged to this note">{studiedText(minutes)}</span></Row>
+      <Row id="studied" k="studied" icon={<Timer size={13} />}><span className="flex-1 truncate py-2" title={t("Study-timer minutes logged to this note")}>{studiedText(minutes)}</span></Row>
 
       {adding ? (
         <AddProp existing={Object.keys(note.props)} onAdd={(k, val) => { setProp(k, val || (kindOf(k, "") === "date" ? ymd(new Date()) : kindOf(k, "") === "dots" ? "3" : "")); setAdding(false); if (!val && kindOf(k, "") !== "dots") setEditing("p:" + k); }} onCancel={() => setAdding(false)} />
       ) : (
-        <button onClick={() => setAdding(true)} className="flex items-center gap-2 rounded-[6px] px-1.5 py-2.5 text-left text-muted hover:text-ink"><Plus size={13} />Add property</button>
+        <button onClick={() => setAdding(true)} className="flex items-center gap-2 rounded-[6px] px-1.5 py-2.5 text-start text-muted hover:text-ink"><Plus size={13} />{t("Add property")}</button>
       )}
 
       <div className="mt-1.5 border-t border-line px-1.5 pt-2.5">
-        <button onClick={() => setAdv((a) => !a)} className="flex w-full items-center gap-1.5 text-left text-[12px] text-muted hover:text-ink">
-          {adv ? <ChevronDown size={12} /> : <ChevronRight size={12} />}Advanced · id, created, aliases, cssclass
+        <button onClick={() => setAdv((a) => !a)} className="flex w-full items-center gap-1.5 text-start text-[12px] text-muted hover:text-ink">
+          {adv ? <ChevronDown size={12} /> : <ChevronRight size={12} />}{t("Advanced · id, created, aliases, cssclass")}
         </button>
         {adv && (
           <div className="mt-2 flex flex-col gap-0.5">
             <div className="grid min-h-8 grid-cols-[104px_1fr] items-center gap-2 text-[12.5px]"><span className="text-muted">id</span><span className="truncate font-mono text-[11.5px]" title={note.id}>{note.id}</span></div>
-            <div className="grid min-h-8 grid-cols-[104px_1fr] items-center gap-2 text-[12.5px]"><span className="text-muted">created</span><span>{new Date(note.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</span></div>
-            <div className="grid min-h-8 grid-cols-[104px_1fr] items-center gap-2 text-[12.5px]"><span className="text-muted">updated</span><span>{new Date(note.updatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</span></div>
+            <div className="grid min-h-8 grid-cols-[104px_1fr] items-center gap-2 text-[12.5px]"><span className="text-muted">created</span><span>{fmtDate(note.createdAt, { dateStyle: "medium", timeStyle: "short" })}</span></div>
+            <div className="grid min-h-8 grid-cols-[104px_1fr] items-center gap-2 text-[12.5px]"><span className="text-muted">updated</span><span>{fmtDate(note.updatedAt, { dateStyle: "medium", timeStyle: "short" })}</span></div>
             {["aliases", "cssclass"].map((k) => (
               <div key={k} className="grid min-h-8 grid-cols-[104px_1fr] items-center gap-2 text-[12.5px]">
                 <span className="text-muted">{k}</span>
-                <input defaultValue={note.props[k] ?? ""} key={note.props[k] ?? ""} placeholder={k === "aliases" ? "Other names, comma separated" : "css class for export"} onBlur={(e) => e.target.value !== (note.props[k] ?? "") && setProp(k, e.target.value.trim() || null)}
+                <input defaultValue={note.props[k] ?? ""} key={note.props[k] ?? ""} placeholder={k === "aliases" ? t("Other names, comma separated") : t("css class for export")} onBlur={(e) => e.target.value !== (note.props[k] ?? "") && setProp(k, e.target.value.trim() || null)}
                   className="h-7 min-w-0 rounded-[6px] border border-transparent bg-transparent px-1.5 outline-none placeholder:text-muted hover:border-line focus:border-accent" />
               </div>
             ))}
@@ -348,27 +352,27 @@ function Properties({ note }: { note: Note }) {
   );
 }
 function RemoveBtn({ onClick }: { onClick: () => void }) {
-  return <button aria-label="Remove property" title="Remove" onClick={onClick} className="ml-1 hidden size-6 shrink-0 items-center justify-center rounded-[6px] text-muted hover:text-bad group-hover:flex"><Trash2 size={12} /></button>;
+  return <button aria-label={t("Remove property")} title={t("Remove")} onClick={onClick} className="ms-1 hidden size-6 shrink-0 items-center justify-center rounded-[6px] text-muted hover:text-bad group-hover:flex"><Trash2 size={12} /></button>;
 }
 function EditBtn({ onClick }: { onClick: () => void }) {
-  return <button aria-label="Edit" title="Edit" onClick={onClick} className="ml-1 hidden h-6 shrink-0 items-center rounded-[6px] px-1.5 text-[11.5px] text-muted hover:text-ink group-hover:flex">Edit</button>;
+  return <button aria-label={t("Edit")} title={t("Edit")} onClick={onClick} className="ms-1 hidden h-6 shrink-0 items-center rounded-[6px] px-1.5 text-[11.5px] text-muted hover:text-ink group-hover:flex">{t("Edit")}</button>;
 }
 const SUGGEST = ["course", "source", "due", "difficulty", "exam", "teacher", "aliases"];
 function AddProp({ existing, onAdd, onCancel }: { existing: string[]; onAdd: (k: string, v: string) => void; onCancel: () => void }) {
   const [k, setK] = useState("");
   const [val, setVal] = useState("");
   const kind = kindOf(k, val);
-  const submit = () => { const key = k.trim().toLowerCase().replace(/\s+/g, "-"); if (key && !existing.includes(key)) onAdd(key, val.trim()); else if (!key) onCancel(); else toast(`“${key}” already exists`); };
+  const submit = () => { const key = k.trim().toLowerCase().replace(/\s+/g, "-"); if (key && !existing.includes(key)) onAdd(key, val.trim()); else if (!key) onCancel(); else toast(t("“{key}” already exists", { key })); };
   return (
     <form className="flex flex-col gap-1.5 rounded-[8px] border border-line bg-bg p-2" onSubmit={(e) => { e.preventDefault(); submit(); }}>
       <div className="flex gap-1.5">
-        <input autoFocus list="lumen-prop-keys" value={k} onChange={(e) => setK(e.target.value)} placeholder="Name" onKeyDown={(e) => e.key === "Escape" && onCancel()}
+        <input autoFocus list="lumen-prop-keys" value={k} onChange={(e) => setK(e.target.value)} placeholder={t("Name")} onKeyDown={(e) => e.key === "Escape" && onCancel()}
           className="h-7 w-[104px] shrink-0 rounded-[6px] border border-line bg-surface px-2 outline-none focus:border-accent" />
-        <input value={val} onChange={(e) => setVal(e.target.value)} type={kind === "date" ? "date" : "text"} placeholder={kind === "dots" ? "1–5" : kind === "url" ? "https://" : "Value"} onKeyDown={(e) => e.key === "Escape" && onCancel()}
+        <input value={val} onChange={(e) => setVal(e.target.value)} type={kind === "date" ? "date" : "text"} placeholder={kind === "dots" ? "1–5" : kind === "url" ? "https://" : t("Value")} onKeyDown={(e) => e.key === "Escape" && onCancel()}
           className="h-7 min-w-0 flex-1 rounded-[6px] border border-line bg-surface px-2 outline-none focus:border-accent" />
       </div>
       <datalist id="lumen-prop-keys">{SUGGEST.filter((s) => !existing.includes(s)).map((s) => <option key={s} value={s} />)}</datalist>
-      <div className="flex justify-end gap-1.5"><Button size="sm" variant="ghost" type="button" className="h-7" onClick={onCancel}>Cancel</Button><Button size="sm" variant="primary" type="submit" className="h-7">Add</Button></div>
+      <div className="flex justify-end gap-1.5"><Button size="sm" variant="ghost" type="button" className="h-7" onClick={onCancel}>{t("Cancel")}</Button><Button size="sm" variant="primary" type="submit" className="h-7">{t("Add")}</Button></div>
     </form>
   );
 }
@@ -383,20 +387,22 @@ function lineDelta(from: string, to: string) {
   }
   return { add, del };
 }
-const fmt = (n: number) => n.toLocaleString();
+const fmt = (n: number) => fmtNum(n);
 const sameDay = (a: number, b: number) => new Date(a).toDateString() === new Date(b).toDateString();
-const hm = (t: number) => new Date(t).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-function when(t: number) {
-  if (sameDay(t, Date.now())) return hm(t);
-  if (sameDay(t, Date.now() - 86400000)) return `Yesterday ${hm(t)}`;
-  const d = new Date(t);
+const hm = (ts: number) => fmtDate(ts, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+function when(ts: number) {
+  if (sameDay(ts, Date.now())) return hm(ts);
+  if (sameDay(ts, Date.now() - 86400000)) return t("Yesterday {time}", { time: hm(ts) });
+  const d = new Date(ts);
   // "Mon 10 Nov 20:18"
-  return `${d.toLocaleDateString(undefined, { weekday: "short" })} ${d.getDate()} ${d.toLocaleDateString(undefined, { month: "short" })}${d.getFullYear() !== new Date().getFullYear() ? " " + d.getFullYear() : ""} ${hm(t)}`;
+  return `${fmtDate(d, { weekday: "short", day: "numeric", month: "short", ...(d.getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}) })} ${hm(ts)}`;
 }
 /** "Today 21:12" style for labels and the comparing bar. */
-const whenLong = (t: number) => (sameDay(t, Date.now()) ? `Today ${hm(t)}` : when(t));
+const whenLong = (ts: number) => (sameDay(ts, Date.now()) ? t("Today {time}", { time: hm(ts) }) : when(ts));
+/** Version labels are stored in English; the known automatic ones are shown translated. */
+const storedLabel = (l: string) => (l === "Manual save" || l === "Before restore" || l === "Before keeping the other version" ? t(l) : l.startsWith("Restored from ") ? t("Restored from {when}", { when: l.slice(14) }) : l);
 const isRestore = (v: Version) => v.label.startsWith("Restored") || v.label === "Before restore";
-const labelOf = (v: Version) => (v.label ? (isRestore(v) || v.label === "Manual save" ? v.label : `“${v.label}”`) : "Auto-save");
+const labelOf = (v: Version) => (v.label ? (isRestore(v) || v.label === "Manual save" ? storedLabel(v.label) : `“${v.label}”`) : t("Auto-save"));
 
 function useVersions(note: Note) {
   const versions = useLiveQuery(() => db.versions.where("noteId").equals(note.id).reverse().sortBy("createdAt"), [note.id]) ?? [];
@@ -410,9 +416,9 @@ async function restore(note: Note, v: Version, live: Version[]) {
   if (live[0]?.body !== note.body) await snapshot(note, "");
   await updateNote(note.id, { title: v.title, body: v.body });
   await snapshot({ ...note, title: v.title, body: v.body }, `Restored from ${whenLong(v.createdAt)}`);
-  toast(`Restored from ${whenLong(v.createdAt)}`, { label: "Undo", run: () => void updateNote(note.id, before) });
+  toast(t("Restored from {when}", { when: whenLong(v.createdAt) }), { label: t("Undo"), run: () => void updateNote(note.id, before) });
 }
-const copy = (t: string) => { void navigator.clipboard.writeText(t); toast("Copied"); };
+const copy = (s: string) => { void navigator.clipboard.writeText(s); toast(t("Copied")); };
 
 function Counts({ add, del }: { add: number; del: number }) {
   return (
@@ -448,26 +454,26 @@ function Versions({ note }: { note: Note }) {
   let lastGroup = "Today";
   return (
     <div ref={ref} className="flex flex-col">
-      <form className="flex gap-2 p-3" onSubmit={async (e) => { e.preventDefault(); await snapshot(note, label || "Manual save"); setLabel(""); toast("Version saved"); }}>
-        <input className="h-8 min-w-0 flex-1 rounded-[6px] border border-line bg-bg px-2.5 text-ink outline-none placeholder:text-muted focus:border-accent" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label (optional)" />
-        <button type="submit" className="flex h-8 items-center rounded-[10px] border border-line px-2.5 font-medium hover:bg-surface-2">Save</button>
+      <form className="flex gap-2 p-3" onSubmit={async (e) => { e.preventDefault(); await snapshot(note, label || "Manual save"); setLabel(""); toast(t("Version saved")); }}>
+        <input className="h-8 min-w-0 flex-1 rounded-[6px] border border-line bg-bg px-2.5 text-ink outline-none placeholder:text-muted focus:border-accent" value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t("Label (optional)")} />
+        <button type="submit" className="flex h-8 items-center rounded-[10px] border border-line px-2.5 font-medium hover:bg-surface-2">{t("Save")}</button>
       </form>
       <div className="flex flex-col gap-0.5 px-2 pb-3">
-        <div className="px-2 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Today</div>
-        <button onClick={() => setSelId(null)} className="flex items-start gap-2.5 rounded-[8px] px-2.5 py-[9px] text-left">
+        <div className="px-2 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("Today")}</div>
+        <button onClick={() => setSelId(null)} className="flex items-start gap-2.5 rounded-[8px] px-2.5 py-[9px] text-start">
           <CircleDot size={14} className="mt-0.5 shrink-0 text-muted" />
-          <span className="flex min-w-0 flex-1 flex-col gap-0.5"><span className="leading-4">Current</span><span className="text-[12px] leading-[15px] text-muted">Now · this device</span></span>
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5"><span className="leading-4">{t("Current")}</span><span className="text-[12px] leading-[15px] text-muted">{t("Now · this device")}</span></span>
           <Counts {...current} />
         </button>
         {live.map((v, i) => {
-          const group = sameDay(v.createdAt, Date.now()) ? "Today" : "Earlier";
+          const group = sameDay(v.createdAt, Date.now()) ? tk("Today") : tk("Earlier");
           const header = group !== lastGroup;
           lastGroup = group;
           const on = v.id === selId;
           return (
             <div key={v.id} className="flex flex-col">
-              {header && <div className="px-2 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{group}</div>}
-              <button onClick={() => setSelId(on ? null : v.id)} className={cx("flex w-full items-start gap-2.5 rounded-[8px] px-2.5 py-[9px] text-left", on ? "bg-surface-2 shadow-[inset_0_0_0_1px_var(--accent)]" : "hover:bg-surface-2")}>
+              {header && <div className="px-2 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t(group)}</div>}
+              <button onClick={() => setSelId(on ? null : v.id)} className={cx("flex w-full items-start gap-2.5 rounded-[8px] px-2.5 py-[9px] text-start", on ? "bg-surface-2 shadow-[inset_0_0_0_1px_var(--accent)]" : "hover:bg-surface-2")}>
                 <span className={cx("mt-0.5 shrink-0", on ? "text-accent" : "text-muted")}>{isRestore(v) ? <History size={14} /> : v.label ? <Bookmark size={14} /> : <Clock size={14} />}</span>
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className={cx("truncate leading-4", (on || v.label) && "font-semibold")}>{when(v.createdAt)}</span>
@@ -478,7 +484,7 @@ function Versions({ note }: { note: Note }) {
             </div>
           );
         })}
-        {!live.length && <p className="px-2.5 pt-2 text-[13px] text-muted">Versions are saved automatically while you write (every 2 min at most), and whenever you click Save. Restoring never overwrites: it adds a new version on top.</p>}
+        {!live.length && <p className="px-2.5 pt-2 text-[13px] text-muted">{t("Versions are saved automatically while you write (every 2 min at most), and whenever you click Save. Restoring never overwrites: it adds a new version on top.")}</p>}
       </div>
       {sel && <DiffOverlay anchor={ref} note={note} v={sel} onClose={() => setSelId(null)} onRestore={async () => { await restore(note, sel, live); setSelId(null); }} />}
     </div>
@@ -507,21 +513,21 @@ function DiffOverlay({ anchor, note, v, onClose, onRestore }: { anchor: React.Re
   if (!box) return null;
   return (
     <div className="fixed z-30 flex flex-col bg-bg text-[13px] text-ink fade-in" style={box}>
-      <div className="flex h-12 shrink-0 items-center gap-2.5 border-b border-line pl-5 pr-4">
-        {folder && <><span className="truncate text-muted">{folder}</span><ChevronRight size={12} className="shrink-0 text-muted" /></>}
+      <div className="flex h-12 shrink-0 items-center gap-2.5 border-b border-line pe-4 ps-5">
+        {folder && <><span dir="auto" className="truncate text-muted">{folder}</span><ChevronRight size={12} className="shrink-0 text-muted" /></>}
         <span dir="auto" className="truncate font-medium">{v.title}</span>
-        <span className="shrink-0 rounded-[6px] bg-surface-2 px-2 text-[12px] leading-[22px] text-muted">Viewing version · read-only</span>
+        <span className="shrink-0 rounded-[6px] bg-surface-2 px-2 text-[12px] leading-[22px] text-muted">{t("Viewing version · read-only")}</span>
         <span className="flex-1" />
-        <button onClick={() => copy(v.body)} className="flex h-8 shrink-0 items-center gap-1.5 rounded-[10px] border border-line px-3 hover:bg-surface-2"><Copy size={14} />Copy</button>
-        <button onClick={onRestore} className="flex h-8 shrink-0 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 font-semibold text-accent-fg hover:brightness-110"><History size={14} />Restore as new version</button>
+        <button onClick={() => copy(v.body)} className="flex h-8 shrink-0 items-center gap-1.5 rounded-[10px] border border-line px-3 hover:bg-surface-2"><Copy size={14} />{t("Copy")}</button>
+        <button onClick={onRestore} className="flex h-8 shrink-0 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 font-semibold text-accent-fg hover:brightness-110"><History size={14} />{t("Restore as new version")}</button>
       </div>
       <div className="flex h-11 shrink-0 items-center gap-2.5 border-b border-line px-5 text-muted">
-        <span>Comparing</span><span className="font-medium text-ink">{whenLong(v.createdAt)}</span><ArrowRight size={13} /><span className="font-medium text-ink">Current</span>
+        <span>{t("Comparing")}</span><span className="font-medium text-ink">{whenLong(v.createdAt)}</span><ArrowRight size={13} /><span className="font-medium text-ink">{t("Current")}</span>
         <span className="flex-1" />
         <span className="text-ok">+{fmt(d.add)}</span><span className="text-bad">−{fmt(d.del)}</span>
-        <span className="ml-2 flex gap-0.5 rounded-[8px] border border-line bg-surface p-[3px]">
+        <span className="ms-2 flex gap-0.5 rounded-[8px] border border-line bg-surface p-[3px]">
           {(["inline", "side"] as const).map((m) => (
-            <button key={m} onClick={() => setM(m)} className={cx("flex h-[22px] items-center rounded-[6px] px-2 text-[12px]", mode === m ? "bg-surface-2 text-ink" : "hover:text-ink")}>{m === "inline" ? "Inline" : "Side by side"}</button>
+            <button key={m} onClick={() => setM(m)} className={cx("flex h-[22px] items-center rounded-[6px] px-2 text-[12px]", mode === m ? "bg-surface-2 text-ink" : "hover:text-ink")}>{m === "inline" ? t("Inline") : t("Side by side")}</button>
           ))}
         </span>
       </div>
@@ -539,16 +545,16 @@ function PhoneVersions({ note }: { note: Note }) {
   const sel = live.find((v) => v.id === selId) ?? live[0] ?? null;
   return (
     <div className="safe-t safe-b fixed inset-0 z-40 flex flex-col bg-surface text-[14px] fade-in">
-      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-line pl-5 pr-1">
-        <div className="flex min-w-0 flex-1 flex-col"><span className="text-[17px] font-[650]">Version history</span><span className="truncate text-[12px] text-muted">{note.title} · {live.length} version{live.length === 1 ? "" : "s"}</span></div>
-        <button aria-label="Close" onClick={() => setUI({ panel: null })} className="flex size-12 items-center justify-center"><X size={20} /></button>
+      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-line pe-1 ps-5">
+        <div className="flex min-w-0 flex-1 flex-col"><span className="text-[17px] font-[650]">{t("Version history")}</span><span className="truncate text-[12px] text-muted"><span dir="auto">{note.title}</span> · {t("{n} version|{n} versions", { n: live.length })}</span></div>
+        <button aria-label={t("Close")} onClick={() => setUI({ panel: null })} className="flex size-12 items-center justify-center"><X size={20} /></button>
       </div>
       {live.length ? (
         <>
           <div className="flex shrink-0 gap-2 overflow-x-auto px-4 py-3">
             {live.map((v, i) => (
-              <button key={v.id} onClick={() => setSelId(v.id)} className={cx("box-border flex w-[150px] shrink-0 flex-col gap-1 rounded-[12px] bg-bg px-3 py-2.5 text-left", v.id === sel?.id ? "border-[1.5px] border-accent" : "border border-line")}>
-                <span className="truncate text-[13.5px] font-semibold leading-[18px]">{sameDay(v.createdAt, Date.now() - 86400000) ? "Yesterday" : when(v.createdAt)}</span>
+              <button key={v.id} onClick={() => setSelId(v.id)} className={cx("box-border flex w-[150px] shrink-0 flex-col gap-1 rounded-[12px] bg-bg px-3 py-2.5 text-start", v.id === sel?.id ? "border-[1.5px] border-accent" : "border border-line")}>
+                <span className="truncate text-[13.5px] font-semibold leading-[18px]">{sameDay(v.createdAt, Date.now() - 86400000) ? t("Yesterday") : when(v.createdAt)}</span>
                 <span className="truncate text-[12px] leading-[15px] text-muted">{labelOf(v).replace(/[“”]/g, "")}</span>
                 <span className="font-mono text-[11.5px] font-medium leading-[15px]"><span className="text-ok">{deltas[i].add ? `+${fmt(deltas[i].add)}` : ""}</span> <span className="text-bad">{deltas[i].del ? `−${fmt(deltas[i].del)}` : ""}</span></span>
               </button>
@@ -556,11 +562,11 @@ function PhoneVersions({ note }: { note: Note }) {
           </div>
           <div className="mx-4 min-h-0 flex-1 overflow-auto rounded-[12px] border border-line bg-bg">{sel && <Diff from={sel.body} to={note.body} mode="phone" />}</div>
           <div className="flex shrink-0 gap-2.5 px-4 py-3">
-            <button aria-label="Copy this version" onClick={() => sel && copy(sel.body)} className="flex size-[52px] items-center justify-center rounded-[12px] border border-line"><Copy size={18} /></button>
-            <button onClick={async () => { if (sel) { await restore(note, sel, live); setUI({ panel: null }); } }} className="flex h-[52px] flex-1 items-center justify-center rounded-[12px] bg-accent text-[15px] font-semibold text-accent-fg">Restore as new version</button>
+            <button aria-label={t("Copy this version")} onClick={() => sel && copy(sel.body)} className="flex size-[52px] items-center justify-center rounded-[12px] border border-line"><Copy size={18} /></button>
+            <button onClick={async () => { if (sel) { await restore(note, sel, live); setUI({ panel: null }); } }} className="flex h-[52px] flex-1 items-center justify-center rounded-[12px] bg-accent text-[15px] font-semibold text-accent-fg">{t("Restore as new version")}</button>
           </div>
         </>
-      ) : <p className="p-5 text-[13px] text-muted">No versions yet. They are saved automatically while you write (every 2 min at most).</p>}
+      ) : <p className="p-5 text-[13px] text-muted">{t("No versions yet. They are saved automatically while you write (every 2 min at most).")}</p>}
     </div>
   );
 }
@@ -580,7 +586,7 @@ function diffRows(from: string, to: string): DiffRow[] {
       for (const l of lines.slice(0, keepHead)) out.push({ kind: "ctx", text: l, a: a++, b: b++ });
       const mid = lines.slice(keepHead, lines.length - keepTail);
       const id = fold++;
-      out.push({ kind: "fold", text: `⋯  ${mid.length} unchanged lines`, id, n: mid.length });
+      out.push({ kind: "fold", text: "⋯  " + t("{n} unchanged line|{n} unchanged lines", { n: mid.length }), id, n: mid.length });
       for (const l of mid) out.push({ kind: "ctx", text: l, a: a++, b: b++, id });
       for (const l of lines.slice(lines.length - keepTail)) out.push({ kind: "ctx", text: l, a: a++, b: b++ });
     } else for (const l of lines) out.push({ kind: "ctx", text: l, a: a++, b: b++ });
@@ -588,7 +594,7 @@ function diffRows(from: string, to: string): DiffRow[] {
   return out;
 }
 const BG = { add: "color-mix(in srgb,var(--success) 13%,transparent)", del: "color-mix(in srgb,var(--danger) 13%,transparent)", fold: "var(--surface)", ctx: "transparent" };
-const NUM = "shrink-0 select-none pr-2 text-right text-[11px] text-muted opacity-60";
+const NUM = "shrink-0 select-none pe-2 text-end text-[11px] text-muted opacity-60";
 
 function Diff({ from, to, mode }: { from: string; to: string; mode: "inline" | "side" | "phone" }) {
   const [open, setOpen] = useState<Set<number>>(new Set());
@@ -596,8 +602,8 @@ function Diff({ from, to, mode }: { from: string; to: string; mode: "inline" | "
   const toggle = (id: number) => setOpen((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const visible = rows.filter((r) => !(r.kind === "ctx" && r.id !== undefined && !open.has(r.id)));
   const foldRow = (r: DiffRow, key: number | string) => (
-    <button key={key} onClick={() => toggle(r.id!)} className="flex w-full items-center pl-[110px] text-left font-sans text-[12px] text-muted hover:text-ink" style={{ background: BG.fold, paddingLeft: mode === "phone" ? 22 : mode === "side" ? 52 : 110 }}>
-      {open.has(r.id!) ? `▾  hide ${r.n} unchanged lines` : r.text}
+    <button key={key} onClick={() => toggle(r.id!)} className="flex w-full items-center ps-[110px] text-start font-sans text-[12px] text-muted hover:text-ink" style={{ background: BG.fold, paddingInlineStart: mode === "phone" ? 22 : mode === "side" ? 52 : 110 }}>
+      {open.has(r.id!) ? "▾  " + t("hide {n} unchanged line|hide {n} unchanged lines", { n: r.n ?? 0 }) : r.text}
     </button>
   );
   const same = !rows.some((r) => r.kind === "add" || r.kind === "del");
@@ -619,15 +625,15 @@ function Diff({ from, to, mode }: { from: string; to: string; mode: "inline" | "
       <div className="flex min-w-0" style={{ background: r ? BG[r.kind] : "color-mix(in srgb,var(--surface) 60%,transparent)" }}>
         <span className={cx(NUM, "w-11")}>{r ? (side === "a" ? r.a : r.b) ?? "" : ""}</span>
         {r && sign(r.kind)}
-        <span dir="auto" className="min-w-0 flex-1 whitespace-pre-wrap break-words pr-3">{r?.text || " "}</span>
+        <span dir="auto" className="min-w-0 flex-1 whitespace-pre-wrap break-words pe-3">{r?.text || " "}</span>
       </div>
     );
     return (
       <div className="overflow-hidden rounded-[10px] border border-line font-mono text-[13px] leading-6">
         {pairs.map((p, i) => p.fold ? foldRow(p.fold, i) : (
-          <div key={i} className="grid grid-cols-2 [&>div:first-child]:border-r [&>div:first-child]:border-line">{cell(p.l, "a")}{cell(p.r, "b")}</div>
+          <div key={i} className="grid grid-cols-2 [&>div:first-child]:border-e [&>div:first-child]:border-line">{cell(p.l, "a")}{cell(p.r, "b")}</div>
         ))}
-        {same && <div className="px-3 py-2 font-sans text-[12px] text-muted">Identical to the current note.</div>}
+        {same && <div className="px-3 py-2 font-sans text-[12px] text-muted">{t("Identical to the current note.")}</div>}
       </div>
     );
   }
@@ -636,13 +642,13 @@ function Diff({ from, to, mode }: { from: string; to: string; mode: "inline" | "
     <div className={cx("overflow-hidden font-mono", phone ? "text-[12.5px] leading-6" : "rounded-[10px] border border-line text-[13px] leading-6")}>
       <div className={phone ? "" : "overflow-x-auto"}>
         {visible.map((r, i) => r.kind === "fold" ? foldRow(r, i) : (
-          <div key={i} className={cx("flex", phone ? "pr-2.5" : "min-w-max")} style={{ background: BG[r.kind] }}>
+          <div key={i} className={cx("flex", phone ? "pe-2.5" : "min-w-max")} style={{ background: BG[r.kind] }}>
             {!phone && <><span className={cx(NUM, "w-11")}>{r.a ?? ""}</span><span className={cx(NUM, "w-11")}>{r.b ?? ""}</span></>}
             {sign(r.kind)}
-            <span dir="auto" className={cx("flex-1 pr-3", phone ? "whitespace-pre-wrap break-words" : "whitespace-pre")}>{r.text || " "}</span>
+            <span dir="auto" className={cx("flex-1 pe-3", phone ? "whitespace-pre-wrap break-words" : "whitespace-pre")}>{r.text || " "}</span>
           </div>
         ))}
-        {same && <div className="px-3 py-2 font-sans text-[12px] text-muted">Identical to the current note.</div>}
+        {same && <div className="px-3 py-2 font-sans text-[12px] text-muted">{t("Identical to the current note.")}</div>}
       </div>
     </div>
   );
@@ -651,10 +657,10 @@ function Diff({ from, to, mode }: { from: string; to: string; mode: "inline" | "
 // ------------------------------------------------------------------ AI assist
 type AiAction = "summarize" | "flashcards" | "explain" | "tags";
 const AI_ACTIONS: { id: AiAction; label: string; icon: ReactNode }[] = [
-  { id: "summarize", label: "Summarize", icon: <AlignLeft size={15} /> },
-  { id: "flashcards", label: "Generate flashcards", icon: <Layers size={15} /> },
-  { id: "explain", label: "Explain selection", icon: <MessageCircleQuestion size={15} /> },
-  { id: "tags", label: "Suggest tags", icon: <Hash size={15} /> },
+  { id: "summarize", label: tk("Summarize"), icon: <AlignLeft size={15} /> },
+  { id: "flashcards", label: tk("Generate flashcards"), icon: <Layers size={15} /> },
+  { id: "explain", label: tk("Explain selection"), icon: <MessageCircleQuestion size={15} /> },
+  { id: "tags", label: tk("Suggest tags"), icon: <Hash size={15} /> },
 ];
 const selectedText = () => getSelectionText() || (typeof getSelection === "function" ? getSelection()?.toString() ?? "" : "");
 const parseCards = (t: string) => t.split("\n").map((l) => /^\s*(?:[-*\d.)]+\s*)?(.+?)\s*::\s*(.+)$/.exec(l)).filter((m): m is RegExpExecArray => !!m).map((m) => ({ q: m[1].replace(/\*\*/g, ""), a: m[2] }));
@@ -677,11 +683,11 @@ function AiTab({ note }: { note: Note }) {
   const pick = (m: "note" | "ask") => { setMode(m); try { sessionStorage.setItem("lumen.aiMode", m); } catch { /* private mode */ } };
   return (
     <div className="flex flex-col">
-      <div role="tablist" aria-label="AI mode" className="mx-3.5 mt-3.5 grid grid-cols-2 gap-0.5 rounded-[9px] bg-surface-2 p-0.5">
-        {([["note", "This note", <Sparkles key="n" size={13} />], ["ask", "Ask vault", <MessageCircleQuestion key="a" size={13} />]] as const).map(([m, label, icon]) => (
+      <div role="tablist" aria-label={t("AI mode")} className="mx-3.5 mt-3.5 grid grid-cols-2 gap-0.5 rounded-[9px] bg-surface-2 p-0.5">
+        {([["note", tk("This note"), <Sparkles key="n" size={13} />], ["ask", tk("Ask vault"), <MessageCircleQuestion key="a" size={13} />]] as const).map(([m, label, icon]) => (
           <button key={m} role="tab" aria-selected={mode === m} onClick={() => pick(m)}
             className={cx("flex h-7 items-center justify-center gap-1.5 rounded-[7px] text-[12.5px]", mode === m ? "bg-surface font-semibold text-ink shadow-[0_1px_2px_rgba(0,0,0,.18)] [&>svg]:text-accent" : "text-muted hover:text-ink")}>
-            {icon}{label}
+            {icon}{t(label)}
           </button>
         ))}
       </div>
@@ -704,11 +710,11 @@ function AI({ note }: { note: Note }) {
   const active: AiAction = busy ?? res?.action ?? (hasSel ? "explain" : "flashcards");
 
   async function run(id: AiAction) {
-    if (!getToken()) return toast("AI needs sync: unlock it in Settings → Sync.");
+    if (!getToken()) return toast(t("AI needs sync: unlock it in Settings → Sync."));
     const sel = selectedText().trim();
     const useSel = !!sel && (id === "explain" || id === "summarize" || id === "flashcards");
     const text = useSel ? sel : splitFrontMatter(note.body).body;
-    if (!text.trim()) return toast("Note is empty");
+    if (!text.trim()) return toast(t("Note is empty"));
     setBusy(id);
     try { setRes({ action: id, text: await aiRun(id, text), from: useSel ? "selection" : "whole note" }); } catch (e) { toast((e as Error).message); } finally { setBusy(null); }
   }
@@ -723,15 +729,15 @@ function AI({ note }: { note: Note }) {
   const cards = res?.action === "flashcards" ? parseCards(res.text) : [];
   const tags = res?.action === "tags" ? parseTags(res.text) : [];
   const meta = res && ({
-    summarize: { icon: <AlignLeft size={14} className="text-info" />, title: "Summary" },
-    flashcards: { icon: <Layers size={14} className="text-learn" />, title: `${cards.length} flashcard${cards.length === 1 ? "" : "s"}` },
-    explain: { icon: <MessageCircleQuestion size={14} className="text-info" />, title: "Explanation" },
-    tags: { icon: <Hash size={14} className="text-link" />, title: `${tags.length} tag${tags.length === 1 ? "" : "s"}` },
+    summarize: { icon: <AlignLeft size={14} className="text-info" />, title: t("Summary") },
+    flashcards: { icon: <Layers size={14} className="text-learn" />, title: t("{n} flashcard|{n} flashcards", { n: cards.length }) },
+    explain: { icon: <MessageCircleQuestion size={14} className="text-info" />, title: t("Explanation") },
+    tags: { icon: <Hash size={14} className="text-link" />, title: t("{n} tag|{n} tags", { n: tags.length }) },
   })[res.action];
   const insert = () => {
     if (!res) return;
-    if (res.action === "tags") { void updateNote(note.id, { tags: [...new Set([...note.tags, ...tags])] }); toast(`Added ${tags.length} tags`); return; }
-    if (res.action === "flashcards" && cards.length) { void updateNote(note.id, { body: withCards(note.body, cards) }); toast(`${cards.length} flashcards added under “Flashcards”`); return; }
+    if (res.action === "tags") { void updateNote(note.id, { tags: [...new Set([...note.tags, ...tags])] }); toast(t("Added {n} tag|Added {n} tags", { n: tags.length })); return; }
+    if (res.action === "flashcards" && cards.length) { void updateNote(note.id, { body: withCards(note.body, cards) }); toast(t("{n} flashcard added under “Flashcards”|{n} flashcards added under “Flashcards”", { n: cards.length })); return; }
     const block = "\n\n" + res.text.trim() + "\n";
     if (!insertText(block, "end")) void updateNote(note.id, { body: note.body.replace(/\s*$/, "") + block });
   };
@@ -743,31 +749,31 @@ function AI({ note }: { note: Note }) {
           const on = a.id === active;
           return (
             <button key={a.id} onClick={() => run(a.id)} disabled={!!busy}
-              className={cx("flex h-14 items-center gap-2.5 rounded-[10px] border px-3 text-left leading-tight disabled:cursor-wait", on ? "border-learn bg-[color-mix(in_srgb,var(--learn)_10%,transparent)] font-semibold" : "border-line hover:bg-surface-2")}>
-              <span className={cx("shrink-0", on ? "text-learn" : "text-muted")}>{busy === a.id ? <Loader2 size={15} className="animate-spin" /> : a.icon}</span>{a.label}
+              className={cx("flex h-14 items-center gap-2.5 rounded-[10px] border px-3 text-start leading-tight disabled:cursor-wait", on ? "border-learn bg-[color-mix(in_srgb,var(--learn)_10%,transparent)] font-semibold" : "border-line hover:bg-surface-2")}>
+              <span className={cx("shrink-0", on ? "text-learn" : "text-muted")}>{busy === a.id ? <Loader2 size={15} className="animate-spin" /> : a.icon}</span>{t(a.label)}
             </button>
           );
         })}
       </div>
       {res && meta && (
         <div className="flex flex-col overflow-hidden rounded-[14px] border border-line bg-surface-2 fade-in">
-          <div className="flex items-center gap-2 border-b border-line px-3.5 py-3">{meta.icon}<span className="flex-1 font-semibold">{meta.title}</span><span className="text-[12px] text-muted">from {res.from}</span></div>
+          <div className="flex items-center gap-2 border-b border-line px-3.5 py-3">{meta.icon}<span className="flex-1 font-semibold">{meta.title}</span><span className="text-[12px] text-muted">{res.from === "selection" ? t("from selection") : t("from whole note")}</span></div>
           {res.action === "flashcards" && cards.length ? cards.map((c, i) => (
             <div key={i} className="flex flex-col gap-[3px] border-b border-line px-3.5 py-2.5 text-[12.5px] leading-[18px]"><span dir="auto" className="font-medium">{c.q}</span><span dir="auto" className="text-muted">:: {c.a}</span></div>
           )) : res.action === "tags" ? (
-            <div className="flex flex-wrap gap-1.5 border-b border-line px-3.5 py-3">{tags.map((t) => <span key={t} className={cx("rounded-full px-2 py-0.5 text-[12px]", note.tags.includes(t) ? "bg-surface text-muted" : "bg-[color-mix(in_srgb,var(--link)_14%,transparent)] text-link")}>#{t}</span>)}</div>
+            <div className="flex flex-wrap gap-1.5 border-b border-line px-3.5 py-3">{tags.map((tag) => <span key={tag} dir="auto" className={cx("rounded-full px-2 py-0.5 text-[12px]", note.tags.includes(tag) ? "bg-surface text-muted" : "bg-[color-mix(in_srgb,var(--link)_14%,transparent)] text-link")}>#{tag}</span>)}</div>
           ) : (
             <div className="max-h-[50vh] overflow-y-auto border-b border-line px-3.5 py-2.5"><Preview note={{ id: note.id, body: res.text, spaceId: note.spaceId }} className="!text-[13px]" /></div>
           )}
           <div className="flex gap-2 px-3.5 py-3">
-            <button onClick={insert} className="flex h-[34px] flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-accent font-semibold text-accent-fg hover:brightness-110"><ArrowDownToLine size={14} />{res.action === "tags" ? "Add tags" : "Insert below"}</button>
-            <button onClick={() => copy(res.text)} className="flex h-[34px] items-center gap-1.5 rounded-[10px] border border-line px-3 hover:bg-surface"><Copy size={13} />Copy</button>
-            <button aria-label="Regenerate" title="Regenerate" onClick={() => run(res.action)} disabled={!!busy} className="flex size-[34px] items-center justify-center rounded-[10px] border border-line hover:bg-surface"><RefreshCw size={13} className={busy ? "animate-spin" : ""} /></button>
+            <button onClick={insert} className="flex h-[34px] flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-accent font-semibold text-accent-fg hover:brightness-110"><ArrowDownToLine size={14} />{res.action === "tags" ? t("Add tags") : t("Insert below")}</button>
+            <button onClick={() => copy(res.text)} className="flex h-[34px] items-center gap-1.5 rounded-[10px] border border-line px-3 hover:bg-surface"><Copy size={13} />{t("Copy")}</button>
+            <button aria-label={t("Regenerate")} title={t("Regenerate")} onClick={() => run(res.action)} disabled={!!busy} className="flex size-[34px] items-center justify-center rounded-[10px] border border-line hover:bg-surface"><RefreshCw size={13} className={busy ? "animate-spin" : ""} /></button>
           </div>
         </div>
       )}
       <span className="text-[12px] leading-[18px] text-muted">
-        {token ? "Runs on Cloudflare Workers AI. Only this note's text is sent; nothing is stored. Results are never inserted without your click." : "Runs on Cloudflare Workers AI once sync is unlocked (Settings → Sync). Only this note's text is sent; nothing is stored."}
+        {token ? t("Runs on Cloudflare Workers AI. Only this note's text is sent; nothing is stored. Results are never inserted without your click.") : t("Runs on Cloudflare Workers AI once sync is unlocked (Settings → Sync). Only this note's text is sent; nothing is stored.")}
       </span>
     </div>
   );

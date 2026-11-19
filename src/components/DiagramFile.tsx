@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { openDiagramExport } from "../lib/diagram-export";
 import type { Note } from "../../shared/types";
 import { canvasesWith, diagramFocus, diagramHash, diagramKind, mermaidBlocks, metaOf, placeOnCanvas, renameDiagramWithAI } from "../lib/diagrams";
+import { t, tx } from "../lib/i18n";
 import { getExtraPrefs } from "../lib/reading-prefs";
 import { openNote, setUI, toast, useVault } from "../lib/store";
 import { DiagramView } from "./diagram-view";
@@ -54,26 +55,26 @@ function DiagramPreview({ note }: { note: Note }) {
   const [naming, setNaming] = useState(false);
   const suggest = async () => {
     setNaming(true);
-    try { const t = await renameDiagramWithAI(note, v.notes); toast(t ? `Renamed to ${t}` : "No name suggestion (AI off or over today's limit)"); } finally { setNaming(false); }
+    try { const nm = await renameDiagramWithAI(note, v.notes); toast(nm ? t("Renamed to {name}", { name: nm }) : t("No name suggestion (AI off or over today's limit)")); } finally { setNaming(false); }
   };
   return (
     <div className="relative h-full min-h-0">
       {note.body.trim()
         ? <DiagramView src={note.body} />
-        : <div className="flex h-full items-center justify-center text-muted">Empty diagram. Switch to Source and write Mermaid.</div>}
+        : <div className="flex h-full items-center justify-center text-muted">{t("Empty diagram. Switch to Source and write Mermaid.")}</div>}
       <div className="pointer-events-none absolute inset-x-4 top-3 flex flex-wrap items-center justify-end gap-1.5 text-[12px] text-muted">
-        <span className="pointer-events-auto rounded-[6px] bg-surface/90 px-1.5 font-mono text-[11.5px]">{diagramKind(note.body)} · updated {relTime(note.updatedAt)}{meta?.savedAt ? ` · saved ${relTime(Date.parse(meta.savedAt))}` : ""}</span>
+        <span className="pointer-events-auto rounded-[6px] bg-surface/90 px-1.5 font-mono text-[11.5px]">{diagramKind(note.body)} · {t("updated {when}", { when: relTime(note.updatedAt) })}{meta?.savedAt ? ` · ${t("saved {when}", { when: relTime(Date.parse(meta.savedAt)) })}` : ""}</span>
         {meta ? (
-          live ? <button className={chip} onClick={back} title="Open the source note at this diagram"><Undo2 size={12} />From {src!.title}{meta.heading ? ` › ${meta.heading}` : ""}</button>
-            : <span className={chip + " border-dashed"}>From “{meta.fromTitle}” (deleted or renamed)</span>
+          live ? <button className={chip} onClick={back} title={t("Open the source note at this diagram")}><Undo2 size={12} />{tx("From {title}", { title: <bdi dir="auto">{src!.title}{meta.heading ? ` › ${meta.heading}` : ""}</bdi> })}</button>
+            : <span className={chip + " border-dashed"}>{tx("From “{title}” (deleted or renamed)", { title: <bdi dir="auto">{meta.fromTitle}</bdi> })}</span>
         ) : null}
-        {drift && <span className={chip + " text-warn"} title="The source note's copy is different from this file">source changed since saved</span>}
+        {drift && <span className={chip + " text-warn"} title={t("The source note's copy is different from this file")}>{t("source changed since saved")}</span>}
         {where.map((w) => (
-          <button key={w.canvas.id} className={chip} onClick={() => { diagramFocus.canvas = { canvasId: w.canvas.id, nodeId: w.nodeId }; openNote(w.canvas.id); }}><LayoutDashboard size={12} />{w.canvas.title}</button>
+          <button key={w.canvas.id} className={chip} onClick={() => { diagramFocus.canvas = { canvasId: w.canvas.id, nodeId: w.nodeId }; openNote(w.canvas.id); }}><LayoutDashboard size={12} /><bdi dir="auto">{w.canvas.title}</bdi></button>
         ))}
-        {!where.length && <button className={chip} onClick={() => void toCanvas().catch(() => toast("Couldn't add it to a canvas"))}><LayoutDashboard size={12} />Add to canvas</button>}
-        <button className={chip} onClick={() => void suggest()} disabled={naming} title="Ask the AI for a short descriptive file name">{naming ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}Suggest name</button>
-        <button className="pointer-events-auto inline-flex h-[30px] items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-semibold text-accent-fg hover:brightness-110" onClick={() => openDiagramExport(note.body, note.title)} title="Export: SVG, PNG, JPEG, WebP"><Download size={13} />Export</button>
+        {!where.length && <button className={chip} onClick={() => void toCanvas().catch(() => toast(t("Couldn't add it to a canvas")))}><LayoutDashboard size={12} />{t("Add to canvas")}</button>}
+        <button className={chip} onClick={() => void suggest()} disabled={naming} title={t("Ask the AI for a short descriptive file name")}>{naming ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}{t("Suggest name")}</button>
+        <button className="pointer-events-auto inline-flex h-[30px] items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-semibold text-accent-fg hover:brightness-110" onClick={() => openDiagramExport(note.body, note.title)} title={t("Export: SVG, PNG, JPEG, WebP")}><Download size={13} />{t("Export")}</button>
       </div>
     </div>
   );

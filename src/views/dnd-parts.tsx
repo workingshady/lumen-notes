@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, type DragEvent, type ReactNode } from "re
 import type { Note } from "../../shared/types";
 import { useVault } from "../lib/store";
 import { cx } from "../components/ui";
+import { t } from "../lib/i18n";
 
 /** MIME types: one per kind of thing being dragged. */
 export const DT = { topic: "text/lumen-topic", need: "text/lumen-need", module: "text/lumen-module", note: "text/lumen-note", concept: "text/lumen-concept", stage: "text/lumen-stage", alias: "text/lumen-alias", palette: "text/lumen-palette" } as const;
@@ -98,9 +99,9 @@ export function useConfirm() {
     return () => removeEventListener("keydown", k);
   }, [ask]);
   const node = ask && (
-    <div role="alertdialog" aria-label="Confirm" className="pdnd-confirm fade-in fixed inset-x-3 bottom-4 z-[60] mx-auto flex max-w-[480px] items-center gap-3 rounded-[12px] border border-line bg-surface px-4 py-3 text-[13px] shadow-xl">
+    <div role="alertdialog" aria-label={t("Confirm")} className="pdnd-confirm fade-in fixed inset-x-3 bottom-4 z-[60] mx-auto flex max-w-[480px] items-center gap-3 rounded-[12px] border border-line bg-surface px-4 py-3 text-[13px] shadow-xl">
       <span className="min-w-0 flex-1" dir="auto">{ask.text}</span>
-      <button onClick={() => setAsk(null)} className="h-8 shrink-0 rounded-[8px] px-3 text-muted hover:bg-surface-2 hover:text-ink">Cancel</button>
+      <button onClick={() => setAsk(null)} className="h-8 shrink-0 rounded-[8px] px-3 text-muted hover:bg-surface-2 hover:text-ink">{t("Cancel")}</button>
       <button autoFocus onClick={() => { const r = ask.run; setAsk(null); r(); }} className={cx("h-8 shrink-0 rounded-[8px] px-3 font-semibold", ask.danger ? "bg-bad text-white" : "bg-accent text-accent-fg")}>{ask.ok}</button>
     </div>
   );
@@ -111,7 +112,7 @@ export function useConfirm() {
  * Notes to drag in: every note of the space (lessons, notes…), searchable. Drag a card onto a module / stage / concept,
  * or tap "+" (phones, keyboard) to add it where `onPick` says. `used` marks notes already in the roadmap/path.
  */
-export function NotesTray({ spaceId, used, onPick, onClose, title = "Notes", hint, className }: { spaceId: string | null; used: Set<string>; onPick?: (n: Note) => void; onClose: () => void; title?: string; hint?: ReactNode; className?: string }) {
+export function NotesTray({ spaceId, used, onPick, onClose, title, hint, className }: { spaceId: string | null; used: Set<string>; onPick?: (n: Note) => void; onClose: () => void; title?: string; hint?: ReactNode; className?: string }) {
   const v = useVault();
   const [q, setQ] = useState("");
   const [all, setAll] = useState(false);
@@ -123,17 +124,17 @@ export function NotesTray({ spaceId, used, onPick, onClose, title = "Notes", hin
       .slice(0, 200);
   }, [v.notes, q, all, spaceId, used]);
   return (
-    <aside className={cx("pdnd-tray flex min-h-0 flex-col border-line bg-surface", className)} aria-label={title}>
+    <aside className={cx("pdnd-tray flex min-h-0 flex-col border-line bg-surface", className)} aria-label={title ?? t("Notes")}>
       <div className="flex items-center gap-2 px-3 pb-2 pt-3">
-        <span className="flex-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{title}</span>
-        <button aria-label="Close notes" onClick={onClose} className="-m-1 rounded-md p-1 text-muted hover:bg-surface-2 hover:text-ink"><X size={14} /></button>
+        <span className="flex-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{title ?? t("Notes")}</span>
+        <button aria-label={t("Close notes")} onClick={onClose} className="-m-1 rounded-md p-1 text-muted hover:bg-surface-2 hover:text-ink"><X size={14} /></button>
       </div>
       {hint && <p className="px-3 pb-2 text-[11.5px] leading-snug text-muted">{hint}</p>}
       <label className="mx-3 mb-2 flex h-8 items-center gap-1.5 rounded-[8px] border border-line bg-bg px-2 text-[12.5px]">
         <Search size={13} className="shrink-0 text-muted" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes" className="min-w-0 flex-1 bg-transparent outline-none" dir="auto" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Search notes")} className="min-w-0 flex-1 bg-transparent outline-none" dir="auto" />
       </label>
-      {spaceId && <label className="mx-3 mb-1.5 flex items-center gap-1.5 text-[11.5px] text-muted"><input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} />All spaces</label>}
+      {spaceId && <label className="mx-3 mb-1.5 flex items-center gap-1.5 text-[11.5px] text-muted"><input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} />{t("All spaces")}</label>}
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         {list.map((n) => {
           const on = used.has(n.title.toLowerCase());
@@ -144,11 +145,11 @@ export function NotesTray({ spaceId, used, onPick, onClose, title = "Notes", hin
               <FileText size={13} className="shrink-0 text-muted" />
               <span className="min-w-0 flex-1 truncate" dir="auto" title={n.title}>{n.title}</span>
               {on ? <span className="text-[10.5px] text-muted">added</span>
-                : onPick && <button aria-label={`Add ${n.title}`} title="Add" onClick={() => onPick(n)} className="flex size-6 shrink-0 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink"><Plus size={13} /></button>}
+                : onPick && <button aria-label={t("Add {title}", { title: n.title })} title={t("Add")} onClick={() => onPick(n)} className="flex size-6 shrink-0 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink"><Plus size={13} /></button>}
             </div>
           );
         })}
-        {!list.length && <p className="px-1 py-3 text-[12px] text-muted">No notes{q ? " match" : " in this space"}.</p>}
+        {!list.length && <p className="px-1 py-3 text-[12px] text-muted">{q ? t("No notes match.") : t("No notes in this space.")}</p>}
       </div>
     </aside>
   );

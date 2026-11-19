@@ -3,6 +3,7 @@
 // a crosshair column per category that is hoverable and keyboard focusable (arrows move), exact values in a tooltip.
 import { useMemo, useRef, useState } from "react";
 import { niceTicks, type Dataset } from "../../lib/dashboard";
+import { t } from "../../lib/i18n";
 import { ChartEmpty, fmt, rovingKeys, textW, Tooltip, useSize, type Tip } from "./common";
 
 type SeriesData = Extract<Dataset, { kind: "series" }>;
@@ -49,7 +50,7 @@ export function CartesianChart({ data, type, label }: { data: SeriesData; type: 
   const stride = Math.max(1, Math.ceil(lw / Math.max(band, 1)));
   const tipFor = (i: number): Tip => {
     const rows: Tip["rows"] = series.map((s) => ({ color: s.color, label: s.label, value: fmt(s.values[i] ?? 0, data.unit) }));
-    if (stacked && series.length > 1) rows.push({ label: "Total", value: fmt(series.reduce((a, s) => a + (s.values[i] ?? 0), 0), data.unit) });
+    if (stacked && series.length > 1) rows.push({ label: t("Total"), value: fmt(series.reduce((a, s) => a + (s.values[i] ?? 0), 0), data.unit) });
     const ys = series.map((s) => yOf(stacked ? 0 : s.values[i] ?? 0));
     return { x: cx(i), y: Math.min(...ys, m.t + ph / 2), title: cats[i].long, rows };
   };
@@ -122,7 +123,7 @@ export function CartesianChart({ data, type, label }: { data: SeriesData; type: 
             {cats.map((c, i) => (
               <rect key={c.key} ref={(el) => { hits.current[i] = el; }} x={hitX(i)} y={m.t} width={band} height={ph} fill="transparent" className="chart-hit"
                 tabIndex={i === focusIdx ? 0 : -1} role="img"
-                aria-label={`${c.long}: ${series.map((s) => `${s.label} ${fmt(s.values[i] ?? 0, data.unit)}`).join(", ")}`}
+                aria-label={`${c.long}: ${series.map((s) => `${s.label} ${fmt(s.values[i] ?? 0, data.unit)}`).join(t(", "))}`}
                 onMouseEnter={() => setActive(i)} onFocus={() => { setActive(i); setFocusIdx(i); }} onBlur={() => setActive(null)}
                 onKeyDown={(e) => rovingKeys(e, i, n, focusAt)} />
             ))}

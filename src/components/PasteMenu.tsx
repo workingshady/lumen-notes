@@ -10,6 +10,7 @@ import { Glyph } from "./Glyph";
 import { useState } from "react";
 import { aiRun, getToken } from "../lib/api";
 import { DEMO } from "../lib/db";
+import { t } from "../lib/i18n";
 import { toast } from "../lib/store";
 import { cx } from "./ui";
 
@@ -67,19 +68,19 @@ export function PasteMenu({ info, view, phone, onClose, busy, setBusy }: {
     view.dispatch({ changes: { from: info.from, to: info.to, insert }, selection: { anchor: info.from + insert.length }, userEvent: event, annotations: isolateHistory.of("full"), scrollIntoView: true });
   };
   async function ai(kind: "summary" | "cards") {
-    if (!signedIn) { toast("AI needs sync unlocked (Settings → Sync). Your paste is kept as is."); return; }
+    if (!signedIn) { toast(t("AI needs sync unlocked (Settings → Sync). Your paste is kept as is.")); return; }
     setBusy(kind);
     try {
       const out = (await aiRun(kind === "summary" ? "summarize" : "flashcards", info.text.slice(0, 12000))).trim();
       const body = kind === "summary"
         ? `> [!abstract] Summary\n${asQuote(out)}`
         : out.split("\n").map((l) => l.replace(/^\s*(?:[-*]|\d+[.)])\s+/, "").trim()).filter((l) => / :: /.test(l)).join("\n");
-      if (!body.trim()) { toast("The AI didn't return anything usable."); return; }
+      if (!body.trim()) { toast(t("The AI didn't return anything usable.")); return; }
       // insert right after the pasted text (its range was kept up to date while the AI worked)
       const at = view.state.doc.lineAt(Math.min(info.to, view.state.doc.length)).to;
       const ins = "\n\n" + body + (at < view.state.doc.length ? "\n" : "");
       view.dispatch({ changes: { from: at, insert: ins }, selection: { anchor: at + ins.length }, userEvent: "input.ai", annotations: isolateHistory.of("full"), scrollIntoView: true });
-      toast(kind === "summary" ? "Summary added under the paste" : "Flashcards added (they show in Review)");
+      toast(kind === "summary" ? t("Summary added under the paste") : t("Flashcards added (they show in Review)"));
     } catch (e) { toast((e as Error).message); } finally { setBusy(null); onClose(); view.focus(); }
   }
   const firstUrl = info.url ? info.text.trim() : (/https?:\/\/[^\s<>)\]]+/.exec(info.text)?.[0] ?? "");
@@ -107,21 +108,21 @@ export function PasteMenu({ info, view, phone, onClose, busy, setBusy }: {
   };
   // Design R4-16H: Keep · Clean up formatting · As quote · As link card · Summarize · Make flashcards (plain labels)
   const opts: { k: Choice; label: string; glyph: string; ai?: boolean; off?: string }[] = [
-    { k: "keep", label: "Keep", glyph: "text" },
+    { k: "keep", label: t("Keep"), glyph: "text" },
     ...(info.url ? [] : [
-      { k: "clean" as const, label: "Clean up formatting", glyph: "c-abstract" },
-      { k: "quote" as const, label: "As quote", glyph: "quote" },
+      { k: "clean" as const, label: t("Clean up formatting"), glyph: "c-abstract" },
+      { k: "quote" as const, label: t("As quote"), glyph: "quote" },
     ]),
-    { k: "card" as const, label: "As link card", glyph: "link-card", off: firstUrl ? undefined : "No link in the pasted text" },
+    { k: "card" as const, label: t("As link card"), glyph: "link-card", off: firstUrl ? undefined : t("No link in the pasted text") },
     ...(info.text.length > LONG_PASTE ? [
-      { k: "summary" as const, label: "Summarize", glyph: "c-abstract", ai: true },
-      { k: "cards" as const, label: "Make flashcards", glyph: "flashcards", ai: true },
+      { k: "summary" as const, label: t("Summarize"), glyph: "c-abstract", ai: true },
+      { k: "cards" as const, label: t("Make flashcards"), glyph: "flashcards", ai: true },
     ] : []),
   ];
   const on = (k: Choice) => sel === k ? { background: "color-mix(in srgb,var(--accent) 14%,transparent)", boxShadow: "inset 0 0 0 1px var(--accent)", fontWeight: 600 } : { fontWeight: 450 };
-  const title = (o: (typeof opts)[number]) => o.off ?? (o.ai && !signedIn ? "Needs sync unlocked (Settings → Sync)" : undefined);
+  const title = (o: (typeof opts)[number]) => o.off ?? (o.ai && !signedIn ? t("Needs sync unlocked (Settings → Sync)") : undefined);
   if (phone) return (
-    <div className="paste-menu flex gap-2 overflow-x-auto border-t border-line bg-surface-2 px-3 py-2" role="toolbar" aria-label="Paste options" onMouseDown={(e) => e.preventDefault()}>
+    <div className="paste-menu flex gap-2 overflow-x-auto border-t border-line bg-surface-2 px-3 py-2" role="toolbar" aria-label={t("Paste options")} onMouseDown={(e) => e.preventDefault()}>
       {opts.map((o) => (
         <button key={o.k} disabled={!!busy || !!o.off} title={title(o)} onClick={() => run(o.k)} className={cx("flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13.5px]", sel !== o.k && "border border-line", (o.off || (o.ai && !signedIn)) && "opacity-50")} style={on(o.k)}>
           {busy === o.k ? <Loader2 size={14} className="animate-spin" /> : <Glyph name={o.glyph} size={14} color="var(--muted)" />}{o.label}
@@ -138,13 +139,13 @@ export function PasteMenu({ info, view, phone, onClose, busy, setBusy }: {
         el.style.left = `${Math.max(8, Math.min(info.x, room))}px`;
         if (info.y + el.offsetHeight > el.parentElement.clientHeight - 8) el.style.top = `${Math.max(8, info.y - el.offsetHeight - 36)}px`;
       }}
-      className="paste-menu absolute z-30 flex max-w-[calc(100%-16px)] flex-wrap items-center gap-0.5 rounded-[10px] border border-line bg-surface-2 p-1 text-[13px] fade-in" role="toolbar" aria-label="Paste options" style={{ left: Math.max(8, info.x), top: info.y, boxShadow: "0 14px 34px rgba(0,0,0,.45)" }} onMouseDown={(e) => e.preventDefault()}>
+      className="paste-menu absolute z-30 flex max-w-[calc(100%-16px)] flex-wrap items-center gap-0.5 rounded-[10px] border border-line bg-surface-2 p-1 text-[13px] fade-in" role="toolbar" aria-label={t("Paste options")} style={{ left: Math.max(8, info.x), top: info.y, boxShadow: "0 14px 34px rgba(0,0,0,.45)" }} onMouseDown={(e) => e.preventDefault()}>
       {opts.map((o) => (
         <button key={o.k} disabled={!!busy || !!o.off} onClick={() => run(o.k)} title={title(o)} className={cx("flex h-[30px] items-center gap-1.5 whitespace-nowrap rounded-[7px] px-2.5", (o.off || (o.ai && !signedIn)) && "opacity-50")} style={on(o.k)}>
           {busy === o.k ? <Loader2 size={14} className="animate-spin text-muted" /> : <Glyph name={o.glyph} size={14} color="var(--muted)" />}{o.label}
         </button>
       ))}
-      <span className="mx-1 h-[18px] w-px bg-line" /><span className="whitespace-nowrap pe-1.5 text-[11.5px] text-muted">{busy ? "Working…" : "Esc · fades in 12 s"}</span>
+      <span className="mx-1 h-[18px] w-px bg-line" /><span className="whitespace-nowrap pe-1.5 text-[11.5px] text-muted">{busy ? t("Working…") : t("Esc · fades in {s} s", { s: 12 })}</span>
     </div>
   );
 }

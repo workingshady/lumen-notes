@@ -3,6 +3,7 @@
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 import { attUrl } from "./api";
 import { db } from "./db";
+import { t } from "./i18n";
 import { imageRegions, type Box, type Matrix } from "./pdf-geom";
 import type { Rect } from "./pdf-format";
 
@@ -42,9 +43,9 @@ async function fetchBytes(file: string, onProgress?: (l: number, t: number) => v
 }
 async function fetchUrl(url: string, onProgress?: (l: number, t: number) => void): Promise<Uint8Array> {
   let res: Response;
-  try { res = await fetch(url); } catch { throw new PdfError("network", "Couldn't download the file. Check the connection and try again."); }
-  if (res.status === 404) throw new PdfError("missing", "The file isn't on this device or the server yet.");
-  if (!res.ok) throw new PdfError("network", `The server answered ${res.status}.`);
+  try { res = await fetch(url); } catch { throw new PdfError("network", t("Couldn't download the file. Check the connection and try again.")); }
+  if (res.status === 404) throw new PdfError("missing", t("The file isn't on this device or the server yet."));
+  if (!res.ok) throw new PdfError("network", t("The server answered {status}.", { status: String(res.status) }));
   const total = Number(res.headers.get("content-length") ?? 0);
   if (!res.body || !onProgress) return new Uint8Array(await res.arrayBuffer());
   // Large files: read in parts so the reader can show how much has arrived.
@@ -65,10 +66,10 @@ async function fetchUrl(url: string, onProgress?: (l: number, t: number) => void
 }
 
 export async function openPdf(file: string, o: OpenOpts = {}): Promise<PdfDoc> {
-  if (!file) throw new PdfError("missing", "This PDF note has no file. Add `file: att:<id>` or a URL to its front matter.");
+  if (!file) throw new PdfError("missing", t("This PDF note has no file. Add `file: att:<id>` or a URL to its front matter."));
   const pdfjs = await loadPdfJs();
   const data = await fetchBytes(file, o.onProgress);
-  if (data.byteLength < 5) throw new PdfError("broken", "The file is empty.");
+  if (data.byteLength < 5) throw new PdfError("broken", t("The file is empty."));
   const task = pdfjs.getDocument({ data, isEvalSupported: false });
   let tries = 0;
   task.onPassword = (update: (pw: string) => void, reason: number) => {
@@ -83,8 +84,8 @@ export async function openPdf(file: string, o: OpenOpts = {}): Promise<PdfDoc> {
     return await task.promise;
   } catch (e) {
     const name = (e as { name?: string })?.name ?? "";
-    if (name === "PasswordException" || tries > 0) throw new PdfError("password", "This PDF is password-protected.");
-    throw new PdfError("broken", "This file couldn't be read as a PDF.");
+    if (name === "PasswordException" || tries > 0) throw new PdfError("password", t("This PDF is password-protected."));
+    throw new PdfError("broken", t("This file couldn't be read as a PDF."));
   }
 }
 

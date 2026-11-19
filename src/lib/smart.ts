@@ -9,6 +9,7 @@
 import type { Folder, Note, Space } from "../../shared/types";
 import { serializeBase, testFilter, type Ctx, type FilterNode } from "./base";
 import { matcher, normalize, parseQuery, type Query } from "./search";
+import { t } from "./i18n";
 
 export interface SmartFolder {
   id: string;
@@ -44,7 +45,7 @@ export function readSmart(raw: string | undefined | null): SmartFolder[] {
     const arr = JSON.parse(raw) as unknown;
     if (!Array.isArray(arr)) return [];
     return arr.filter((x): x is SmartFolder => !!x && typeof x === "object" && typeof (x as SmartFolder).id === "string" && typeof (x as SmartFolder).query === "string")
-      .map((x, i) => ({ ...x, name: String(x.name || "Smart folder"), sort: Number.isFinite(x.sort) ? x.sort : i, filters: Array.isArray(x.filters) ? x.filters.filter((f) => typeof f === "string" && f.trim()) : undefined }));
+      .map((x, i) => ({ ...x, name: String(x.name || t("Smart folder")), sort: Number.isFinite(x.sort) ? x.sort : i, filters: Array.isArray(x.filters) ? x.filters.filter((f) => typeof f === "string" && f.trim()) : undefined }));
   } catch { return []; }
 }
 export const serializeSmart = (list: SmartFolder[]) => JSON.stringify(list.map(({ id, name, query, filters, match, glyph, color, pinned, sort }) => ({ id, name, query, ...(filters?.length ? { filters } : {}), ...(match === "or" ? { match } : {}), ...(glyph ? { glyph } : {}), ...(color ? { color } : {}), ...(pinned ? { pinned } : {}), sort })));
@@ -86,10 +87,10 @@ export function suggestName(q: string) {
     const m = /^(-?)(tag|type|status|in|space|is|due|has|no|updated|created|course):"?([^"]*)"?$/.exec(tok);
     if (!m) return tok.replace(/^"|"$/g, "");
     const v = m[2] === "tag" ? "#" + m[3].replace(/^#/, "") : m[3].replace(/^this-/, "");
-    return (m[1] ? "not " : "") + v;
+    return m[1] ? t("not {value}", { value: v }) : v;
   });
   const s = words.filter(Boolean).join(" · ");
-  return s ? s.charAt(0).toUpperCase() + s.slice(1) : "Smart folder";
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : t("Smart folder");
 }
 
 // ------------------------------------------------------------------ query

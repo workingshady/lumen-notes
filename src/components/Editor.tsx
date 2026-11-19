@@ -7,7 +7,8 @@ import { liveLook } from "./editor-live";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
-import { tags as t } from "@lezer/highlight";
+import { tags } from "@lezer/highlight";
+import { t } from "../lib/i18n";
 import { Decoration, EditorView, MatchDecorator, ViewPlugin, keymap, type DecorationSet, type ViewUpdate } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/state";
 import CodeMirror from "@uiw/react-codemirror";
@@ -101,15 +102,15 @@ const ACTIONS = {
 
 // Token classes (design ScreenWorkspace: bold headings, muted markup; 6A: muted marks + sized headings in live editing).
 const mdStyle = HighlightStyle.define([
-  { tag: [t.heading1], class: "cm-h cm-h1" },
-  { tag: [t.heading2], class: "cm-h cm-h2" },
-  { tag: [t.heading3, t.heading4, t.heading5, t.heading6], class: "cm-h" },
-  { tag: [t.processingInstruction, t.contentSeparator, t.atom], class: "cm-mk" },
-  { tag: t.strong, class: "cm-strong" },
-  { tag: t.emphasis, class: "cm-em" },
-  { tag: t.monospace, class: "cm-code" },
-  { tag: t.url, class: "cm-url" },
-  { tag: t.quote, class: "cm-quote" },
+  { tag: [tags.heading1], class: "cm-h cm-h1" },
+  { tag: [tags.heading2], class: "cm-h cm-h2" },
+  { tag: [tags.heading3, tags.heading4, tags.heading5, tags.heading6], class: "cm-h" },
+  { tag: [tags.processingInstruction, tags.contentSeparator, tags.atom], class: "cm-mk" },
+  { tag: tags.strong, class: "cm-strong" },
+  { tag: tags.emphasis, class: "cm-em" },
+  { tag: tags.monospace, class: "cm-code" },
+  { tag: tags.url, class: "cm-url" },
+  { tag: tags.quote, class: "cm-quote" },
 ]);
 
 // Teal [[links]] / #tags, $math$ delimiters muted, $$ display math in mono.
@@ -386,7 +387,7 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
 
   async function toggleVoice() {
     if (rec) { rec.stop(); return; }
-    if (!getToken()) { toast("Voice notes need sync unlocked (Settings → Sync)."); return; }
+    if (!getToken()) { toast(t("Voice notes need sync unlocked (Settings → Sync).")); return; }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const r = new MediaRecorder(stream);
@@ -399,43 +400,43 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
         try {
           const blob = new Blob(chunks, { type: r.mimeType });
           const { text: tx } = await api<{ text: string }>("/transcribe", { method: "POST", body: blob, headers: { "Content-Type": r.mimeType } });
-          if (tx) insertText(tx + " "); else toast("Didn't catch anything.");
+          if (tx) insertText(tx + " "); else toast(t("Didn't catch anything."));
         } catch (e) { toast((e as Error).message); } finally { setBusy(false); }
       };
       r.start();
       setRec(r);
-    } catch { toast("Microphone not available."); }
+    } catch { toast(t("Microphone not available.")); }
   }
   editorBridge.voice = toggleVoice;
   editorBridge.image = () => fileRef.current?.click();
 
   // Phone keyboard toolbar, design order (6A): B · I · H · list · task · {} · ∑ · ◇ · image · voice, then ⋯ pinned.
   const tb = [
-    { k: "bold", icon: <Bold size={19} />, label: "Bold (Ctrl+B)" },
-    { k: "italic", icon: <Italic size={19} />, label: "Italic (Ctrl+I)" },
-    { k: "h2", icon: <Heading size={19} />, label: "Heading" },
-    { k: "list", icon: <List size={19} />, label: "List" },
-    { k: "task", icon: <ListTodo size={19} />, label: "Task" },
-    { k: "codeblock", icon: <Braces size={19} />, label: "Code block" },
-    { k: "math", icon: <Sigma size={19} />, label: "Math block" },
-    { k: "mermaid", icon: <Diamond size={19} />, label: "Diagram (Mermaid)" },
+    { k: "bold", icon: <Bold size={19} />, label: t("Bold (Ctrl+B)") },
+    { k: "italic", icon: <Italic size={19} />, label: t("Italic (Ctrl+I)") },
+    { k: "h2", icon: <Heading size={19} />, label: t("Heading") },
+    { k: "list", icon: <List size={19} />, label: t("List") },
+    { k: "task", icon: <ListTodo size={19} />, label: t("Task") },
+    { k: "codeblock", icon: <Braces size={19} />, label: t("Code block") },
+    { k: "math", icon: <Sigma size={19} />, label: t("Math block") },
+    { k: "mermaid", icon: <Diamond size={19} />, label: t("Diagram (Mermaid)") },
   ] as const;
   const extra = [
-    { k: "link", icon: <Link2 size={16} />, label: "Link a note" },
-    { k: "callout", icon: <Square size={16} />, label: "Callout" },
-    { k: "code", icon: <Code size={16} />, label: "Inline code" },
-    { k: "table", icon: <Table size={16} />, label: "Table" },
-    { k: "quote", icon: <Quote size={16} />, label: "Quote" },
-    { k: "task", icon: <CheckSquare size={16} />, label: "Task" },
-    { k: "card", icon: <span className="text-[13px] font-bold">::</span>, label: "Flashcard" },
-    { k: "slide", icon: <span className="text-[13px] font-bold">—</span>, label: "New slide" },
+    { k: "link", icon: <Link2 size={16} />, label: t("Link a note") },
+    { k: "callout", icon: <Square size={16} />, label: t("Callout") },
+    { k: "code", icon: <Code size={16} />, label: t("Inline code") },
+    { k: "table", icon: <Table size={16} />, label: t("Table") },
+    { k: "quote", icon: <Quote size={16} />, label: t("Quote") },
+    { k: "task", icon: <CheckSquare size={16} />, label: t("Task") },
+    { k: "card", icon: <span className="text-[13px] font-bold">::</span>, label: t("Flashcard") },
+    { k: "slide", icon: <span className="text-[13px] font-bold">—</span>, label: t("New slide") },
     { k: "mermaid", icon: <Workflow size={16} />, label: "Mermaid" },
   ] as const;
   const showBar = !focus && (live || !wide);
   const pasteOpts: { k: PasteChoice; glyph: string; label: string }[] = [
-    { k: "card", glyph: "link-card", label: "Preview card" },
-    ...(paste?.embed ? [{ k: "embed" as const, glyph: "embed", label: "Embed" }] : []),
-    { k: "plain", glyph: "wikilink", label: "Plain link" },
+    { k: "card", glyph: "link-card", label: t("Preview card") },
+    ...(paste?.embed ? [{ k: "embed" as const, glyph: "embed", label: t("Embed") }] : []),
+    { k: "plain", glyph: "wikilink", label: t("Plain link") },
   ];
 
   return (
@@ -451,18 +452,18 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
           height="100%"
           className="h-full"
           basicSetup={{ lineNumbers: !focus && !live && !page && wide, foldGutter: false, highlightActiveLine: !focus && !live && !page, highlightActiveLineGutter: !focus && !live && !page, autocompletion: false, searchKeymap: true, syntaxHighlighting: false }}
-          placeholder="Start writing… Markdown, $math$, ```mermaid, [[links]], #tags"
+          placeholder={t("Start writing… Markdown, $math$, ```mermaid, [[links]], #tags")}
         />
       </div>
       {/* paste-a-URL chip (R4-16I): floating on desktop, a pill row above the toolbar on phone */}
       {paste && wide && (
         <div className="paste-menu absolute z-30 flex items-center gap-0.5 rounded-[10px] border border-line bg-surface-2 p-1 text-[13px] fade-in" style={{ left: Math.max(8, paste.x), top: paste.y, boxShadow: "0 14px 34px rgba(0,0,0,.45)" }} onMouseDown={(e) => e.preventDefault()}>
           {pasteOpts.map((o) => (
-            <button key={o.k} title={o.k === paste.sel ? "↵ to choose" : undefined} onClick={() => applyPaste(o.k)} className="flex h-[30px] items-center gap-1.5 whitespace-nowrap rounded-[7px] px-2.5" style={paste.sel === o.k ? { background: "color-mix(in srgb,var(--accent) 14%,transparent)", boxShadow: "inset 0 0 0 1px var(--accent)", fontWeight: 600 } : { fontWeight: 450 }}>
+            <button key={o.k} title={o.k === paste.sel ? t("↵ to choose") : undefined} onClick={() => applyPaste(o.k)} className="flex h-[30px] items-center gap-1.5 whitespace-nowrap rounded-[7px] px-2.5" style={paste.sel === o.k ? { background: "color-mix(in srgb,var(--accent) 14%,transparent)", boxShadow: "inset 0 0 0 1px var(--accent)", fontWeight: 600 } : { fontWeight: 450 }}>
               <Glyph name={o.glyph} size={14} color="var(--muted)" />{o.label}
             </button>
           ))}
-          <span className="mx-1 h-[18px] w-px bg-line" /><span className="whitespace-nowrap pe-1.5 text-[11.5px] text-muted">Esc · fades in 12 s</span>
+          <span className="mx-1 h-[18px] w-px bg-line" /><span className="whitespace-nowrap pe-1.5 text-[11.5px] text-muted">{t("Esc · fades in {s} s", { s: 12 })}</span>
         </div>
       )}
       {pasteMenu && viewRef.current && (wide || !showBar) && (
@@ -487,13 +488,13 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
             {tb.map((b) => (
               <button key={b.k} aria-label={b.label} title={b.label} onMouseDown={(e) => e.preventDefault()} onClick={() => run(b.k)} className="flex h-10 w-9 shrink-0 items-center justify-center rounded-[8px] text-ink active:bg-surface-2">{b.icon}</button>
             ))}
-            <button aria-label="Insert image or file" title="Insert image or file" onMouseDown={(e) => e.preventDefault()} onClick={() => fileRef.current?.click()} className="flex h-10 w-9 shrink-0 items-center justify-center rounded-[8px] text-ink active:bg-surface-2"><ImagePlus size={19} /></button>
-            <button aria-label={rec ? "Stop recording" : "Voice note → text"} title="Voice note → text" onClick={toggleVoice} className={cx("flex h-10 w-9 shrink-0 items-center justify-center rounded-[8px]", rec ? "text-bad" : "text-accent")}>
+            <button aria-label={t("Insert image or file")} title={t("Insert image or file")} onMouseDown={(e) => e.preventDefault()} onClick={() => fileRef.current?.click()} className="flex h-10 w-9 shrink-0 items-center justify-center rounded-[8px] text-ink active:bg-surface-2"><ImagePlus size={19} /></button>
+            <button aria-label={rec ? t("Stop recording") : t("Voice note → text")} title={t("Voice note → text")} onClick={toggleVoice} className={cx("flex h-10 w-9 shrink-0 items-center justify-center rounded-[8px]", rec ? "text-bad" : "text-accent")}>
               {busy ? <Loader2 size={19} className="animate-spin" /> : <Mic size={19} className={rec ? "animate-pulse" : ""} />}
             </button>
           </div>
           <div className="my-2 w-px bg-line" />
-          <button aria-label="More formatting" onMouseDown={(e) => e.preventDefault()} onClick={() => setMore((m) => !m)} className={cx("flex w-12 shrink-0 items-center justify-center", more ? "text-accent" : "text-ink")}><MoreHorizontal size={20} /></button>
+          <button aria-label={t("More formatting")} onMouseDown={(e) => e.preventDefault()} onClick={() => setMore((m) => !m)} className={cx("flex w-12 shrink-0 items-center justify-center", more ? "text-accent" : "text-ink")}><MoreHorizontal size={20} /></button>
           {more && (
             <div className="absolute bottom-full end-2 z-20 mb-2 grid grid-cols-3 gap-1 rounded-[12px] border border-line bg-surface p-1.5 shadow-xl fade-in">
               {extra.map((b, i) => (

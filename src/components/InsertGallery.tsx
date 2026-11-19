@@ -4,6 +4,7 @@
 import type { EditorView } from "@codemirror/view";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { t, tx, useLang } from "../lib/i18n";
 import { applySlash, GALLERY, SLASH, slashById, slashMarkdown, type SlashCommand } from "../lib/slash";
 import { Glyph } from "./Glyph";
 import { LayoutThumb } from "./LayoutThumb";
@@ -29,46 +30,48 @@ export function InsertGallery() {
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => { opener = (t) => { setTarget(t); setQ(""); setCur("sidebar-l"); }; return () => { opener = null; }; }, []);
 
+  const { lang, rtl } = useLang();
+  // group names are already translated
   const groups = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return GALLERY.map((g) => ({ name: g.group as string, items: g.ids.map(slashById).filter((c): c is SlashCommand => !!c) }));
-    const hit = SLASH.filter((c) => !c.action && `${c.label} ${c.keys} ${c.hint}`.toLowerCase().includes(s));
-    return hit.length ? [{ name: `${hit.length} block${hit.length === 1 ? "" : "s"}`, items: hit }] : [];
-  }, [q]);
+    if (!s) return GALLERY.map((g) => ({ name: t(g.group), items: g.ids.map(slashById).filter((c): c is SlashCommand => !!c) }));
+    const hit = SLASH.filter((c) => !c.action && `${c.label} ${t(c.label)} ${c.keys} ${c.hint} ${t(c.hint)}`.toLowerCase().includes(s));
+    return hit.length ? [{ name: t("{n} block|{n} blocks", { n: hit.length }), items: hit }] : [];
+  }, [q, lang]);
   const flat = groups.flatMap((g) => g.items);
   useEffect(() => { if (flat.length && !flat.some((c) => c.id === cur)) setCur(flat[0].id); }, [q]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!target) return null;
   const close = () => { setTarget(null); target.view.focus(); };
-  const insert = (c: SlashCommand) => { const t = target; setTarget(null); applySlash(t.view, c, t.from, t.to); };
+  const insert = (c: SlashCommand) => { const tg = target; setTarget(null); applySlash(tg.view, c, tg.from, tg.to); };
   const pc = slashById(cur) ?? flat[0];
   const onKey = (e: React.KeyboardEvent) => {
     const i = flat.findIndex((c) => c.id === cur);
-    const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: phone ? 3 : 5, ArrowUp: phone ? -3 : -5 }[e.key];
+    const step = { ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1, ArrowDown: phone ? 3 : 5, ArrowUp: phone ? -3 : -5 }[e.key];
     if (step && flat.length) { e.preventDefault(); setCur(flat[Math.max(0, Math.min(flat.length - 1, i + step))].id); }
     else if (e.key === "Enter" && pc) { e.preventDefault(); insert(pc); }
     else if (e.key === "Escape") { e.preventDefault(); close(); }
   };
   const tile = (c: SlashCommand) => (
-    <button key={c.id} onMouseEnter={() => setCur(c.id)} onFocus={() => setCur(c.id)} onClick={() => insert(c)} title={c.hint}
+    <button key={c.id} onMouseEnter={() => setCur(c.id)} onFocus={() => setCur(c.id)} onClick={() => insert(c)} title={t(c.hint)}
       className="flex flex-col gap-1.5 rounded-[10px] p-1.5 text-start outline-none"
       style={c.id === cur ? { background: "color-mix(in srgb,var(--accent) 10%,transparent)", boxShadow: "inset 0 0 0 1.5px var(--accent)" } : undefined}>
       {c.thumb ? <LayoutThumb kind={c.thumb} /> : <span className="flex h-16 w-24 items-center justify-center rounded-[8px] border border-line bg-bg"><Glyph name={c.glyph} size={22} /></span>}
-      <span className="px-0.5 text-[12px] font-medium leading-4">{c.label}</span>
+      <span className="px-0.5 text-[12px] font-medium leading-4">{t(c.label)}</span>
     </button>
   );
 
   return createPortal(
     <div className="fixed inset-0 z-[70]" onKeyDown={onKey}>
       <div className="absolute inset-0" style={{ background: "rgba(5,6,8,.55)" }} onClick={close} />
-      <div role="dialog" aria-label="Insert" className={phone
+      <div role="dialog" aria-label={t("Insert")} className={phone
         ? "absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col overflow-hidden rounded-t-[14px] bg-surface fade-in"
         : "absolute left-1/2 top-1/2 flex w-[860px] max-w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[14px] border border-line bg-surface fade-in"}>
         <div className="flex items-center gap-3 border-b border-line px-5 py-4">
-          <span className="flex-1 text-[17px] font-[650]">Insert</span>
+          <span className="flex-1 text-[17px] font-[650]">{t("Insert")}</span>
           <label className={phone ? "flex h-8 w-44 items-center gap-2 rounded-[6px] border border-line bg-bg px-2.5 text-muted" : "flex h-8 w-60 items-center gap-2 rounded-[6px] border border-line bg-bg px-2.5 text-muted"}>
             <Glyph name="query" size={14} />
-            <input ref={input} autoFocus={!phone} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search blocks" className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-muted" />
+            <input ref={input} autoFocus={!phone} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Search blocks")} className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-muted" />
           </label>
         </div>
         <div className="flex min-h-0">
@@ -79,15 +82,15 @@ export function InsertGallery() {
                 <div className={phone ? "grid grid-cols-3 gap-2.5" : "grid grid-cols-5 gap-2.5"}>{g.items.map(tile)}</div>
               </div>
             ))}
-            {!groups.length && <div className="py-6 text-muted">No block matches “{q}”. Type <kbd className="rounded border border-line px-1">/</kbd> in the note to see every command.</div>}
+            {!groups.length && <div className="py-6 text-muted">{tx("No block matches “{q}”. Type {slash} in the note to see every command.", { q, slash: <kbd className="rounded border border-line px-1">/</kbd> })}</div>}
           </div>
           {!phone && pc && (
             <div className="flex w-60 shrink-0 flex-col gap-2.5 border-s border-line bg-bg p-4">
-              <span className="text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Preview</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("Preview")}</span>
               {pc.thumb ? <LayoutThumb kind={pc.thumb} scale={2.15} /> : <span className="flex h-[138px] w-[206px] items-center justify-center rounded-[8px] border border-line"><Glyph name={pc.glyph} size={40} color="var(--muted)" /></span>}
-              <span className="font-semibold">{pc.label}</span>
-              <span className="text-[12px] leading-[17px] text-muted">{pc.desc ?? pc.hint}</span>
-              <code className="overflow-hidden whitespace-pre font-mono text-[11.5px] leading-[18px] text-muted">{previewMd(pc)}</code>
+              <span className="font-semibold">{t(pc.label)}</span>
+              <span className="text-[12px] leading-[17px] text-muted">{t(pc.desc ?? pc.hint)}</span>
+              <code dir="ltr" className="overflow-hidden whitespace-pre font-mono text-[11.5px] leading-[18px] text-muted">{previewMd(pc)}</code>
             </div>
           )}
         </div>

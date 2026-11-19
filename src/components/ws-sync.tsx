@@ -3,7 +3,8 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { DEMO } from "../lib/db";
 import { go } from "../lib/store";
 import { syncNow, useSync, type SyncState } from "../lib/sync";
-import { num, syncedAgo, tr, useRtl } from "./ws-dir";
+import { syncedAgo, useRtl } from "./ws-dir";
+import { fmtDate, t } from "../lib/i18n";
 import { cx } from "./ui";
 
 /* Sync indicator states (design: Lumen 12 · R3-6, Lumen Components "sync"):
@@ -48,10 +49,10 @@ export function syncLook(s: SyncState, rtl = false): SyncLook {
   // Demo mode never syncs; show the design's steady state ("Synced 2m ago") so screens compare 1:1.
   if (DEMO && s.status === "local") s = navigator.onLine ? { ...s, status: "idle", last: Date.now() - 2 * 60000 - 5000 } : { ...s, status: "offline", pending: 3 };
   const base = { width: 8, height: 8, borderRadius: "50%", flexShrink: 0 } as React.CSSProperties;
-  if (s.status === "local") return { kind: s.status, error: false, color: "var(--muted)", text: tr("Local only", rtl), dot: { ...base, background: "transparent", boxShadow: "0 0 0 1.5px var(--muted) inset" } };
-  if (s.status === "syncing") return { kind: s.status, error: false, color: "var(--muted)", text: tr("Syncing…", rtl), dot: { ...base, background: "var(--info)", boxShadow: "0 0 0 3px color-mix(in srgb,var(--info) 25%,transparent)" } };
-  if (s.status === "offline") return { kind: s.status, error: false, color: "var(--muted)", text: `${tr("Offline", rtl)}${s.pending ? ` · ${num(s.pending, rtl)} ${tr("queued", rtl)}` : ""}`, dot: { ...base, background: "var(--warning)" } };
-  if (s.status === "error") return { kind: s.status, error: true, color: "var(--danger)", text: `${tr("Sync error", rtl)} · ${tr("tap for details", rtl)}`, dot: { ...base, background: "var(--danger)" } };
+  if (s.status === "local") return { kind: s.status, error: false, color: "var(--muted)", text: t("Local only"), dot: { ...base, background: "transparent", boxShadow: "0 0 0 1.5px var(--muted) inset" } };
+  if (s.status === "syncing") return { kind: s.status, error: false, color: "var(--muted)", text: t("Syncing…"), dot: { ...base, background: "var(--info)", boxShadow: "0 0 0 3px color-mix(in srgb,var(--info) 25%,transparent)" } };
+  if (s.status === "offline") return { kind: s.status, error: false, color: "var(--muted)", text: s.pending ? t("Offline · {n} queued", { n: s.pending }) : t("Offline"), dot: { ...base, background: "var(--warning)" } };
+  if (s.status === "error") return { kind: s.status, error: true, color: "var(--danger)", text: t("Sync error · tap for details"), dot: { ...base, background: "var(--danger)" } };
   return { kind: s.status, error: false, color: "var(--muted)", text: syncedAgo(s.last, rtl), dot: { ...base, background: "var(--success)" } };
 }
 
@@ -65,18 +66,18 @@ export function useSyncLook() {
 export function SyncErrorPopover({ onClose, className, style }: { onClose: () => void; className?: string; style?: React.CSSProperties }) {
   const s = useSync();
   const code = lastSyncHttp.status || (/401|unauthor|token/i.test(s.error ?? "") ? 401 : 0);
-  const msg = code === 401 ? "Cloudflare rejected the passcode token (expired)." : s.error ? `${s.error.replace(/\.?$/, ".")}` : "The server didn't answer.";
-  const at = new Date(lastSyncHttp.at || Date.now()).toLocaleTimeString([], { hour12: false });
+  const msg = code === 401 ? t("Cloudflare rejected the passcode token (expired).") : s.error ? `${s.error.replace(/\.?$/, ".")}` : t("The server didn't answer.");
+  const at = fmtDate(lastSyncHttp.at || Date.now(), { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className={cx("z-50 w-[296px] rounded-[12px] border border-line bg-surface p-[14px] shadow-xl fade-in", className)} style={style} role="dialog" aria-label="Sync error">
-        <div className="flex items-center gap-2 font-semibold text-bad"><CircleAlert size={15} />Sync error</div>
-        <div className="mt-2 text-[13px] leading-[19px]">{msg} Your {s.pending || "unsynced"} change{s.pending === 1 ? "" : "s"} {s.pending === 1 ? "is" : "are"} safe on this device.</div>
-        <div className="mt-2 font-mono text-[11.5px] text-muted">{code || "—"} · {lastSyncHttp.path} · {at}</div>
+      <div className={cx("z-50 w-[296px] rounded-[12px] border border-line bg-surface p-[14px] shadow-xl fade-in", className)} style={style} role="dialog" aria-label={t("Sync error")}>
+        <div className="flex items-center gap-2 font-semibold text-bad"><CircleAlert size={15} />{t("Sync error")}</div>
+        <div className="mt-2 text-[13px] leading-[19px]"><span dir="auto">{msg}</span> {s.pending ? t("Your {n} change is safe on this device.|Your {n} changes are safe on this device.", { n: s.pending }) : t("Your unsynced changes are safe on this device.")}</div>
+        <div className="mt-2 font-mono text-[11.5px] text-muted" dir="ltr">{code || "—"} · {lastSyncHttp.path} · {at}</div>
         <div className="mt-3 flex gap-2">
-          {code === 401 && <button className="h-[30px] rounded-[8px] bg-accent px-2.5 text-[13px] font-semibold text-accent-fg" onClick={() => { onClose(); go("settings"); }}>Unlock again</button>}
-          <button className="h-[30px] rounded-[8px] border border-line px-2.5 text-[13px] font-medium" onClick={() => { onClose(); void syncNow(); }}>Retry</button>
+          {code === 401 && <button className="h-[30px] rounded-[8px] bg-accent px-2.5 text-[13px] font-semibold text-accent-fg" onClick={() => { onClose(); go("settings"); }}>{t("Unlock again")}</button>}
+          <button className="h-[30px] rounded-[8px] border border-line px-2.5 text-[13px] font-medium" onClick={() => { onClose(); void syncNow(); }}>{t("Retry")}</button>
         </div>
       </div>
     </>
@@ -116,10 +117,9 @@ export function RailSync() {
 /** Phone header sub-line under the title. */
 export function PhoneSyncLine({ saving }: { saving?: boolean }) {
   const l = useSyncLook();
-  const rtl = useRtl();
   const [open, setOpen] = useState(false);
-  if (saving) return <span className="ps-2.5 text-[11.5px] leading-4 text-muted">Saving…</span>;
-  const text = l.kind === "idle" ? `${tr("Saved", rtl)} · ${l.text}` : l.text;
+  if (saving) return <span className="ps-2.5 text-[11.5px] leading-4 text-muted">{t("Saving…")}</span>;
+  const text = l.kind === "idle" ? t("Saved · {status}", { status: l.text }) : l.text;
   return (
     <span className="relative flex">
       <button onClick={() => l.error && setOpen(true)} className="flex min-w-0 items-center gap-[5px] text-[11.5px] leading-4" style={{ color: l.color, cursor: l.error ? "pointer" : "default" }}>
@@ -134,11 +134,10 @@ export function PhoneSyncLine({ saving }: { saving?: boolean }) {
 export function HeaderSync({ wrap }: { wrap?: boolean }) {
   const l = useSyncLook();
   const s = useSync();
-  const rtl = useRtl();
   const saving = useSaving();
   const [open, setOpen] = useState(false);
   const pending = DEMO ? 3 : s.pending;
-  const text = saving ? "Saving…" : l.kind === "idle" ? `${tr("Saved", rtl)} · ${l.text}` : l.kind === "offline" ? `Saved locally${pending ? ` · ${pending} queued` : ""}` : l.kind === "local" ? "Saved on this device" : l.kind === "syncing" ? `${tr("Saved", rtl)} · ${tr("Syncing…", rtl)}` : l.text;
+  const text = saving ? t("Saving…") : l.kind === "idle" ? t("Saved · {status}", { status: l.text }) : l.kind === "offline" ? (pending ? t("Saved locally · {n} queued", { n: pending }) : t("Saved locally")) : l.kind === "local" ? t("Saved on this device") : l.kind === "syncing" ? t("Saved · {status}", { status: t("Syncing…") }) : l.text;
   return (
     <span className="relative flex">
       <button onClick={() => l.error && setOpen(true)} className={cx("flex items-center gap-1.5 text-[12px]", wrap ? "max-w-[96px] text-start leading-[14px]" : "whitespace-nowrap")} style={{ color: l.color, cursor: l.error ? "pointer" : "default" }}>
@@ -166,9 +165,9 @@ export function OfflineBanner() {
   return (
     <div className="flex h-9 shrink-0 items-center gap-2.5 px-4 text-[12.5px]" style={{ background: "color-mix(in srgb,var(--warning) 12%,var(--bg))", borderBottom: "1px solid color-mix(in srgb,var(--warning) 30%,transparent)" }} role="status">
       <CloudOff size={14} className="shrink-0 text-warn" />
-      <span className="truncate"><b className="font-semibold">Offline</b> · {(DEMO ? 3 : s.pending) ? `${DEMO ? 3 : s.pending} change${s.pending === 1 ? "" : "s"} queued. ` : ""}Everything is saved on this device and will sync when you're back.</span>
+      <span className="truncate"><b className="font-semibold">{t("Offline")}</b> · {(DEMO ? 3 : s.pending) ? t("{n} change queued.|{n} changes queued.", { n: DEMO ? 3 : s.pending }) + " " : ""}{t("Everything is saved on this device and will sync when you're back.")}</span>
       <span className="flex-1" />
-      <button aria-label="Dismiss" className="text-muted hover:text-ink" onClick={() => { dismissedSession = session; force((x) => x + 1); }}><X size={14} /></button>
+      <button aria-label={t("Dismiss")} className="text-muted hover:text-ink" onClick={() => { dismissedSession = session; force((x) => x + 1); }}><X size={14} /></button>
     </div>
   );
 }

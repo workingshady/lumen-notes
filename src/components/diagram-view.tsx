@@ -3,6 +3,7 @@
 // diagrams larger than "Max render size" open fitted.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { buildSvg, exportPrefs } from "../lib/diagram-export";
+import { fmtNum, t } from "../lib/i18n";
 import { renderMermaidForExport } from "../lib/markdown";
 import { useExtraPrefs, withLook } from "../lib/reading-prefs";
 import { activeTheme } from "../lib/settings";
@@ -21,16 +22,16 @@ export function DiagramView({ src, className, toolbar = true }: { src: string; c
 
   useEffect(() => {
     let live = true;
-    const t = setTimeout(async () => {
+    const tm = setTimeout(async () => {
       try {
         const html = await renderMermaidForExport(withLook(src, p.diagramHand), p.diagramTheme, false);
         const doc = new DOMParser().parseFromString(html, "image/svg+xml").documentElement;
         const vb = (doc.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
         const w = vb[2] || parseFloat(doc.getAttribute("width") ?? "") || 400, h = vb[3] || parseFloat(doc.getAttribute("height") ?? "") || 300;
         if (live) { setSvg({ html, w, h }); setErr(""); }
-      } catch (e) { if (live) setErr((e as Error).message.split("\n")[0] || "Couldn't render this diagram"); }
+      } catch (e) { if (live) setErr((e as Error).message.split("\n")[0] || t("Couldn't render this diagram")); }
     }, 200);
-    return () => { live = false; clearTimeout(t); };
+    return () => { live = false; clearTimeout(tm); };
   }, [src, p.diagramTheme, p.diagramHand, dark]);
 
   const fitZoom = useCallback(() => {
@@ -58,7 +59,7 @@ export function DiagramView({ src, className, toolbar = true }: { src: string; c
 
   const step = (d: number) => { fitted.current = false; setZ((x) => Math.min(8, Math.max(0.1, x * (d > 0 ? 1.2 : 1 / 1.2)))); };
   const copySvg = async () => {
-    try { const b = await buildSvg(src, { ...exportPrefs(), format: "svg" }); await navigator.clipboard.writeText(b.svg); toast("SVG code copied"); }
+    try { const b = await buildSvg(src, { ...exportPrefs(), format: "svg" }); await navigator.clipboard.writeText(b.svg); toast(t("SVG code copied")); }
     catch (e) { toast((e as Error).message); }
   };
   const down = (e: React.PointerEvent) => {
@@ -80,15 +81,15 @@ export function DiagramView({ src, className, toolbar = true }: { src: string; c
         <div className="absolute left-1/2 top-1/2" style={{ width: svg.w, height: svg.h, transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px)) scale(${z})` }}
           dangerouslySetInnerHTML={{ __html: svg.html }} />
       )}
-      {!svg && !err && <div className="absolute inset-0 flex items-center justify-center text-muted">Rendering diagram…</div>}
+      {!svg && !err && <div className="absolute inset-0 flex items-center justify-center text-muted">{t("Rendering diagram…")}</div>}
       {err && <div className="absolute inset-x-4 top-4 rounded-[8px] border border-[color-mix(in_srgb,var(--danger)_40%,transparent)] bg-[color-mix(in_srgb,var(--danger)_12%,var(--surface))] px-3 py-2 font-mono text-[12px] text-bad">{err}</div>}
       {toolbar && (
-        <div className="absolute bottom-4 left-4 flex gap-0.5 rounded-[10px] border border-line bg-surface p-[3px] text-[12px]">
-          <button aria-label="Zoom out" title="Zoom out (−)" onClick={() => step(-1)} className={cx(tbtn, "w-[30px] text-[13px]")}>−</button>
-          <button title="Actual size" onClick={() => { fitted.current = false; setZ(1); }} className={cx(tbtn, "w-10 tabular-nums")}>{Math.round(z * 100)}%</button>
-          <button aria-label="Zoom in" title="Zoom in (+)" onClick={() => step(1)} className={cx(tbtn, "w-[30px] text-[13px]")}>+</button>
-          <button title="Fit (0)" onClick={fit} className={cx(tbtn, "px-2")}>Fit</button>
-          <button title="Copy the diagram as SVG code" onClick={() => void copySvg()} className={cx(tbtn, "px-2")}>Copy SVG</button>
+        <div className="absolute bottom-4 start-4 flex gap-0.5 rounded-[10px] border border-line bg-surface p-[3px] text-[12px]">
+          <button aria-label={t("Zoom out")} title={t("Zoom out (−)")} onClick={() => step(-1)} className={cx(tbtn, "w-[30px] text-[13px]")}>−</button>
+          <button title={t("Actual size")} onClick={() => { fitted.current = false; setZ(1); }} className={cx(tbtn, "w-10 tabular-nums")}>{fmtNum(Math.round(z * 100))}%</button>
+          <button aria-label={t("Zoom in")} title={t("Zoom in (+)")} onClick={() => step(1)} className={cx(tbtn, "w-[30px] text-[13px]")}>+</button>
+          <button title={t("Fit (0)")} onClick={fit} className={cx(tbtn, "px-2")}>{t("Fit")}</button>
+          <button title={t("Copy the diagram as SVG code")} onClick={() => void copySvg()} className={cx(tbtn, "px-2")}>{t("Copy SVG")}</button>
         </div>
       )}
     </div>

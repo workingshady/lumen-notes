@@ -8,6 +8,7 @@ import { Decoration, EditorView, ViewPlugin, type DecorationSet, type ViewUpdate
 import CodeMirror from "@uiw/react-codemirror";
 import { BookOpen, Check, ChevronDown, ChevronUp, CircleCheck, CircleX, Code2, Play, SquareTerminal, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { t } from "../lib/i18n";
 import { Glyph } from "./Glyph";
 import { cx } from "./ui";
 
@@ -15,22 +16,22 @@ export type CodeTab = "json" | "script";
 const MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
 export function CodePanel({ tab, onTab, onClose, children, phoneRight }: { tab: CodeTab; onTab: (t: CodeTab) => void; onClose: () => void; children: ReactNode; phoneRight?: ReactNode }) {
-  const tabBtn = (t: CodeTab, icon: ReactNode, label: string) => (
-    <button onClick={() => onTab(t)} className={cx("flex h-[34px] items-center gap-1.5 rounded-[7px] px-3 text-[13px] md:h-8 md:rounded-[8px]", tab === t ? "bg-surface-2 font-semibold text-ink [&>svg]:text-accent" : "text-muted hover:text-ink")}>
+  const tabBtn = (id: CodeTab, icon: ReactNode, label: string) => (
+    <button onClick={() => onTab(id)} className={cx("flex h-[34px] items-center gap-1.5 rounded-[7px] px-3 text-[13px] md:h-8 md:rounded-[8px]", tab === id ?"bg-surface-2 font-semibold text-ink [&>svg]:text-accent" : "text-muted hover:text-ink")}>
       {icon}{label}
     </button>
   );
   return (
-    <div className="relative z-10 -mt-3.5 flex h-[60%] min-h-0 shrink-0 flex-col rounded-t-[14px] border-t border-line bg-surface text-[13px] md:mt-0 md:h-auto md:w-[480px] md:rounded-none md:border-l md:border-t-0">
-      <div className="flex justify-center pb-1 pt-2.5 md:hidden"><button aria-label="Close panel" onClick={onClose} className="h-1 w-9 rounded-full bg-line" /></div>
+    <div className="relative z-10 -mt-3.5 flex h-[60%] min-h-0 shrink-0 flex-col rounded-t-[14px] border-t border-line bg-surface text-[13px] md:mt-0 md:h-auto md:w-[480px] md:rounded-none md:border-s md:border-t-0">
+      <div className="flex justify-center pb-1 pt-2.5 md:hidden"><button aria-label={t("Close panel")} onClick={onClose} className="h-1 w-9 rounded-full bg-line" /></div>
       <div className="flex h-12 shrink-0 items-center gap-1 border-line px-4 md:h-11 md:border-b md:px-2">
         <div className="flex rounded-[10px] border border-line bg-bg p-[3px] md:gap-1 md:border-0 md:bg-transparent md:p-0">
           {tabBtn("json", <Code2 size={14} />, "JSON")}
-          {tabBtn("script", <SquareTerminal size={14} />, "Script")}
+          {tabBtn("script", <SquareTerminal size={14} />, t("Script"))}
         </div>
         <span className="flex-1" />
         <span className="flex items-center md:hidden">{phoneRight}</span>
-        <button aria-label="Close panel" title="Close" onClick={onClose} className="hidden size-8 items-center justify-center rounded-[8px] text-muted hover:bg-surface-2 hover:text-ink md:flex"><X size={16} /></button>
+        <button aria-label={t("Close panel")} title={t("Close")} onClick={onClose} className="hidden size-8 items-center justify-center rounded-[8px] text-muted hover:bg-surface-2 hover:text-ink md:flex"><X size={16} /></button>
       </div>
       {children}
     </div>
@@ -49,19 +50,19 @@ export function PanelBar({ children, phone }: { children: ReactNode; phone?: Rea
 
 export function ValidChip({ error, big }: { error: string | null; big?: boolean }) {
   return error ? (
-    <span className={cx("flex items-center gap-1 rounded-full bg-bad/14 px-2.5 font-semibold text-bad", big ? "h-7 text-[12.5px]" : "h-6 text-[12px]")}><CircleX size={12} />Invalid</span>
+    <span className={cx("flex items-center gap-1 rounded-full bg-bad/14 px-2.5 font-semibold text-bad", big ? "h-7 text-[12.5px]" : "h-6 text-[12px]")}><CircleX size={12} />{t("Invalid")}</span>
   ) : (
-    <span className={cx("flex items-center gap-1 rounded-full bg-ok/14 px-2.5 font-semibold text-ok", big ? "h-7 text-[12.5px]" : "h-6 text-[12px]")}>Valid <Check size={13} strokeWidth={2.5} /></span>
+    <span className={cx("flex items-center gap-1 rounded-full bg-ok/14 px-2.5 font-semibold text-ok", big ? "h-7 text-[12.5px]" : "h-6 text-[12px]")}>{t("Valid")} <Check size={13} strokeWidth={2.5} /></span>
   );
 }
 
 /** Red banner shown above the editor while the JSON is invalid. */
 export function ErrorBanner({ error, line, onGoto }: { error: string; line?: number | null; onGoto?: () => void }) {
-  const msg = line ? `Line ${line}: ${error.replace(/^JSON:\s*/, "").replace(/\s*(\(line \d+ column \d+\)|at position \d+.*)$/i, "")}` : error;
+  const msg = line ? t("Line {line}: {error}", { line, error: error.replace(/^JSON:\s*/, "").replace(/\s*(\(line \d+ column \d+\)|at position \d+.*)$/i, "") }) : error;
   return (
     <div className="mx-3 mt-2.5 flex shrink-0 items-center gap-2 rounded-[8px] border px-2.5 py-2 text-[12.5px] font-medium text-bad" style={{ background: "color-mix(in srgb,var(--danger) 12%,transparent)", borderColor: "color-mix(in srgb,var(--danger) 35%,transparent)" }}>
       <CircleX size={14} className="shrink-0" /><span className="min-w-0 flex-1 truncate">{msg}</span>
-      {line && onGoto && <button onClick={onGoto} className="shrink-0 font-medium text-ink underline underline-offset-[3px]">Go to line</button>}
+      {line && onGoto && <button onClick={onGoto} className="shrink-0 font-medium text-ink underline underline-offset-[3px]">{t("Go to line")}</button>}
     </div>
   );
 }
@@ -72,10 +73,10 @@ export function StatusFooter({ children }: { children: ReactNode }) {
 export function ValidFooter({ error, detail, cursor }: { error: string | null; detail: ReactNode; cursor?: { line: number; col: number } | null }) {
   return (
     <StatusFooter>
-      {error ? <span className="truncate">Board keeps last valid state</span>
-        : <><CircleCheck size={14} className="shrink-0 text-ok" /><span className="font-medium text-ok">Valid</span><span className="truncate">{detail}</span></>}
+      {error ? <span className="truncate">{t("Board keeps last valid state")}</span>
+        : <><CircleCheck size={14} className="shrink-0 text-ok" /><span className="font-medium text-ok">{t("Valid")}</span><span className="truncate">{detail}</span></>}
       <span className="flex-1" />
-      {cursor && <span className="shrink-0 tabular-nums">Ln {cursor.line}, Col {cursor.col}</span>}
+      {cursor && <span className="shrink-0 tabular-nums">{t("Ln {line}, Col {col}", { line: cursor.line, col: cursor.col })}</span>}
     </StatusFooter>
   );
 }
@@ -98,14 +99,14 @@ export function ExamplesMenu({ examples, onPick }: { examples: Example[]; onPick
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen((o) => !o)} className={cx("flex h-9 items-center gap-1.5 rounded-[10px] border px-3 text-[13px] md:h-[30px] md:rounded-[8px] md:bg-surface-2 md:px-2.5", open ? "border-accent" : "border-line")}>
-        <BookOpen size={13} className="hidden text-muted md:block" />Examples{open ? <ChevronUp size={12} className="text-muted" /> : <ChevronDown size={13} className="text-muted" />}
+        <BookOpen size={13} className="hidden text-muted md:block" />{t("Examples")}{open ? <ChevronUp size={12} className="text-muted" /> : <ChevronDown size={13} className="text-muted" />}
       </button>
       {open && (
-        <div className="absolute right-0 top-10 z-30 flex w-[300px] flex-col gap-0.5 rounded-[12px] border border-line bg-surface-2 p-1.5 shadow-[0_16px_40px_rgba(0,0,0,.45)] md:left-0 md:right-auto md:top-9 fade-in">
+        <div className="absolute end-0 top-10 z-30 flex w-[300px] flex-col gap-0.5 rounded-[12px] border border-line bg-surface-2 p-1.5 shadow-[0_16px_40px_rgba(0,0,0,.45)] md:start-0 md:end-auto md:top-9 fade-in">
           {examples.map((e) => (
-            <button key={e.title} onClick={() => { onPick(e.code); setOpen(false); }} className="flex gap-2.5 rounded-[8px] px-2.5 py-[9px] text-left hover:bg-bg">
+            <button key={e.title} onClick={() => { onPick(e.code); setOpen(false); }} className="flex gap-2.5 rounded-[8px] px-2.5 py-[9px] text-start hover:bg-bg">
               <span className="mt-px text-muted">{e.icon}</span>
-              <span className="flex flex-col gap-0.5"><span className="text-[13px] font-medium">{e.title}</span><span className="text-[12px] text-muted">{e.desc}</span></span>
+              <span className="flex flex-col gap-0.5"><span className="text-[13px] font-medium">{t(e.title)}</span><span className="text-[12px] text-muted">{t(e.desc)}</span></span>
             </button>
           ))}
         </div>
@@ -116,10 +117,10 @@ export function ExamplesMenu({ examples, onPick }: { examples: Example[]; onPick
 
 export function RunButton({ onRun, big }: { onRun: () => void; big?: boolean }) {
   return big ? (
-    <button onClick={onRun} className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-[12px] bg-accent text-[15px] font-semibold text-accent-fg"><Play size={14} />Run</button>
+    <button onClick={onRun} className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-[12px] bg-accent text-[15px] font-semibold text-accent-fg"><Play size={14} />{t("Run")}</button>
   ) : (
     <button onClick={onRun} className="flex h-[30px] items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-semibold text-accent-fg hover:brightness-110">
-      <Play size={12} />Run <span className="font-mono text-[11px] font-medium opacity-65">{MAC ? "⌘↵" : "Ctrl↵"}</span>
+      <Play size={12} />{t("Run")} <span dir="ltr" className="font-mono text-[11px] font-medium opacity-65">{MAC ? "⌘↵" : "Ctrl↵"}</span>
     </button>
   );
 }
@@ -129,8 +130,8 @@ export function OutputStrip({ logs, onClear, empty }: { logs: string[]; onClear:
   return (
     <div className="mx-3 mt-2.5 flex max-h-40 shrink-0 flex-col gap-1 overflow-auto rounded-[10px] bg-bg px-3 py-2 font-mono text-[11.5px] leading-[18px] text-muted md:mx-0 md:mt-0 md:rounded-none md:border-t md:border-line md:px-3.5 md:py-2.5 md:text-[12px] md:leading-[19px]">
       <div className="hidden items-center pb-0.5 font-sans text-[10.5px] font-semibold uppercase tracking-[.06em] md:flex">
-        <span className="flex-1">Output</span>
-        {logs.length > 0 && <button onClick={onClear} className="font-medium normal-case tracking-normal hover:text-ink">Clear</button>}
+        <span className="flex-1">{t("Output")}</span>
+        {logs.length > 0 && <button onClick={onClear} className="font-medium normal-case tracking-normal hover:text-ink">{t("Clear")}</button>}
       </div>
       {logs.length ? logs.map((l, i) => (
         <span key={i} className={cx("whitespace-pre-wrap break-words", l.startsWith("✓") && "text-ok", l.startsWith("✖") && "text-bad")}>{l.startsWith("✓") ? <span className="inline-flex items-start gap-1.5"><Check size={13} className="mt-[3px] shrink-0" />{l.slice(1).trim()}</span> : l.startsWith("✖") ? <span className="inline-flex items-start gap-1.5"><Glyph name="x" size={13} className="mt-[3px] shrink-0" />{l.slice(1).trim()}</span> : `› ${l}`}</span>
@@ -289,7 +290,7 @@ export function CodeEditor({ value, onChange, band, onCursor, handle, lang = "js
     format,
   };
   return (
-    <div className={className ?? cx("mx-3 min-h-0 flex-1 overflow-auto rounded-[10px] border border-line bg-bg md:mx-0 md:rounded-none md:border-0 md:bg-transparent", CODE_TEXT)}
+    <div dir="ltr" className={className ?? cx("mx-3 min-h-0 flex-1 overflow-auto rounded-[10px] border border-line bg-bg md:mx-0 md:rounded-none md:border-0 md:bg-transparent", CODE_TEXT)}
       onKeyDown={(e) => {
         if (lang === "json" && e.shiftKey && e.altKey && e.code === "KeyF") { e.preventDefault(); format(); }
         onKeyDown?.(e);

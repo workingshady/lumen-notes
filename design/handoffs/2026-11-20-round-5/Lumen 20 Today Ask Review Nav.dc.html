@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&family=IBM+Plex+Sans+Arabic:wght@400;600&family=Noto+Naskh+Arabic:wght@400;700&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 20 Today · Ask · Review · Navigation · Access</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 4</span></div><div style="font-size:14px;color:#9A9890">D3 study plan, A11 ask your vault, A12 FSRS, A13 history, passcodes &amp; devices, A14 settings pages.</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · D3</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Today · the study plan</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Rules, not AI. Every item says why it is here. Start opens the lesson and starts the timer; Done ticks the roadmap; Skip and Tomorrow are undoable.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+      <sc-for list="{{ today }}" as="f" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+          <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};--sh:{{ f.t.sh }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)"><dc-import name="TodayDesk" missed="{{ f.m }}" phone="{{ f.ph }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ok:#6BCB8B;display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;color:var(--tx)">
+      <div style="width:520px;border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:22px;display:flex;flex-direction:column;gap:10px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Plan log note · synced, editable</span><span style="font-family:'Source Serif 4',serif;font-size:22px;font-weight:700">Study plan log</span><span style="font-weight:650">Goals</span><code style="font:12.5px/21px 'JetBrains Mono',monospace;color:var(--mu);white-space:pre">- 3 lessons · CS231n
+- 150 cards
+- 300 minutes</code><span style="font-weight:650">2026-11-19</span><code style="font:12.5px/21px 'JetBrains Mono',monospace;color:var(--mu);white-space:pre-wrap">- done: Flashcards (14 min) ^cards
+- later: Attention (30 min) ^lesson:cs224n:attention
+- skip: Practice: Gradient descent</code></div>
+      <div style="width:520px;border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:22px;display:flex;flex-direction:column;gap:14px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Settings › Reading › Study plan</span>
+        <div style="display:flex;align-items:center;gap:12px"><span style="flex:1">Daily minutes</span><span style="width:200px;height:4px;border-radius:2px;background:var(--sf2);position:relative"><span style="position:absolute;left:0;top:0;width:45%;height:100%;background:var(--tx);border-radius:2px"></span><span style="position:absolute;left:45%;top:-6px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--tx)"></span></span><b style="width:52px;text-align:right">90 min</b></div>
+        <div style="display:flex;align-items:center;gap:12px"><span style="flex:1">Study days</span><div style="display:flex;gap:4px"><sc-for list="{{ days }}" as="d" hint-placeholder-count="7"><span style="width:30px;height:30px;border-radius:8px;background:{{ d.bg }};color:{{ d.c }};display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px">{{ d.n }}</span></sc-for></div></div>
+        <div style="display:flex;align-items:center;gap:12px"><span style="flex:1">Max new lessons a day</span><span style="height:30px;padding:0 12px;border-radius:7px;border:1px solid var(--bd);display:flex;align-items:center">2</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><span>Course priority · drag to reorder</span><sc-for list="{{ prio }}" as="c" hint-placeholder-count="4"><div style="height:36px;border-radius:8px;background:var(--sf);display:flex;align-items:center;gap:10px;padding:0 10px"><span style="color:var(--mu);font-size:11px;letter-spacing:-1px">⋮⋮</span><span style="width:4px;height:16px;border-radius:2px;background:{{ c.c }}"></span><span style="flex:1">{{ c.n }}</span><span style="color:var(--mu);font-size:12px">{{ c.k }}</span></div></sc-for></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><span>Weekly goals</span><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="height:30px;padding:0 10px;border-radius:7px;background:var(--sf2);display:flex;align-items:center">3 lessons · CS231n ×</span><span style="height:30px;padding:0 10px;border-radius:7px;background:var(--sf2);display:flex;align-items:center">150 cards ×</span><span style="height:30px;padding:0 10px;border-radius:7px;background:var(--sf2);display:flex;align-items:center">300 min ×</span><span style="height:30px;padding:0 10px;border-radius:7px;border:1px dashed var(--bd);color:var(--mu);display:flex;align-items:center">+ Goal</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;display:flex;flex-direction:column;gap:28px;color:var(--tx)">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · A11</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Ask your vault</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">A search box that answers only from your notes, with numbered citations. Same styling as search: no glow, no sparkles.</p></div>
+    <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+      <div style="width:1440px;height:900px;border-radius:12px;background:var(--bg);display:flex;overflow:hidden;position:relative">
+        <dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+        <div style="width:260px;border-right:1px solid var(--bd);padding:16px 12px;display:flex;flex-direction:column;gap:4px"><span style="font-weight:650;font-size:15px;padding:0 6px 10px">Ask</span><span style="height:32px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;margin-bottom:10px">New question</span><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);padding:6px">History</span><sc-for list="{{ askHist }}" as="h" hint-placeholder-count="5"><span style="padding:8px;border-radius:7px;background:{{ h.bg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ h.t }}</span></sc-for></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:32px 40px;gap:18px;overflow:hidden">
+          <div style="width:760px;display:flex;flex-direction:column;gap:10px">
+            <div style="height:48px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:10px;padding:0 14px"><dc-import name="LumenGlyph" glyph="query" size="{{ 18 }}" color="var(--mu)" hint-size="18px,18px"></dc-import><span style="flex:1;font-size:15px">Why does dividing by √dk help attention?</span><span style="height:28px;padding:0 10px;border-radius:7px;background:var(--sf2);display:flex;align-items:center;gap:6px;font-size:12px"><dc-import name="LumenGlyph" glyph="path" size="{{ 13 }}" hint-size="13px,13px"></dc-import>AI Engineer ▾</span></div>
+            <span style="font-size:12px;color:var(--mu)">Answered from 4 notes in AI Engineer · 1.8 s · nothing leaves your Cloudflare</span>
+          </div>
+          <div style="width:760px;font-family:'Source Serif 4',serif;font-size:17px;line-height:30px;display:flex;flex-direction:column;gap:12px">
+            <p style="margin:0">Without scaling, dot products of large vectors grow with d<sub>k</sub>, pushing softmax into regions where its gradient is almost zero<sup style="font:600 11px Inter;color:var(--ln);padding:0 3px;border-radius:4px;background:color-mix(in srgb,var(--ln) 14%,transparent);margin-left:2px">1</sup>. Dividing by √d<sub>k</sub> keeps their variance near 1<sup style="font:600 11px Inter;color:var(--ln);padding:0 3px;border-radius:4px;background:color-mix(in srgb,var(--ln) 14%,transparent);margin-left:2px">2</sup>, so training stays stable<sup style="font:600 11px Inter;color:var(--ln);padding:0 3px;border-radius:4px;background:color-mix(in srgb,var(--ln) 14%,transparent);margin-left:2px">3</sup>.</p>
+          </div>
+          <div style="width:760px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px"><sc-for list="{{ sources }}" as="s" hint-placeholder-count="3"><div style="border-radius:10px;background:var(--sf);border:1px solid var(--bd);padding:10px 12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="font-weight:700;color:var(--ln)">{{ s.n }}</span><dc-import name="LumenGlyph" glyph="{{ s.g }}" size="{{ 13 }}" color="var(--mu)" hint-size="13px,13px"></dc-import><span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.t }}</span></div><span style="font-family:'Source Serif 4',serif;font-size:13.5px;line-height:19px;color:var(--mu)">“{{ s.q }}”</span></div></sc-for></div>
+          <div style="width:760px;display:flex;gap:8px"><span style="height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center">Insert as note</span><span style="height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center">Copy with citations</span><span style="height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center">Make flashcards</span></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;width:420px">
+        <sc-for list="{{ askStates }}" as="s" hint-placeholder-count="4"><div style="border-radius:12px;background:var(--bg);border:1px solid var(--bd);padding:16px;display:flex;flex-direction:column;gap:8px;direction:{{ s.dir }}"><span style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;direction:ltr">{{ s.k }}</span><span style="font-weight:600;font-family:{{ s.ff }}">{{ s.t }}</span><span style="color:var(--mu);line-height:19px;font-family:{{ s.ff }}">{{ s.d }}</span><div style="display:{{ s.barS }};height:4px;border-radius:2px;background:var(--sf2);overflow:hidden"><span style="display:block;width:55%;height:100%;background:var(--tx)"></span></div></div></sc-for>
+      </div>
+      <div style="width:412px;height:915px;border-radius:28px;background:var(--bg);position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:rgba(5,6,8,.5)"></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:820px;background:var(--sf);border-radius:14px 14px 0 0;padding:10px 16px 0;display:flex;flex-direction:column;gap:12px"><div style="display:flex;justify-content:center"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div><span style="font-size:18px;font-weight:650">Ask</span>
+          <div style="min-height:48px;border-radius:12px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 12px">Why does dividing by √dk help?</div>
+          <p style="margin:0;font-family:'Source Serif 4',serif;font-size:16px;line-height:28px">Without scaling, dot products grow with d<sub>k</sub> and push softmax into flat regions<sup style="font:600 11px Inter;color:var(--ln)"> 1</sup>. Dividing keeps variance near 1<sup style="font:600 11px Inter;color:var(--ln)"> 2</sup>.</p>
+          <sc-for list="{{ sources }}" as="s" hint-placeholder-count="3"><div style="min-height:52px;border-radius:10px;background:var(--bg);border:1px solid var(--bd);padding:8px 12px;display:flex;align-items:center;gap:10px"><span style="font-weight:700;color:var(--ln)">{{ s.n }}</span><dc-import name="LumenGlyph" glyph="{{ s.g }}" size="{{ 16 }}" color="var(--mu)" hint-size="16px,16px"></dc-import><span style="flex:1">{{ s.t }}</span></div></sc-for>
+        </div></div>
+    </div>
+  </section>
+
+  <section style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;display:flex;flex-direction:column;gap:28px;color:var(--tx)">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · A12 · A13 · A14 · ACCESS</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Review settings, navigation, access</h2></div>
+    <div style="display:grid;grid-template-columns:repeat(3,520px);gap:24px;align-items:start">
+      <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:22px;display:flex;flex-direction:column;gap:14px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Settings › Review (FSRS)</span>
+        <div style="display:flex;align-items:baseline;gap:8px"><span style="flex:1;font-weight:600">Target retention</span><b style="font-size:20px">0.90</b></div>
+        <div style="position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--sf2),var(--le))"><span style="position:absolute;left:58%;top:-7px;width:20px;height:20px;margin-left:-10px;border-radius:50%;background:var(--tx);border:3px solid var(--bg)"></span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--mu)"><span>0.80 · fewer reviews</span><span>0.97 · forget less</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--mu)">Reviews per day, next 30 days</span><div style="height:90px;display:flex;align-items:flex-end;gap:3px;border-bottom:1px solid var(--bd)"><sc-for list="{{ workload }}" as="w" hint-placeholder-count="30"><span style="flex:1;height:{{ w.h }};background:{{ w.c }};border-radius:2px 2px 0 0"></span></sc-for></div><span style="font-size:12px;color:var(--mu)">~42 a day at 0.90 · ~61 at 0.95 (dashed)</span></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:12px"><sc-for list="{{ cardStates }}" as="c" hint-placeholder-count="5"><span style="padding:0 8px;line-height:22px;border-radius:999px;background:{{ c.bg }};color:{{ c.c }};font-weight:600">{{ c.n }}</span></sc-for></div>
+        <div style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12.5px;border-top:1px solid var(--bd);padding-top:12px">▸ Advanced · max interval, new cards a day, optimize from history</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:12px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Desktop header · history + breadcrumb</span>
+          <div style="height:44px;border-radius:10px;background:var(--sf);display:flex;align-items:center;gap:8px;padding:0 10px"><span style="width:28px;height:28px;border-radius:7px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center">←</span><span style="width:28px;height:28px;border-radius:7px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;color:var(--mu)">→</span><span style="display:flex;align-items:center;gap:6px;color:var(--mu);white-space:nowrap"><dc-import name="LumenGlyph" glyph="eye" size="{{ 14 }}" color="#39C5CF" hint-size="14px,14px"></dc-import>CS231n › Module 2 ›<b style="color:var(--tx);font-weight:500">Backpropagation</b></span></div>
+          <div style="border-radius:10px;background:var(--sf2);border:1px solid var(--bd);padding:4px;width:260px;display:flex;flex-direction:column;font-size:12.5px"><span style="padding:6px 8px;color:var(--mu);font-size:11px">Back · long-press</span><span style="padding:6px 8px;border-radius:6px;background:var(--bg)">Tag #attention</span><span style="padding:6px 8px">Filter: status learning</span><span style="padding:6px 8px">AI Engineer · Graph</span><span style="padding:6px 8px">Today</span></div>
+        </div>
+        <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:12px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Phone header · exit toast</span>
+          <div style="height:56px;border-radius:12px;background:var(--sf);display:flex;align-items:center;gap:4px;padding:0 4px"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:18px">←</span><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:11.5px;color:var(--mu)">CS231n › Module 2</span><span style="font-weight:600">Backpropagation</span></div><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center">⋯</span></div>
+          <div style="align-self:center;height:40px;padding:0 16px;border-radius:20px;background:var(--tx);color:var(--bg);display:flex;align-items:center;font-weight:500">Swipe back again to close Lumen</div>
+        </div>
+        <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:10px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Developer › Simulator</span><span style="color:var(--mu);line-height:18px">Bottom drawer to test the app: fake date, offline, slow sync, big vault (738 notes), RTL, Paper.</span><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ sim }}" as="s" hint-placeholder-count="6"><span style="height:28px;padding:0 10px;border-radius:7px;border:1px solid {{ s.b }};background:{{ s.bg }};display:flex;align-items:center;font-size:12.5px">{{ s.l }}</span></sc-for></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:10px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Unlock · wrong passcode, lockout</span>
+          <div style="height:44px;border-radius:8px;background:var(--sf);border:1.5px solid var(--da);display:flex;align-items:center;padding:0 12px;letter-spacing:.3em">••••••••</div><span style="color:var(--da);font-size:12.5px">Wrong passcode · 2 tries left before a short lockout.</span>
+          <div style="border-radius:10px;background:color-mix(in srgb,var(--wa) 9%,transparent);border:1px solid color-mix(in srgb,var(--wa) 30%,transparent);padding:12px;display:flex;align-items:center;gap:12px"><b style="font:600 22px 'JetBrains Mono',monospace">03:58</b><span style="flex:1;line-height:18px">Too many tries from this network. Try again when the timer ends. Next lockout doubles (max 24 h).</span></div>
+          <span style="color:var(--ln);font-size:12.5px">Forgot the passcode?</span>
+        </div>
+        <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:10px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Forgot passcode · help sheet</span><span style="line-height:19px">Lumen has one owner and no accounts. To set a new passcode, run this in your project — <b style="font-weight:600">no notes are lost</b>:</span><code style="font:12px 'JetBrains Mono',monospace;background:var(--sf);padding:10px;border-radius:8px">wrangler secret put APP_PASSCODE</code><span style="color:var(--mu);font-size:12.5px">Notes on this device stay readable offline meanwhile.</span></div>
+        <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:8px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Settings › Sync › Devices <span style="text-transform:none;letter-spacing:0;font-weight:500">(replaces “accounts”)</span></span>
+          <sc-for list="{{ devices }}" as="d" hint-placeholder-count="3"><div style="min-height:44px;display:flex;align-items:center;gap:10px;border-top:1px solid var(--bd)"><span style="width:8px;height:8px;border-radius:50%;background:{{ d.c }}"></span><div style="flex:1;display:flex;flex-direction:column"><span style="font-weight:500">{{ d.n }}</span><span style="font-size:12px;color:var(--mu)">{{ d.s }}</span></div><span style="font-size:12.5px;color:{{ d.ac }}">{{ d.a }}</span></div></sc-for>
+          <div style="display:flex;gap:8px;padding-top:6px"><div style="flex:1;border-radius:10px;background:color-mix(in srgb,var(--in) 10%,transparent);padding:8px 10px;font-size:12.5px;line-height:18px">Demo mode (?demo=1): sample data, never syncs. <span style="color:var(--ln)">Leave demo</span></div></div>
+          <div style="border-radius:10px;border:1px solid var(--bd);padding:8px 10px;font-size:12.5px;display:flex;align-items:center;gap:8px"><dc-import name="LumenGlyph" glyph="s-locked" size="{{ 14 }}" color="var(--wa)" hint-size="14px,14px"></dc-import><span style="flex:1">Sync paused · this device's token expired.</span><span style="color:var(--ln)">Unlock again</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', inn:'#7AA2F7', le:'#B48EF0', sh:'none' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', inn:'#2F5BD3', le:'#7A4BD1', sh:'0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .08)' };
+    const today = [['R4-20A','Today · Lamplight',L,false,false],['R4-20B','Today · missed days, reschedule · Paper',P,true,false],['R4-20C','Today · phone',L,false,true],['R4-20D','Today · phone · Paper',P,false,true]].map(([id,l,t,m,ph]) => ({ id, l, t, m, ph, w: ph?'412px':'1440px', h: ph?'915px':'900px', r: ph?'28px':'12px' }));
+    const days = ['M','T','W','T','F','S','S'].map((n,i) => ({ n, bg: i<6?'var(--ac)':'var(--sf2)', c: i<6?'var(--af)':'var(--mu)' }));
+    const prio = [['CS231n','#39C5CF','target 20 Dec'],['Karpathy · Zero to Hero','#E3B341','no date'],['CS224n','#A371F7','target 15 Jan'],['fast.ai','#E5534B','no date']].map(([n,c,k]) => ({ n, c, k }));
+    const askHist = ['Why does dividing by √dk help?','Difference between LoRA and full fine-tune','When does batch norm hurt?','What is BPE merging?','Adam vs AdamW'].map((t,i) => ({ t, bg: i===0?'var(--sf2)':'transparent' }));
+    const sources = [['1','lesson','Attention · CS224n','dot products grow large in magnitude, pushing the softmax…'],['2','pdf','Attention.pdf · p. 4','we scale the dot products by 1/√dk'],['3','flashcards','Attention cards','keeps gradients from vanishing']].map(([n,g,t,q]) => ({ n, g, t, q }));
+    const askStates = [['Searching','Reading 12 notes in AI Engineer…','Progress shows notes read, not a spinner.','ltr',"Inter,sans-serif",1],['No answer','Your notes don\'t cover this yet.','Shows the 3 closest notes and “Search instead”. Never guesses.','ltr','Inter,sans-serif'],['Offline','Ask needs a connection.','Search still works offline.','ltr','Inter,sans-serif'],['Arabic','لماذا نقسم على جذر dk؟','الإجابة من ملاحظاتك فقط، مع أرقام المصادر.','rtl',"'IBM Plex Sans Arabic',sans-serif"]].map(([k,t,d,dir,ff,bar]) => ({ k, t, d, dir, ff, barS: bar?'block':'none' }));
+    const workload = Array.from({length:30},(_,i) => ({ h: (40 + 30*Math.abs(Math.sin(i*1.3)) + (i<3?30:0)) + '%', c: i<3?'var(--le)':'color-mix(in srgb,var(--le) 55%,transparent)' }));
+    const cardStates = [['New','var(--in)'],['Learning','var(--wa)'],['Review','var(--ok)'],['Relearning','var(--da)'],['Suspended','var(--mu)']].map(([n,c]) => ({ n, c, bg:`color-mix(in srgb, ${c} 14%, transparent)` }));
+    const sim = [['Date: 1 Dec',1],['Offline',0],['Slow sync',0],['738 notes',1],['RTL',0],['Paper',0]].map(([l,on]) => ({ l, b: on?'var(--ac)':'var(--bd)', bg: on?'color-mix(in srgb,var(--ac) 12%,transparent)':'transparent' }));
+    const devices = [['Laptop · this device','Unlocked 2 Nov · synced 2m ago','var(--ok)','',''],['Pixel 8','Unlocked 5 Nov · synced 1h ago','var(--ok)','Sign out','var(--da)'],['Office desktop','Token expired 14 Nov','var(--wa)','Remove','var(--da)']].map(([n,s,c,a,ac]) => ({ n, s, c, a, ac }));
+    return { today, days, prio, askHist, sources, askStates, workload, cardStates, sim, devices };
+  }
+}
+</script>
+</body>
+</html>

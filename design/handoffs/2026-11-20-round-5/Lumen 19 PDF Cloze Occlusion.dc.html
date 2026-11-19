@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 19 PDF reader · cloze · image occlusion</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 4</span></div><div style="font-size:14px;color:#9A9890">D1 reader with highlights (stored as plain Markdown in the PDF note), D2 fill-in-the-blank and image-hiding cards.</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · D1</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Reader</h2></div>
+    <div style="display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+      <sc-for list="{{ frames }}" as="f" hint-placeholder-count="10">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+          <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};--sh:{{ f.t.sh }};--page:{{ f.pg }};--ink:{{ f.ink }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)">
+            <dc-import name="PdfDesk" state="{{ f.s }}" invert="{{ f.inv }}" phone="{{ f.ph }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+          </div>
+          <div style="max-width:{{ f.w }};font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;display:flex;flex-direction:column;gap:28px;color:var(--tx)">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · D1 · WHERE HIGHLIGHTS GO</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Highlights → note, card, canvas</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Every highlight is a list item under “## Highlights” in the PDF note. Anything made from it carries a back-link chip: file · page.</p></div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+      <div style="width:560px;border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:22px;display:flex;flex-direction:column;gap:12px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">The PDF note in Read mode</span>
+        <span style="font-family:'Source Serif 4',serif;font-size:24px;font-weight:700">Attention Is All You Need</span>
+        <div style="display:flex;gap:10px;align-items:center;color:var(--mu);font-size:12.5px"><dc-import name="LumenGlyph" glyph="pdf" size="{{ 14 }}" color="var(--da)" hint-size="14px,14px"></dc-import>vaswani-2017.pdf · 15 pages · read 27%<span style="flex:1"></span><span style="color:var(--ln)">Open reader</span></div>
+        <span style="font-weight:650;font-size:16px;margin-top:6px">Highlights</span>
+        <sc-for list="{{ noteHl }}" as="h" hint-placeholder-count="4"><div style="display:flex;gap:10px;align-items:flex-start;font-family:'Source Serif 4',serif;font-size:15px;line-height:23px"><span style="width:4px;align-self:stretch;border-radius:2px;background:{{ h.c }};flex-shrink:0"></span><span style="flex:1">{{ h.t }}<span style="display:block;font-family:Inter;font-size:12.5px;color:var(--mu)">{{ h.cm }}</span></span><span style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu);white-space:nowrap">p. {{ h.p }}</span></div></sc-for>
+        <code style="margin-top:6px;font:11.5px/18px 'JetBrains Mono',monospace;color:var(--mu);white-space:pre;background:var(--sf);padding:10px;border-radius:8px">- yellow · p. 4 · The output is computed as a… ^hl-k3x9a2
+- blue · p. 4 · We compute the dot products… ^hl-p8m2c1
+  - Why √dk: keeps softmax out of tiny-gradient zones.</code>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:20px;width:520px">
+        <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:20px;display:flex;flex-direction:column;gap:10px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">In another note · quote with back-link</span>
+          <div style="border-left:3px solid #7AA2F7;padding:4px 0 4px 14px;font-family:'Source Serif 4',serif;font-size:16px;line-height:26px">We compute the dot products of the query with all keys, divide each by √d<sub>k</sub>…</div>
+          <span style="align-self:flex-start;display:flex;align-items:center;gap:6px;padding:0 8px;line-height:22px;border-radius:6px;background:color-mix(in srgb,var(--ln) 12%,transparent);color:var(--ln);font-size:12px"><dc-import name="LumenGlyph" glyph="pdf" size="{{ 12 }}" hint-size="12px,12px"></dc-import>Attention.pdf · p. 4</span></div>
+        <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:20px;display:flex;flex-direction:column;gap:10px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">As a flashcard</span>
+          <div style="border-radius:12px;background:var(--sf);border:1px solid var(--bd);padding:14px;display:flex;flex-direction:column;gap:8px"><span style="font-family:'Source Serif 4',serif;font-size:16px">Why divide by √d<sub>k</sub> in attention?</span><span style="height:1px;background:var(--bd)"></span><span style="font-family:'Source Serif 4',serif;font-size:15px;color:var(--mu)">Keeps dot products small so softmax doesn't saturate.</span><span style="align-self:flex-start;display:flex;align-items:center;gap:6px;padding:0 8px;line-height:22px;border-radius:6px;background:color-mix(in srgb,var(--ln) 12%,transparent);color:var(--ln);font-size:12px">Attention.pdf · p. 4</span></div></div>
+        <div style="border-radius:14px;background-color:var(--bg);background-image:radial-gradient(color-mix(in srgb,var(--mu) 22%,transparent) 1px,transparent 1.2px);background-size:20px 20px;border:1px solid var(--bd);padding:24px;display:flex;flex-direction:column;gap:10px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">On a canvas · highlight card</span>
+          <div style="width:300px;border-radius:10px;background:var(--sf);border:1px solid var(--bd);overflow:hidden"><div style="height:4px;background:#E3B341"></div><div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px"><span style="font-family:'Source Serif 4',serif;font-size:14px;line-height:20px">“The output is computed as a weighted sum of the values”</span><span style="font-size:11.5px;color:var(--mu);display:flex;align-items:center;gap:6px"><dc-import name="LumenGlyph" glyph="pdf" size="{{ 12 }}" color="var(--da)" hint-size="12px,12px"></dc-import>Attention.pdf · p. 4</span></div></div></div>
+      </div>
+      <div style="width:520px;border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:20px;display:flex;flex-direction:column;gap:6px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);padding-bottom:6px">PDF library · smart folder “PDFs”</span>
+        <sc-for list="{{ lib }}" as="l" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:12px;min-height:56px;border-top:1px solid var(--bd)"><div style="width:34px;height:44px;border-radius:3px;background:#F4F1EA;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div><div style="flex:1;display:flex;flex-direction:column;gap:4px"><span style="font-weight:600">{{ l.t }}</span><span style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mu)"><span style="width:90px;height:4px;border-radius:2px;background:var(--sf2)"><span style="display:block;height:100%;width:{{ l.p }};background:var(--tx);border-radius:2px"></span></span>{{ l.p }} · {{ l.h }}</span></div><span style="font-size:12px;color:var(--mu)">{{ l.d }}</span></div></sc-for></div>
+    </div>
+  </section>
+
+  <section style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;display:flex;flex-direction:column;gap:28px;color:var(--tx)">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · D2</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Cloze &amp; image occlusion</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Anki-compatible <code>{{ czEx }}</code> in any note; <code>==text==</code> only in flashcard notes. Image occlusion is a fenced block with boxes over an image. Violet = practice, amber = the hidden target.</p></div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+      <div style="width:480px;display:flex;flex-direction:column;gap:14px">
+        <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:8px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Editor</span><code style="font:13px/22px 'JetBrains Mono',monospace;color:var(--tx);white-space:pre-wrap">Attention divides by <span style="color:var(--le)">{{ cz1 }}</span> so that <span style="color:var(--le)">{{ cz2 }}</span> doesn't saturate.</code></div>
+        <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:8px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Read mode · subtle underline, no reveal</span><span style="font-family:'Source Serif 4',serif;font-size:17px;line-height:30px">Attention divides by <span style="border-bottom:2px dotted var(--le)">√d<sub>k</sub></span> so that <span style="border-bottom:2px dotted var(--le)">softmax</span> doesn't saturate.</span></div>
+        <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:22px;display:flex;flex-direction:column;gap:14px;text-align:center"><span style="font-size:12px;color:var(--mu)">Review · card 1 of 2 from this sentence</span><span style="font-family:'Source Serif 4',serif;font-size:20px;line-height:32px">Attention divides by <span style="display:inline-block;min-width:60px;border-radius:6px;background:color-mix(in srgb,var(--ac) 18%,transparent);border:1.5px solid var(--ac);color:var(--ac);font-family:Inter;font-size:14px;font-weight:600;padding:0 8px">[ … ]</span> so that softmax doesn't saturate.</span><span style="height:36px;border-radius:10px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:600">Show answer</span></div>
+        <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:22px;display:flex;flex-direction:column;gap:14px;text-align:center"><span style="font-size:12px;color:var(--mu)">Answer shown</span><span style="font-family:'Source Serif 4',serif;font-size:20px;line-height:32px">Attention divides by <span style="border-radius:6px;box-shadow:inset 0 0 0 1.5px var(--ac);padding:0 6px;font-weight:600">√d<sub>k</sub></span> so that softmax doesn't saturate.</span><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:12px"><span style="height:40px;border-radius:8px;background:color-mix(in srgb,var(--da) 12%,var(--bg));display:flex;flex-direction:column;align-items:center;justify-content:center"><b style="color:var(--da);font-weight:600">Again</b>1m</span><span style="height:40px;border-radius:8px;background:color-mix(in srgb,var(--wa) 12%,var(--bg));display:flex;flex-direction:column;align-items:center;justify-content:center"><b style="color:var(--wa);font-weight:600">Hard</b>8m</span><span style="height:40px;border-radius:8px;background:color-mix(in srgb,var(--ok) 12%,var(--bg));display:flex;flex-direction:column;align-items:center;justify-content:center"><b style="color:var(--ok);font-weight:600">Good</b>3d</span><span style="height:40px;border-radius:8px;background:color-mix(in srgb,var(--in) 12%,var(--bg));display:flex;flex-direction:column;align-items:center;justify-content:center"><b style="color:var(--in);font-weight:600">Easy</b>9d</span></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">R4-19O1</span> Image occlusion · editor · desktop</div>
+        <div style="width:1040px;height:640px;border-radius:12px;background:var(--bg);border:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden">
+          <div style="height:48px;padding:0 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><dc-import name="LumenGlyph" glyph="occlusion" size="{{ 16 }}" color="var(--le)" hint-size="16px,16px"></dc-import><span style="font-weight:600;flex:1">Image occlusion · Transformer block</span><div style="display:flex;gap:2px;padding:3px;border-radius:8px;background:var(--sf);border:1px solid var(--bd);font-size:12px"><span style="height:24px;padding:0 9px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;font-weight:600">Hide one</span><span style="height:24px;padding:0 9px;display:flex;align-items:center;color:var(--mu)">Hide all</span></div><span style="color:var(--mu)">− 100% +</span><span style="height:30px;padding:0 12px;border-radius:8px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">Done · 5 cards</span></div>
+          <div style="flex:1;display:flex">
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--sf) 50%,var(--bg))"><div style="width:480px;height:500px;background:#F4F1EA;border-radius:4px;position:relative;font:12px Inter;color:#1F1D1A">
+              <sc-for list="{{ blocks }}" as="b" hint-placeholder-count="6"><span style="position:absolute;left:{{ b.x }};top:{{ b.y }};width:{{ b.w }};height:36px;border-radius:6px;border:1.5px solid #8C8578;background:{{ b.f }};display:flex;align-items:center;justify-content:center">{{ b.t }}</span></sc-for>
+              <sc-for list="{{ boxes }}" as="b" hint-placeholder-count="5"><span style="position:absolute;left:{{ b.x }};top:{{ b.y }};width:{{ b.w }};height:{{ b.h }};border-radius:4px;background:{{ b.f }};border:2px solid {{ b.c }};box-sizing:border-box;display:flex;align-items:flex-start;justify-content:flex-start"><span style="margin:-10px 0 0 -10px;width:18px;height:18px;border-radius:50%;background:{{ b.c }};color:#0F1115;font:700 10px Inter;display:flex;align-items:center;justify-content:center">{{ b.n }}</span></span></sc-for>
+              <span style="position:absolute;left:276px;top:296px;width:8px;height:8px;background:#F4F1EA;border:2px solid var(--ac)"></span>
+            </div></div>
+            <div style="width:260px;border-left:1px solid var(--bd);background:var(--sf);padding:14px;display:flex;flex-direction:column;gap:8px"><span style="font-weight:600">Boxes · 5</span><sc-for list="{{ boxes }}" as="b" hint-placeholder-count="5"><div style="height:36px;padding:0 8px;border-radius:8px;display:flex;align-items:center;gap:10px;background:{{ b.rowBg }}"><span style="width:18px;height:18px;border-radius:50%;background:{{ b.c }};color:#0F1115;font:700 10px Inter;display:flex;align-items:center;justify-content:center">{{ b.n }}</span><span style="flex:1">{{ b.l }}</span></div></sc-for><span style="font-size:12px;color:var(--mu);line-height:17px;margin-top:auto">Drag to draw · drag a box to move · corners resize · Delete removes · labels are the answers.</span></div>
+          </div>
+        </div></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">R4-19O2</span> Occlusion review · phone · hide one</div>
+        <div style="width:412px;height:915px;border-radius:28px;background:var(--bg);display:flex;flex-direction:column;overflow:hidden">
+          <div style="height:32px"></div><div style="height:56px;padding:0 8px;display:flex;align-items:center;gap:8px"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center">×</span><span style="flex:1;height:4px;border-radius:2px;background:var(--sf2)"><span style="display:block;width:40%;height:100%;background:var(--le)"></span></span><span style="padding:0 12px;font-weight:600">2 / 5</span></div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:16px"><div style="width:372px;height:388px;background:#F4F1EA;border-radius:6px;position:relative;font:11px Inter;color:#1F1D1A;transform-origin:0 0">
+            <sc-for list="{{ blocksP }}" as="b" hint-placeholder-count="6"><span style="position:absolute;left:{{ b.x }};top:{{ b.y }};width:{{ b.w }};height:28px;border-radius:5px;border:1.5px solid #8C8578;background:{{ b.f }};display:flex;align-items:center;justify-content:center">{{ b.t }}</span></sc-for>
+            <sc-for list="{{ boxesP }}" as="b" hint-placeholder-count="5"><span style="position:absolute;left:{{ b.x }};top:{{ b.y }};width:{{ b.w }};height:{{ b.h }};border-radius:4px;background:{{ b.f }};border:2px solid {{ b.c }};box-sizing:border-box"></span></sc-for>
+          </div></div>
+          <div style="padding:0 16px 16px"><span style="height:56px;border-radius:12px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:600">Show answer</span></div><div style="height:24px"></div>
+        </div></div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', inn:'#7AA2F7', le:'#B48EF0', sh:'none' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', inn:'#2F5BD3', le:'#7A4BD1', sh:'0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .08)' };
+    const F = (id,l,s,t,n,o={}) => ({ id, l, s, t, n, inv:!!o.inv, ph:!!o.ph, pg: o.inv ? '#16191F' : (t===P ? '#FFFFFF' : '#F4F1EA'), ink: o.inv ? '#D8D5CE' : '#1F1D1A', w: o.ph?'412px':'1440px', h: o.ph?'915px':'900px', r: o.ph?'28px':'12px' });
+    const frames = [
+      F('R4-19A','Select text → highlight bar · Lamplight','read',L,'Five colours, Note, Card, Copy, Link. Margin markers show existing highlights (numbered) and comments (pen). Page rail on the left.'),
+      F('R4-19B','Highlights panel · Paper','highlights',P,'Right panel lists every highlight by page with colour, comment and kind (text/area). One action at the bottom: make a note from all of them.'),
+      F('R4-19C','Area mode · figure selected','area',L,'Toggle Area, drag a box over a figure; the same bar appears. Area highlights save an image crop with the page.'),
+      F('R4-19D','Search · hits on thumbnails','search',L,'Hits are outlined amber on the page and dotted on the thumbnails.'),
+      F('R4-19E','Dark inversion · continue reading','continue',L,'Page colours inverted for night reading (images kept as-is). Reopening offers Continue at the furthest point read.',{inv:1}),
+      F('R4-19F','Loading in parts','skeleton',L,'Large PDFs stream from D1 in 1.5 MB parts; the skeleton says how far it got.'),
+      F('R4-19G','Password-protected','password',P,'Never stored. Asked every time.'),
+      F('R4-19H','Scanned PDF · no text layer','scanned',L,'A pill explains why text can\'t be selected and points to Area.'),
+      F('R4-19I','Phone · reading with highlight bar','read',L,'Tap-and-hold to select; the bar sits above the selection, 44 px targets.',{ph:1}),
+      F('R4-19J','Phone · Paper · highlights','highlights',P,'On phone the Highlights list opens as a sheet from ⋯.',{ph:1})
+    ];
+    const noteHl = [['4','The output is computed as a weighted sum of the values','','#E3B341'],['4','We compute the dot products of the query with all keys, divide each by √dk','Why √dk: keeps softmax out of tiny-gradient zones.','#7AA2F7'],['4','[Figure 2 · area]','','#A371F7'],['9','We used the Adam optimizer with β1 = 0.9, β2 = 0.98','Compare with AdamW notes.','#E5534B']].map(([p,t,cm,c]) => ({ p, t, cm, c }));
+    const lib = [['Attention Is All You Need','27%','9 highlights','today'],['Deep Residual Learning','100%','14 highlights','12 Nov'],['CS231n lecture 5 slides','64%','6 highlights','10 Nov'],['HOML ch. 11 · Training deep nets','8%','no highlights','3 Nov']].map(([t,p,h,d]) => ({ t, p, h, d }));
+    const B = [['Inputs',40,440,140],['Multi-head attention',40,350,220],['Add & norm',40,290,140],['Feed forward',40,220,160],['Add & norm',40,160,140],['Output',40,60,140]];
+    const blocks = B.map(([t,x,y,w]) => ({ t, x:(x+120)+'px', y:y+'px', w:w+'px', f:'#FFFFFF' }));
+    const blocksP = B.map(([t,x,y,w]) => ({ t, x:(x+80)*.78+'px', y:y*.76+'px', w:(w*.85)+'px', f:'#FFFFFF' }));
+    const BX = [[156,346,230,44,'Multi-head attention'],[156,286,150,44,'Add & norm'],[156,216,170,44,'Feed forward'],[156,156,150,44,'Add & norm'],[310,346,120,44,'× N layers']];
+    const boxes = BX.map(([x,y,w,h,l],i) => ({ x:x+'px', y:y+'px', w:w+'px', h:h+'px', l, n:i+1, c: i===2?'#F2A93B':'#B48EF0', f: i===2?'color-mix(in srgb,#F2A93B 30%,transparent)':'color-mix(in srgb,#B48EF0 40%,#F4F1EA)', rowBg: i===2?'var(--sf2)':'transparent' }));
+    const boxesP = BX.map(([x,y,w,h],i) => ({ x:(x*.78-30)+'px', y:(y*.76)+'px', w:(w*.85)+'px', h:(h*.76)+'px', c: i===1?'#F2A93B':'#B48EF0', f: i===1?'#F2A93B':'transparent' }));
+    return { frames, noteHl, lib, blocks, blocksP, boxes, boxesP, czEx:'{{c1::text}}', cz1:'{{c1::√d_k}}', cz2:'{{c2::softmax}}' };
+  }
+}
+</script>
+</body>
+</html>

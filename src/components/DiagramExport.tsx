@@ -1,6 +1,7 @@
 import { Loader2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { copyImage, downloadBlob, EXT, exportPrefs, finalize, maxScale, safeName, saveExportPrefs, type DiagramExportPrefs, type ExportJob } from "../lib/diagram-export";
+import { fmtNum, t, tk } from "../lib/i18n";
 import { toast } from "../lib/store";
 import { Toggle } from "./ShareSheet";
 import { ChipSelect } from "./chip-select";
@@ -8,9 +9,9 @@ import { cx } from "./ui";
 
 const SCALES = [1, 2, 3, 4, 6, 8];
 const PADS = [0, 8, 16, 24, 32, 48, 64, 96];
-const BG_PRESETS = [{ v: "white", l: "White", c: "#ffffff" }, { v: "paper", l: "Paper", c: "#faf8f3" }, { v: "black", l: "Black", c: "#0b0c0e" }];
-const THEMES: { value: DiagramExportPrefs["theme"]; label: string }[] = [{ value: "app", label: "Match app" }, { value: "default", label: "Paper" }, { value: "dark", label: "Lamplight" }, { value: "neutral", label: "Neutral" }, { value: "forest", label: "Forest" }];
-const fmtBytes = (n: number) => (n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
+const BG_PRESETS = [{ v: "white", l: tk("White"), c: "#ffffff" }, { v: "paper", l: tk("Paper"), c: "#faf8f3" }, { v: "black", l: tk("Black"), c: "#0b0c0e" }];
+const THEMES: { value: DiagramExportPrefs["theme"]; label: string }[] = [{ value: "app", label: tk("Match app") }, { value: "default", label: tk("Paper") }, { value: "dark", label: tk("Lamplight") }, { value: "neutral", label: tk("Neutral") }, { value: "forest", label: tk("Forest") }];
+const fmtBytes = (n: number) => (n > 1e6 ? t("{n} MB", { n: fmtNum(n / 1e6, { maximumFractionDigits: 1, minimumFractionDigits: 1 }) }) : t("{n} KB", { n: Math.max(1, Math.round(n / 1e3)) }));
 
 /**
  * Export a Mermaid diagram (opened by `openDiagramExport(src, name)` from any diagram toolbar).
@@ -42,7 +43,7 @@ export function DiagramExport() {
     if (!job) return;
     const my = ++seq.current;
     setBusy(true); setErr(null);
-    const t = setTimeout(async () => {
+    const tm = setTimeout(async () => {
       try {
         const b = await job.build(p);
         const r = await finalize(b, p);
@@ -53,7 +54,7 @@ export function DiagramExport() {
         if (my === seq.current) setErr((e as Error).message);
       } finally { if (my === seq.current) setBusy(false); }
     }, 250);
-    return () => clearTimeout(t);
+    return () => clearTimeout(tm);
   }, [job, p]);
 
   const close = () => { setJob(null); setOut((old) => { if (old) URL.revokeObjectURL(old.url); return null; }); };
@@ -65,18 +66,18 @@ export function DiagramExport() {
   const download = async () => {
     if (!out) return;
     await downloadBlob(out.blob, file);
-    toast(`Saved ${file}`);
+    toast(t("Saved {file}", { file }));
   };
   const copyImg = async () => {
     if (!job) return;
     try {
       const png = p.format === "png" ? out!.blob : (await finalize(await job.build({ ...p, format: "png" }), { ...p, format: "png" })).blob;
       await copyImage(png);
-      toast("Image copied");
+      toast(t("Image copied"));
     } catch (e) { toast((e as Error).message); }
   };
-  const copySvg = async () => { if (!job) return; const b = await job.build({ ...p, format: "svg" }); await navigator.clipboard.writeText(b.svg); toast("SVG code copied"); };
-  const copySrc = async () => { if (!job?.src) return; await navigator.clipboard.writeText(job.src); toast("Mermaid source copied"); };
+  const copySvg = async () => { if (!job) return; const b = await job.build({ ...p, format: "svg" }); await navigator.clipboard.writeText(b.svg); toast(t("SVG code copied")); };
+  const copySrc = async () => { if (!job?.src) return; await navigator.clipboard.writeText(job.src); toast(t("Mermaid source copied")); };
 
 
   useEffect(() => {
@@ -99,47 +100,47 @@ export function DiagramExport() {
     <div className="fixed inset-0 z-[70] flex items-end justify-center text-[13px] text-ink md:items-center">
       <div className="absolute inset-0 bg-[rgba(5,6,8,.55)]" onClick={close} />
       <div role="dialog" aria-label={job.title} className="relative flex max-h-[94dvh] w-full flex-col overflow-y-auto rounded-t-[14px] border border-line bg-surface md:grid md:w-[820px] md:max-w-[calc(100vw-32px)] md:grid-cols-[1fr_300px] md:overflow-visible md:rounded-[14px]">
-        <div className="relative flex min-h-[240px] items-center justify-center overflow-hidden p-4 md:min-h-[380px] md:rounded-l-[14px]" style={{ background: "repeating-conic-gradient(#20242c 0 25%, #1a1d24 0 50%) 0 0/16px 16px" }}>
-          {out && <img src={out.url} alt="Export preview" className="max-h-[440px] max-w-full rounded-[4px] object-contain" />}
-          {busy && <div className="absolute right-2 top-2 flex items-center gap-1.5 rounded-full bg-surface/90 px-2 py-1 text-[11.5px] text-muted"><Loader2 size={12} className="animate-spin" />Rendering</div>}
+        <div className="relative flex min-h-[240px] items-center justify-center overflow-hidden p-4 md:min-h-[380px] md:rounded-s-[14px]" style={{ background: "repeating-conic-gradient(#20242c 0 25%, #1a1d24 0 50%) 0 0/16px 16px" }}>
+          {out && <img src={out.url} alt={t("Export preview")} className="max-h-[440px] max-w-full rounded-[4px] object-contain" />}
+          {busy && <div className="absolute end-2 top-2 flex items-center gap-1.5 rounded-full bg-surface/90 px-2 py-1 text-[11.5px] text-muted"><Loader2 size={12} className="animate-spin" />{t("Rendering")}</div>}
           {err && <div className="absolute inset-x-3 bottom-3 rounded-[8px] bg-[color-mix(in_srgb,var(--danger)_14%,var(--surface))] px-3 py-2 text-[12.5px] text-bad">{err}</div>}
         </div>
-        <div className="flex flex-col gap-3.5 border-line p-[18px] md:border-l">
-          <div className="flex items-center"><span className="flex-1 text-[16px] font-[650]">{job.title}</span><button aria-label="Close" onClick={close} className="text-muted hover:text-ink"><X size={16} /></button></div>
+        <div className="flex flex-col gap-3.5 border-line p-[18px] md:border-s">
+          <div className="flex items-center"><span className="flex-1 text-[16px] font-[650]">{job.title}</span><button aria-label={t("Close")} onClick={close} className="text-muted hover:text-ink"><X size={16} /></button></div>
           <div className="grid grid-cols-4 gap-0.5 rounded-[8px] border border-line bg-bg p-[3px] text-[12px]">{fmtBtn("svg", "SVG")}{fmtBtn("png", "PNG")}{fmtBtn("jpeg", "JPEG")}{fmtBtn("webp", "WebP")}</div>
-          {row("Scale", <ChipSelect value={p.scale} disabled={!raster} onChange={(s) => set({ scale: s })} label={raster ? `${p.scale}×` : "Vector"}
-            options={SCALES.map((s) => ({ value: s, label: `${s}×`, hint: out ? `${Math.round(out.natural.w * s)} × ${Math.round(out.natural.h * s)} px` : undefined, disabled: !!out && s > maxScale(out.natural.w, out.natural.h) + 0.01 }))} />)}
-          {row("Background", <span className="flex items-center gap-1.5">
-            {bgValue === "custom" && <input type="color" value={p.color} onChange={(e) => set({ color: e.target.value })} className="h-7 w-8 cursor-pointer rounded border border-line bg-transparent" title="Any colour" />}
-            <ChipSelect value={bgValue} onChange={setBg} options={[...(p.format === "jpeg" ? [] : [{ value: "transparent", label: "Transparent" }]), { value: "theme", label: "Theme" }, ...BG_PRESETS.map((b) => ({ value: b.v, label: b.l })), { value: "custom", label: "Colour…" }]} />
+          {row(t("Scale"), <ChipSelect value={p.scale} disabled={!raster} onChange={(s) => set({ scale: s })} label={raster ? `${fmtNum(p.scale)}×` : t("Vector")}
+            options={SCALES.map((s) => ({ value: s, label: `${fmtNum(s)}×`, hint: out ? t("{w} × {h} px", { w: Math.round(out.natural.w * s), h: Math.round(out.natural.h * s) }) : undefined, disabled: !!out && s > maxScale(out.natural.w, out.natural.h) + 0.01 }))} />)}
+          {row(t("Background"), <span className="flex items-center gap-1.5">
+            {bgValue === "custom" && <input type="color" value={p.color} onChange={(e) => set({ color: e.target.value })} className="h-7 w-8 cursor-pointer rounded border border-line bg-transparent" title={t("Any colour")} />}
+            <ChipSelect value={bgValue} onChange={setBg} options={[...(p.format === "jpeg" ? [] : [{ value: "transparent", label: t("Transparent") }]), { value: "theme", label: t("Theme") }, ...BG_PRESETS.map((b) => ({ value: b.v, label: t(b.l) })), { value: "custom", label: t("Colour…") }]} />
           </span>)}
-          {job.themable !== false && row("Theme", <ChipSelect value={p.theme} onChange={(t) => set({ theme: t })} options={THEMES} />)}
-          {row("Padding", <ChipSelect value={p.padding} onChange={(v) => set({ padding: v })} options={PADS.map((n) => ({ value: n, label: `${n} px` }))} />)}
-          {row("Quality", <ChipSelect value={Math.round(p.quality * 100)} disabled={!lossy} label={lossy ? `${Math.round(p.quality * 100)}%` : "Lossless"} onChange={(q) => set({ quality: q / 100 })} options={[60, 70, 80, 90, 95, 100].map((q) => ({ value: q, label: `${q}%` }))} />)}
+          {job.themable !== false && row(t("Theme"), <ChipSelect value={p.theme} onChange={(th) => set({ theme: th })} options={THEMES.map((th) => ({ ...th, label: t(th.label) }))} />)}
+          {row(t("Padding"), <ChipSelect value={p.padding} onChange={(v) => set({ padding: v })} options={PADS.map((n) => ({ value: n, label: t("{n} px", { n }) }))} />)}
+          {row(t("Quality"), <ChipSelect value={Math.round(p.quality * 100)} disabled={!lossy} label={lossy ? `${fmtNum(Math.round(p.quality * 100))}%` : t("Lossless")} onChange={(q) => set({ quality: q / 100 })} options={[60, 70, 80, 90, 95, 100].map((q) => ({ value: q, label: `${fmtNum(q)}%` }))} />)}
           <span className="text-[12px] text-muted">
-            {out ? <>{raster ? `${out.width} × ${out.height} px` : `${Math.round(out.natural.w)} × ${Math.round(out.natural.h)} · vector`} · ~{fmtBytes(out.blob.size)}</> : "Rendering…"}
-            {capped && <span className="text-warn"> · limited to {out!.scale.toFixed(1)}× by the browser</span>}
+            {out ? <>{raster ? t("{w} × {h} px", { w: out.width, h: out.height }) : t("{w} × {h} · vector", { w: Math.round(out.natural.w), h: Math.round(out.natural.h) })} · ~{fmtBytes(out.blob.size)}</> : t("Rendering…")}
+            {capped && <span className="text-warn"> · {t("limited to {scale}× by the browser", { scale: fmtNum(out!.scale, { maximumFractionDigits: 1, minimumFractionDigits: 1 }) })}</span>}
           </span>
           <details className="text-[12.5px]">
-            <summary className="cursor-pointer text-muted hover:text-ink">More options</summary>
+            <summary className="cursor-pointer text-muted hover:text-ink">{t("More options")}</summary>
             <div className="mt-2.5 flex flex-col gap-2.5">
-              <label className="flex items-center gap-2"><Toggle on={p.svgText} onChange={(v) => set({ svgText: v })} /><span className="flex-1">Text as SVG text <span className="text-muted">(editable in Figma)</span></span></label>
-              <label className="flex items-center gap-2"><Toggle on={p.embedFont} onChange={(v) => set({ embedFont: v })} /><span className="flex-1">Embed font</span></label>
-              <div className="flex items-center rounded-[8px] border border-line bg-bg pe-2.5"><input aria-label="File name" value={name} onChange={(e) => setName(e.target.value)} className="min-w-0 flex-1 bg-transparent px-2.5 py-1.5 font-mono text-[12px] outline-none" /><span className="font-mono text-[12px] text-muted">.{EXT[p.format]}</span></div>
+              <label className="flex items-center gap-2"><Toggle on={p.svgText} onChange={(v) => set({ svgText: v })} /><span className="flex-1">{t("Text as SVG text")} <span className="text-muted">{t("(editable in Figma)")}</span></span></label>
+              <label className="flex items-center gap-2"><Toggle on={p.embedFont} onChange={(v) => set({ embedFont: v })} /><span className="flex-1">{t("Embed font")}</span></label>
+              <div className="flex items-center rounded-[8px] border border-line bg-bg pe-2.5" dir="ltr"><input aria-label={t("File name")} value={name} onChange={(e) => setName(e.target.value)} className="min-w-0 flex-1 bg-transparent px-2.5 py-1.5 font-mono text-[12px] outline-none" /><span className="font-mono text-[12px] text-muted">.{EXT[p.format]}</span></div>
             </div>
           </details>
           <div className="mt-auto flex gap-2">
             <span className="relative flex-1">
-              <button onClick={() => setCopyOpen((o) => !o)} className="flex h-[34px] w-full items-center justify-center rounded-[9px] border border-line hover:bg-surface-2">Copy</button>
+              <button onClick={() => setCopyOpen((o) => !o)} className="flex h-[34px] w-full items-center justify-center rounded-[9px] border border-line hover:bg-surface-2">{t("Copy")}</button>
               {copyOpen && (
-                <div className="absolute bottom-full left-0 z-10 mb-1.5 flex w-[180px] flex-col rounded-[9px] border border-line bg-surface-2 p-1 shadow-[0_12px_28px_rgba(0,0,0,.35)]" onMouseLeave={() => setCopyOpen(false)}>
-                  {([["Copy image", copyImg], ["Copy SVG", copySvg], ...(job.src ? [["Copy source", copySrc]] : [])] as [string, () => Promise<void>][]).map(([l, f]) => (
-                    <button key={l} onClick={() => { setCopyOpen(false); void f(); }} className="flex h-8 items-center rounded-[6px] px-2.5 text-left hover:bg-surface">{l}</button>
+                <div className="absolute bottom-full start-0 z-10 mb-1.5 flex w-[180px] flex-col rounded-[9px] border border-line bg-surface-2 p-1 shadow-[0_12px_28px_rgba(0,0,0,.35)]" onMouseLeave={() => setCopyOpen(false)}>
+                  {([[t("Copy image"), copyImg], [t("Copy SVG"), copySvg], ...(job.src ? [[t("Copy source"), copySrc]] : [])] as [string, () => Promise<void>][]).map(([l, f]) => (
+                    <button key={l} onClick={() => { setCopyOpen(false); void f(); }} className="flex h-8 items-center rounded-[6px] px-2.5 text-start hover:bg-surface">{l}</button>
                   ))}
                 </div>
               )}
             </span>
-            <button disabled={!out || busy} onClick={() => void download()} className="flex h-[34px] flex-1 items-center justify-center rounded-[9px] bg-accent font-semibold text-accent-fg hover:brightness-110 disabled:opacity-50">Download</button>
+            <button disabled={!out || busy} onClick={() => void download()} className="flex h-[34px] flex-1 items-center justify-center rounded-[9px] bg-accent font-semibold text-accent-fg hover:brightness-110 disabled:opacity-50">{t("Download")}</button>
           </div>
         </div>
       </div>

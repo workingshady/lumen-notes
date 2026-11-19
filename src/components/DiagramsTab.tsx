@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import type { Note } from "../../shared/types";
 import { openDiagramExport } from "../lib/diagram-export";
 import { canvasesWith, diagramFiles, diagramFocus, diagramHash, diagramName, fileFor, mermaidBlocks, saveDiagramToCanvas, type DiagramBlock } from "../lib/diagrams";
+import { t, tx } from "../lib/i18n";
 import { openNote, setUI, toast, useVault } from "../lib/store";
 import { DiagramView } from "./diagram-view";
 import { Glyph } from "./Glyph";
@@ -27,28 +28,28 @@ export function DiagramsTab({ note, wide }: { note: Note; wide: boolean }) {
     try {
       let notes = v.notes, last: { canvasId: string; nodeId: string } | null = null;
       for (const b of blocks) { const r = await saveDiagramToCanvas({ ...note }, b, notes, v.folders); last = r; notes = [...notes, r.file]; }
-      toast(`${blocks.length} diagram${blocks.length === 1 ? "" : "s"} saved to the canvas`, last ? { label: "Open canvas", run: () => { diagramFocus.canvas = last; openNote(last!.canvasId); } } : undefined);
+      toast(t("{n} diagram saved to the canvas|{n} diagrams saved to the canvas", { n: blocks.length }), last ? { label: t("Open canvas"), run: () => { diagramFocus.canvas = last; openNote(last!.canvasId); } } : undefined);
     } finally { setBusy(false); }
   };
 
-  if (!blocks.length) return <div className="flex h-full items-center justify-center text-muted">No Mermaid diagrams in this note yet. Add a <code className="mx-1">```mermaid</code> block in Edit.</div>;
+  if (!blocks.length) return <div className="flex h-full items-center justify-center text-muted">{tx("No Mermaid diagrams in this note yet. Add a {fence} block in Edit.", { fence: <code className="mx-1" dir="ltr">```mermaid</code> })}</div>;
   return (
     <div className={cx("h-full overflow-y-auto", wide ? "px-8 py-6" : "px-4 py-4")}>
       <div className="mx-auto flex max-w-[1200px] flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2 text-[13px]">
           <Glyph name="diagram" size={16} />
-          <span className="font-semibold">{blocks.length} diagram{blocks.length === 1 ? "" : "s"}</span>
-          <span className="text-muted">in “{note.title}”</span>
+          <span className="font-semibold">{t("{n} diagram|{n} diagrams", { n: blocks.length })}</span>
+          <span className="text-muted">{tx("in “{title}”", { title: <bdi dir="auto">{note.title}</bdi> })}</span>
           <span className="flex-1" />
           {wide && (
             <div className="flex rounded-[8px] border border-line p-0.5">
               {([1, 2] as const).map((c) => (
-                <button key={c} title={c === 1 ? "One per row" : "Two per row"} onClick={() => { setCols(c); try { localStorage.setItem(COLS_KEY, String(c)); } catch { /* ignore */ } }}
+                <button key={c} title={c === 1 ? t("One per row") : t("Two per row")} onClick={() => { setCols(c); try { localStorage.setItem(COLS_KEY, String(c)); } catch { /* ignore */ } }}
                   className={cx("flex size-7 items-center justify-center rounded-[6px]", cols === c ? "bg-surface-2 text-ink" : "text-muted hover:text-ink")}>{c === 1 ? <Square size={14} /> : <Columns2 size={14} />}</button>
               ))}
             </div>
           )}
-          <Button size="sm" onClick={() => void saveAll()} disabled={busy}>{busy ? <Loader2 size={14} className="animate-spin" /> : <LayoutDashboard size={14} />}Save all to canvas</Button>
+          <Button size="sm" onClick={() => void saveAll()} disabled={busy}>{busy ? <Loader2 size={14} className="animate-spin" /> : <LayoutDashboard size={14} />}{t("Save all to canvas")}</Button>
         </div>
         <div className={cx("grid gap-4", two ? "grid-cols-2" : "grid-cols-1")}>
           {blocks.map((b) => <DiagramItem key={`${b.line}:${diagramHash(b.src)}`} note={note} b={b} found={fileFor(index, note.id, b)} tall={!two} />)}
@@ -72,16 +73,16 @@ function DiagramItem({ note, b, found, tall }: { note: Note; b: DiagramBlock; fo
   return (
     <div className="flex flex-col overflow-hidden rounded-[12px] border border-line bg-surface">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-line px-3 py-2">
-        <span className="min-w-0 truncate font-mono text-[12.5px] text-ink">{name}</span>
+        <span className="min-w-0 truncate font-mono text-[12.5px] text-ink" dir="auto">{name}</span>
         <span className="rounded-[5px] bg-surface-2 px-1.5 font-mono text-[11px] text-muted">{b.kind}</span>
         {b.heading && <span className="min-w-0 truncate text-[12px] text-muted">§ {b.heading}</span>}
-        {found?.stale && <span className="text-[11.5px] text-warn">changed since saved</span>}
+        {found?.stale && <span className="text-[11.5px] text-warn">{t("changed since saved")}</span>}
         <span className="flex-1" />
-        <button className={btn} title="Show it in the note" onClick={jump}><Undo2 size={13} />In note</button>
-        <button className={btn} title="Export: SVG, PNG, JPEG, WebP" onClick={() => openDiagramExport(b.src, name)}><Download size={13} />Export</button>
-        <button className={btn} title={where.length ? "Open on its canvas" : "Save to canvas"} onClick={() => void toCanvas()}><LayoutDashboard size={13} />{where.length ? "Canvas" : "To canvas"}</button>
-        {found && <button className={btn} title={`Open ${found.file.title}`} onClick={() => openNote(found.file.id, "read")}><FileText size={13} />File</button>}
-        <button className={btn} title="Copy Mermaid source" onClick={() => void navigator.clipboard.writeText(b.src).then(() => toast("Source copied"))}><Code2 size={13} /></button>
+        <button className={btn} title={t("Show it in the note")} onClick={jump}><Undo2 size={13} />{t("In note")}</button>
+        <button className={btn} title={t("Export: SVG, PNG, JPEG, WebP")} onClick={() => openDiagramExport(b.src, name)}><Download size={13} />{t("Export")}</button>
+        <button className={btn} title={where.length ? t("Open on its canvas") : t("Save to canvas")} onClick={() => void toCanvas()}><LayoutDashboard size={13} />{where.length ? t("Canvas") : t("To canvas")}</button>
+        {found && <button className={btn} title={t("Open {title}", { title: found.file.title })} onClick={() => openNote(found.file.id, "read")}><FileText size={13} />{t("File")}</button>}
+        <button className={btn} title={t("Copy Mermaid source")} aria-label={t("Copy Mermaid source")} onClick={() => void navigator.clipboard.writeText(b.src).then(() => toast(t("Source copied")))}><Code2 size={13} /></button>
       </div>
       <div style={{ height: tall ? "min(70vh, 640px)" : 380 }}>
         <DiagramView src={b.src} />

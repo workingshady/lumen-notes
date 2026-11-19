@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+</helmet>
+<div style="width:{{ w }};height:{{ h }};overflow:hidden;position:relative;border-radius:{{ r }};background:#0F1115">
+  <div style="position:absolute;left:0;top:0;width:1280px;height:720px;transform:scale({{ s }});transform-origin:0 0;background:#0F1115;color:#E8E6E1;font-family:Inter,system-ui,sans-serif;padding:72px 96px;box-sizing:border-box;display:flex;flex-direction:column">
+    <sc-if value="{{ isTitle }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:26px">
+        <span style="font-size:20px;color:#F2A93B;font-weight:600;letter-spacing:.08em;text-transform:uppercase">Study group · week 6</span>
+        <span style="font-size:84px;font-weight:700;letter-spacing:-.035em;line-height:1">Backprop,<br>from one neuron up</span>
+        <span style="font-size:26px;color:#9AA0AA">Amir Hakim · Night Shift Notes</span>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isBullets }}">
+      <span style="font-size:18px;color:#9AA0AA;letter-spacing:.06em;text-transform:uppercase">03 · Neural networks</span>
+      <span style="font-size:60px;font-weight:700;letter-spacing:-.025em;margin-top:18px">The chain rule, one neuron</span>
+      <div style="display:flex;flex-direction:column;gap:26px;font-size:34px;line-height:44px;margin-top:48px">
+        <span style="display:flex;gap:20px"><span style="color:#9AA0AA">•</span><span>Forward: <i style="font-family:'Source Serif 4',serif;white-space:nowrap">z = wx + b, a = σ(z)</i></span></span>
+        <span style="display:flex;gap:20px"><span style="color:#9AA0AA">•</span>Backward: multiply the local gradients</span>
+        <span style="display:flex;gap:20px"><span style="color:#9AA0AA">•</span>Cache activations — you'll need them</span>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isImage }}">
+      <span style="font-size:48px;font-weight:700;letter-spacing:-.02em;text-align:center">What the network actually sees</span>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+        <div style="height:446px;width:670px;border-radius:16px;background:repeating-linear-gradient(135deg,#1D222B 0 14px,#161A21 14px 28px);display:flex;align-items:center;justify-content:center"><span style="font:500 18px 'JetBrains Mono',monospace;color:#9AA0AA;background:#0F1115;padding:6px 12px;border-radius:6px">feature-maps.png · ≤ 62% height</span></div>
+        <span style="font-size:20px;color:#9AA0AA">Layer-3 activations on a cat photo (uploaded image)</span>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isVideo }}">
+      <span style="font-size:48px;font-weight:700;letter-spacing:-.02em;text-align:center">Watch: backprop, visually</span>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center">
+        <div style="width:800px;height:450px;border-radius:16px;background:repeating-linear-gradient(135deg,#1D222B 0 14px,#161A21 14px 28px);position:relative;display:flex;align-items:center;justify-content:center"><span style="width:92px;height:92px;border-radius:50%;background:rgba(10,12,15,.75);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px rgba(255,255,255,.2)"><i class="icon-play" style="font-size:36px;margin-left:5px"></i></span><span style="position:absolute;left:20px;bottom:16px;font-size:18px;color:#E8E6E1">youtube.com · 3Blue1Brown · 13:54</span></div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isDiagram }}">
+      <span style="font-size:48px;font-weight:700;letter-spacing:-.02em;text-align:center">One training step</span>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:0;font-size:24px">
+        <span style="padding:20px 28px;border-radius:12px;border:2px solid #2A303B;background:#161A21">Input x</span><span style="width:56px;height:2px;background:#9AA0AA"></span>
+        <span style="padding:20px 28px;border-radius:12px;border:2px solid #2A303B;background:#161A21">Forward</span><span style="width:56px;height:2px;background:#9AA0AA"></span>
+        <span style="padding:20px 28px;border-radius:999px;border:2px solid #E8B34A">Loss L</span><span style="width:56px;height:2px;background:#9AA0AA"></span>
+        <span style="padding:20px 28px;border-radius:12px;border:2px solid #2A303B;background:#161A21">Backward ∂L/∂w</span><span style="width:56px;height:2px;background:#9AA0AA"></span>
+        <span style="padding:20px 28px;border-radius:12px;border:2px solid #6BCB8B">Update w</span>
+      </div>
+      <span style="font:500 16px 'JetBrains Mono',monospace;color:#9AA0AA;text-align:center">mermaid · flowchart LR</span>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:640,&quot;height&quot;:360},&quot;layout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;title&quot;,&quot;bullets&quot;,&quot;image&quot;,&quot;video&quot;,&quot;diagram&quot;],&quot;default&quot;:&quot;title&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;width&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:640,&quot;tsType&quot;:&quot;number&quot;},&quot;radius&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:10,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const w = this.props.width ?? 640, L = this.props.layout ?? 'title';
+    return { w: w + 'px', h: (w * 9 / 16) + 'px', s: w / 1280, r: (this.props.radius ?? 10) + 'px', isTitle: L==='title', isBullets: L==='bullets', isImage: L==='image', isVideo: L==='video', isDiagram: L==='diagram' };
+  }
+}
+</script>
+</body>
+</html>

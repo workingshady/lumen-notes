@@ -7,6 +7,7 @@ import { db, now, save, uid } from "../lib/db";
 import { setUI, toast } from "../lib/store";
 import { Preview } from "./Preview";
 import { Button, Sheet } from "./ui";
+import { fmtDate, fmtTime, t, tx } from "../lib/i18n";
 
 /*
  * Sync conflicts (design: 06b · 22F "Kept newer version · View other").
@@ -74,8 +75,8 @@ async function conflict(mine: Tagged, theirs: Tagged) {
   await save("version", v);
   if (!keepTheirs) await updateNote(mine.id, { body: mine.body });
   const winner = keepTheirs ? theirs : mine;
-  const at = new Date(winner.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-  toast("Kept newer version", { label: "View other", run: () => openOther(v.id) }, { icon: "merge", sub: `From ${winner.lumenDeviceName ?? "another device"} at ${at} · the other is in history`, ms: 10000, actionStyle: "link" });
+  const at = fmtTime(winner.updatedAt);
+  toast(t("Kept newer version"), { label: t("View other"), run: () => openOther(v.id) }, { icon: "merge", sub: t("From {device} at {time} · the other is in history", { device: winner.lumenDeviceName ?? t("another device"), time: at }), ms: 10000, actionStyle: "link" });
 }
 
 // ------------------------------------------------------------------ "View other" sheet
@@ -89,15 +90,15 @@ export function ConflictSheet() {
   const v = useLiveQuery(() => (id ? db.versions.get(id) : undefined), [id]);
   const note = useLiveQuery(() => (v ? db.notes.get(v.noteId) : undefined), [v?.noteId]);
   return (
-    <Sheet open={!!id && !!v} onClose={() => openOther(null)} wide title={<span className="flex items-center gap-2"><GitMerge size={16} className="text-warn" />Other version{v ? ` · ${v.title}` : ""}</span>}>
+    <Sheet open={!!id && !!v} onClose={() => openOther(null)} wide title={<span className="flex items-center gap-2"><GitMerge size={16} className="text-warn" />{t("Other version")}{v ? <span dir="auto"> · {v.title}</span> : ""}</span>}>
       {v && (
         <div className="flex flex-col gap-3">
-          <div className="text-[12.5px] text-muted">{v.label} · saved to history {new Date(v.createdAt).toLocaleString()}. The note itself kept the newer version.</div>
+          <div className="text-[12.5px] text-muted">{tx("{label} · saved to history {date}. The note itself kept the newer version.", { label: <span dir="auto">{v.label}</span>, date: fmtDate(v.createdAt, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }) })}</div>
           <div className="max-h-[56vh] overflow-y-auto rounded-[10px] border border-line bg-bg px-5 py-4"><Preview note={{ id: v.noteId, body: v.body, spaceId: note?.spaceId ?? "inbox" }} className="reading" /></div>
           <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="ghost" onClick={() => { void navigator.clipboard.writeText(v.body); toast("Copied"); }}>Copy text</Button>
-            <Button onClick={() => { openOther(null); if (note) setUI({ view: "notes", noteId: note.id, panel: "versions" }); }}>Open history</Button>
-            <Button variant="primary" onClick={async () => { if (!note) return; await save("version", { id: uid(), noteId: note.id, title: note.title, body: note.body, label: "Before keeping the other version", createdAt: now() }); await updateNote(note.id, { body: v.body }); openOther(null); toast("Kept the other version", { label: "Undo", run: () => void updateNote(note.id, { body: note.body }) }); }}>Use this version</Button>
+            <Button variant="ghost" onClick={() => { void navigator.clipboard.writeText(v.body); toast(t("Copied")); }}>{t("Copy text")}</Button>
+            <Button onClick={() => { openOther(null); if (note) setUI({ view: "notes", noteId: note.id, panel: "versions" }); }}>{t("Open history")}</Button>
+            <Button variant="primary" onClick={async () => { if (!note) return; await save("version", { id: uid(), noteId: note.id, title: note.title, body: note.body, label: "Before keeping the other version", createdAt: now() }); await updateNote(note.id, { body: v.body }); openOther(null); toast(t("Kept the other version"), { label: t("Undo"), run: () => void updateNote(note.id, { body: note.body }) }); }}>{t("Use this version")}</Button>
           </div>
         </div>
       )}

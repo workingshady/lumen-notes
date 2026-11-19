@@ -7,7 +7,8 @@ import { natural, progress, roadmap, tasks } from "../lib/parse";
 import { getSettings, useSettings } from "../lib/settings";
 import { expandSidebar, go, noteDerived, openNote, setUI, toast, useUI, useVault, type UI, type View } from "../lib/store";
 import { RailSync, SidebarSync } from "./ws-sync";
-import { num, tr, useRtl } from "./ws-dir";
+import { num } from "./ws-dir";
+import { t } from "../lib/i18n";
 import { PRESETS } from "../lib/canvas";
 import { useDueCards } from "./Review";
 import { cx } from "./ui";
@@ -17,7 +18,11 @@ import { Glyph } from "./Glyph";
 import { AvatarGlyph, SpaceIcon, SpaceTile as SpaceTileBox } from "./SpaceIcon";
 import { useAvatarImage } from "../lib/home-meta";
 
-export const KIND_LABEL: Record<Space["kind"], string> = { project: "Project", area: "Area", course: "Course", resource: "Resource", archive: "Archive" };
+/** Space kind labels, translated on read (getters), so `KIND_LABEL[k]` is already in the interface language. */
+export const KIND_LABEL: Record<Space["kind"], string> = {
+  get project() { return t("Project"); }, get area() { return t("Area"); }, get course() { return t("Course"); }, get resource() { return t("Resource"); }, get archive() { return t("Archive"); },
+};
+const KIND_PLURAL: Record<Space["kind"], () => string> = { project: () => t("Projects"), area: () => t("Areas"), course: () => t("Courses"), resource: () => t("Resources"), archive: () => t("Archives") };
 const colorOf = (c: string | null | undefined) => (c ? PRESETS[c] ?? c : null);
 
 export type NavKey = "home" | "today" | "inbox" | "daily" | "tasks" | "calendar" | "review" | "graph" | "canvas" | "paths" | "blog";
@@ -32,20 +37,20 @@ function activeKey(ui: UI): NavKey | null {
 export function useNav(): NavItem[] {
   const v = useVault();
   const due = useDueCards(v.notes)?.length ?? 0;
-  const openTasks = useMemo(() => v.notes.filter((n) => n.type !== "roadmap").reduce((a, n) => a + noteDerived("openTasks", n, (x) => tasks(x.body).filter((t) => !t.done).length), 0), [v.notes]);
+  const openTasks = useMemo(() => v.notes.filter((n) => n.type !== "roadmap").reduce((a, n) => a + noteDerived("openTasks", n, (x) => tasks(x.body).filter((k) => !k.done).length), 0), [v.notes]);
   const inbox = v.notes.filter((n) => n.spaceId === "inbox").length;
   return [
-    { key: "home", icon: <House size={16} />, label: "Home" },
-    { key: "today", icon: <CalendarCheck size={16} />, label: "Today" },
-    { key: "inbox", icon: <Inbox size={16} />, label: "Inbox", count: inbox },
-    { key: "daily", icon: <NotebookPen size={16} />, label: "Daily note" },
-    { key: "tasks", icon: <ListChecks size={16} />, label: "Tasks", count: openTasks },
-    { key: "calendar", icon: <CalendarDays size={16} />, label: "Calendar" },
-    { key: "review", icon: <Layers size={16} />, label: "Review", count: due, learn: true },
-    { key: "graph", icon: <Waypoints size={16} />, label: "Graph" },
-    { key: "canvas", icon: <LayoutDashboard size={16} />, label: "Canvases" },
-    { key: "paths", icon: <Route size={16} />, label: "Learning paths" },
-    { key: "blog", icon: <Rss size={16} />, label: "Blog" },
+    { key: "home", icon: <House size={16} />, label: t("Home") },
+    { key: "today", icon: <CalendarCheck size={16} />, label: t("Today") },
+    { key: "inbox", icon: <Inbox size={16} />, label: t("Inbox"), count: inbox },
+    { key: "daily", icon: <NotebookPen size={16} />, label: t("Daily note") },
+    { key: "tasks", icon: <ListChecks size={16} />, label: t("Tasks"), count: openTasks },
+    { key: "calendar", icon: <CalendarDays size={16} />, label: t("Calendar") },
+    { key: "review", icon: <Layers size={16} />, label: t("Review"), count: due, learn: true },
+    { key: "graph", icon: <Waypoints size={16} />, label: t("Graph") },
+    { key: "canvas", icon: <LayoutDashboard size={16} />, label: t("Canvases") },
+    { key: "paths", icon: <Route size={16} />, label: t("Learning paths") },
+    { key: "blog", icon: <Rss size={16} />, label: t("Blog") },
   ];
 }
 
@@ -68,9 +73,9 @@ function SpaceTile({ space, size = 28 }: { space?: Space; size?: number }) {
 
 function useSpaceMeta(space?: Space) {
   const v = useVault();
-  if (!space) return `${v.spaces.length} spaces`;
-  if (space.kind === "course" && space.roadmapId) return `${progress(roadmap(v.byId.get(space.roadmapId)?.body ?? "")).pct}% done`;
-  return `${v.notes.filter((n) => n.spaceId === space.id).length} notes`;
+  if (!space) return t("{n} space|{n} spaces", { n: v.spaces.length });
+  if (space.kind === "course" && space.roadmapId) return t("{pct}% done", { pct: progress(roadmap(v.byId.get(space.roadmapId)?.body ?? "")).pct });
+  return t("{n} note|{n} notes", { n: v.notes.filter((n) => n.spaceId === space.id).length });
 }
 
 export function Sidebar({ rail }: { rail?: boolean }) {
@@ -81,21 +86,20 @@ export function Sidebar({ rail }: { rail?: boolean }) {
   const meta = useSpaceMeta(space);
   const [switcher, setSwitcher] = useState(false);
   const act = activeKey(ui);
-  const rtl = useRtl();
 
   if (rail) {
     return (
       <aside className="safe-t flex h-full w-14 shrink-0 flex-col items-center gap-1 border-e border-line bg-surface py-2.5">
-        <button title={space?.name ?? "All spaces"} onClick={expandSidebar} className="mb-1.5"><SpaceTile space={space} size={32} /></button>
-        <RailBtn label="Search (Ctrl K)" onClick={() => setUI({ palette: true })}><Search size={16} /></RailBtn>
+        <button title={space?.name ?? t("All spaces")} onClick={expandSidebar} className="mb-1.5"><SpaceTile space={space} size={32} /></button>
+        <RailBtn label={t("Search (Ctrl K)")} onClick={() => setUI({ palette: true })}><Search size={16} /></RailBtn>
         {nav.map((n) => (
-          <RailBtn key={n.key} label={tr(n.label, rtl)} active={act === n.key} dot={!!(n.learn && n.count)} onClick={() => runNav(n.key, ui.spaceId)}>{n.icon}</RailBtn>
+          <RailBtn key={n.key} label={n.label} active={act === n.key} dot={!!(n.learn && n.count)} onClick={() => runNav(n.key, ui.spaceId)}>{n.icon}</RailBtn>
         ))}
         <div className="my-1.5 h-px w-6 bg-line" />
-        <RailBtn label="Folders" onClick={expandSidebar}><FolderTreeIcon size={16} /></RailBtn>
+        <RailBtn label={t("Folders")} onClick={expandSidebar}><FolderTreeIcon size={16} /></RailBtn>
         <div className="flex-1" />
         <RailSync />
-        <RailBtn label="Settings" active={ui.view === "settings"} onClick={() => go("settings")}><Settings size={16} /></RailBtn>
+        <RailBtn label={t("Settings")} active={ui.view === "settings"} onClick={() => go("settings")}><Settings size={16} /></RailBtn>
         <Avatar size={28} />
       </aside>
     );
@@ -104,20 +108,20 @@ export function Sidebar({ rail }: { rail?: boolean }) {
   return (
     <aside className="safe-t flex h-full w-[240px] shrink-0 flex-col border-e border-line bg-surface text-[13px]">
       <div className="relative flex flex-col gap-2 px-2.5 pb-2 pt-2.5">
-        <button onClick={() => setSwitcher((s) => !s)} className={cx("flex items-center gap-2.5 rounded-[10px] border px-2 py-1.5 text-left", switcher ? "border-accent bg-surface-2" : "border-transparent hover:bg-surface-2")}>
+        <button onClick={() => setSwitcher((s) => !s)} className={cx("flex items-center gap-2.5 rounded-[10px] border px-2 py-1.5 text-start", switcher ? "border-accent bg-surface-2" : "border-transparent hover:bg-surface-2")}>
           <SpaceTile space={space} />
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="truncate font-semibold">{space?.name ?? tr("All spaces", rtl)}</span>
+            <span className="truncate font-semibold" dir="auto">{space?.name ?? t("All spaces")}</span>
             <span className="flex items-center gap-1.5 text-[11px] text-muted">
-              {space && <span className="rounded-[4px] border border-line px-[5px] leading-[15px]">{tr(KIND_LABEL[space.kind], rtl)}</span>}
-              <span>{rtl ? num(meta.replace(" done", "").replace(" notes", ""), true).replace("%", "٪") : meta}</span>
+              {space && <span className="rounded-[4px] border border-line px-[5px] leading-[15px]">{KIND_LABEL[space.kind]}</span>}
+              <span>{meta}</span>
             </span>
           </span>
           <ChevronsUpDown size={14} className="text-muted" />
         </button>
         {switcher && <SpaceSwitcher onClose={() => setSwitcher(false)} />}
         <button onClick={() => setUI({ palette: true })} className="flex h-8 items-center gap-2 rounded-[6px] border border-line bg-bg px-2.5 text-muted hover:text-ink">
-          <Search size={14} /><span className="flex-1 text-start">{tr("Search", rtl)}</span>
+          <Search size={14} /><span className="flex-1 text-start">{t("Search")}</span>
           <span dir="ltr" className="rounded-[4px] border border-line px-[5px] py-px font-mono text-[11px] font-medium leading-[14px]">{navigator.platform.includes("Mac") ? "⌘K" : "Ctrl K"}</span>
         </button>
       </div>
@@ -129,8 +133,8 @@ export function Sidebar({ rail }: { rail?: boolean }) {
             return (
               <button key={n.key} onClick={() => runNav(n.key, ui.spaceId)} className={cx("flex h-[30px] items-center gap-2.5 rounded-[6px] px-2 text-start transition-colors", on ? "bg-surface-2 font-semibold text-ink" : "font-[450] text-muted hover:bg-surface-2 hover:text-ink")}>
                 <span className={cx("flex w-4 justify-center", on && "text-accent")}>{n.icon}</span>
-                <span className="flex-1">{tr(n.label, rtl)}</span>
-                {!!n.count && <span className={cx("text-[11px] font-semibold tabular-nums", n.learn ? "text-learn" : "text-muted")}>{num(n.count, rtl)}</span>}
+                <span className="flex-1">{n.label}</span>
+                {!!n.count && <span className={cx("text-[11px] font-semibold tabular-nums", n.learn ? "text-learn" : "text-muted")}>{num(n.count)}</span>}
               </button>
             );
           })}
@@ -141,13 +145,13 @@ export function Sidebar({ rail }: { rail?: boolean }) {
         <Tags />
 
         <div className="px-2 pt-2.5">
-          <button onClick={() => go("trash")} className={cx("flex h-[30px] w-full items-center gap-2.5 rounded-[6px] px-2", ui.view === "trash" ? "bg-surface-2 text-ink" : "text-muted hover:bg-surface-2 hover:text-ink")}><Trash2 size={16} /> {tr("Trash", rtl)}</button>
+          <button onClick={() => go("trash")} className={cx("flex h-[30px] w-full items-center gap-2.5 rounded-[6px] px-2", ui.view === "trash" ? "bg-surface-2 text-ink" : "text-muted hover:bg-surface-2 hover:text-ink")}><Trash2 size={16} /> {t("Trash")}</button>
         </div>
       </div>
 
       <div className="safe-b flex items-center gap-2.5 border-t border-line px-3 py-2.5">
         <SidebarSync />
-        <button title={tr("Settings", rtl)} onClick={() => go("settings")} className={cx("flex", ui.view === "settings" ? "text-accent" : "text-muted hover:text-ink")}><Settings size={16} /></button>
+        <button title={t("Settings")} onClick={() => go("settings")} className={cx("flex", ui.view === "settings" ? "text-accent" : "text-muted hover:text-ink")}><Settings size={16} /></button>
         <Avatar />
       </div>
     </aside>
@@ -166,7 +170,7 @@ function RailBtn({ label, active, dot, onClick, children }: { label: string; act
 function Avatar({ size = 26 }: { size?: number }) {
   const s = useSettings();
   const img = useAvatarImage();
-  return <button onClick={() => go("settings")} title={s.author || "Profile"} className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface-2" style={{ width: size, height: size }}>{img ? <img src={img} alt="" className="size-full object-cover" /> : <AvatarGlyph value={s.avatar} size={12} />}</button>;
+  return <button onClick={() => go("settings")} title={s.author || t("Profile")} className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface-2" style={{ width: size, height: size }}>{img ? <img src={img} alt="" className="size-full object-cover" /> : <AvatarGlyph value={s.avatar} size={12} />}</button>;
 }
 
 function SpaceSwitcher({ onClose }: { onClose: () => void }) {
@@ -177,13 +181,13 @@ function SpaceSwitcher({ onClose }: { onClose: () => void }) {
     <>
       <div className="fixed inset-0 z-30" onClick={onClose} />
       <div className="absolute inset-x-2.5 top-[52px] z-40 max-h-[60vh] overflow-y-auto rounded-[12px] border border-line bg-surface p-1.5 shadow-xl fade-in" onClick={onClose}>
-        <button className={row(ui.spaceId === "all")} onClick={() => setUI({ spaceId: "all", folderId: null, filter: null })}><Glyph name="folder" size={16} tile="var(--muted)" tileScale={1.5} color="var(--muted)" /> All spaces</button>
+        <button className={row(ui.spaceId === "all")} onClick={() => setUI({ spaceId: "all", folderId: null, filter: null })}><Glyph name="folder" size={16} tile="var(--muted)" tileScale={1.5} color="var(--muted)" /> {t("All spaces")}</button>
         {SPACE_KINDS.map((k) => {
           const list = v.spaces.filter((s) => s.kind === k && !s.archived);
           if (!list.length) return null;
           return (
             <div key={k} className="mt-1.5">
-              <div className="px-2 py-1 text-[10.5px] font-semibold uppercase tracking-[.06em] text-muted">{KIND_LABEL[k]}s</div>
+              <div className="px-2 py-1 text-[10.5px] font-semibold uppercase tracking-[.06em] text-muted">{KIND_PLURAL[k]()}</div>
               {list.map((s) => (
                 <button key={s.id} className={row(ui.spaceId === s.id)} onClick={() => go(s.id === "inbox" || k === "area" || k === "resource" ? "notes" : "space", { spaceId: s.id, folderId: null, tag: null, filter: null })}>
                   <SpaceIcon space={s} size={16} tile tileScale={1.5} /><span dir="auto" className="flex-1 truncate text-start">{s.name}</span>
@@ -195,14 +199,14 @@ function SpaceSwitcher({ onClose }: { onClose: () => void }) {
         })}
         {v.spaces.some((s) => s.archived) && (
           <details className="mt-1.5" onClick={(e) => e.stopPropagation()}>
-            <summary className="cursor-pointer px-2 py-1 text-[11px] text-muted">Archived · {v.spaces.filter((s) => s.archived).length}</summary>
+            <summary className="cursor-pointer px-2 py-1 text-[11px] text-muted">{t("Archived · {n}", { n: v.spaces.filter((s) => s.archived).length })}</summary>
             {v.spaces.filter((s) => s.archived).map((s) => <button key={s.id} className={row(false)} onClick={() => { onClose(); go("space", { spaceId: s.id, folderId: null }); }}><SpaceIcon space={s} size={16} tile tileScale={1.5} /><span dir="auto" className="truncate">{s.name}</span></button>)}
           </details>
         )}
         <div className="my-1 h-px bg-line" />
-        <button className={row(false)} onClick={() => setUI({ newSpace: true })}><Plus size={15} /> New space…</button>
+        <button className={row(false)} onClick={() => setUI({ newSpace: true })}><Plus size={15} /> {t("New space…")}</button>
         <div className="my-1 h-px bg-line" />
-        <div className="px-2 py-1 text-[10.5px] font-semibold uppercase tracking-[.06em] text-muted">Accounts</div>
+        <div className="px-2 py-1 text-[10.5px] font-semibold uppercase tracking-[.06em] text-muted">{t("Accounts")}</div>
         <AccountSwitcher compact onDone={onClose} />
       </div>
     </>
@@ -223,11 +227,11 @@ function Tags() {
   if (!v.tags.length) return null;
   return (
     <div className="px-2 pt-3.5">
-      <SectionHead title={tr("Tags")} />
+      <SectionHead title={t("Tags")} />
       <div className="flex flex-wrap gap-1 px-1.5">
-        {v.tags.slice(0, 30).map(([t, c]) => (
-          <button key={t} dir="ltr" onClick={() => go("notes", { tag: ui.tag === t ? null : t, folderId: null, filter: null })} className={cx("rounded-[6px] px-[7px] py-0.5 text-[12px]", ui.tag === t ? "bg-accent text-accent-fg" : "bg-surface-2 text-muted hover:text-ink")}>
-            #{t} <b className="font-medium opacity-70">{c}</b>
+        {v.tags.slice(0, 30).map(([tag, c]) => (
+          <button key={tag} dir="ltr" onClick={() => go("notes", { tag: ui.tag === tag ? null : tag, folderId: null, filter: null })} className={cx("rounded-[6px] px-[7px] py-0.5 text-[12px]", ui.tag === tag ? "bg-accent text-accent-fg" : "bg-surface-2 text-muted hover:text-ink")}>
+            #{tag} <b className="font-medium opacity-70">{num(c)}</b>
           </button>
         ))}
       </div>
@@ -257,13 +261,13 @@ function FolderTree({ spaceId }: { spaceId: string }) {
 
   return (
     <div className="px-2 pt-3.5">
-      <SectionHead title={tr("Folders")} action={
-        <button title="New folder" aria-label="New folder" className="hover:text-ink" onClick={() => createFolder(spaceId, null)}><Plus size={14} /></button>
+      <SectionHead title={t("Folders")} action={
+        <button title={t("New folder")} aria-label={t("New folder")} className="hover:text-ink" onClick={() => createFolder(spaceId, null)}><Plus size={14} /></button>
       } />
       <div onDragOver={(e) => { e.preventDefault(); setRootOver(true); }} onDragLeave={() => setRootOver(false)} onDrop={(e) => { setRootOver(false); void drop(e, null); }}
         className={cx("flex flex-col gap-px rounded-[8px]", rootOver && "bg-accent/10 ring-1 ring-accent/40")}>
         <Tree folders={folders} parent={null} depth={0} counts={counts} onDrop={drop} />
-        {!folders.length && <div className="px-2 py-1 text-[12px] text-muted">No folders yet. Use + or drop notes here.</div>}
+        {!folders.length && <div className="px-2 py-1 text-[12px] text-muted">{t("No folders yet. Use + or drop notes here.")}</div>}
       </div>
     </div>
   );
@@ -304,31 +308,31 @@ function FolderRow({ f, folders, depth, counts, onDrop }: { f: Folder; folders: 
         className={cx("group relative flex h-7 items-center gap-[7px] rounded-[6px] pe-2", active ? "bg-surface-2 font-semibold" : "font-[450] hover:bg-surface-2")}
         style={{ paddingInlineStart: pl, ...(over ? { background: "color-mix(in srgb,var(--accent) 15%,transparent)", boxShadow: "inset 0 0 0 1.5px var(--accent)" } : {}) }}
       >
-        <button onClick={toggle} aria-label={open ? "Collapse" : "Expand"} className="flex w-3 justify-center text-muted">{open ? <ChevronDown size={12} /> : <ChevronRight size={12} className="rtl:rotate-180" />}</button>
+        <button onClick={toggle} aria-label={open ? t("Collapse") : t("Expand")} className="flex w-3 justify-center text-muted">{open ? <ChevronDown size={12} /> : <ChevronRight size={12} className="rtl:rotate-180" />}</button>
         <span className="size-2 shrink-0 rounded-[3px]" style={{ background: color }} />
         {rename ? (
           <input autoFocus defaultValue={f.name} className="h-6 min-w-0 flex-1 rounded border border-accent bg-bg px-1 outline-none"
             onBlur={(e) => { setRename(false); if (e.target.value.trim()) void patch("folder", f.id, { name: e.target.value.trim() }); }}
             onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setRename(false); }} />
         ) : (
-          <button className="min-w-0 flex-1 truncate text-start" onClick={() => go("notes", { folderId: f.id, tag: null, filter: null })} onDoubleClick={() => setRename(true)}>{f.name}</button>
+          <button className="min-w-0 flex-1 truncate text-start" onClick={() => go("notes", { folderId: f.id, tag: null, filter: null })} onDoubleClick={() => setRename(true)} dir="auto">{f.name}</button>
         )}
         <span className="text-[11px] text-muted group-hover:hidden">{num(counts.get(f.id) ?? "")}</span>
-        <button className="hidden text-muted hover:text-ink group-hover:block" onClick={() => setMenu(true)} aria-label="Folder menu">⋯</button>
+        <button className="hidden text-muted hover:text-ink group-hover:block" onClick={() => setMenu(true)} aria-label={t("Folder menu")}>⋯</button>
         {menu && (
           <>
             <div className="fixed inset-0 z-30" onClick={() => setMenu(false)} />
-            <div className="absolute left-6 top-full z-40 w-48 rounded-[10px] border border-line bg-surface p-1 shadow-xl fade-in" onClick={() => setMenu(false)}>
+            <div className="absolute start-6 top-full z-40 w-48 rounded-[10px] border border-line bg-surface p-1 shadow-xl fade-in" onClick={() => setMenu(false)}>
               {([
-                ["New note", async () => openNote((await createNote({ spaceId: f.spaceId, folderId: f.id })).id, "edit")],
-                ["New subfolder", async () => { await createFolder(f.spaceId, f.id); if (!open) toggle(); }],
-                ["Rename", () => setRename(true)],
-              ] as [string, () => void][]).map(([l, fn]) => <button key={l} className="block w-full rounded px-2 py-1.5 text-left text-[13px] hover:bg-surface-2" onClick={fn}>{l}</button>)}
+                [t("New note"), async () => openNote((await createNote({ spaceId: f.spaceId, folderId: f.id })).id, "edit")],
+                [t("New subfolder"), async () => { await createFolder(f.spaceId, f.id); if (!open) toggle(); }],
+                [t("Rename"), () => setRename(true)],
+              ] as [string, () => void][]).map(([l, fn]) => <button key={l} className="block w-full rounded px-2 py-1.5 text-start text-[13px] hover:bg-surface-2" onClick={fn}>{l}</button>)}
               <div className="flex gap-1 px-2 py-1.5">
-                <button title="No color" className="size-5 rounded-full border border-line" onClick={() => patch("folder", f.id, { color: null })} />
+                <button title={t("No color")} className="size-5 rounded-full border border-line" onClick={() => patch("folder", f.id, { color: null })} />
                 {Object.keys(PRESETS).map((k) => <button key={k} className="size-5 rounded-full" style={{ background: PRESETS[k] }} onClick={() => patch("folder", f.id, { color: k })} />)}
               </div>
-              <button className="block w-full rounded px-2 py-1.5 text-left text-[13px] text-bad hover:bg-surface-2" onClick={async () => { await deleteFolder(f); toast(`Deleted “${f.name}”. Its notes moved up one level.`); }}>Delete folder</button>
+              <button className="block w-full rounded px-2 py-1.5 text-start text-[13px] text-bad hover:bg-surface-2" onClick={async () => { await deleteFolder(f); toast(t("Deleted “{name}”. Its notes moved up one level.", { name: f.name })); }}>{t("Delete folder")}</button>
             </div>
           </>
         )}

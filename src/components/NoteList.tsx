@@ -20,30 +20,31 @@ import { num, tr, useRtl } from "./ws-dir";
 import { filterByQuery, NoteListQueryBar, openSmartEditor, SmartListHeader, smartListFor, SmartRow, useSmartFolders } from "./SmartFolders";
 import { EmptyState } from "./EmptyState";
 import { indexLabel, LIST_PAGE, useIndexStatus } from "../lib/big-vault";
+import { fmtDate, t, useLang } from "../lib/i18n";
 
 type Sort = "updated" | "created" | "title";
 /** Note type → glyph (Lumen 13 › B1 note types; the glyph name equals the type). Flashcards carry the violet "practice" colour. */
-export const TYPE_ICON = (t: Note["type"], size = 16) => <Glyph name={t} size={size} color={t === "flashcards" ? "var(--learn)" : "currentColor"} />;
+export const TYPE_ICON = (ty: Note["type"], size = 16) => <Glyph name={ty} size={size} color={ty === "flashcards" ? "var(--learn)" : "currentColor"} />;
 const useWide = () => { const [w, setW] = useState(() => innerWidth >= 900); useEffect(() => { const f = () => setW(innerWidth >= 900); addEventListener("resize", f); return () => removeEventListener("resize", f); }, []); return w; };
 
 /** Body without front-matter and the title H1 (the title is shown above the excerpt). */
 const TEX: Record<string, string> = { theta: "θ", eta: "η", nabla: "∇", lambda: "λ", alpha: "α", beta: "β", gamma: "γ", delta: "δ", sigma: "σ", Sigma: "Σ", mu: "μ", pi: "π", epsilon: "ε", infty: "∞", cdot: "·", times: "×", leftarrow: "←", rightarrow: "→", to: "→", le: "≤", ge: "≥", partial: "∂", sum: "Σ", approx: "≈" };
 /** Inline $math$ → readable text for previews ("$J(\theta)$" → "J(θ)"). */
 const texText = (s: string) => s.replace(/\\([A-Za-z]+)/g, (m, w: string) => TEX[w] ?? w).replace(/[{}]/g, "").replace(/\^(\S)/g, "$1").replace(/_(\S)/g, "$1");
-const listBody = (b: string) => b.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").replace(/^\s*#\s.*$/m, "").replace(/\$\$[\s\S]*?\$\$/g, " ").replace(/\$([^$\n]+)\$/g, (_m, t: string) => texText(t));
+const listBody = (b: string) => b.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").replace(/^\s*#\s.*$/m, "").replace(/\$\$[\s\S]*?\$\$/g, " ").replace(/\$([^$\n]+)\$/g, (_m, s: string) => texText(s));
 
 /** List time (design: "12m", "1h", "Yesterday", "Mon", "3 Nov"). */
-export function listTime(t: number) {
-  const s = (Date.now() - t) / 1000;
-  if (s < 60) return "now";
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  const d = new Date(t), today = new Date();
+export function listTime(ts: number) {
+  const s = (Date.now() - ts) / 1000;
+  if (s < 60) return t("now");
+  if (s < 3600) return t("{n}m", { n: Math.floor(s / 60) });
+  const d = new Date(ts), today = new Date();
   today.setHours(0, 0, 0, 0);
-  if (d >= today) return `${Math.floor(s / 3600)}h`;
+  if (d >= today) return t("{n}h", { n: Math.floor(s / 3600) });
   const days = Math.ceil((today.getTime() - d.getTime()) / 86400000);
-  if (days <= 1) return "Yesterday";
-  if (days < 7) return d.toLocaleDateString("en-GB", { weekday: "short" });
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(d.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}) });
+  if (days <= 1) return t("Yesterday");
+  if (days < 7) return fmtDate(d, { weekday: "short" });
+  return fmtDate(d, { day: "numeric", month: "short", ...(d.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}) });
 }
 
 /** Task/roadmap syntax that reads as noise (and as emoji) in a one-line preview: `📅 2026-12-01`, `🛫 …`, `[x]`, `→ [[…]]` arrows stay as text. */
@@ -51,7 +52,7 @@ const dropSyntax = (s: string) => s.replace(/\s*[\u{1F4C5}\u{1F6EB}\u{23F3}]️?
   // round-4 Markdown: status pills keep their text; glyphs, block ids, ::: fences, {.attrs}, [[toc]] and == marks go
   .replace(/:status\[([^\]]*)\](\{[^}]*\})?/g, "$1").replace(/:glyph\[[^\]]*\]/g, "").replace(/\s\^[A-Za-z0-9-]+$/gm, "")
   .replace(/^\s*:{3,}.*$/gm, "").replace(/\{\.[^}]*\}/g, "").replace(/\[\[toc\]\]/gi, "").replace(/==/g, "");
-const preview = (n: Note) => (n.type === "canvas" ? "Canvas board" : n.type === "whiteboard" ? "Whiteboard" : noteDerived("listPreview", n, (x) => excerpt(dropSyntax(listBody(x.body.slice(0, 8000))), 160)) || "Empty");
+const preview = (n: Note) => (n.type === "canvas" ? t("Canvas board") : n.type === "whiteboard" ? t("Whiteboard") : noteDerived("listPreview", n, (x) => excerpt(dropSyntax(listBody(x.body.slice(0, 8000))), 160)) || t("Empty"));
 
 /**
  * Big vaults (design 20b A15): the list renders LIST_PAGE rows at a time; the footer says "Showing 200 of 738" and
@@ -63,8 +64,8 @@ function usePaged<T>(items: T[], resetKey: unknown) {
   const left = items.length - count;
   const more = left > 0 ? (
     <div className="flex shrink-0 flex-col items-center gap-2 p-3.5 text-[12.5px] text-muted" data-list-more>
-      Showing {count} of {items.length}
-      <button onClick={() => setCount((c) => c + LIST_PAGE)} className="flex h-8 items-center rounded-[8px] border border-line px-3.5 text-ink hover:bg-surface-2">Show {Math.min(LIST_PAGE, left)} more</button>
+      {t("Showing {count} of {total}", { count, total: items.length })}
+      <button onClick={() => setCount((c) => c + LIST_PAGE)} className="flex h-8 items-center rounded-[8px] border border-line px-3.5 text-ink hover:bg-surface-2">{t("Show {n} more", { n: Math.min(LIST_PAGE, left) })}</button>
     </div>
   ) : null;
   return { shown: left > 0 ? items.slice(0, count) : items, more };
@@ -72,8 +73,10 @@ function usePaged<T>(items: T[], resetKey: unknown) {
 
 /** "Indexing 512 / 738" while the search index catches up (big vaults). */
 function IndexingBadge() {
-  const label = indexLabel(useIndexStatus());
-  return label ? <span className="flex min-w-0 shrink-0 items-center gap-1.5 whitespace-nowrap text-[12px] text-muted" data-indexing title={`${label} · search results fill in as the index catches up`}><span className="size-[7px] shrink-0 rounded-full bg-info" /><span className="max-2xl:sr-only">Indexing </span>{label.replace(/^Indexing /, "")}</span> : null;
+  const s = useIndexStatus();
+  if (!indexLabel(s)) return null;
+  const label = t("Indexing {done} / {total}", { done: s.done, total: s.total });
+  return <span className="flex min-w-0 shrink-0 items-center gap-1.5 whitespace-nowrap text-[12px] text-muted" data-indexing title={t("{label} · search results fill in as the index catches up", { label })}><span className="size-[7px] shrink-0 rounded-full bg-info" /><span className="max-2xl:sr-only">{t("Indexing")} </span><span dir="ltr">{t("{done} / {total}", { done: s.done, total: s.total })}</span></span>;
 }
 
 export function NoteList() {
@@ -102,12 +105,12 @@ export function NoteList() {
   }, [v, ui, sort, filter, wide, smart, lq]);
   const folder = ui.folderId ? v.folderMap.get(ui.folderId) : null;
   const space = v.spaceMap.get(ui.spaceId);
-  const title = smartSel ? smartSel.sf?.name ?? "Smart folder" : ui.filter === "visual" ? "Canvases & whiteboards" : ui.filter === "paths" ? "Learning paths" : ui.filter === "published" ? "Blog posts" : ui.tag ? `#${ui.tag}` : folder ? folder.name : ui.spaceId === "all" ? tr("All notes", rtl) : space?.name ?? tr("Notes", rtl);
+  const title = smartSel ? smartSel.sf?.name ?? t("Smart folder") : ui.filter === "visual" ? t("Canvases & whiteboards") : ui.filter === "paths" ? t("Learning paths") : ui.filter === "published" ? t("Blog posts") : ui.tag ? `#${ui.tag}` : folder ? folder.name : ui.spaceId === "all" ? tr("All notes", rtl) : space?.name ?? tr("Notes", rtl);
   const spaceId = ui.spaceId === "all" ? "inbox" : ui.spaceId;
   const { shown, more } = usePaged(notes, `${ui.spaceId}|${ui.folderId}|${ui.tag}|${ui.filter}|${sort}|${filter}|${lq}`);
 
   const nextSort: Record<Sort, Sort> = { updated: "created", created: "title", title: "updated" };
-  const cycleSort = () => { const s = nextSort[sort]; setSort(s); toast(`Sorted by ${s === "updated" ? "last edited" : s === "created" ? "date created" : "title"}`, undefined, { icon: "check" }); try { localStorage.setItem("lumen.sort", s); } catch { /* ignore */ } };
+  const cycleSort = () => { const s = nextSort[sort]; setSort(s); toast(s === "updated" ? t("Sorted by last edited") : s === "created" ? t("Sorted by date created") : t("Sorted by title"), undefined, { icon: "check" }); try { localStorage.setItem("lumen.sort", s); } catch { /* ignore */ } };
   const [chooser, setChooser] = useState(false);
   // phone: the tab bar's + on the Visual list opens the "New…" sheet (R4-17 A5) instead of a blank note
   const [pathDlg, setPathDlg] = useState(false);
@@ -127,16 +130,16 @@ export function NoteList() {
     if (!fl.length) return;
     e.preventDefault();
     const r = await importFiles(fl, spaceId, ui.folderId);
-    toast(`Imported ${r.notes} note${r.notes === 1 ? "" : "s"}`, undefined, { icon: "check" });
+    toast(t("Imported {n} note|Imported {n} notes", { n: r.notes }), undefined, { icon: "check" });
   };
   const empty = !notes.length && (
     smartSel?.sf && !lq.trim() ? (
       // Lumen 21 empty state: smart folder with no matches → edit its search
-      <EmptyState glyph="smart-folder" text="Nothing in this smart folder right now." action={{ label: "Edit search", onClick: () => openSmartEditor(smartSel.sf!) }} />
+      <EmptyState glyph="smart-folder" text={t("Nothing in this smart folder right now.")} action={{ label: t("Edit search"), onClick: () => openSmartEditor(smartSel.sf!) }} />
     ) : filter || ui.tag || ui.filter || lq.trim() ? (
-      <Empty title={`No ${filter === "pinned" ? "pinned notes" : filter === "review" ? "notes to review" : "notes"} here`} hint={filter ? "Clear the filter to see every note in this folder." : "Nothing matches this filter yet."} action={<Button onClick={() => { setFilter(null); setLq(""); setUI({ tag: null, filter: null }); }}><X size={14} />Clear filter</Button>} />
+      <Empty title={filter === "pinned" ? t("No pinned notes here") : filter === "review" ? t("No notes to review here") : t("No notes here")} hint={filter ? t("Clear the filter to see every note in this folder.") : t("Nothing matches this filter yet.")} action={<Button onClick={() => { setFilter(null); setLq(""); setUI({ tag: null, filter: null }); }}><X size={14} />{t("Clear filter")}</Button>} />
     ) : (
-      <Empty title={`“${folder?.name ?? space?.name ?? "Inbox"}” is empty`} hint="Start with a lesson — it comes with objectives, a summary and a questions section." action={<Button variant="primary" onClick={() => newNote("lesson")}><Plus size={14} />New lesson</Button>} foot="or drop .md files here" />
+      <Empty title={t("“{name}” is empty", { name: folder?.name ?? space?.name ?? t("Inbox") })} hint={t("Start with a lesson — it comes with objectives, a summary and a questions section.")} action={<Button variant="primary" onClick={() => newNote("lesson")}><Plus size={14} />{t("New lesson")}</Button>} foot={t("or drop .md files here")} />
     )
   );
 
@@ -152,7 +155,7 @@ export function NoteList() {
               <button onClick={() => openNote(n.id)} className="flex w-full flex-col gap-1.5 px-4 py-3.5 text-start active:bg-surface">
                 <div className="flex w-full items-center gap-2">
                   <span className="size-2 shrink-0 rounded-full" style={{ background: n.status ? STATUS_COLOR[n.status] : "var(--muted)" }} />
-                  <span dir="auto" className="min-w-0 flex-1 truncate text-[15px] font-semibold">{n.title || "Untitled"}</span>
+                  <span dir="auto" className="min-w-0 flex-1 truncate text-[15px] font-semibold">{n.title || t("Untitled")}</span>
                   {n.shareId ? <Link2 size={13} className="text-info" /> : null}
                   {n.published ? <Globe size={13} className="text-ok" /> : null}
                   {n.pinned ? <Pin size={13} className="text-muted" /> : null}
@@ -164,8 +167,8 @@ export function NoteList() {
           ))}
           {more}
           {empty}
-          <button onClick={() => setTpl(true)} className="mx-auto my-3 flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[13px] text-muted active:bg-surface"><LayoutTemplate size={14} />New from template · base</button>
-          <button onClick={() => setPdfs(true)} className="mx-auto -mt-2 mb-3 flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[13px] text-muted active:bg-surface"><FileText size={14} />PDFs</button>
+          <button onClick={() => setTpl(true)} className="mx-auto my-3 flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[13px] text-muted active:bg-surface"><LayoutTemplate size={14} />{t("New from template · base")}</button>
+          <button onClick={() => setPdfs(true)} className="mx-auto -mt-2 mb-3 flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[13px] text-muted active:bg-surface"><FileText size={14} />{t("PDFs")}</button>
         </div>
         <TemplatePicker open={tpl} onClose={() => setTpl(false)} spaceId={spaceId} folderId={ui.folderId} />
         <NewVisualChooser open={chooser} onClose={() => setChooser(false)} />
@@ -181,14 +184,14 @@ export function NoteList() {
         {folder ? <span className="size-2 shrink-0 rounded-[3px]" style={{ background: folder.color ? PRESETS[folder.color] ?? folder.color : "var(--muted)" }} /> : ui.filter ? null : space ? <SpaceIcon space={space} size={15} /> : null}
         <span dir="auto" className="truncate text-[14px] font-semibold">{title}</span>
         {!indexing && <span className="text-muted">{num(notes.length, rtl)}</span>}
-        {(ui.tag || folder || ui.filter) && <button aria-label="Clear filter" className="text-muted hover:text-ink" onClick={() => setUI({ tag: null, folderId: null, filter: null })}><X size={13} /></button>}
+        {(ui.tag || folder || ui.filter) && <button aria-label={t("Clear filter")} className="text-muted hover:text-ink" onClick={() => setUI({ tag: null, folderId: null, filter: null })}><X size={13} /></button>}
         {indexing && <IndexingBadge />}
         <span className="flex-1" />
-        {ui.filter === "published" && <a href="/blog" target="_blank" rel="noreferrer" className="text-[12px] text-link">View blog ↗</a>}
-        <button title={`Sort: ${sort}`} aria-label="Sort" className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={cycleSort}><ArrowDownWideNarrow size={15} /></button>
-        <button title="New base (database view of notes) or another template" aria-label="New base" className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={() => setTpl(true)}><Table2 size={15} /></button>
-        <button title="PDFs in this space" aria-label="PDFs" aria-pressed={pdfs} className={cx("flex size-7 items-center justify-center rounded-[6px] hover:bg-surface-2 hover:text-ink", pdfs ? "bg-surface-2 text-ink" : "text-muted")} onClick={() => setPdfs(!pdfs)}><FileText size={15} /></button>
-        <button title={ui.filter === "visual" ? "New canvas or whiteboard" : ui.filter === "paths" ? "New learning path" : "New… note, dashboard, base, PDF, canvas, path or template (right-click: from template)"} aria-label="New note" className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={(e) => (ui.filter === "visual" ? setChooser(true) : ui.filter === "paths" ? setPathDlg(true) : openNewMenu(e.currentTarget))} onContextMenu={(e) => { e.preventDefault(); setTpl(true); }}><SquarePen size={15} /></button>
+        {ui.filter === "published" && <a href="/blog" target="_blank" rel="noreferrer" className="text-[12px] text-link">{t("View blog")}↗</a>}
+        <button title={sort === "updated" ? t("Sort: last edited") : sort === "created" ? t("Sort: date created") : t("Sort: title")} aria-label={t("Sort")} className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={cycleSort}><ArrowDownWideNarrow size={15} /></button>
+        <button title={t("New base (database view of notes) or another template")} aria-label={t("New base")} className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={() => setTpl(true)}><Table2 size={15} /></button>
+        <button title={t("PDFs in this space")} aria-label={t("PDFs")} aria-pressed={pdfs} className={cx("flex size-7 items-center justify-center rounded-[6px] hover:bg-surface-2 hover:text-ink", pdfs ? "bg-surface-2 text-ink" : "text-muted")} onClick={() => setPdfs(!pdfs)}><FileText size={15} /></button>
+        <button title={ui.filter === "visual" ? t("New canvas or whiteboard") : ui.filter === "paths" ? t("New learning path") : t("New… note, dashboard, base, PDF, canvas, path or template (right-click: from template)")} aria-label={t("New note")} className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={(e) => (ui.filter === "visual" ? setChooser(true) : ui.filter === "paths" ? setPathDlg(true) : openNewMenu(e.currentTarget))} onContextMenu={(e) => { e.preventDefault(); setTpl(true); }}><SquarePen size={15} /></button>
       </div>
       <NoteListQueryBar query={lq} setQuery={setLq} count={notes.length} />
       </>}
@@ -208,6 +211,7 @@ export function NoteList() {
 
 /** One list row. Memoized on what it shows, so a save re-renders only the edited note's row. */
 export const NoteRow = memo(function NoteRow({ n, active, space }: { n: Note; active?: boolean; /** shown when listing all spaces */ space?: Space }) {
+  useLang();
   return (
     <button
       draggable
@@ -217,7 +221,7 @@ export const NoteRow = memo(function NoteRow({ n, active, space }: { n: Note; ac
     >
       <div className="flex w-full items-center gap-2">
         <span className="size-[7px] shrink-0 rounded-full" style={{ background: n.status ? STATUS_COLOR[n.status] : "var(--muted)" }} />
-        <span dir="auto" className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">{n.title || "Untitled"}</span>
+        <span dir="auto" className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">{n.title || t("Untitled")}</span>
         {n.shareId ? <Link2 size={12} className="text-info" /> : null}
         {n.published ? <Globe size={12} className="text-ok" /> : null}
         {n.favorite ? <Star size={12} className="text-warn" /> : null}
@@ -225,8 +229,8 @@ export const NoteRow = memo(function NoteRow({ n, active, space }: { n: Note; ac
       </div>
       <div dir="auto" className="line-clamp-2 h-9 w-full text-[12.5px] leading-[18px] text-muted">{preview(n)}</div>
       <div className="flex w-full items-center gap-1">
-        {n.tags.slice(0, 2).map((t) => <span key={t} className="rounded-[6px] bg-surface-2 px-1.5 text-[11px] leading-[18px] text-muted">#{t}</span>)}
-        {space && <span className="flex min-w-0 items-center gap-1 truncate text-[11px] text-muted"><SpaceIcon space={space} size={12} />{space.name}</span>}
+        {n.tags.slice(0, 2).map((tag) => <span key={tag} dir="auto" className="rounded-[6px] bg-surface-2 px-1.5 text-[11px] leading-[18px] text-muted">#{tag}</span>)}
+        {space && <span dir="auto" className="flex min-w-0 items-center gap-1 truncate text-[11px] text-muted"><SpaceIcon space={space} size={12} />{space.name}</span>}
         <span className="flex-1" />
         <span className="text-[11px] text-muted">{listTime(n.updatedAt)}</span>
       </div>
@@ -237,13 +241,13 @@ export const NoteRow = memo(function NoteRow({ n, active, space }: { n: Note; ac
 
 export function TemplatePicker({ open, onClose, spaceId, folderId }: { open: boolean; onClose: () => void; spaceId: string; folderId: string | null }) {
   return (
-    <Sheet open={open} onClose={onClose} title="New from template">
+    <Sheet open={open} onClose={onClose} title={t("New from template")}>
       <div className="grid grid-cols-2 gap-2">
-        {[...TEMPLATES.filter((t) => t.type === "base" || t.type === "dashboard"), ...TEMPLATES.filter((t) => t.type !== "base" && t.type !== "dashboard")].map((t) => (
-          <button key={t.id} onClick={async () => { onClose(); openNote((await createNote({ template: t.id, spaceId, folderId })).id, t.type === "slides" || t.type === "canvas" || t.type === "whiteboard" ? undefined : t.type === "base" || t.type === "dashboard" ? "read" : "edit"); }}
+        {[...TEMPLATES.filter((tp) => tp.type === "base" || tp.type === "dashboard"), ...TEMPLATES.filter((tp) => tp.type !== "base" && tp.type !== "dashboard")].map((tp) => (
+          <button key={tp.id} onClick={async () => { onClose(); openNote((await createNote({ template: tp.id, spaceId, folderId })).id, tp.type === "slides" || tp.type === "canvas" || tp.type === "whiteboard" ? undefined : tp.type === "base" || tp.type === "dashboard" ? "read" : "edit"); }}
             className="rounded-[10px] border border-line p-3 text-start hover:border-accent">
-            <div className="flex items-center gap-2 text-[13.5px] font-semibold"><span className="text-muted">{TYPE_ICON(t.type)}</span>{t.name}</div>
-            <div className="text-[12px] text-muted">{t.hint}</div>
+            <div className="flex items-center gap-2 text-[13.5px] font-semibold"><span className="text-muted">{TYPE_ICON(tp.type)}</span>{t(tp.name)}</div>
+            <div className="text-[12px] text-muted">{t(tp.hint)}</div>
           </button>
         ))}
       </div>

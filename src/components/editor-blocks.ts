@@ -11,6 +11,7 @@ import {
   blockGlyph, blockIndexAt, blockPreview, deleteBlocks, duplicateBlocks, idInsertion, moveBlocks, newBlockId, parseBlocks, turnBlocks,
   type Block, type LineEdit, type TurnTarget,
 } from "../lib/blocks";
+import { t } from "../lib/i18n";
 
 // ------------------------------------------------------------------ block cache (parsed once per document version)
 const cache = new WeakMap<Text, { lines: string[]; blocks: Block[] }>();
@@ -166,8 +167,8 @@ function handlePlugin(hooks: BlockHooks) {
       h.type = "button";
       h.className = "cm-blk-handle";
       h.tabIndex = -1;
-      h.title = "Drag to move · click for block menu · Shift-click to select several";
-      h.setAttribute("aria-label", "Block menu");
+      h.title = t("Drag to move · click for block menu · Shift-click to select several");
+      h.setAttribute("aria-label", t("Block menu"));
       h.textContent = GRIP;
       h.style.display = "none";
       this.drop = document.createElement("div");
@@ -424,9 +425,9 @@ class SelBar extends WidgetType {
     el.className = "cm-blk-selbar";
     el.setAttribute("contenteditable", "false");
     const act = (label: string, run: (b: HTMLElement) => void) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.onmousedown = (e) => e.preventDefault(); b.onclick = () => run(b); return b; };
-    el.append(`${this.n} blocks selected`, " · ", act("Delete", () => { remove(view); view.focus(); }), " · ",
-      act("Move", (b) => openMenu(view, targets(view), b.getBoundingClientRect())), " · ",
-      act("Turn into", (b) => openMenu(view, targets(view), b.getBoundingClientRect(), "turn")));
+    el.append(t("{n} blocks selected", { n: this.n }), " · ", act(t("Delete"), () => { remove(view); view.focus(); }), " · ",
+      act(t("Move"), (b) => openMenu(view, targets(view), b.getBoundingClientRect())), " · ",
+      act(t("Turn into"), (b) => openMenu(view, targets(view), b.getBoundingClientRect(), "turn")));
     return el;
   }
   ignoreEvent() { return true; }
@@ -491,14 +492,15 @@ export function blockRefSource(notes: () => RefNote[], currentTitle: () => strin
     const options: (Completion & { lmGlyph: string; lmId: string })[] = [];
     const name = self ? currentTitle() : note!.title;
     // "Blocks in <b>Note</b>" header (design R4-16G); the "adds an id" footnote is the tooltip's ::after (layout.css)
-    const section = { name: `Blocks in ${name}`, header: () => { const h = document.createElement("completion-section"); h.className = "lm-blk-head"; h.append("Blocks in "); const b = document.createElement("b"); b.textContent = name; h.append(b); return h; } };
+    const head = t("Blocks in {name}"); // "{name}" stays in the string so the bold title goes where the language puts it
+    const section = { name: head.replace("{name}", name), header: () => { const h = document.createElement("completion-section"); h.className = "lm-blk-head"; const [pre, post = ""] = head.split("{name}"); h.append(pre); const b = document.createElement("b"); b.textContent = name; b.dir = "auto"; h.append(b, post); return h; } };
     for (const blk of blocks) {
       const text = lines.slice(blk.a, blk.b + 1).join("\n");
       const label = blockPreview(text, blk.kind);
       if (q && !(blk.id ?? "").toLowerCase().startsWith(q) && !label.toLowerCase().includes(q)) continue;
       options.push({
         label,
-        lmId: blk.id ? `^${blk.id}` : "add id",
+        lmId: blk.id ? `^${blk.id}` : t("add id"),
         lmGlyph: blockGlyph(blk, lines[blk.a] ?? ""),
         section,
         boost: -options.length,

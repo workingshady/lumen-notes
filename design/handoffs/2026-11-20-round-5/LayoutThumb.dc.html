@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="width:{{ w }};height:{{ h }};position:relative;flex-shrink:0"><div style="position:absolute;left:0;top:0;width:96px;height:64px;transform:scale({{ s }});transform-origin:0 0;border-radius:8px;background:var(--bg);border:1px solid var(--bd);box-sizing:border-box;overflow:hidden">
+  <sc-for list="{{ rects }}" as="r" hint-placeholder-count="6"><span style="position:absolute;left:{{ r.x }};top:{{ r.y }};width:{{ r.w }};height:{{ r.h }};border-radius:{{ r.r }};background:{{ r.f }};border:{{ r.b }};box-sizing:border-box"></span></sc-for>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:120,&quot;height&quot;:90},&quot;kind&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cols-2&quot;,&quot;cols-3&quot;,&quot;cols-side&quot;,&quot;tabs&quot;,&quot;expand&quot;,&quot;panel-info&quot;,&quot;panel-tip&quot;,&quot;panel-warn&quot;,&quot;aside&quot;,&quot;center&quot;,&quot;wide&quot;,&quot;full&quot;,&quot;toc&quot;,&quot;include&quot;,&quot;cards&quot;],&quot;default&quot;:&quot;cols-2&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;scale&quot;:{&quot;editor&quot;:&quot;float&quot;,&quot;default&quot;:1,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const k = this.props.kind ?? 'cols-2', s = this.props.scale ?? 1;
+    const R = (x,y,w,h,f='var(--sf2)',o={}) => ({ x:x+'px', y:y+'px', w:w+'px', h:h+'px', f, r:(o.r??2)+'px', b:o.b||'none' });
+    const line = (x,y,w,c='var(--mu)') => R(x,y,w,3,`color-mix(in srgb, ${c} 45%, transparent)`,{r:1.5});
+    const tint = c => `color-mix(in srgb, ${c} 16%, var(--bg))`;
+    const lines = (x,y,w,n) => Array.from({length:n},(_,i) => line(x, y+i*7, i===n-1 ? w*.6 : w));
+    const M = {
+      'cols-2': [R(8,8,37,48),R(51,8,37,48),...lines(12,14,28,3),...lines(55,14,28,3)],
+      'cols-3': [R(8,8,24,48),R(36,8,24,48),R(64,8,24,48),...lines(11,14,18,3),...lines(39,14,18,3),...lines(67,14,18,3)],
+      'cols-side': [R(8,8,24,48,tint('var(--ac)')),R(36,8,52,48),...lines(11,14,18,3),...lines(40,14,44,5)],
+      'tabs': [R(8,8,20,8,'var(--sf2)',{r:3}),R(30,8,20,8,'transparent',{b:'1px solid var(--bd)',r:3}),R(52,8,20,8,'transparent',{b:'1px solid var(--bd)',r:3}),R(8,18,80,38),...lines(12,24,60,4)],
+      'expand': [R(8,10,80,12),line(18,15,40,'var(--tx)'),R(11,13,4,6,'var(--mu)',{r:1}),R(8,26,80,12,'transparent',{b:'1px solid var(--bd)'}),line(18,31,30)],
+      'panel-info': [R(8,10,80,44,tint('var(--in)'),{b:'1px solid color-mix(in srgb,var(--in) 45%,transparent)',r:5}),R(13,15,8,8,'var(--in)',{r:4}),line(25,17,40,'var(--in)'),...lines(13,29,64,3)],
+      'panel-tip': [R(8,10,80,44,tint('var(--ok)'),{b:'1px solid color-mix(in srgb,var(--ok) 45%,transparent)',r:5}),R(13,15,8,8,'var(--ok)',{r:4}),line(25,17,40,'var(--ok)'),...lines(13,29,64,3)],
+      'panel-warn': [R(8,10,80,44,tint('var(--wa)'),{b:'1px solid color-mix(in srgb,var(--wa) 45%,transparent)',r:5}),R(13,15,8,8,'var(--wa)',{r:4}),line(25,17,40,'var(--wa)'),...lines(13,29,64,3)],
+      'aside': [...lines(8,12,52,6),R(64,10,24,30,tint('var(--mu)'),{r:4}),line(67,15,16)],
+      'center': [line(22,14,52),line(16,22,64),line(26,30,44),line(30,38,36)],
+      'wide': [...lines(24,8,48,2),R(4,24,88,18,'var(--sf2)'),...lines(24,48,48,2)],
+      'full': [...lines(24,8,48,2),R(0,24,96,18,tint('var(--ac)'),{r:0}),...lines(24,48,48,2)],
+      'toc': [R(10,8,46,48,'transparent',{b:'1px solid var(--bd)',r:4}),line(14,14,30,'var(--tx)'),line(18,23,30),line(18,31,26),line(22,39,22),line(18,47,28)],
+      'include': [line(8,10,60),R(8,18,80,34,'transparent',{b:'1px dashed var(--bd)',r:5}),R(12,22,26,7,tint('var(--ln)'),{r:3}),...lines(12,34,64,2)],
+      'cards': [R(8,8,24,48,'var(--sf2)',{r:5}),R(36,8,24,48,'var(--sf2)',{r:5}),R(64,8,24,48,'var(--sf2)',{r:5}),line(11,14,16,'var(--tx)'),line(39,14,16,'var(--tx)'),line(67,14,16,'var(--tx)')]
+    };
+    return { rects: M[k] || M['cols-2'], s, w:(96*s)+'px', h:(64*s)+'px' };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&family=IBM+Plex+Sans+Arabic:wght@400;600&family=Noto+Naskh+Arabic:wght@400;700&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 16 Editor &amp; Read</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 4</span></div><div style="font-size:14px;color:#9A9890">Slash commands, insert gallery, block handles, block references, paste menu — and one visual language for every Read-mode block.</div></div>
+  </div>
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="2">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ sec.k }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ sec.t }}</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">{{ sec.d }}</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:48px">
+        <sc-for list="{{ sec.frames }}" as="f" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};--sh:{{ f.t.sh }};width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg)">
+              <sc-if value="{{ f.ed }}"><dc-import name="EditorDesk" state="{{ f.s }}" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import></sc-if>
+              <sc-if value="{{ f.rd }}"><dc-import name="ReadDoc" width="{{ f.w }}" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import></sc-if>
+            </div>
+            <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · A6 · A7 · PHONE</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Phone · slash sheet, block sheet, RTL handle, read</h2></div>
+    <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">R4-16P1</span> Slash · bottom sheet with search</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;width:412px;height:915px;border-radius:28px;background:var(--bg);color:var(--tx);position:relative;overflow:hidden;font-size:14px">
+          <div style="padding:52px 20px;font-family:'Source Serif 4',serif;font-size:16px;line-height:28px;opacity:.5">Backpropagation is the chain rule applied from the loss back to every weight.<br>/</div>
+          <div style="position:absolute;left:0;right:0;bottom:0;height:640px;background:var(--sf);border-radius:14px 14px 0 0;display:flex;flex-direction:column">
+            <div style="display:flex;justify-content:center;padding:10px 0"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+            <div style="margin:0 16px 8px;height:44px;border-radius:10px;background:var(--bg);border:1px solid var(--ac);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--mu)"><dc-import name="LumenGlyph" glyph="query" size="{{ 16 }}" hint-size="16px,16px"></dc-import>Search blocks</div>
+            <sc-for list="{{ pslash }}" as="s" hint-placeholder-count="10"><div style="display:{{ s.hdr }};padding:10px 20px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">{{ s.g }}</div><div style="display:{{ s.row }};height:52px;padding:0 16px;align-items:center;gap:12px"><span style="width:34px;height:34px;border-radius:8px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><dc-import name="LumenGlyph" glyph="{{ s.gl }}" size="{{ 18 }}" hint-size="18px,18px"></dc-import></span><span style="display:flex;flex-direction:column"><span style="font-weight:500">{{ s.l }}</span><span style="font-size:12px;color:var(--mu)">{{ s.h }}</span></span></div></sc-for>
+          </div>
+        </div></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">R4-16P2</span> Block sheet · handle beside current block</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--da:#EF6B6B;width:412px;height:915px;border-radius:28px;background:var(--bg);color:var(--tx);position:relative;overflow:hidden;font-size:14px">
+          <div style="padding:52px 20px 0 40px;font-family:'Source Serif 4',serif;font-size:16px;line-height:28px;position:relative"><span style="position:absolute;left:10px;top:56px;width:24px;height:24px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:12px;letter-spacing:-1px;color:var(--tx)">⋮⋮</span><div style="background:color-mix(in srgb,var(--ac) 12%,transparent);border-radius:8px;padding:2px 6px">For one neuron, z = wx + b and a = σ(z).</div></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--sf);border-radius:14px 14px 0 0;padding:10px 16px 0;display:flex;flex-direction:column">
+            <div style="display:flex;justify-content:center;padding-bottom:10px"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+            <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);padding-bottom:8px">Turn into</span>
+            <div style="display:flex;gap:6px;overflow:hidden;padding-bottom:12px"><sc-for list="{{ pturn }}" as="g" hint-placeholder-count="7"><span style="width:48px;height:48px;flex-shrink:0;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><dc-import name="LumenGlyph" glyph="{{ g }}" size="{{ 20 }}" hint-size="20px,20px"></dc-import></span></sc-for></div>
+            <sc-for list="{{ pblock }}" as="m" hint-placeholder-count="6"><div style="height:52px;display:flex;align-items:center;gap:12px;border-top:1px solid var(--bd);color:{{ m.c }}"><dc-import name="LumenGlyph" glyph="{{ m.g }}" size="{{ 18 }}" hint-size="18px,18px"></dc-import>{{ m.l }}</div></sc-for>
+            <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+          </div>
+        </div></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">R4-16P3</span> Arabic block · handle on the right</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;width:412px;height:420px;border-radius:28px;background:var(--bg);color:var(--tx);position:relative;overflow:hidden">
+          <div style="padding:48px 40px 0 20px;display:flex;flex-direction:column;gap:12px">
+            <div dir="rtl" style="position:relative;font-family:'Noto Naskh Arabic',serif;font-size:19px;line-height:34px;padding:2px 6px;border-radius:8px;background:var(--sf)"><span style="position:absolute;right:-30px;top:6px;width:24px;height:24px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font:12px Inter;letter-spacing:-1px">⋮⋮</span>الانتشار العكسي هو قاعدة السلسلة مطبّقة من الخسارة إلى كل وزن.</div>
+            <div style="font-family:'Source Serif 4',serif;font-size:16px;line-height:28px;color:var(--mu)">Each node multiplies upstream by local.</div>
+          </div>
+        </div>
+        <span style="max-width:412px;font-size:13px;line-height:20px;color:#CFCBC3">The handle follows the block's own direction, not the app's — mixed notes get handles on both sides.</span></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">R4-16P4</span> Read · sample note · Lamplight</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:412px;height:915px;border-radius:28px;position:relative;overflow:hidden"><dc-import name="ReadDoc" phone="{{ true }}" hint-size="412px,915px" style="position:absolute;inset:0"></dc-import></div></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">R4-16P5</span> Read · sample note · Paper</div>
+        <div style="--bg:#FAF8F3;--sf:#FFFFFF;--sf2:#F2EFE7;--bd:#E4DFD3;--tx:#1F1D1A;--mu:#6A655C;--ac:#B45F0E;--ln:#0F7C78;--ok:#1F8A4C;--wa:#A86A00;--da:#C42B2B;--in:#2F5BD3;--le:#7A4BD1;width:412px;height:915px;border-radius:28px;position:relative;overflow:hidden"><dc-import name="ReadDoc" phone="{{ true }}" hint-size="412px,915px" style="position:absolute;inset:0"></dc-import></div></div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;flex-direction:column;gap:6px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · C1</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Layout thumbnails · 96×64, both themes</h2></div>
+    <div style="display:flex;gap:20px">
+      <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ok:#6BCB8B;--wa:#E8B34A;--in:#7AA2F7;--ln:#5CC8C2;border-radius:14px;background:#161A21;padding:20px;display:grid;grid-template-columns:repeat(5,110px);gap:14px"><sc-for list="{{ thumbs }}" as="t" hint-placeholder-count="15"><div style="display:flex;flex-direction:column;gap:6px;color:#9AA0AA;font-size:12px"><dc-import name="LayoutThumb" kind="{{ t.k }}" hint-size="96px,64px"></dc-import>{{ t.l }}</div></sc-for></div>
+      <div style="--bg:#FAF8F3;--sf:#FFFFFF;--sf2:#F2EFE7;--bd:#E4DFD3;--tx:#1F1D1A;--mu:#6A655C;--ac:#B45F0E;--ok:#1F8A4C;--wa:#A86A00;--in:#2F5BD3;--ln:#0F7C78;border-radius:14px;background:#FFFFFF;padding:20px;display:grid;grid-template-columns:repeat(5,110px);gap:14px"><sc-for list="{{ thumbs }}" as="t" hint-placeholder-count="15"><div style="display:flex;flex-direction:column;gap:6px;color:#6A655C;font-size:12px"><dc-import name="LayoutThumb" kind="{{ t.k }}" hint-size="96px,64px"></dc-import>{{ t.l }}</div></sc-for></div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', inn:'#7AA2F7', le:'#B48EF0', sh:'none' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', inn:'#2F5BD3', le:'#7A4BD1', sh:'0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .08)' };
+    const F = (id,l,c,s,w,t,n) => ({ id, l, ed: c==='EditorDesk', rd: c==='ReadDoc', s, w, t, n });
+    const sections = [
+      { k:'R4 · A6', t:'Editor', d:'One catalog of 55 blocks feeds the slash menu, the Insert gallery and the block menu. Same glyphs everywhere.', frames:[
+        F('R4-16A','Slash menu · recent + groups · Lamplight','EditorDesk','slash','',L,'Rows: glyph tile, label, one-line hint, shortcut. Recent group on top; Notion/Confluence/Obsidian names match as aliases. Never opens inside URLs or code.'),
+        F('R4-16B','Slash · no results · Paper','EditorDesk','empty','',P,'Says what was searched and suggests the closest real block, plus one way out.'),
+        F('R4-16C','Insert gallery · hover preview','EditorDesk','gallery','',L,'From note ⋯ › Insert. Thumbnails are built from theme tokens (Part C), so they work in both themes. The preview shows the Markdown it will write.'),
+        F('R4-16D','Block handle · rest, dragging, drop line','EditorDesk','handle','',L,'Handle appears on hover (muted), turns solid when grabbed. The block lifts; a 2 px amber line shows where it lands; the source fades to 35%.'),
+        F('R4-16E','Block menu · Turn into + actions · Paper','EditorDesk','menu','',P,'Turn into is a glyph grid (text, H1–H3, lists, quote, code, toggle, callouts). Every action is one undo step.'),
+        F('R4-16F','Multi-select','EditorDesk','multi','',L,'Shift/Ctrl-click or long-press. Selected blocks get a 12% amber wash and a check in the margin; the same menu acts on all.'),
+        F('R4-16G','Block reference · arrival highlight + autocomplete','EditorDesk','ref','',L,'Following [[Note#^id]] scrolls and briefly washes the block amber (fades over 1.2 s). The faint ^id marker shows on hover. Autocomplete lists blocks; ones without an id say “add id”.'),
+        F('R4-16H','Paste menu · long text','EditorDesk','paste','',P,'After pasting >200 characters: Keep · Clean up · As quote · As link card · Summarize · Make flashcards. Plain labels, no sparkles.'),
+        F('R4-16I','Paste menu · link alone on a line','EditorDesk','link','',L,'Preview card / Embed / Plain link. Choice is remembered per domain.')
+      ]},
+      { k:'R4 · A7', t:'Read mode & preview', d:'Width switch, columns, cards, tabs, toggles, panels, tables, includes, status pills and contents — one language, both themes.', frames:[
+        F('R4-16J','Sample note · Wide · Lamplight','ReadDoc','','wide',L,'Width switch in the header (Fixed · Wide · Full). Contents box, status pills in all six colours, 3-column cards, tabs, a warning panel, a toggle, a sortable table and a live include with its source chip.'),
+        F('R4-16K','Sample note · Fixed · Paper','ReadDoc','','fixed',P,'In Fixed width the table breaks out of the text column by 60 px each side. Header sticks; zebra rows; sort arrow in amber on the sorted column.'),
+        F('R4-16L','Sample note · Full','ReadDoc','','full',L,'Full uses the whole pane; text stays readable because cards and tables take the extra width, not paragraphs.')
+      ]}
+    ];
+    const pslash = [['Recent'],['text','Text','Plain paragraph'],['c-tip','Tip','Panel · green'],['Basic'],['h2','Heading 2','Section title'],['task','Task list','Checkboxes'],['code','Code','With copy'],['Media & embeds'],['image','Image','Upload or link'],['voice','Voice note','Record and transcribe']].map(([a,l,h]) => l === undefined ? { hdr:'block', row:'none', g:a, gl:'note', l:'', h:'' } : { hdr:'none', row:'flex', g:'', gl:a, l, h });
+    const pturn = ['text','h1','h2','list','task','quote','c-info'];
+    const pblock = [['columns-2','Duplicate'],['wikilink','Copy link to block'],['expand','Move up'],['expand','Move down'],['c-danger','Delete',1]].map(([g,l,d]) => ({ g, l, c:d?'var(--da)':'var(--tx)' }));
+    const thumbs = [['cols-2','2 columns'],['cols-3','3 columns'],['cols-side','Sidebar + main'],['tabs','Tabs'],['expand','Toggle'],['panel-info','Info'],['panel-tip','Tip'],['panel-warn','Warning'],['aside','Aside'],['center','Center'],['wide','Wide'],['full','Full'],['toc','Contents'],['include','Include'],['cards','Cards']].map(([k,l]) => ({ k, l }));
+    return { sections, pslash, pturn, pblock, thumbs };
+  }
+}
+</script>
+</body>
+</html>

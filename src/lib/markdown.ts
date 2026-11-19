@@ -16,6 +16,7 @@ import { glyphSvg } from "./glyph-svg";
 import { hasGlyph } from "./glyphs";
 import { clozeEnabled } from "./cloze";
 import { clozePlugin, occlusionHtml } from "./cloze-md";
+import { t as tr } from "./i18n";
 
 type MD = ReturnType<typeof MarkdownIt>;
 
@@ -142,7 +143,7 @@ function layoutBlocks(md: MD) {
       case "wide": case "full": return `<div ${cls("md-" + s.name)}${line}>`;
       case "aside": return `<aside ${cls("md-aside")}${line}><div class="md-aside-box">`;
       case "center": return `<div ${cls("md-center")}${line}>`;
-      case "expand": return `<details ${cls("md-expand")}${line}${s.attrs.open != null || s.classes.includes("open") ? " open" : ""}><summary dir="auto">${md.renderInline(s.title || "Details")}</summary><div class="md-expand-body">`;
+      case "expand": return `<details ${cls("md-expand")}${line}${s.attrs.open != null || s.classes.includes("open") ? " open" : ""}><summary dir="auto">${md.renderInline(s.title || tr("Details"))}</summary><div class="md-expand-body">`;
       case "panel": {
         const fold = s.attrs.collapse === "true" ? "-" : s.attrs.collapse === "false" ? "+" : "";
         return calloutOpen(md, s.attrs.callout ?? "note", s.title || s.attrs.title || "", fold, line, strongDir(s.title || s.attrs.title || ""));
@@ -246,7 +247,7 @@ function build() {
     highlight(code, lang) {
       const l = lang?.trim().split(/\s+/)[0];
       const html = l && hljs.getLanguage(l) ? hljs.highlight(code, { language: l, ignoreIllegals: true }).value : esc(code);
-      return `<pre class="code" dir="ltr"><div class="code-head"><span>${esc(l || "text")}</span><button class="copy" type="button">${icon("copy", 13)}<span>Copy</span></button></div><code class="hljs">${html}</code></pre>`;
+      return `<pre class="code" dir="ltr"><div class="code-head"><span>${esc(l || "text")}</span><button class="copy" type="button">${icon("copy", 13)}<span>${tr("Copy")}</span></button></div><code class="hljs">${html}</code></pre>`;
     },
   });
   md.use(footnote).use(taskLists, { enabled: true, label: true }).use(mark).use(sub).use(sup); // ==mark==, H~2~O, x^2^
@@ -277,7 +278,7 @@ function build() {
     const t = tokens[idx];
     const lang = t.info.trim().split(/\s+/)[0];
     const line = t.map ? ` data-line="${t.map[0]}"` : "";
-    if (lang === "mermaid") return `<div class="mermaid-card"${line} tabindex="-1"><div class="mm-head"><span>mermaid · ${esc(MERMAID_KIND(t.content))}</span><span class="mm-tools"><button type="button" class="mm-zout" title="Zoom out (−)" aria-label="Zoom out">${icon("minus", 13)}</button><button type="button" class="mm-zlabel" title="Fit (0) · double-click the diagram to switch between fit and 100%">Fit</button><button type="button" class="mm-zin" title="Zoom in (+)" aria-label="Zoom in">${icon("plus", 13)}</button><button type="button" class="mm-z100" title="Actual size (100%)">1:1</button><span class="mm-sep"></span><button type="button" class="mm-export" title="Export: SVG, PNG, JPEG, WebP · copy image">${icon("download", 13)}</button><button type="button" class="mm-src" title="Show source">${icon("code", 14)}</button><button type="button" class="mm-full" title="Full screen">${icon("maximize-2", 13)}</button></span></div><div class="mermaid-block" data-src="${enc(t.content)}"><div class="muted">Rendering diagram…</div></div><pre class="mm-code" hidden><code>${esc(t.content)}</code></pre></div>`;
+    if (lang === "mermaid") return `<div class="mermaid-card"${line} tabindex="-1"><div class="mm-head"><span>mermaid · ${esc(MERMAID_KIND(t.content))}</span><span class="mm-tools"><button type="button" class="mm-zout" title="${tr("Zoom out (−)")}" aria-label="${tr("Zoom out")}">${icon("minus", 13)}</button><button type="button" class="mm-zlabel" title="${tr("Fit (0) · double-click the diagram to switch between fit and 100%")}">${tr("Fit")}</button><button type="button" class="mm-zin" title="${tr("Zoom in (+)")}" aria-label="${tr("Zoom in")}">${icon("plus", 13)}</button><button type="button" class="mm-z100" title="${tr("Actual size (100%)")}">1:1</button><span class="mm-sep"></span><button type="button" class="mm-export" title="${tr("Export: SVG, PNG, JPEG, WebP · copy image")}">${icon("download", 13)}</button><button type="button" class="mm-src" title="${tr("Show source")}">${icon("code", 14)}</button><button type="button" class="mm-full" title="${tr("Full screen")}">${icon("maximize-2", 13)}</button></span></div><div class="mermaid-block" data-src="${enc(t.content)}"><div class="muted">Rendering diagram…</div></div><pre class="mm-code" hidden><code>${esc(t.content)}</code></pre></div>`;
     if (lang === "canvas") return `<div class="canvas-embed"${line} data-canvas="${enc(t.content)}"></div>`;
     if (lang === "query") return `<div class="query-block"${line} data-q="${enc(t.content.trim())}"></div>`;
     if (lang === "occlusion") return occlusionHtml(t.content, line); // image-occlusion cards (lib/cloze-md.ts)
@@ -467,7 +468,7 @@ function build() {
       const tok = new state.Token("html_block", "", 0);
       tok.content = lines.map((l) => {
         const m = /^(?:[-*]\s+)?(.+?)\s+::\s+(.+)$/.exec(l)!;
-        return `<div class="fc-row"${toks[i].map ? ` data-line="${toks[i].map![0]}"` : ""}><span class="fc-tag"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>Card</span><span class="fc-q" dir="auto">${md.renderInline(m[1])}</span><span class="fc-a" dir="auto">${md.renderInline(m[2])}</span></div>`;
+        return `<div class="fc-row"${toks[i].map ? ` data-line="${toks[i].map![0]}"` : ""}><span class="fc-tag"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>${tr("Card")}</span><span class="fc-q" dir="auto">${md.renderInline(m[1])}</span><span class="fc-a" dir="auto">${md.renderInline(m[2])}</span></div>`;
       }).join("");
       toks.splice(i, 3, tok);
     }
@@ -753,8 +754,8 @@ function hydrateTables(root: HTMLElement) {
     const caption = wrap.dataset.caption ?? "";
     const nrows = (n: number, of?: number) => `${of != null ? `${n} of ${of}` : n} row${(of ?? n) === 1 ? "" : "s"}`;
     tools.innerHTML = `<span class="tbl-count">${caption ? `${esc(caption)} · ` : ""}${nrows(rows.length)}</span>`
-      + (rows.length >= 5 ? `<label class="tbl-filter">${glyphSvg("query", 12)}<span class="tbl-filter-l">Filter</span><input type="search" placeholder="Filter rows" aria-label="Filter rows"></label>` : "")
-      + `<button type="button" class="tbl-full" title="Full screen" aria-label="Show table full screen">${glyphSvg("full", 12)}</button>`;
+      + (rows.length >= 5 ? `<label class="tbl-filter">${glyphSvg("query", 12)}<span class="tbl-filter-l">${tr("Filter")}</span><input type="search" placeholder="${tr("Filter rows")}" aria-label="${tr("Filter rows")}"></label>` : "")
+      + `<button type="button" class="tbl-full" title="${tr("Full screen")}" aria-label="${tr("Show table full screen")}">${glyphSvg("full", 12)}</button>`;
     wrap.prepend(tools);
     const input = tools.querySelector("input");
     const count = tools.querySelector<HTMLElement>(".tbl-count")!;
@@ -773,7 +774,7 @@ function hydrateTables(root: HTMLElement) {
     wrap.addEventListener("fullscreenchange", () => {
       const on = document.fullscreenElement === wrap;
       full.innerHTML = glyphSvg(on ? "x" : "full", 12);
-      full.title = on ? "Exit full screen (Esc)" : "Full screen";
+      full.title = on ? tr("Exit full screen (Esc)") : tr("Full screen");
     });
     // Sort: asc → desc → original order. Only the view changes; the Markdown stays as written.
     const heads = [...(table.tHead?.rows[0]?.cells ?? [])];
@@ -863,7 +864,7 @@ function hydrateToc(root: HTMLElement) {
   const rtlToc = strongDir(hs.map((h) => h.textContent ?? "").join(" ")) === "rtl"; // Arabic headings: the box reads right-to-left
   for (const toc of tocs) {
     if (rtlToc) toc.dir = "rtl";
-    toc.innerHTML = `<div class="md-toc-t">Contents</div>` + (hs.length ? `<ol>${hs.map((h, i) => `<li class="toc-${h.tagName.toLowerCase()}"><a href="#" data-i="${i}" dir="auto">${esc(h.textContent ?? "")}</a></li>`).join("")}</ol>` : `<div class="muted">No headings yet.</div>`);
+    toc.innerHTML = `<div class="md-toc-t">${tr("Contents")}</div>` + (hs.length ? `<ol>${hs.map((h, i) => `<li class="toc-${h.tagName.toLowerCase()}"><a href="#" data-i="${i}" dir="auto">${esc(h.textContent ?? "")}</a></li>`).join("")}</ol>` : `<div class="muted">No headings yet.</div>`);
     toc.onclick = (e) => { const a = (e.target as HTMLElement).closest<HTMLAnchorElement>("a[data-i]"); if (!a) return; e.preventDefault(); e.stopPropagation(); hs[Number(a.dataset.i)]?.scrollIntoView({ behavior: "smooth", block: "start" }); };
   }
   // The section being read is bold (R4 "Contents" box): the last heading above the top fifth of the pane.
@@ -1008,7 +1009,7 @@ export function handleCopyClick(e: MouseEvent | React.MouseEvent) {
   const code = btn.closest("pre")?.querySelector("code")?.textContent ?? "";
   void navigator.clipboard.writeText(code);
   const label = btn.querySelector("span");
-  if (label) { label.textContent = "Copied"; setTimeout(() => (label.textContent = "Copy"), 1200); }
+  if (label) { label.textContent = tr("Copied"); setTimeout(() => (label.textContent = tr("Copy")), 1200); }
   return true;
 }
 

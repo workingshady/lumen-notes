@@ -4,6 +4,7 @@
 import type { CanvasNode, JsonCanvas, Note } from "../../shared/types";
 import { backgroundOf, buildSvg, fontFaces, type BuiltSvg, type DiagramExportPrefs } from "./diagram-export";
 import { colorOf } from "./canvas";
+import { t } from "./i18n";
 import { parseDiagramText } from "./diagrams";
 
 interface Palette { surface: string; surface2: string; border: string; text: string; muted: string; accent: string }
@@ -14,8 +15,8 @@ export function paletteFor(theme: DiagramExportPrefs["theme"]): Palette {
   if (theme === "dark") return DARK;
   if (theme !== "app") return LIGHT;
   const css = getComputedStyle(document.documentElement);
-  const t = (k: string, f: string) => css.getPropertyValue(k).trim() || f;
-  return { surface: t("--surface", LIGHT.surface), surface2: t("--surface-2", LIGHT.surface2), border: t("--border", LIGHT.border), text: t("--text", LIGHT.text), muted: t("--muted", LIGHT.muted), accent: t("--accent", LIGHT.accent) };
+  const v = (k: string, f: string) => css.getPropertyValue(k).trim() || f;
+  return { surface: v("--surface", LIGHT.surface), surface2: v("--surface-2", LIGHT.surface2), border: v("--border", LIGHT.border), text: v("--text", LIGHT.text), muted: v("--muted", LIGHT.muted), accent: v("--accent", LIGHT.accent) };
 }
 
 const esc = (s: string) => s.replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]!);
@@ -65,7 +66,7 @@ function diagramOf(n: CanvasNode, byTitle: Map<string, Note>): string | null {
 export async function canvasSvg(c: JsonCanvas, notes: Note[], p: DiagramExportPrefs): Promise<BuiltSvg> {
   const P = paletteFor(p.theme);
   const nodes = c.nodes ?? [];
-  if (!nodes.length) throw new Error("This canvas is empty.");
+  if (!nodes.length) throw new Error(t("This canvas is empty."));
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const byTitle = new Map(notes.filter((n) => !n.deleted).map((n) => [n.title.toLowerCase(), n]));
   const pad = Math.max(0, p.padding);
@@ -155,7 +156,7 @@ export async function canvasSvg(c: JsonCanvas, notes: Note[], p: DiagramExportPr
 export interface GraphNodeIn { x: number; y: number; r: number; color: string; label: string; showLabel: boolean }
 export interface GraphLinkIn { a: { x: number; y: number }; b: { x: number; y: number }; tag?: boolean }
 export async function graphSvg(nodes: GraphNodeIn[], links: GraphLinkIn[], p: DiagramExportPrefs): Promise<BuiltSvg> {
-  if (!nodes.length) throw new Error("The graph is empty.");
+  if (!nodes.length) throw new Error(t("The graph is empty."));
   const P = paletteFor(p.theme);
   const pad = Math.max(0, p.padding) + 40;
   const minX = Math.min(...nodes.map((n) => n.x - n.r)) - pad, minY = Math.min(...nodes.map((n) => n.y - n.r)) - pad;

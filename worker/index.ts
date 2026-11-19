@@ -10,10 +10,13 @@ import extSettings from "./ext/settings";
 import extWorkspace from "./ext/workspace";
 import extPractice from "./ext/practice";
 import registerAsk from "./ext/ask";
+import registerChat from "./ext/chat";
+import registerTutor from "./ext/tutor";
 import registerHub from "./ext/hub";
 import registerAccess from "./ext/access";
 import extOg, { ogPages } from "./ext/og"; // OG images + share/blog page meta (round 4 assets)
 import { accountRouter } from "./accounts";
+import registerAuth, { authGate } from "./ext/auth"; // user accounts, behind ACCOUNTS_ENABLED (off) — docs/ACCOUNTS.md
 
 export type Env = {
   Bindings: {
@@ -55,6 +58,7 @@ function safeEqual(a: string, b: string) {
 const ownerToken = (env: Env["Bindings"]) => hmac(env.APP_PASSCODE, "lumen:owner:v1");
 
 // Pick the account (main or an extra one) before any route runs.
+api.use("*", authGate()); // no-op unless accounts are on and the request carries a user session (lms_…)
 api.use("*", accountRouter({ hmac, safeEqual }));
 
 const failures = new Map<string, { n: number; until: number }>(); // per-isolate brute-force brake
@@ -494,8 +498,10 @@ const helpers = { auth, getNote, putNote, upserts, hmac, safeEqual };
 export type Helpers = typeof helpers;
 for (const ext of [extHome, extSpaces, extNavigate, extStudy, extSettings, extWorkspace, extPractice]) ext(api, helpers);
 registerAsk(api, helpers); // "Ask your vault" (worker/ext/ask.ts)
+registerChat(api, helpers); registerTutor(api, helpers); // Ask chat + AI tutor (worker/ext/chat.ts, tutor.ts)
 registerHub(api, helpers); // project hub "Ask" (worker/ext/hub.ts)
 registerAccess(api, helpers); // devices that sync (worker/ext/access.ts)
+registerAuth(api, helpers); // /api/accounts/config + /api/auth/* (worker/ext/auth.ts; 404 while accounts are off)
 extOg(api, helpers); ogPages(app); // OG image routes + /s/:token, /blog/:slug meta (worker/ext/og.ts)
 
 app.route("/api", api);

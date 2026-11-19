@@ -1,5 +1,6 @@
 import { api, attUrl, getToken } from "./api";
 import { db, save, uid } from "./db";
+import { t } from "./i18n";
 
 /** Shrink big photos so they fit D1 fallback storage and load fast on phones. */
 async function compress(file: File): Promise<Blob> {
@@ -17,7 +18,7 @@ async function compress(file: File): Promise<Blob> {
 
 /** Store a file locally and queue its upload. Returns the Markdown to insert. */
 export async function addFile(file: File): Promise<string> {
-  if (file.size > MAX_FILE) throw new Error(`${file.name} is over 100 MB. Upload long videos to YouTube (unlisted) and paste the link.`);
+  if (file.size > MAX_FILE) throw new Error(t("{name} is over 100 MB. Upload long videos to YouTube (unlisted) and paste the link.", { name: file.name }));
   const id = uid();
   const blob = await compress(file);
   await db.blobs.put({ id, blob, uploaded: 0 });

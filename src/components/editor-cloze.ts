@@ -6,9 +6,8 @@
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from "@codemirror/view";
 import type { Range } from "@codemirror/state";
 import { clozeBlocks } from "../lib/cloze";
+import { t } from "../lib/i18n";
 import { newOcclusion, occlusionBlocks, occlusionCardCount, serializeOcclusion, type Occlusion } from "../lib/occlusion";
-
-const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
 class ChipWidget extends WidgetType {
   constructor(readonly text: string, readonly cls: string, readonly act?: (v: EditorView) => void, readonly title?: string) { super(); }
@@ -63,14 +62,14 @@ function build(view: EditorView): DecorationSet {
     const base = doc.line(b.line + 1).from;
     for (const s of b.spans) out.push(mark.range(base + s.from, base + s.to));
     const n = new Set(b.spans.map((s) => s.n)).size;
-    out.push(Decoration.widget({ widget: new ChipWidget(plural(n, "card"), "cm-cloze-chip", undefined, "Cloze cards in this block"), side: 1 }).range(doc.line(b.line + 1).to));
+    out.push(Decoration.widget({ widget: new ChipWidget(t("{n} card|{n} cards", { n }), "cm-cloze-chip", undefined, t("Cloze cards in this block")), side: 1 }).range(doc.line(b.line + 1).to));
   }
   for (const b of occlusionBlocks(text)) {
     if (b.from + 1 > doc.lines) continue;
     const n = occlusionCardCount(b.data);
-    const label = b.data.image ? `Edit boxes · ${plural(n, "card")}` : "Choose image";
+    const label = b.data.image ? t("Edit boxes · {n} card|Edit boxes · {n} cards", { n }) : t("Choose image");
     const line = b.from;
-    out.push(Decoration.widget({ widget: new ChipWidget(label, "cm-occl-chip", (v) => openOcclusionAt(v, line), "Open the image occlusion editor"), side: 1 }).range(doc.line(b.from + 1).to));
+    out.push(Decoration.widget({ widget: new ChipWidget(label, "cm-occl-chip", (v) => openOcclusionAt(v, line), t("Open the image occlusion editor")), side: 1 }).range(doc.line(b.from + 1).to));
   }
   return Decoration.set(out, true);
 }
@@ -100,7 +99,7 @@ const imageAction = ViewPlugin.fromClass(class {
       view.dispatch({ changes: { from: l.to, insert: "\n```occlusion\n" + serializeOcclusion(o) + "\n```" }, userEvent: "input.occlusion" });
       openOcclusionAt(view, l.number); // the new fence is on the next line (0-based = l.number)
     };
-    return Decoration.set([Decoration.widget({ widget: new ChipWidget("Make image cards", "cm-occl-chip", make, "Hide parts of this image as flashcards"), side: 1 }).range(line.to)]);
+    return Decoration.set([Decoration.widget({ widget: new ChipWidget(t("Make image cards"), "cm-occl-chip", make, t("Hide parts of this image as flashcards")), side: 1 }).range(line.to)]);
   }
 }, { decorations: (p) => p.d });
 

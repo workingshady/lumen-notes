@@ -7,6 +7,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { hydrate, render } from "../lib/markdown";
 import { formatTime, videoSources } from "../lib/video-notes";
 import { cx } from "./ui";
+import { digits, fmtNum, t } from "../lib/i18n";
 import { Glyph } from "./Glyph";
 import { Toggle } from "./SmartFolders";
 import { insertVideoMark, pauseTyping, resetTypingPause } from "./editor-video";
@@ -80,9 +81,9 @@ export function VideoNoteBar({ body }: { body: string }) {
     ctlFor(hostRef.current?.querySelector(PLAYER_SEL))?.play();
   };
   const keep = (e: React.MouseEvent) => e.preventDefault(); // keep the caret in the editor
-  const t = cur ? cur.time() : 0;
+  const now = cur ? cur.time() : 0;
   const dur = cur?.duration() ?? 0;
-  const pct = dur ? Math.min(100, (t / dur) * 100) : 0;
+  const pct = dur ? Math.min(100, (now / dur) * 100) : 0;
   const seekBar = (e: React.MouseEvent<HTMLSpanElement>) => {
     if (!cur || !dur) return;
     const r = e.currentTarget.getBoundingClientRect();
@@ -102,33 +103,33 @@ export function VideoNoteBar({ body }: { body: string }) {
         </div>
       )}
       {!dock && <div ref={hostRef} hidden />}
-      <div className={cx("vn-bar flex items-center gap-2.5 overflow-x-auto px-3", dock ? "vn-bar-on" : "vn-bar-solo")} role="toolbar" aria-label="Video notes">
-        <button type="button" className={ib} aria-label={playing ? "Pause video" : "Play video"} title={playing ? "Pause" : "Play"} onMouseDown={keep} onClick={playPause}>
+      <div className={cx("vn-bar flex items-center gap-2.5 overflow-x-auto px-3", dock ? "vn-bar-on" : "vn-bar-solo")} role="toolbar" aria-label={t("Video notes")}>
+        <button type="button" className={ib} aria-label={playing ? t("Pause video") : t("Play video")} title={playing ? t("Pause") : t("Play")} onMouseDown={keep} onClick={playPause}>
           {playing ? <Pause size={15} fill="currentColor" strokeWidth={0} /> : <Glyph name="play" size={15} />}
         </button>
-        <span className="vn-time shrink-0 font-mono text-[12px] font-medium tabular-nums" aria-live="off">{cur ? formatTime(t) : "–:––"}<span className="max-md:hidden">{dur ? ` / ${formatTime(dur)}` : ""}</span></span>
-        <span className="vn-prog relative h-1 min-w-[40px] flex-1 cursor-pointer rounded-[2px]" onMouseDown={keep} onClick={seekBar} role="slider" aria-label="Seek" aria-valuemin={0} aria-valuemax={Math.round(dur)} aria-valuenow={Math.round(t)}>
+        <span className="vn-time shrink-0 font-mono text-[12px] font-medium tabular-nums" aria-live="off">{cur ? digits(formatTime(now)) : "–:––"}<span className="max-md:hidden">{dur ? ` / ${digits(formatTime(dur))}` : ""}</span></span>
+        <span className="vn-prog relative h-1 min-w-[40px] flex-1 cursor-pointer rounded-[2px]" onMouseDown={keep} onClick={seekBar} role="slider" aria-label={t("Seek")} aria-valuemin={0} aria-valuemax={Math.round(dur)} aria-valuenow={Math.round(now)}>
           <span className="vn-prog-fill absolute inset-y-0 start-0 rounded-[2px]" style={{ width: `${pct}%` }} />
         </span>
-        <button type="button" className="vn-rate-pill shrink-0 rounded-[5px] border px-1.5 text-[12px] tabular-nums max-md:hidden" title="Playback speed" aria-label={`Playback speed ${cur?.rate() ?? 1}×`} disabled={!cur} onMouseDown={keep}
-          onClick={() => { if (!cur) return; const i = RATES.indexOf(cur.rate()); cur.setRate(RATES[(i + 1) % RATES.length]); }}>{cur?.rate() ?? 1}×</button>
-        <button type="button" className={ib} title="Insert a timestamp at the caret (Alt+T)" aria-label="Insert timestamp" onMouseDown={keep} onClick={() => insertVideoMark("timestamp")}>
+        <button type="button" className="vn-rate-pill shrink-0 rounded-[5px] border px-1.5 text-[12px] tabular-nums max-md:hidden" title={t("Playback speed")} aria-label={t("Playback speed {rate}×", { rate: cur?.rate() ?? 1 })} disabled={!cur} onMouseDown={keep}
+          onClick={() => { if (!cur) return; const i = RATES.indexOf(cur.rate()); cur.setRate(RATES[(i + 1) % RATES.length]); }}>{fmtNum(cur?.rate() ?? 1)}×</button>
+        <button type="button" className={ib} title={t("Insert a timestamp at the caret (Alt+T)")} aria-label={t("Insert timestamp")} onMouseDown={keep} onClick={() => insertVideoMark("timestamp")}>
           <Glyph name="timestamp" size={16} />
         </button>
-        <button type="button" className={ib} title="Flashcard at this moment" aria-label="Flashcard at this moment" onMouseDown={keep} onClick={() => insertVideoMark("card")}>
+        <button type="button" className={ib} title={t("Flashcard at this moment")} aria-label={t("Flashcard at this moment")} onMouseDown={keep} onClick={() => insertVideoMark("card")}>
           <Glyph name="flashcards" size={16} />
         </button>
-        <span className="flex shrink-0 items-center gap-1.5 text-[12px]" title="Pause while typing: the first keystroke after a timestamp pauses the video; Enter on an empty line or 4 s idle resumes it" onMouseDown={keep}>
-          <span className="max-2xl:hidden">Pause while typing</span>
-          <Toggle on={pt} label="Pause while typing" onChange={(on) => { pauseTyping.set(on); setPt(on); resetTypingPause(); }} />
+        <span className="flex shrink-0 items-center gap-1.5 text-[12px]" title={t("Pause while typing: the first keystroke after a timestamp pauses the video; Enter on an empty line or 4 s idle resumes it")} onMouseDown={keep}>
+          <span className="max-2xl:hidden">{t("Pause while typing")}</span>
+          <Toggle on={pt} label={t("Pause while typing")} onChange={(on) => { pauseTyping.set(on); setPt(on); resetTypingPause(); }} />
         </span>
         {sources.length > 1 && !!dock && (
-          <select className="vn-sel h-7 shrink-0 rounded-[6px] border px-1 text-[12px]" aria-label="Video in the dock" value={dock} onChange={(e) => setDock(Number(e.target.value))}>
-            {sources.map((_, i) => <option key={i} value={i + 1}>Video {i + 1}</option>)}
+          <select className="vn-sel h-7 shrink-0 rounded-[6px] border px-1 text-[12px]" aria-label={t("Video in the dock")} value={dock} onChange={(e) => setDock(Number(e.target.value))}>
+            {sources.map((_, i) => <option key={i} value={i + 1}>{t("Video {n}", { n: i + 1 })}</option>)}
           </select>
         )}
         {!!sources.length && (
-          <button type="button" className="shrink-0 text-[12px] hover:underline" aria-pressed={!!dock} title={dock ? "Undock the video" : "Dock the video above the editor"} onMouseDown={keep} onClick={toggleDock}>{dock ? "Undock" : "Dock"}</button>
+          <button type="button" className="shrink-0 text-[12px] hover:underline" aria-pressed={!!dock} title={dock ? t("Undock the video") : t("Dock the video above the editor")} onMouseDown={keep} onClick={toggleDock}>{dock ? t("Undock") : t("Dock")}</button>
         )}
       </div>
     </div>

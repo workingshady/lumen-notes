@@ -1,4 +1,5 @@
 import { Capacitor } from "@capacitor/core";
+import { t } from "./i18n";
 
 /**
  * Fingerprint / face unlock inside the Android app (Capacitor 6 + @capgo/capacitor-native-biometric 6).
@@ -17,11 +18,11 @@ export async function isNativeBiometricAvailable(): Promise<boolean> {
 }
 
 /** Show the system biometric prompt. Resolves true when the user is verified, false when cancelled or failed. */
-export async function nativeBiometricVerify(reason = "Unlock Lumen"): Promise<boolean> {
+export async function nativeBiometricVerify(reason = t("Unlock Lumen")): Promise<boolean> {
   const p = await load();
   if (!p) return false;
   try {
-    await p.verifyIdentity({ reason, title: "Unlock Lumen", subtitle: reason, negativeButtonText: "Use passcode", useFallback: true, maxAttempts: 3 });
+    await p.verifyIdentity({ reason, title: t("Unlock Lumen"), subtitle: reason, negativeButtonText: t("Use passcode"), useFallback: true, maxAttempts: 3 });
     return true;
   } catch { return false; }
 }

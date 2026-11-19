@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, API_BASE, getToken } from "../lib/api";
+import { t } from "../lib/i18n";
 
 /** What the presenter broadcasts (to the phone remote over a Durable Object, and to an audience window over BroadcastChannel). */
 export interface DeckState {
@@ -49,12 +50,12 @@ export function useRemoteLink(state: DeckState, onCmd: (c: DeckCmd) => void) {
   async function open() {
     setError("");
     if (pair) return;
-    if (!getToken()) { setError("Sign in to sync first: the remote goes through your Cloudflare Worker."); return; }
+    if (!getToken()) { setError(t("Sign in to sync first: the remote goes through your Cloudflare Worker.")); return; }
     try {
       const r = await api<{ code: string; key: string }>("/remote", { method: "POST" });
       try { sessionStorage.setItem(KEY, JSON.stringify(r)); } catch { /* ignore */ }
       setPair(r);
-    } catch (e) { setError((e as Error).message || "Could not open a remote room"); }
+    } catch (e) { setError((e as Error).message || t("Could not open a remote room")); }
   }
   function stop() {
     try { sessionStorage.removeItem(KEY); } catch { /* ignore */ }
@@ -80,7 +81,7 @@ export function useRemoteLink(state: DeckState, onCmd: (c: DeckCmd) => void) {
       };
       s.onclose = (e) => {
         if (closed) return;
-        if (e.code === 1008 || retry > 8) { setError("The remote room closed."); stop(); return; }
+        if (e.code === 1008 || retry > 8) { setError(t("The remote room closed.")); stop(); return; }
         setStatus("connecting");
         timer = setTimeout(connect, Math.min(10_000, 500 * 2 ** retry++));
       };

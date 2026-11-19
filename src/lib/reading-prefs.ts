@@ -2,6 +2,7 @@
 // the same `lumen.settings` object as lib/settings.ts (which keeps unknown keys), typed here so that file stays as is.
 import { getSettings, setSettings, useSettings, type Settings } from "./settings";
 import type { HlColor } from "./highlights";
+import { tk } from "./i18n";
 
 export interface ReadingPrefs {
   /** Read-aloud voice (SpeechSynthesisVoice.voiceURI); "" = the system default. */
@@ -37,7 +38,7 @@ export const HL_PALETTES: Record<ReadingPrefs["hlPalette"], Record<HlColor, stri
   soft: { yellow: "#E8CF7A", green: "#8FC79A", blue: "#A9C1F5", pink: "#EE9A96", purple: "#C2A6F2" },
   bold: { yellow: "#F2B90C", green: "#2FA84F", blue: "#3D7BF5", pink: "#E5332A", purple: "#8B4CF0" },
 };
-export const HL_LABEL: Record<ReadingPrefs["hlPalette"], string> = { default: "Default", soft: "Soft", bold: "Bold" };
+export const HL_LABEL: Record<ReadingPrefs["hlPalette"], string> = { default: tk("Default"), soft: tk("Soft"), bold: tk("Bold") };
 /** CSS custom properties for a container: --hl-yellow … --hl-purple. */
 export const hlVars = (p: ReadingPrefs["hlPalette"]) => Object.fromEntries(Object.entries(HL_PALETTES[p] ?? HL_PALETTES.default).map(([k, v]) => [`--hl-${k}`, v]));
 

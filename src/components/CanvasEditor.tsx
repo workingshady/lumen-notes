@@ -19,6 +19,7 @@ import { getSettings } from "../lib/settings";
 import { download } from "../lib/io";
 import { openExport } from "../lib/diagram-export";
 import { canvasSvg } from "../lib/visual-export";
+import { fmtNum, t, tk, tx, useLang } from "../lib/i18n";
 import { openNote, setUI, toast, useVault } from "../lib/store";
 import { canvasToSkeleton, type Skeleton } from "../lib/whiteboard";
 import { plainExcerpt } from "./nav-text";
@@ -93,7 +94,7 @@ function Handles({ n }: { n?: CanvasNode }) {
     <>
       {(Object.keys(SIDE_POS) as Side[]).map((s) => <Handle key={s} id={s} type="source" position={SIDE_POS[s]} />)}
       {/* Pinned card (Tidy up leaves it where it is): small amber pin on the corner. */}
-      {n && isPinned(n) && <span title="Pinned: Tidy up keeps it here" className="pointer-events-none absolute -right-2 -top-2 z-10 flex size-[18px] items-center justify-center rounded-full bg-accent text-accent-fg shadow-[0_0_0_2px_var(--bg)]"><Pin size={10} /></span>}
+      {n && isPinned(n) && <span title={t("Pinned: Tidy up keeps it here")} className="pointer-events-none absolute -right-2 -top-2 z-10 flex size-[18px] items-center justify-center rounded-full bg-accent text-accent-fg shadow-[0_0_0_2px_var(--bg)]"><Pin size={10} /></span>}
     </>
   );
 }
@@ -133,16 +134,16 @@ function DiagramBody({ id, n, name, src, selected, onEdit }: { id: string; n: Di
   const cur = ref ? now.find((b) => diagramHash(b.src) === ref.hash) ?? now.find((b) => b.line === ref.line) : undefined;
   const stale = !!cur && diagramHash(cur.src) !== diagramHash(src);
   const back = () => { if (!source || !ref) return; diagramFocus.note = { noteId: source.id, line: cur?.line ?? ref.line, hash: cur ? diagramHash(cur.src) : ref.hash }; openNote(source.id, "read"); };
-  const pull = () => { if (!cur || !ref) return; updateNodeData(id, { node: { ...n, text: diagramText(name, cur.src), lumenDiagram: { ...ref, line: cur.line, hash: diagramHash(cur.src) } } }); toast("Diagram updated from the note"); };
+  const pull = () => { if (!cur || !ref) return; updateNodeData(id, { node: { ...n, text: diagramText(name, cur.src), lumenDiagram: { ...ref, line: cur.line, hash: diagramHash(cur.src) } } }); toast(t("Diagram updated from the note")); };
   const body = useMemo(() => `\`\`\`mermaid\n${src}\n\`\`\``, [src]);
   return (
     <div {...s}>
-      <div className="flex h-[30px] shrink-0 cursor-grab items-center gap-1.5 border-b border-line px-2.5 text-[11.5px] text-muted" onDoubleClick={onEdit} title="Drag to move · double-click to edit the source">
+      <div className="flex h-[30px] shrink-0 cursor-grab items-center gap-1.5 border-b border-line px-2.5 text-[11.5px] text-muted" onDoubleClick={onEdit} title={t("Drag to move · double-click to edit the source")}>
         <Waypoints size={12} className="shrink-0 text-accent" />
         <span className="min-w-0 flex-1 truncate font-mono text-ink">{name}</span>
-        {stale && <button className="nodrag shrink-0 rounded-[6px] px-1.5 py-0.5 text-warn hover:bg-surface-2" title="The note's copy of this diagram changed" onClick={pull}><RotateCw size={11} className="mr-1 inline align-[-1px]" />Update from note</button>}
-        {source && <button className="nodrag max-w-[45%] shrink-0 truncate rounded-[6px] px-1.5 py-0.5 hover:bg-surface-2 hover:text-ink" title={`Open “${source.title}” at this diagram`} onClick={back}><CornerUpLeft size={11} className="mr-1 inline align-[-1px]" />{source.title}</button>}
-        {ref && !source && <span className="shrink-0 text-[11px]" title="The source note was deleted or renamed">source missing</span>}
+        {stale && <button className="nodrag shrink-0 rounded-[6px] px-1.5 py-0.5 text-warn hover:bg-surface-2" title={t("The note's copy of this diagram changed")} onClick={pull}><RotateCw size={11} className="mr-1 inline align-[-1px]" />{t("Update from note")}</button>}
+        {source && <button className="nodrag max-w-[45%] shrink-0 truncate rounded-[6px] px-1.5 py-0.5 hover:bg-surface-2 hover:text-ink" title={t("Open “{title}” at this diagram", { title: source.title })} onClick={back}><CornerUpLeft size={11} className="mr-1 inline align-[-1px]" />{source.title}</button>}
+        {ref && !source && <span className="shrink-0 text-[11px]" title={t("The source note was deleted or renamed")}>{t("source missing")}</span>}
       </div>
       <div className="nodrag nowheel diagram-node min-h-0 flex-1 overflow-hidden"><Preview note={{ id, body, spaceId }} className="!m-0 !max-w-none" /></div>
     </div>
@@ -150,6 +151,7 @@ function DiagramBody({ id, n, name, src, selected, onEdit }: { id: string; n: Di
 }
 
 const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
+  useLang();
   const n = data.node as Extract<CanvasNode, { type: "text" }>;
   const { updateNodeData } = useReactFlow();
   const { spaceId } = useContext(Ctx);
@@ -194,7 +196,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
               rich
                 ? <div className="text-[13px] leading-[19px] opacity-85 [&_.katex]:text-[15px]"><Preview note={{ id, body: body.replace(/([^\n])\n(?=[^\n])/g, "$1  \n"), spaceId }} className="!font-sans !text-[13px] !leading-[19px]" /></div>
                 : <span dir="auto" className="whitespace-pre-line text-[13px] leading-[19px] text-ink opacity-85">{body}</span>
-            ) : !title && <span className="text-[13px] text-muted">Double-click to edit</span>}
+            ) : !title && <span className="text-[13px] text-muted">{t("Double-click to edit")}</span>}
           </div>
         )}
       </div>
@@ -212,21 +214,22 @@ function DiagramFileCard({ n, note, selected }: { n: CanvasNode; note: Note; sel
   const body = useMemo(() => fenced(note.body), [note.body]);
   return (
     <div {...s}>
-      <div className="flex h-[30px] shrink-0 cursor-grab items-center gap-1.5 border-b border-line px-2.5 text-[11.5px] text-muted" title="Drag to move">
+      <div className="flex h-[30px] shrink-0 cursor-grab items-center gap-1.5 border-b border-line px-2.5 text-[11.5px] text-muted" title={t("Drag to move")}>
         <Waypoints size={12} className="shrink-0 text-accent" />
-        <button className="nodrag min-w-0 flex-1 truncate text-left font-mono text-ink hover:text-accent" title="Open the .mermaid file" onClick={() => openNote(note.id, "read")}>{note.title}</button>
+        <button className="nodrag min-w-0 flex-1 truncate text-left font-mono text-ink hover:text-accent" title={t("Open the .mermaid file")} onClick={() => openNote(note.id, "read")}>{note.title}</button>
         <span className="shrink-0 rounded-[5px] bg-surface-2 px-1 font-mono text-[10.5px]">{diagramKind(note.body)}</span>
       </div>
-      <div className="nodrag nowheel diagram-node min-h-0 flex-1 overflow-hidden">{note.body.trim() ? <Preview note={{ id: note.id, body, spaceId: note.spaceId }} className="!m-0 !max-w-none" /> : <div className="p-4 text-[12px] text-muted">Empty diagram. Open it to write Mermaid.</div>}</div>
+      <div className="nodrag nowheel diagram-node min-h-0 flex-1 overflow-hidden">{note.body.trim() ? <Preview note={{ id: note.id, body, spaceId: note.spaceId }} className="!m-0 !max-w-none" /> : <div className="p-4 text-[12px] text-muted">{t("Empty diagram. Open it to write Mermaid.")}</div>}</div>
       <div className="flex h-[24px] shrink-0 items-center gap-1.5 border-t border-line px-2.5 text-[11px] text-muted">
-        {src && !src.deleted ? <button className="nodrag min-w-0 truncate hover:text-ink" title="Open the source note at this diagram" onClick={back}><CornerUpLeft size={11} className="mr-1 inline align-[-1px]" />{src.title}{meta?.heading ? ` › ${meta.heading}` : ""}</button> : <span className="truncate">{meta ? `from “${meta.fromTitle}”` : "standalone diagram"}</span>}
-        <span className="ms-auto shrink-0">updated {relTime(note.updatedAt)}</span>
+        {src && !src.deleted ? <button className="nodrag min-w-0 truncate hover:text-ink" title={t("Open the source note at this diagram")} onClick={back}><CornerUpLeft size={11} className="mr-1 inline align-[-1px]" />{src.title}{meta?.heading ? ` › ${meta.heading}` : ""}</button> : <span className="truncate">{meta ? t("from “{title}”", { title: meta.fromTitle }) : t("standalone diagram")}</span>}
+        <span className="ms-auto shrink-0">{t("updated {when}", { when: relTime(note.updatedAt) })}</span>
       </div>
     </div>
   );
 }
 
 const FileNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
+  useLang();
   const n = data.node as Extract<CanvasNode, { type: "file" }>;
   const v = useVault();
   const { spaceId } = useContext(Ctx);
@@ -254,14 +257,14 @@ const FileNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
       <Handles n={n} />
       <div {...s}>
         <div className="flex h-[30px] shrink-0 items-center gap-1.5 border-b border-line px-2.5 text-[11.5px] text-muted">
-          <FileText size={12} className="shrink-0" /><span className="flex-1 truncate">{folder ?? "Note"}</span>
+          <FileText size={12} className="shrink-0" /><span className="flex-1 truncate" dir="auto">{folder ?? t("Note")}</span>
           <span className="size-[7px] shrink-0 rounded-full" style={{ background: note?.status ? STATUS_COLOR[note.status] : note ? "var(--info)" : "var(--border)" }} />
         </div>
         <div className="flex min-h-0 flex-1 flex-col gap-[5px] px-3 py-2.5">
           <button className="nodrag truncate text-left text-[14px] font-[650] hover:text-accent" onClick={async () => openNote((note ?? (await findOrCreateByTitle(title, spaceId))).id)}>
-            {title}{!note && <span className="ml-1.5 text-[11px] font-normal text-muted">create</span>}
+            {title}{!note && <span className="ml-1.5 text-[11px] font-normal text-muted">{t("create")}</span>}
           </button>
-          <span dir="auto" className="nowheel overflow-hidden text-[12px] leading-[17px] text-muted">{note ? plainExcerpt(note.body, 90) : "Note not found. Click the title to create it."}</span>
+          <span dir="auto" className="nowheel overflow-hidden text-[12px] leading-[17px] text-muted">{note ? plainExcerpt(note.body, 90) : t("Note not found. Click the title to create it.")}</span>
         </div>
       </div>
     </>
@@ -295,6 +298,7 @@ const LinkNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
 });
 
 const GroupNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
+  useLang();
   const n = data.node as Extract<CanvasNode, { type: "group" }>;
   const { updateNodeData } = useReactFlow();
   const c = colorOf(n.color) ?? "var(--muted)";
@@ -307,7 +311,7 @@ const GroupNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
           className="group-handle absolute -top-[30px] left-0 h-6 cursor-move rounded-[6px] px-2.5 text-[12.5px] font-semibold text-[#0F1115] outline-none"
           style={{ background: c, width: `${Math.max(6, (n.label ?? "Group").length + 3)}ch` }}
           defaultValue={n.label ?? ""}
-          placeholder="Group"
+          placeholder={t("Group@@noun")}
           onBlur={(e) => updateNodeData(id, { node: { ...n, label: e.target.value } })}
         />
       </div>
@@ -330,7 +334,7 @@ canvas.layout("tree");
 log("nodes:", canvas.nodes.length);`;
 
 const EXAMPLES: Example[] = [
-  { icon: <GitFork size={15} />, title: "Mind map from headings", desc: "Each ## heading becomes a branch", code: `// Paste an outline; every heading becomes a card linked to its parent.
+  { icon: <GitFork size={15} />, title: tk("Mind map from headings"), desc: tk("Each ## heading becomes a branch"), code: `// Paste an outline; every heading becomes a card linked to its parent.
 canvas.fromOutline(\`# Backpropagation
 ## Forward pass
 ### Activations
@@ -339,20 +343,20 @@ canvas.fromOutline(\`# Backpropagation
 ### Vanishing gradients\`);
 canvas.layout("tree");
 log("cards:", canvas.nodes.length);` },
-  { icon: <FileText size={15} />, title: "Cards from tagged notes", desc: "One note card per note with a tag", code: `// Change the tag, then Run. Notes become file cards in a grid.
+  { icon: <FileText size={15} />, title: tk("Cards from tagged notes"), desc: tk("One note card per note with a tag"), code: `// Change the tag, then Run. Notes become file cards in a grid.
 const tag = "math";
 const hits = helpers.notes.filter((n) => n.tags.includes(tag));
 for (const n of hits) canvas.addNote(n.title);
 canvas.layout("grid");
 log(hits.length, "notes tagged #" + tag);` },
-  { icon: <Network size={15} />, title: "Concept tree", desc: "A root card with typed children", code: SCRIPT_EXAMPLE },
+  { icon: <Network size={15} />, title: tk("Concept tree"), desc: tk("A root card with typed children"), code: SCRIPT_EXAMPLE },
 ];
 
 /** Output-line markers OutputStrip (VisualCodePanel) turns into a check / x icon; the characters themselves never render. */
 const LOG_OK = "\u2713", LOG_ERR = "\u2716";
 const EDGE_RF: Record<EdgeShape, string> = { curved: "default", elbow: "smoothstep", straight: "straight" };
 const TOOL = "flex h-8 items-center justify-center gap-[5px] rounded-[8px] text-ink hover:bg-surface-2 disabled:opacity-40 disabled:hover:bg-transparent";
-const CAPTION = "hidden pl-1 pr-1.5 text-[10.5px] font-semibold uppercase tracking-[.06em] text-muted xl:inline";
+const CAPTION = "hidden ps-1 pe-1.5 text-[10.5px] font-semibold uppercase tracking-[.06em] text-muted xl:inline";
 const SEP = <span className="mx-1.5 h-[22px] w-px shrink-0 bg-line" />;
 type PhoneTab = "add" | "arrange" | "style" | "code";
 type Tool = [name: string, icon: ReactNode, label: string, run: () => void, on?: boolean];
@@ -371,10 +375,10 @@ function ZoomPill() {
   const { zoom } = useViewport();
   const rf = useReactFlow();
   return (
-    <div className="absolute bottom-4 left-4 z-10 hidden items-center gap-0.5 rounded-[10px] border border-line bg-surface p-[3px] md:flex">
-      <button aria-label="Zoom out" onClick={() => rf.zoomOut({ duration: 150 })} className="flex size-7 items-center justify-center rounded-[7px] hover:bg-surface-2"><Minus size={14} /></button>
-      <button title="Fit" onClick={() => rf.fitView({ padding: 0.2, duration: 300 })} className="w-10 text-center text-[12px] tabular-nums">{Math.round(zoom * 100)}%</button>
-      <button aria-label="Zoom in" onClick={() => rf.zoomIn({ duration: 150 })} className="flex size-7 items-center justify-center rounded-[7px] hover:bg-surface-2"><Plus size={14} /></button>
+    <div className="absolute bottom-4 start-4 z-10 hidden items-center gap-0.5 rounded-[10px] border border-line bg-surface p-[3px] md:flex">
+      <button aria-label={t("Zoom out")} onClick={() => rf.zoomOut({ duration: 150 })} className="flex size-7 items-center justify-center rounded-[7px] hover:bg-surface-2"><Minus size={14} /></button>
+      <button title={t("Fit")} onClick={() => rf.fitView({ padding: 0.2, duration: 300 })} className="w-10 text-center text-[12px] tabular-nums">{fmtNum(Math.round(zoom * 100))}%</button>
+      <button aria-label={t("Zoom in")} onClick={() => rf.zoomIn({ duration: 150 })} className="flex size-7 items-center justify-center rounded-[7px] hover:bg-surface-2"><Plus size={14} /></button>
     </div>
   );
 }
@@ -499,17 +503,17 @@ function Inner({ note }: { note: Note }) {
     if (!tidyPrev) return;
     const { prev, stats } = tidyPrev;
     setTidyPrev(null);
-    toast(`Tidied up · ${stats.moved} card${stats.moved === 1 ? "" : "s"} moved`, { label: "Undo", run: () => { load(prev); setTimeout(() => rf.fitView({ padding: 0.2, duration: 300 }), 50); } });
+    toast(t("Tidied up · {n} card moved|Tidied up · {n} cards moved", { n: stats.moved }), { label: t("Undo"), run: () => { load(prev); setTimeout(() => rf.fitView({ padding: 0.2, duration: 300 }), 50); } });
   };
   const selPinned = selected.length > 0 && selected.every((n) => isPinned(n.data.node));
   const togglePin = () => {
-    if (!selected.length) return toast("Select the cards to pin first");
+    if (!selected.length) return toast(t("Select the cards to pin first"));
     const on = !selPinned;
     setNodes((ns) => ns.map((n) => (n.selected ? { ...n, data: { node: setPinned(n.data.node, on) } } : n)));
-    toast(on ? `Pinned ${selected.length} card${selected.length === 1 ? "" : "s"} · Tidy up leaves them` : "Unpinned");
+    toast(on ? t("Pinned {n} card · Tidy up leaves it|Pinned {n} cards · Tidy up leaves them", { n: selected.length }) : t("Unpinned"));
   };
   // Canvases from the first diagram version (text cards) are upgraded to .mermaid file cards once, on open.
-  useEffect(() => { if (note.body.includes("lumenDiagram")) void migrateDiagramCards(note, v.notes, v.folders).then((c) => c && toast("Diagram cards upgraded to .mermaid files")); }, [note.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (note.body.includes("lumenDiagram")) void migrateDiagramCards(note, v.notes, v.folders).then((c) => c && toast(t("Diagram cards upgraded to .mermaid files"))); }, [note.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // Arrived from a note's diagram ("Open in canvas"): select that card and centre it, once it exists (a just-saved
   // card can arrive a moment after the canvas opens).
   useEffect(() => {
@@ -556,7 +560,7 @@ function Inner({ note }: { note: Note }) {
     const helpers = { notes: v.notes.map((n) => ({ id: n.id, title: n.title, tags: n.tags, type: n.type, status: n.status })), outline: fromOutline };
     const t0 = performance.now();
     const r = await runScript(src, fromFlow(nodes, edges), helpers);
-    setLogs([...r.logs, ...(r.error ? [`${LOG_ERR} ${r.error}`] : [`${LOG_OK} done · ${r.canvas.nodes?.length ?? 0} nodes · ${Math.round(performance.now() - t0)} ms · restore from History`])]);
+    setLogs([...r.logs, ...(r.error ? [`${LOG_ERR} ${r.error}`] : [`${LOG_OK} ${t("done · {n} nodes · {ms} ms · restore from History", { n: r.canvas.nodes?.length ?? 0, ms: Math.round(performance.now() - t0) })}`])]);
     if (!r.error) { load(r.canvas); setTimeout(() => rf.fitView({ padding: 0.2, duration: 300 }), 50); }
   }
 
@@ -572,7 +576,7 @@ function Inner({ note }: { note: Note }) {
     // Mermaid blocks in this board's text cards (and the notes its file cards point to).
     const texts = nodes.map((n) => n.data.node).flatMap((n) => n.type === "text" ? [n.text] : n.type === "file" ? [v.byTitle.get(n.file.replace(/\.md$/i, "").split("/").pop()!.toLowerCase())?.body ?? ""] : []);
     const blocks = texts.flatMap((t) => [...t.matchAll(/```mermaid\s*\n([\s\S]*?)```/g)].map((m) => m[1].trim()));
-    if (!blocks.length) { toast("No Mermaid block on this board: write it in the dialog"); return toWhiteboard([], `${note.title} (diagram)`, true); }
+    if (!blocks.length) { toast(t("No Mermaid block on this board: write it in the dialog")); return toWhiteboard([], `${note.title} (diagram)`, true); }
     try {
       const { parseMermaidToExcalidraw } = await import("@excalidraw/mermaid-to-excalidraw");
       const skel: Skeleton[] = [];
@@ -585,72 +589,73 @@ function Inner({ note }: { note: Note }) {
         dy += maxY + 120;
       }
       await toWhiteboard(skel, `${note.title} (diagram)`);
-    } catch (e) { toast(`Mermaid: ${(e as Error).message}`); }
+    } catch (e) { toast(t("Mermaid: {error}", { error: (e as Error).message })); }
   };
   const convertOutline = async (src: Note) => {
     const c = fromOutline(src.body);
-    if (!c.nodes?.length) return toast("That note has no headings or bullets to map");
+    if (!c.nodes?.length) return toast(t("That note has no headings or bullets to map"));
     const n = await createNote({ type: "canvas", title: `${src.title} (map)`, body: stringify(c), ...where });
     openNote(n.id);
   };
   const duplicate = async () => { const d = await duplicateNote(note.id); if (d) openNote(d.id); };
-  const del = async () => { await trashNote(note.id); setUI({ noteId: null }); toast("Canvas moved to trash", { label: "Undo", run: () => { void restoreNote(note.id); openNote(note.id); } }); };
+  const del = async () => { await trashNote(note.id); setUI({ noteId: null }); toast(t("Canvas moved to trash"), { label: t("Undo"), run: () => { void restoreNote(note.id); openNote(note.id); } }); };
 
   const addTools: Tool[] = [
-    ["Text", <Type size={15} />, "Add text card", () => addNode({ type: "text", text: "" })],
-    ["Diagram", <Waypoints size={15} />, "New .mermaid diagram file on this canvas", async () => { const folderId = await diagramFolderFor(note.spaceId, note.folderId, getSettings().diagramFolder ?? "sub", v.folders); const f = await newDiagramFile({ spaceId: note.spaceId, folderId }, v.notes); addNode({ type: "file", file: f.title, width: 560, height: 380 }); toast(`Created ${f.title}`, { label: "Open", run: () => openNote(f.id, "edit") }); }],
-    ["Note", <FilePlus size={15} />, "Add note card", () => { const t = prompt("Note title"); if (t) addNode({ type: "file", file: t, width: 300, height: 200 }); }],
-    ["Link", <Link2 size={15} />, "Add link card", () => { const u = prompt("URL", "https://"); if (u) addNode({ type: "link", url: u, width: 300, height: 84 }); }],
-    ["Group", <Group size={15} />, "Add group", () => addNode({ type: "group", label: "Group", width: 600, height: 400 })],
+    // [name (English key, rendered with t()), icon, label (translated), run, on]
+    [tk("Text"), <Type size={15} />, t("Add text card"), () => addNode({ type: "text", text: "" })],
+    [tk("Diagram"), <Waypoints size={15} />, t("New .mermaid diagram file on this canvas"), async () => { const folderId = await diagramFolderFor(note.spaceId, note.folderId, getSettings().diagramFolder ?? "sub", v.folders); const f = await newDiagramFile({ spaceId: note.spaceId, folderId }, v.notes); addNode({ type: "file", file: f.title, width: 560, height: 380 }); toast(t("Created {title}", { title: f.title }), { label: t("Open"), run: () => openNote(f.id, "edit") }); }],
+    [tk("Note"), <FilePlus size={15} />, t("Add note card"), () => { const nt = prompt(t("Note title")); if (nt) addNode({ type: "file", file: nt, width: 300, height: 200 }); }],
+    [tk("Link"), <Link2 size={15} />, t("Add link card"), () => { const u = prompt("URL", "https://"); if (u) addNode({ type: "link", url: u, width: 300, height: 84 }); }],
+    [tk("Group"), <Group size={15} />, t("Add group"), () => addNode({ type: "group", label: "Group", width: 600, height: 400 })],
   ];
   const arrangeTools: Tool[] = [
-    ["Tidy up", <Glyph name="wide" size={15} color="var(--accent)" />, "Tidy up: lay out by links, keep groups and pinned cards (Shift T)", startTidy],
-    ["Pin", <Pin size={15} />, selPinned ? "Unpin selected cards" : "Pin selected cards (Tidy up leaves them)", togglePin, selPinned],
-    ["Tree", <Network size={15} />, "Tree layout", () => doLayout("tree")],
-    ["Grid", <LayoutGrid size={15} />, "Grid layout", () => doLayout("grid")],
-    ["Force", <Orbit size={15} />, "Force layout", () => doLayout("force")],
+    [tk("Tidy up"), <Glyph name="wide" size={15} color="var(--accent)" />, t("Tidy up: lay out by links, keep groups and pinned cards (Shift T)"), startTidy],
+    [tk("Pin"), <Pin size={15} />, selPinned ? t("Unpin selected cards") : t("Pin selected cards (Tidy up leaves them)"), togglePin, selPinned],
+    [tk("Tree"), <Network size={15} />, t("Tree layout"), () => doLayout("tree")],
+    [tk("Grid"), <LayoutGrid size={15} />, t("Grid layout"), () => doLayout("grid")],
+    [tk("Force"), <Orbit size={15} />, t("Force layout"), () => doLayout("force")],
   ];
   const codeTools: Tool[] = [
-    ["JSON", <Code2 size={15} />, "Code: edit as JSON Canvas", () => togglePanel("json"), panel === "json"],
-    ["Script", <SquareTerminal size={15} />, "Script console (Ctrl `)", () => togglePanel("script"), panel === "script"],
-    ["Export", <Download size={15} />, "Download .canvas", exportCanvas],
-    ["Image", <ImageIcon size={15} />, "Export as image: SVG, PNG, JPEG, WebP (diagram cards included)", () => openExport({ name: note.title, title: "Export canvas", themable: true, build: (pr) => canvasSvg(fromFlow(nodes, edges), v.notes, pr) })],
+    ["JSON", <Code2 size={15} />, t("Code: edit as JSON Canvas"), () => togglePanel("json"), panel === "json"],
+    [tk("Script"), <SquareTerminal size={15} />, t("Script console (Ctrl `)"), () => togglePanel("script"), panel === "script"],
+    [tk("Export"), <Download size={15} />, t("Download .canvas"), exportCanvas],
+    [tk("Image"), <ImageIcon size={15} />, t("Export as image: SVG, PNG, JPEG, WebP (diagram cards included)"), () => openExport({ name: note.title, title: t("Export canvas"), themable: true, build: (pr) => canvasSvg(fromFlow(nodes, edges), v.notes, pr) })],
   ];
   const ring = "0 0 0 2px var(--surface),0 0 0 3.5px var(--text)";
   const swatches = (size: string) => (
     <span className="flex items-center gap-[5px] px-1">
       {Object.entries(PRESETS).map(([k, c]) => (
-        <button key={k} title={anySel ? (curColor === k ? "Remove colour" : `Colour ${k}`) : `Default colour ${k} for new cards`} aria-label={`Colour ${k}`} onClick={() => setColor(curColor === k ? undefined : k)} className={cx(size, "shrink-0 rounded-full")}
+        <button key={k} title={anySel ? (curColor === k ? t("Remove colour") : t("Colour {c}", { c: k })) : t("Default colour {c} for new cards", { c: k })} aria-label={t("Colour {c}", { c: k })} onClick={() => setColor(curColor === k ? undefined : k)} className={cx(size, "shrink-0 rounded-full")}
           style={{ background: c, boxShadow: curColor === k ? ring : undefined }} />
       ))}
     </span>
   );
 
   const conversions: [ReactNode, ReactNode, string, string, () => void][] = [
-    [<ListTree size={13} />, <LayoutDashboard size={13} />, "Note outline → Canvas", "headings → cards", () => setMenu("outline")],
-    [<LayoutDashboard size={13} />, <Pencil size={13} />, "Canvas → Whiteboard", "cards → shapes", () => { setMenu(null); void convertCanvas(); }],
-    [<Workflow size={13} />, <Pencil size={13} />, "Mermaid block → Whiteboard", "editable shapes", () => { setMenu(null); void convertMermaid(); }],
+    [<ListTree size={13} />, <LayoutDashboard size={13} />, t("Note outline → Canvas"), t("headings → cards"), () => setMenu("outline")],
+    [<LayoutDashboard size={13} />, <Pencil size={13} />, t("Canvas → Whiteboard"), t("cards → shapes"), () => { setMenu(null); void convertCanvas(); }],
+    [<Workflow size={13} />, <Pencil size={13} />, t("Mermaid block → Whiteboard"), t("editable shapes"), () => { setMenu(null); void convertMermaid(); }],
   ];
   const menuEl = menu && (
     <>
       <div className="fixed inset-0 z-20" onClick={() => setMenu(null)} />
-      <div className="absolute right-3 top-[-6px] z-30 flex w-max min-w-[360px] max-w-[calc(100%-24px)] flex-col gap-px whitespace-nowrap rounded-[12px] border border-line bg-surface-2 p-1.5 text-[13px] shadow-[0_16px_40px_rgba(0,0,0,.45)] fade-in max-md:bottom-[150px] max-md:top-auto">
+      <div className="absolute end-3 top-[-6px] z-30 flex w-max min-w-[360px] max-w-[calc(100%-24px)] flex-col gap-px whitespace-nowrap rounded-[12px] border border-line bg-surface-2 p-1.5 text-[13px] shadow-[0_16px_40px_rgba(0,0,0,.45)] fade-in max-md:bottom-[150px] max-md:top-auto">
         {menu === "outline" ? <OutlinePicker exclude={note.id} onPick={(n) => { setMenu(null); void convertOutline(n); }} onBack={() => setMenu("main")} /> : (
           <>
-            <span className="px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Convert</span>
+            <span className="px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("Convert")}</span>
             {conversions.map(([a, b, l, n, fn]) => (
-              <button key={l} onClick={fn} className="flex h-10 items-center gap-2.5 rounded-[8px] px-2.5 text-left hover:bg-bg">
+              <button key={l} onClick={fn} className="flex h-10 items-center gap-2.5 rounded-[8px] px-2.5 text-start hover:bg-bg">
                 <span className="flex items-center gap-[3px] rounded-[6px] border border-line bg-bg px-1.5 py-[3px] text-muted">{a}<ArrowRight size={10} /><span className="text-ink">{b}</span></span>
                 <span className="flex-1">{l}</span><span className="text-[11.5px] text-muted">{n}</span>
               </button>
             ))}
             <div className="m-1 h-px bg-line" />
-            <span className="px-2.5 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Edges</span>
+            <span className="px-2.5 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("Edges")}</span>
             <div className="px-1.5 pb-1.5 text-[12px]"><EdgeSeg value={edgeShape} onChange={setEdgeShape} /></div>
             <div className="m-1 h-px bg-line" />
-            <button onClick={() => { setMenu(null); exportCanvas(); }} className="flex h-[34px] items-center gap-2.5 rounded-[8px] px-2.5 text-left hover:bg-bg"><Download size={14} className="text-muted" />Export .canvas</button>
-            <button onClick={() => { setMenu(null); void duplicate(); }} className="flex h-[34px] items-center gap-2.5 rounded-[8px] px-2.5 text-left hover:bg-bg"><Copy size={14} className="text-muted" />Duplicate</button>
-            <button onClick={() => { setMenu(null); void del(); }} className="flex h-[34px] items-center gap-2.5 rounded-[8px] px-2.5 text-left text-bad hover:bg-bg"><Trash2 size={14} />Delete canvas</button>
+            <button onClick={() => { setMenu(null); exportCanvas(); }} className="flex h-[34px] items-center gap-2.5 rounded-[8px] px-2.5 text-start hover:bg-bg"><Download size={14} className="text-muted" />{t("Export .canvas")}</button>
+            <button onClick={() => { setMenu(null); void duplicate(); }} className="flex h-[34px] items-center gap-2.5 rounded-[8px] px-2.5 text-start hover:bg-bg"><Copy size={14} className="text-muted" />{t("Duplicate")}</button>
+            <button onClick={() => { setMenu(null); void del(); }} className="flex h-[34px] items-center gap-2.5 rounded-[8px] px-2.5 text-start text-bad hover:bg-bg"><Trash2 size={14} />{t("Delete canvas")}</button>
           </>
         )}
       </div>
@@ -676,7 +681,7 @@ function Inner({ note }: { note: Note }) {
           connectionMode={ConnectionMode.Loose} fitView fitViewOptions={{ padding: 0.15, maxZoom: 1, ...(typeof innerWidth === "number" && innerWidth < 768 ? { minZoom: 0.62 } : {}) }} minZoom={0.05} maxZoom={3} snapToGrid snapGrid={[20, 20]} zoomOnDoubleClick={false}
           deleteKeyCode={["Delete", "Backspace"]} multiSelectionKeyCode={["Shift", "Meta", "Control"]} proOptions={{ hideAttribution: true }}
           connectionLineStyle={{ stroke: "var(--accent)", strokeWidth: 2 }}
-          onEdgeDoubleClick={(_, e) => { const l = prompt("Edge label", (e.label as string) ?? ""); if (l !== null) setEdges((es) => es.map((x) => (x.id === e.id ? { ...x, label: l || undefined } : x))); }}
+          onEdgeDoubleClick={(_, e) => { const l = prompt(t("Edge label"), (e.label as string) ?? ""); if (l !== null) setEdges((es) => es.map((x) => (x.id === e.id ? { ...x, label: l || undefined } : x))); }}
         >
           <Background variant={BackgroundVariant.Dots} gap={22} size={1.1} color="color-mix(in srgb, var(--muted) 35%, transparent)" />
           <ZoomPill />
@@ -687,19 +692,19 @@ function Inner({ note }: { note: Note }) {
 
         {/* Desktop toolbar: Add | Arrange | Style | Code (captions at ≥1280px, icon-only below) + ⋯ */}
         <div className="absolute left-1/2 top-3.5 z-10 hidden max-w-[calc(100%-24px)] -translate-x-1/2 items-center gap-0.5 rounded-[12px] border border-line bg-surface px-1.5 py-1 md:flex">
-          <span className={CAPTION}>Add</span>
+          <span className={CAPTION}>{t("Add")}</span>
           {addTools.map(([, icon, label, fn]) => <button key={label} title={label} aria-label={label} onClick={fn} className={cx(TOOL, "w-8 shrink-0")}>{icon}</button>)}
           {SEP}
-          <span className={CAPTION}>Arrange</span>
-          {arrangeTools.map(([name, icon, label, fn, on]) => <button key={name} title={label} aria-label={label} onClick={fn} className={cx(TOOL, "shrink-0 px-2 text-[12px]", on && "bg-surface-2 text-accent", name === "Tidy up" && "font-semibold")}>{icon}<span className={name === "Tidy up" ? "hidden md:inline" : "hidden lg:inline"}>{name}</span></button>)}
+          <span className={CAPTION}>{t("Arrange")}</span>
+          {arrangeTools.map(([name, icon, label, fn, on]) => <button key={name} title={label} aria-label={label} onClick={fn} className={cx(TOOL, "shrink-0 px-2 text-[12px]", on && "bg-surface-2 text-accent", name === "Tidy up" && "font-semibold")}>{icon}<span className={name === "Tidy up" ? "hidden md:inline" : "hidden lg:inline"}>{t(name)}</span></button>)}
           {SEP}
-          <span className={CAPTION}>Style</span>
+          <span className={CAPTION}>{t("Style")}</span>
           {swatches("size-4")}
           {SEP}
-          <span className={CAPTION}>Code</span>
+          <span className={CAPTION}>{t("Code")}</span>
           {codeTools.map(([, icon, label, fn, on]) => <button key={label} title={label} aria-label={label} onClick={fn} className={cx(TOOL, "w-8 shrink-0", on && "bg-surface-2 text-accent")}>{icon}</button>)}
           {SEP}
-          <button title="More: convert, export, duplicate" aria-label="Canvas menu" onClick={() => setMenu((m) => (m ? null : "main"))} className={cx(TOOL, "w-8 shrink-0", menu && "bg-surface-2")}><Ellipsis size={16} /></button>
+          <button title={t("More: convert, export, duplicate")} aria-label={t("Canvas menu")} onClick={() => setMenu((m) => (m ? null : "main"))} className={cx(TOOL, "w-8 shrink-0", menu && "bg-surface-2")}><Ellipsis size={16} /></button>
         </div>
         {menuEl}
         {tidyPrev && <TidyBanner stats={tidyPrev.stats} onCancel={cancelTidy} onApply={applyTidy} top={64} />}
@@ -708,16 +713,16 @@ function Inner({ note }: { note: Note }) {
         {!panel && (
           <div className="absolute inset-x-3 bottom-4 z-10 flex flex-col overflow-hidden rounded-[16px] border border-line bg-surface-2 md:hidden">
             <div className="grid h-9 grid-cols-4 border-b border-line text-[12px] font-semibold text-muted">
-              {(["add", "arrange", "style", "code"] as PhoneTab[]).map((t) => (
-                <button key={t} onClick={() => setPhoneTab(t)} className={cx("capitalize", phoneTab === t && "text-ink shadow-[inset_0_-2px_0_var(--accent)]")}>{t}</button>
+              {([["add", tk("Add")], ["arrange", tk("Arrange")], ["style", tk("Style")], ["code", tk("Code")]] as [PhoneTab, string][]).map(([id, l]) => (
+                <button key={id} onClick={() => setPhoneTab(id)} className={cx(phoneTab === id && "text-ink shadow-[inset_0_-2px_0_var(--accent)]")}>{t(l)}</button>
               ))}
             </div>
             <div className="grid h-[60px] items-center" style={{ gridTemplateColumns: `repeat(${phoneTab === "arrange" ? arrangeTools.length + 1 : phoneTab === "add" ? addTools.length : 4},minmax(0,1fr))` }}>
               {phoneTab === "style" ? (
-                <div className="col-span-4 flex items-center justify-center gap-2">{swatches("size-7")}{anySel && <button aria-label="Delete selected" onClick={delSelected} className="flex size-11 items-center justify-center text-bad"><Trash2 size={20} /></button>}</div>
+                <div className="col-span-4 flex items-center justify-center gap-2">{swatches("size-7")}{anySel && <button aria-label={t("Delete selected")} onClick={delSelected} className="flex size-11 items-center justify-center text-bad"><Trash2 size={20} /></button>}</div>
               ) : (
-                (phoneTab === "add" ? addTools : phoneTab === "arrange" ? [...arrangeTools, ["Fit", <Scan size={15} />, "Fit to screen", fit] as Tool] : [...codeTools, ["More", <Ellipsis size={15} />, "Convert, duplicate, delete", () => setMenu("main")] as Tool]).map(([name, icon, label, fn, on]) => (
-                  <button key={name} aria-label={label} onClick={fn} className={cx("flex h-full flex-col items-center justify-center gap-0.5 text-[10.5px] [&>svg]:size-5", on && "text-accent")}>{icon}{name}</button>
+                (phoneTab === "add" ? addTools : phoneTab === "arrange" ? [...arrangeTools, [tk("Fit"), <Scan size={15} />, t("Fit to screen"), fit] as Tool] : [...codeTools, [tk("More"), <Ellipsis size={15} />, t("Convert, duplicate, delete"), () => setMenu("main")] as Tool]).map(([name, icon, label, fn, on]) => (
+                  <button key={name} aria-label={label} onClick={fn} className={cx("flex h-full flex-col items-center justify-center gap-0.5 text-[10.5px] [&>svg]:size-5", on && "text-accent")}>{icon}{t(name)}</button>
                 ))
               )}
             </div>
@@ -726,7 +731,7 @@ function Inner({ note }: { note: Note }) {
 
         {!nodes.length && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center text-[13px] text-muted">
-            Empty canvas. Double-click to add a card, paste JSON Canvas in <b className="mx-1">Code</b>, or generate with a <b className="ml-1">script</b>.
+            {tx("Empty canvas. Double-click to add a card, paste JSON Canvas in {code}, or generate with a {script}.", { code: <b className="mx-1">{t("Code")}</b>, script: <b className="mx-1">{t("script")}</b> })}
           </div>
         )}
       </div>
@@ -741,18 +746,18 @@ function Inner({ note }: { note: Note }) {
                 <span className="truncate font-mono text-[11.5px] text-muted">.canvas · 1.0</span>
                 <span className="flex-1" />
                 <ValidChip error={codeErr} />
-                <button title="Format (Shift Alt F)" onClick={() => ed.current?.format()} className="flex h-7 items-center rounded-[8px] border border-line px-2.5 text-muted hover:bg-surface-2 hover:text-ink">Format</button>
-                <button title="Download .canvas" aria-label="Download .canvas" onClick={exportCanvas} className="flex size-7 items-center justify-center rounded-[8px] border border-line hover:bg-surface-2"><Download size={14} /></button>
+                <button title={t("Format (Shift Alt F)")} onClick={() => ed.current?.format()} className="flex h-7 items-center rounded-[8px] border border-line px-2.5 text-muted hover:bg-surface-2 hover:text-ink">{t("Format")}</button>
+                <button title={t("Download .canvas")} aria-label={t("Download .canvas")} onClick={exportCanvas} className="flex size-7 items-center justify-center rounded-[8px] border border-line hover:bg-surface-2"><Download size={14} /></button>
               </PanelBar>
               {codeErr && <ErrorBanner error={codeErr} line={errLine} onGoto={() => errLine && ed.current?.goto(errLine)} />}
               <div className="flex min-h-0 flex-1 flex-col md:pt-0" onFocus={() => (jsonFocus.current = true)} onBlur={() => (jsonFocus.current = false)}>
                 <CodeEditor value={codeText} onChange={onJson} band={band} handle={ed}
                   onCursor={(c) => { setCursor({ line: c.line, col: c.col }); if (c.user) { const id = itemAt(spans, c.pos); if (id) selectItem(id); } }} />
               </div>
-              <ValidFooter error={codeErr} detail={`${nodes.length} nodes · ${edges.length} edges · live round-trip`} cursor={cursor} />
+              <ValidFooter error={codeErr} detail={t("{nodes} nodes · {edges} edges · live round-trip", { nodes: nodes.length, edges: edges.length })} cursor={cursor} />
               <PhoneActions>
-                <button aria-label="Download .canvas" onClick={exportCanvas} className="flex size-[52px] items-center justify-center rounded-[12px] border border-line"><Download size={18} /></button>
-                <button disabled={!!codeErr} onClick={() => { onJson(codeText); setPanel(null); }} className="flex h-[52px] flex-1 items-center justify-center rounded-[12px] bg-accent text-[15px] font-semibold text-accent-fg disabled:opacity-50">Apply</button>
+                <button aria-label={t("Download .canvas")} onClick={exportCanvas} className="flex size-[52px] items-center justify-center rounded-[12px] border border-line"><Download size={18} /></button>
+                <button disabled={!!codeErr} onClick={() => { onJson(codeText); setPanel(null); }} className="flex h-[52px] flex-1 items-center justify-center rounded-[12px] bg-accent text-[15px] font-semibold text-accent-fg disabled:opacity-50">{t("Apply")}</button>
               </PhoneActions>
             </>
           ) : (
@@ -764,7 +769,7 @@ function Inner({ note }: { note: Note }) {
                 <RunButton onRun={run} />
               </PanelBar>
               <CodeEditor lang="js" value={src} onChange={setSrc} onKeyDown={runKey(run)} />
-              <OutputStrip logs={logs} onClear={() => setLogs([])} empty="Output appears here. Every change is kept in History, so you can restore the board." />
+              <OutputStrip logs={logs} onClear={() => setLogs([])} empty={t("Output appears here. Every change is kept in History, so you can restore the board.")} />
               <PhoneActions><RunButton onRun={run} big /></PhoneActions>
             </>
           )}
@@ -783,19 +788,19 @@ function OutlinePicker({ exclude, onPick, onBack }: { exclude: string; onPick: (
   return (
     <>
       <div className="flex items-center gap-2 px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">
-        <button onClick={onBack} className="flex items-center gap-1 normal-case tracking-normal hover:text-ink"><ArrowRight size={11} className="rotate-180" />Convert</button><span className="flex-1" />Note outline → Canvas
+        <button onClick={onBack} className="flex items-center gap-1 normal-case tracking-normal hover:text-ink"><ArrowRight size={11} className="rotate-180" />{t("Convert")}</button><span className="flex-1" />{t("Note outline → Canvas")}
       </div>
       <label className="mx-1 mb-1 flex h-8 items-center gap-2 rounded-[8px] border border-line bg-bg px-2.5 text-muted focus-within:border-accent">
-        <Search size={13} /><input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Which note? (headings become cards)" className="min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-muted"
+        <Search size={13} /><input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Which note? (headings become cards)")} className="min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-muted"
           onKeyDown={(e) => { if (e.key === "Enter" && list[0]) onPick(list[0]); }} />
       </label>
       {list.map((n) => (
-        <button key={n.id} onClick={() => onPick(n)} className="flex h-9 items-center gap-2.5 rounded-[8px] px-2.5 text-left hover:bg-bg">
+        <button key={n.id} onClick={() => onPick(n)} className="flex h-9 items-center gap-2.5 rounded-[8px] px-2.5 text-start hover:bg-bg">
           <FileText size={14} className="shrink-0 text-muted" /><span dir="auto" className="flex-1 truncate">{n.title}</span>
-          <span className="text-[11.5px] text-muted">{(n.body.match(/^#{1,6}\s/gm) ?? []).length} headings</span>
+          <span className="text-[11.5px] text-muted">{t("{n} heading|{n} headings", { n: (n.body.match(/^#{1,6}\s/gm) ?? []).length })}</span>
         </button>
       ))}
-      {!list.length && <span className="px-2.5 py-2 text-[12.5px] text-muted">No note with headings matches.</span>}
+      {!list.length && <span className="px-2.5 py-2 text-[12.5px] text-muted">{t("No note with headings matches.")}</span>}
     </>
   );
 }

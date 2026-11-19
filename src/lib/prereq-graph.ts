@@ -7,11 +7,14 @@
 //    (allowed after asking) · duplicate (nothing happens).
 //  · edgePath(): curved / elbow / straight edges, optionally bundled through a shared gutter between stages, in a
 //    left → right or top → down flow.
+import { isRtl, t, tk } from "./i18n";
 
 /** How a link is written: `needs` (prerequisite), `after` (recommended order), `related` (see also, no order). */
 export type LinkKind = "needs" | "after" | "related";
 export const LINK_KINDS: LinkKind[] = ["needs", "after", "related"];
-export const LINK_LABEL: Record<LinkKind, string> = { needs: "Prerequisite", after: "Recommended order", related: "Related (no order)" };
+export const LINK_LABEL: Record<LinkKind, string> = { needs: tk("Prerequisite"), after: tk("Recommended order"), related: tk("Related (no order)") };
+/** Arrow for "A → B" chains in the interface direction. */
+export const arrow = () => (isRtl() ? " ← " : " → ");
 /** Line pattern per link type (14b · 1). Colour of a prerequisite comes from progress, the others are fixed. */
 export const LINK_DASH: Record<LinkKind | "implied" | "added", string | undefined> = { needs: undefined, after: "6 5", related: "1.5 5", added: "6 5", implied: "2 4" };
 
@@ -62,13 +65,13 @@ export function checkLink(needsOf: Needs, prereq: string, target: string): LinkC
 
 /** One-line explanation for a refused / questioned link (names the existing chain so it can be fixed). */
 export function linkMessage(c: LinkCheck, name: (k: string) => string, prereq: string, target: string): { title: string; body: string } | null {
-  const through = (ks: string[]) => { const mid = ks.slice(1, -1).map(name); return mid.length ? mid.join(" → ") : ""; };
+  const through = (ks: string[]) => { const mid = ks.slice(1, -1).map(name); return mid.length ? mid.join(arrow()) : ""; };
   if (c.kind === "loop") {
-    const t = through(c.chain);
-    return { title: "Would make a loop", body: t ? `${name(target)} is already needed (through ${t}) to reach ${name(prereq)}.` : `${name(prereq)} already needs ${name(target)}.` };
+    const via = through(c.chain);
+    return { title: t("Would make a loop"), body: via ? t("{a} is already needed (through {via}) to reach {b}.", { a: name(target), via, b: name(prereq) }) : t("{a} already needs {b}.", { a: name(prereq), b: name(target) }) };
   }
-  if (c.kind === "implied") return { title: "Already implied", body: `${name(target)} already needs ${name(prereq)} through ${through(c.chain)}. This link adds nothing new.` };
-  if (c.kind === "duplicate") return { title: "Already connected", body: `${name(prereq)} → ${name(target)} exists.` };
+  if (c.kind === "implied") return { title: t("Already implied"), body: t("{a} already needs {b} through {via}. This link adds nothing new.", { a: name(target), b: name(prereq), via: through(c.chain) }) };
+  if (c.kind === "duplicate") return { title: t("Already connected"), body: t("{a} → {b} exists.", { a: name(prereq), b: name(target) }) };
   return null;
 }
 

@@ -1,13 +1,16 @@
 import type { NoteType, Status } from "../../shared/types";
+import { tk } from "./i18n";
+
+// `name` / `hint` are English keys marked with tk() (pickers render them with t()); `title` and `body` become note content.
 
 export interface Template { id: string; name: string; type: NoteType; status?: Status; title: string; body: string; hint: string }
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 export const TEMPLATES: Template[] = [
-  { id: "blank", name: "Blank note", type: "note", title: "Untitled", hint: "Empty page", body: "" },
+  { id: "blank", name: tk("Blank note"), type: "note", title: "Untitled", hint: tk("Empty page"), body: "" },
   {
-    id: "lesson", name: "Lesson", type: "lesson", status: "learning", title: "New lesson", hint: "Objectives, notes, summary, questions",
+    id: "lesson", name: tk("Lesson"), type: "lesson", status: "learning", title: "New lesson", hint: tk("Objectives, notes, summary, questions"),
     body: `## Objectives
 -
 
@@ -26,7 +29,7 @@ Term :: Definition
 `,
   },
   {
-    id: "cornell", name: "Cornell notes", type: "lesson", status: "learning", title: "Cornell notes", hint: "Cues · notes · summary",
+    id: "cornell", name: tk("Cornell notes"), type: "lesson", status: "learning", title: "Cornell notes", hint: tk("Cues · notes · summary"),
     body: `| Cues / questions | Notes |
 |---|---|
 | | |
@@ -37,7 +40,7 @@ Term :: Definition
 `,
   },
   {
-    id: "journal", name: "Daily journal", type: "journal", title: `Journal ${today()}`, hint: "What I learned today",
+    id: "journal", name: tk("Daily journal"), type: "journal", title: `Journal ${today()}`, hint: tk("What I learned today"),
     body: `## Today I learned
 -
 
@@ -51,7 +54,7 @@ Term :: Definition
 `,
   },
   {
-    id: "flashcards", name: "Flashcard deck", type: "flashcards", status: "review", title: "New deck", hint: "Q :: A cards with spaced repetition",
+    id: "flashcards", name: tk("Flashcard deck"), type: "flashcards", status: "review", title: "New deck", hint: tk("Q :: A cards with spaced repetition"),
     body: `What is the derivative of $x^2$? :: $2x$
 Capital of Egypt :: Cairo
 
@@ -61,7 +64,7 @@ SYN → SYN-ACK → ACK
 `,
   },
   {
-    id: "slides", name: "Slide deck", type: "slides", title: "New deck", hint: "--- separates slides",
+    id: "slides", name: tk("Slide deck"), type: "slides", title: "New deck", hint: tk("--- separates slides"),
     body: `# Title slide
 Subtitle
 
@@ -85,7 +88,7 @@ flowchart LR
 `,
   },
   {
-    id: "post", name: "Blog post", type: "post", title: "New post", hint: "Publishable article",
+    id: "post", name: tk("Blog post"), type: "post", title: "New post", hint: tk("Publishable article"),
     body: `> [!abstract] TL;DR
 > One-sentence summary.
 
@@ -99,7 +102,7 @@ flowchart LR
 `,
   },
   {
-    id: "roadmap", name: "Course roadmap", type: "roadmap", title: "Roadmap", hint: "Modules → topics with status & prerequisites",
+    id: "roadmap", name: tk("Course roadmap"), type: "roadmap", title: "Roadmap", hint: tk("Modules → topics with status & prerequisites"),
     body: `## Module 1: Foundations
 - [ ] Topic one
 - [ ] Topic two (needs: Topic one)
@@ -113,7 +116,7 @@ flowchart LR
 `,
   },
   {
-    id: "moc", name: "Map of Content", type: "moc", title: "Topic MOC", hint: "Hub note linking a topic",
+    id: "moc", name: tk("Map of Content"), type: "moc", title: "Topic MOC", hint: tk("Hub note linking a topic"),
     body: `## Overview
 
 
@@ -125,7 +128,7 @@ flowchart LR
 `,
   },
   {
-    id: "meeting", name: "Meeting / class", type: "note", title: `Class ${today()}`, hint: "Attendees, notes, actions",
+    id: "meeting", name: tk("Meeting / class"), type: "note", title: `Class ${today()}`, hint: tk("Attendees, notes, actions"),
     body: `**Date:** ${today()}
 
 ## Notes
@@ -136,7 +139,7 @@ flowchart LR
 `,
   },
   {
-    id: "base", name: "Base (database view)", type: "base", title: "New base", hint: "Table, board, gallery & calendar of notes",
+    id: "base", name: tk("Base (database view)"), type: "base", title: "New base", hint: tk("Table, board, gallery & calendar of notes"),
     body: `Notes shown as a database. Change views with the toolbar, or edit the YAML below (Obsidian Bases format).
 
 \`\`\`base
@@ -157,7 +160,7 @@ views:
 `,
   },
   {
-    id: "base-lessons", name: "Lessons by status × course", type: "base", title: "Lessons by status × course", hint: "Base: board by status, table grouped by course",
+    id: "base-lessons", name: tk("Lessons by status × course"), type: "base", title: "Lessons by status × course", hint: tk("Base: board by status, table grouped by course"),
     body: `Every lesson in one place: drag a card to change its status, group the table by course (space).
 
 \`\`\`base
@@ -201,7 +204,7 @@ views:
 `,
   },
   {
-    id: "dashboard-path", name: "AI Engineer path dashboard", type: "dashboard", title: "AI Engineer path", hint: "Dashboard: study minutes, concepts learned, cards due, heatmap",
+    id: "dashboard-path", name: tk("AI Engineer path dashboard"), type: "dashboard", title: "AI Engineer path", hint: tk("Dashboard: study minutes, concepts learned, cards due, heatmap"),
     body: `Charts over your study sessions, flashcards and newest learning path. Drag a tile's grip to move it, its corner to resize it; edit the YAML below (format: docs/DASHBOARDS.md).
 
 \`\`\`dashboard
@@ -267,19 +270,19 @@ tiles:
 `,
   },
   {
-    id: "whiteboard", name: "Whiteboard", type: "whiteboard", title: "New whiteboard", hint: "Freehand drawing, shapes, stickies (Excalidraw)",
+    id: "whiteboard", name: tk("Whiteboard"), type: "whiteboard", title: "New whiteboard", hint: tk("Freehand drawing, shapes, stickies (Excalidraw)"),
     body: "",
   },
   {
-    id: "canvas", name: "Canvas", type: "canvas", title: "New canvas", hint: "Infinite board (JSON Canvas)",
+    id: "canvas", name: tk("Canvas"), type: "canvas", title: "New canvas", hint: tk("Infinite board (JSON Canvas)"),
     body: JSON.stringify({ nodes: [{ id: "n1", type: "text", text: "# Central idea", x: 0, y: 0, width: 260, height: 120, color: "6" }], edges: [] }, null, 2),
   },
 ];
 
 export const ROADMAP_PRESETS: { name: string; body: string }[] = [
-  { name: "Blank roadmap", body: TEMPLATES.find((t) => t.id === "roadmap")!.body },
+  { name: tk("Blank roadmap"), body: TEMPLATES.find((t) => t.id === "roadmap")!.body },
   {
-    name: "Learn a language",
+    name: tk("Learn a language"),
     body: `## Module 1: Basics
 - [ ] Alphabet & pronunciation
 - [ ] 100 core words (needs: Alphabet & pronunciation)
@@ -297,7 +300,7 @@ export const ROADMAP_PRESETS: { name: string; body: string }[] = [
 `,
   },
   {
-    name: "CS fundamentals",
+    name: tk("CS fundamentals"),
     body: `## Module 1: Programming
 - [ ] Variables, types, control flow
 - [ ] Functions & recursion (needs: Variables, types, control flow)
@@ -321,7 +324,7 @@ export const ROADMAP_PRESETS: { name: string; body: string }[] = [
 `,
   },
   {
-    name: "Web development",
+    name: tk("Web development"),
     body: `## Module 1: Web basics
 - [ ] HTML semantics
 - [ ] CSS layout: flexbox & grid (needs: HTML semantics)

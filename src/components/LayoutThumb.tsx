@@ -31,7 +31,8 @@ export const LAYOUT_THUMBS = Object.keys(M);
 export function LayoutThumb({ kind, scale = 1, style }: { kind: string; scale?: number; style?: CSSProperties }) {
   const rects = M[kind] ?? M["cols-2"];
   return (
-    <div aria-hidden style={{ width: 96 * scale, height: 64 * scale, position: "relative", flexShrink: 0, ...style }}>
+    // mirrored in the Arabic interface: columns, sidebars and asides flow right-to-left there
+    <div aria-hidden className="rtl:-scale-x-100" style={{ width: 96 * scale, height: 64 * scale, position: "relative", flexShrink: 0, ...style }}>
       <div style={{ position: "absolute", left: 0, top: 0, width: 96, height: 64, transform: `scale(${scale})`, transformOrigin: "0 0", borderRadius: 8, background: "var(--bg)", border: "1px solid var(--border)", boxSizing: "border-box", overflow: "hidden" }}>
         {rects.map((r, i) => (
           <span key={i} style={{ position: "absolute", left: r.x, top: r.y, width: r.w, height: r.h, borderRadius: r.r, background: r.f, border: r.b ?? "none", boxSizing: "border-box" }} />

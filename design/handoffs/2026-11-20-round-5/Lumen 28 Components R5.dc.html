@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&family=IBM+Plex+Sans+Arabic:wght@400;600&family=Noto+Naskh+Arabic:wght@400;700&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;padding:80px;display:flex;flex-direction:column;gap:40px;font-family:Inter,system-ui,sans-serif;color:var(--tx);width:1720px;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 28 Component sheet · round 5</span></div><div style="font-size:14px;color:#9A9890">Chat, tutor, language, import and account components. Same tokens as the main sheet.</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start">
+
+    <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:12px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Chat · bubbles, rewrite note, chips</span>
+      <div style="align-self:flex-end;max-width:80%;border-radius:14px;background:var(--sf2);padding:9px 13px;line-height:20px">And how is that different for AdamW?</div>
+      <span style="font-size:12px;color:var(--mu);display:flex;align-items:center;gap:6px"><dc-import name="LumenGlyph" glyph="query" size="{{ 12 }}" hint-size="12px,12px"></dc-import>Searched for: AdamW weight decay vs Adam L2</span>
+      <div style="display:flex;flex-direction:column;gap:8px"><span style="font-family:'Source Serif 4',serif;font-size:15.5px;line-height:26px">AdamW applies weight decay directly to the weights<sup style="font:600 10.5px Inter;color:var(--ln);padding:0 3px;border-radius:4px;background:color-mix(in srgb,var(--ln) 14%,transparent)">1</sup>, not through the gradient.</span><div style="display:flex;gap:10px;font-size:12px;color:var(--mu)"><span>Copy</span><span>Save as note</span><span>Make cards</span></div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ chips }}" as="c" hint-placeholder-count="3"><span style="height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center">{{ c }}</span></sc-for></div>
+      <span style="align-self:flex-start;padding:0 8px;line-height:22px;border-radius:6px;background:color-mix(in srgb,var(--wa) 14%,transparent);color:var(--wa);font-size:12px;font-weight:600">Not from your notes</span></div>
+
+    <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:12px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Tutor · step, question, feedback</span>
+      <div style="border-radius:12px;background:var(--sf);border:1px solid var(--bd);padding:12px;display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;color:var(--mu);font-weight:600">STEP 2 OF 4</span><span style="font-family:'Source Serif 4',serif;font-size:15px;line-height:23px">For z = wx + b, ∂z/∂w is simply x.</span><div style="display:flex;gap:6px"><span style="height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--ac);background:color-mix(in srgb,var(--ac) 12%,transparent);display:flex;align-items:center;font-weight:600">Got it</span><span style="height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center">Explain differently</span><span style="height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center">Example</span></div></div>
+      <div style="border-radius:12px;background:var(--sf);border:1px solid color-mix(in srgb,var(--le) 40%,transparent);padding:12px;display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;color:var(--le);font-weight:600">QUESTION 2 OF 5</span><span>Upstream 4, local 3 — what goes back?</span><div style="height:36px;border-radius:8px;background:var(--bg);border:1px solid var(--bd)"></div></div>
+      <sc-for list="{{ verdicts }}" as="v" hint-placeholder-count="3"><div style="border-radius:10px;background:color-mix(in srgb,{{ v.c }} 9%,transparent);border:1px solid color-mix(in srgb,{{ v.c }} 32%,transparent);padding:8px 12px;display:flex;align-items:center;gap:8px"><dc-import name="LumenGlyph" glyph="{{ v.g }}" size="{{ 14 }}" color="{{ v.c }}" hint-size="14px,14px"></dc-import><b style="color:{{ v.c }};font-weight:600">{{ v.l }}</b><span style="color:var(--mu)">{{ v.d }}</span></div></sc-for></div>
+
+    <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:12px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Hint ladder · clarity bars</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><span style="height:28px;padding:0 10px;border-radius:999px;border:1px solid color-mix(in srgb,var(--le) 45%,transparent);background:color-mix(in srgb,var(--le) 12%,transparent);display:flex;align-items:center">Hint 1 · used</span><span style="height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center">Hint 2</span><span style="height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;color:var(--mu)">Show answer</span></div>
+      <div style="display:flex;align-items:baseline;gap:8px"><span style="font-weight:600;flex:1">Clarity score</span><b style="font-size:20px">72</b><span style="color:var(--mu)">/ 100</span></div>
+      <sc-for list="{{ clar }}" as="c" hint-placeholder-count="4"><div style="display:grid;grid-template-columns:100px 1fr;gap:10px;align-items:center"><span style="color:var(--mu)">{{ c.l }}</span><span style="height:8px;border-radius:4px;background:var(--sf2);overflow:hidden"><span style="display:block;height:100%;width:{{ c.v }};background:{{ c.c }}"></span></span></div></sc-for></div>
+
+    <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:12px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Language switch · digits · RTL</span>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="height:34px;display:flex;align-items:center;justify-content:center;color:var(--mu)">English</span><span style="height:34px;border-radius:8px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'IBM Plex Sans Arabic'">العربية</span><span style="height:34px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Auto</span></div>
+      <div style="display:flex;gap:8px"><span style="flex:1;height:34px;border-radius:8px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:600">41 / 101</span><span style="flex:1;height:34px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;color:var(--mu)">٤١ / ١٠١</span></div>
+      <div dir="rtl" style="border-radius:10px;background:var(--sf);padding:10px 12px;font-family:'IBM Plex Sans Arabic';display:flex;flex-direction:column;gap:6px"><span style="color:var(--mu);font-size:12.5px">مهندس ذكاء اصطناعي ‹ ٠٣ ‹ <span dir="ltr">Backprop, by hand</span></span><span style="height:6px;border-radius:3px;background:var(--sf2);overflow:hidden;display:flex"><span style="width:41%;background:var(--ok)"></span></span><span style="font-size:12px;color:var(--mu)">الشريط يمتلئ من اليمين · السهم ←</span></div></div>
+
+    <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:12px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Import · source card, preview tree</span>
+      <div style="border-radius:12px;border:1.5px solid var(--ac);background:color-mix(in srgb,var(--ac) 6%,var(--sf));padding:12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px"><dc-import name="LumenGlyph" glyph="flashcards" size="{{ 16 }}" color="var(--le)" tile="#B48EF0" hint-size="28px,28px"></dc-import><b style="font-weight:650">Anki deck</b></div><span style="color:var(--mu);font-size:12.5px;line-height:18px">Decks become flashcard notes; review history kept.</span><span style="font:11.5px 'JetBrains Mono',monospace;color:var(--mu)">.apkg · .colpkg</span></div>
+      <div style="border-radius:10px;border:1px solid var(--bd);padding:4px"><sc-for list="{{ tree }}" as="t" hint-placeholder-count="4"><div style="min-height:28px;padding:0 6px;padding-left:{{ t.ind }};display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:4px;background:{{ t.cb }};border:{{ t.cbd }};box-sizing:border-box;color:var(--af);font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center">{{ t.ck }}</span><span style="flex:1">{{ t.n }}</span><span style="display:{{ t.tagS }};padding:0 6px;line-height:18px;border-radius:5px;font-size:11px;background:color-mix(in srgb,var(--wa) 14%,transparent);color:var(--wa)">{{ t.tag }}</span><span style="font-size:11.5px;color:var(--mu)">{{ t.k }}</span></div></sc-for></div></div>
+
+    <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:12px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Account card · Google button · password meter</span>
+      <div style="border-radius:12px;background:var(--sf);border:1px solid var(--bd);padding:12px;display:flex;align-items:center;gap:12px"><span style="width:44px;height:44px;border-radius:50%;background:color-mix(in srgb,#F2A93B 18%,transparent);display:flex;align-items:center;justify-content:center"><dc-import name="LumenGlyph" glyph="owl" size="{{ 22 }}" color="#F2A93B" hint-size="22px,22px"></dc-import></span><div style="flex:1;display:flex;flex-direction:column"><b style="font-weight:600">Amir Hakim</b><span style="font-size:12px;color:var(--mu)">amir@nightshift.dev</span></div><span style="padding:0 7px;line-height:19px;border-radius:999px;background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok);font-size:11.5px;font-weight:600">Verified</span></div>
+      <div style="height:42px;border-radius:999px;background:#FFFFFF;border:1px solid #747775;display:flex;align-items:center;justify-content:center;gap:10px;color:#1F1F1F;font-weight:500"><span style="width:20px;height:20px;border-radius:50%;border:1px solid #DADCE0;display:flex;align-items:center;justify-content:center;font:700 13px Arial;color:#4285F4">G</span>Continue with Google</div>
+      <span style="font-size:12px;color:var(--mu)">Use Google's official multicolour “G” asset and the light/dark/neutral variants per Google's guidelines — the letter here is a placeholder.</span>
+      <sc-for list="{{ meter }}" as="m" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1;display:flex;gap:4px"><sc-for list="{{ m.segs }}" as="s" hint-placeholder-count="4"><span style="flex:1;height:4px;border-radius:2px;background:{{ s }}"></span></sc-for></div><span style="width:56px;font-size:12px;color:{{ m.c }}">{{ m.l }}</span></div></sc-for></div>
+
+    <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:12px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">“Coming soon” card</span>
+      <div style="border-radius:12px;border:1px dashed var(--bd);background:color-mix(in srgb,var(--sf) 50%,transparent);padding:14px;display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:center;gap:10px"><span style="font-weight:600;flex:1;color:var(--mu)">Sign-in and registration</span><span style="padding:0 8px;line-height:20px;border-radius:999px;background:var(--sf2);color:var(--mu);font-size:11.5px;font-weight:600">Coming soon</span></div><span style="color:var(--mu);line-height:19px">Google, email and password, magic link. No buttons until it's live.</span></div>
+      <span style="color:var(--mu);font-size:12.5px;line-height:18px">Dashed border, muted text, no actions, no accent. Use for any feature built behind a switch.</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const chips = ['Explain with an example','Compare with Adam','Make 5 flashcards'];
+    const verdicts = [['Correct','upstream × local = 12','var(--ok)','s-done'],['Partly','right idea, wrong sign','var(--wa)','s-revise'],['Not yet','gradients multiply, not add','var(--da)','c-danger']].map(([l,d,c,g]) => ({ l, d, c, g }));
+    const clar = [['Accuracy','60%','var(--wa)'],['Completeness','55%','var(--wa)'],['Plain words','80%','var(--ok)'],['Structure','90%','var(--ok)']].map(([l,v,c]) => ({ l, v, c }));
+    const cb = s => s==='on' ? { cb:'var(--ac)', cbd:'none', ck:'✓' } : s==='part' ? { cb:'var(--ac)', cbd:'none', ck:'–' } : { cb:'transparent', cbd:'1.5px solid var(--mu)', ck:'' };
+    const tree = [['ML Foundations',0,'612','on'],['Neural nets',1,'260','on'],['Audio drills',1,'80','part','audio'],['Old: GRE words',0,'1,200','off']].map(([n,i,k,s,tag]) => ({ n, ind:(6+i*18)+'px', k, ...cb(s), tag:tag||'', tagS:tag?'inline':'none' }));
+    const meter = [['Weak','var(--da)',1],['Fair','var(--wa)',3],['Strong','var(--ok)',4]].map(([l,c,n]) => ({ l, c, segs:[0,1,2,3].map(i => i<n ? c : 'var(--sf2)') }));
+    return { chips, verdicts, clar, tree, meter };
+  }
+}
+</script>
+</body>
+</html>

@@ -9,6 +9,7 @@ import { renderThumb, type OutlineItem, type PdfDoc } from "../lib/pdf-doc";
 import { allTags, filterHighlights, HL_COLORS, hlCardText, hlHex, sortHighlights, type HlColor, type Highlight } from "../lib/pdf-format";
 import { HL_MIME } from "../lib/pdf-note";
 import { PopMenu } from "./pdf-dialogs";
+import { fmtNum, t, tk, useLang } from "../lib/i18n";
 import { cx } from "./ui";
 
 export type RailTab = "thumbs" | "outline" | "highlights";
@@ -18,13 +19,13 @@ export function PdfRail(p: {
   doc: PdfDoc | null; pages: number; page: number; tab: RailTab; setTab: (t: RailTab) => void; outline: OutlineItem[] | null;
   highlights: Highlight[]; title: string; hitPages: Set<number>; invert: boolean; onPage: (n: number) => void; onHl: (h: Highlight) => void;
 }) {
-  const tabs: [RailTab, string][] = [["thumbs", "Pages"], ["outline", "Outline"], ["highlights", "Highlights"]];
+  const tabs: [RailTab, string][] = [["thumbs", tk("Pages")], ["outline", tk("Outline")], ["highlights", tk("Highlights")]];
   return (
     <div className="pdfr-rail flex h-full min-h-0 flex-col">
       <div role="tablist" className="m-[10px] flex shrink-0 gap-[2px] rounded-[8px] border border-line bg-bg p-[3px] text-[12px]">
         {tabs.map(([v, l]) => (
           <button key={v} role="tab" aria-selected={p.tab === v} onClick={() => p.setTab(v)}
-            className={cx("flex h-6 flex-1 items-center justify-center whitespace-nowrap rounded-[6px]", p.tab === v ? "bg-surface-2 font-semibold text-ink" : "text-muted hover:text-ink")}>{l}</button>
+            className={cx("flex h-6 flex-1 items-center justify-center whitespace-nowrap rounded-[6px]", p.tab === v ? "bg-surface-2 font-semibold text-ink" : "text-muted hover:text-ink")}>{t(l)}</button>
         ))}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -48,6 +49,7 @@ function Thumbs({ doc, pages, page, onPage, hitPages, invert }: { doc: PdfDoc | 
 }
 const thumbCache = new WeakMap<PdfDoc, Map<number, string>>();
 const Thumb = memo(function Thumb({ doc, n, active, hit, invert, onPage, root }: { doc: PdfDoc | null; n: number; active: boolean; hit: boolean; invert: boolean; onPage: (n: number) => void; root: React.RefObject<HTMLDivElement | null> }) {
+  useLang(); // memo: re-render on a language / digits change
   const el = useRef<HTMLButtonElement>(null);
   const [src, setSrc] = useState<string | null>(() => (doc ? thumbCache.get(doc)?.get(n) ?? null : null));
   useEffect(() => {
@@ -66,21 +68,21 @@ const Thumb = memo(function Thumb({ doc, n, active, hit, invert, onPage, root }:
     return () => io.disconnect();
   }, [doc, n, src, root]);
   return (
-    <button ref={el} data-thumb={n} onClick={() => onPage(n)} className="flex flex-col items-center gap-1" aria-label={`Page ${n}`} aria-current={active ? "page" : undefined}>
+    <button ref={el} data-thumb={n} onClick={() => onPage(n)} className="flex flex-col items-center gap-1" aria-label={t("Page {n}", { n })} aria-current={active ? "page" : undefined}>
       <span className={cx("pdfr-thumb relative block w-[110px] overflow-hidden rounded-[2px]", invert && "inverted")}
         style={{ aspectRatio: "612 / 792", boxShadow: active ? "0 0 0 2px var(--accent)" : "0 1px 4px rgba(0,0,0,.3)" }}>
         {src && <img src={src} alt="" className="h-full w-full object-cover object-top" />}
         {hit && <span className="absolute right-1 top-1 size-2 rounded-full bg-accent" />}
       </span>
-      <span className={cx("text-[11px]", active ? "text-accent" : "text-muted")}>{n}</span>
+      <span className={cx("text-[11px] tabular-nums", active ? "text-accent" : "text-muted")}>{fmtNum(n)}</span>
     </button>
   );
 });
 
 // ------------------------------------------------------------------ outline
 function Outline({ items, page, onPage }: { items: OutlineItem[] | null; page: number; onPage: (n: number) => void }) {
-  if (!items) return <div className="p-4 text-[12.5px] text-muted">Reading bookmarks…</div>;
-  if (!items.length) return <div className="p-4 text-[12.5px] leading-5 text-muted">This PDF has no bookmarks. Use the page thumbnails or search instead.</div>;
+  if (!items) return <div className="p-4 text-[12.5px] text-muted">{t("Reading bookmarks…")}</div>;
+  if (!items.length) return <div className="p-4 text-[12.5px] leading-5 text-muted">{t("This PDF has no bookmarks. Use the page thumbnails or search instead.")}</div>;
   let cur = -1;
   items.forEach((it, i) => { if (it.page && it.page <= page) cur = i; });
   return (
@@ -90,7 +92,7 @@ function Outline({ items, page, onPage }: { items: OutlineItem[] | null; page: n
           className={cx("flex min-h-8 items-center gap-2 rounded-[6px] py-1.5 pe-2 text-start text-[12.5px] leading-[17px] hover:bg-surface-2 disabled:opacity-50", i === cur ? "bg-surface-2 font-semibold text-ink" : "text-muted")}
           style={{ paddingInlineStart: 8 + it.depth * 14 }}>
           <span className="min-w-0 flex-1">{it.title}</span>
-          {it.page > 0 && <span className="shrink-0 text-[11px] text-muted">{it.page}</span>}
+          {it.page > 0 && <span className="shrink-0 text-[11px] tabular-nums text-muted">{fmtNum(it.page)}</span>}
         </button>
       ))}
     </div>
@@ -100,12 +102,12 @@ function Outline({ items, page, onPage }: { items: OutlineItem[] | null; page: n
 // ------------------------------------------------------------------ rail: compact highlight cards
 function RailHls({ highlights, title, onHl }: { highlights: Highlight[]; title: string; onHl: (h: Highlight) => void }) {
   const shown = useMemo(() => sortHighlights(highlights, "page"), [highlights]);
-  if (!highlights.length) return <div className="p-4 text-[12.5px] leading-5 text-muted">No highlights yet. Select text on a page and pick a colour, or switch on Area to capture a figure.</div>;
+  if (!highlights.length) return <div className="p-4 text-[12.5px] leading-5 text-muted">{t("No highlights yet. Select text on a page and pick a colour, or switch on Area to capture a figure.")}</div>;
   return (
     <div className="flex flex-col gap-2 px-[10px] pb-3">
       {shown.map((h) => (
-        <DragHl key={h.id} h={h} title={title} onClick={() => onHl(h)} className="flex flex-col gap-1 rounded-[8px] bg-bg px-[10px] py-2 text-start" style={{ borderLeft: `3px solid ${hlHex(h.color)}` }}>
-          <span className="text-[11px] text-muted">p. {h.page}{h.tags.length ? ` · ${h.tags.map((t) => "#" + t).join(" ")}` : ""}</span>
+        <DragHl key={h.id} h={h} title={title} onClick={() => onHl(h)} className="flex flex-col gap-1 rounded-[8px] bg-bg px-[10px] py-2 text-start" style={{ borderInlineStart: `3px solid ${hlHex(h.color)}` }}>
+          <span className="text-[11px] text-muted">{t("p. {n}", { n: h.page })}{h.tags.length ? ` · ${h.tags.map((tg) => "#" + tg).join(" ")}` : ""}</span>
           <HlBody h={h} size={13} lh={18} />
           {h.comment && <span dir="auto" className="text-[12px] text-muted">{h.comment}</span>}
         </DragHl>
@@ -121,7 +123,7 @@ function HlBody({ h, size, lh }: { h: Highlight; size: number; lh: number }) {
 
 function DragHl({ h, title, onClick, className, style, children }: { h: Highlight; title: string; onClick: () => void; className: string; style?: React.CSSProperties; children: React.ReactNode }) {
   return (
-    <button draggable onClick={onClick} className={className} style={style} title="Click to jump · drag onto a canvas to make a card"
+    <button draggable onClick={onClick} className={className} style={style} title={t("Click to jump · drag onto a canvas to make a card")}
       onDragStart={(e) => { e.dataTransfer.setData(HL_MIME, JSON.stringify({ title, h })); e.dataTransfer.setData("text/plain", hlCardText(title, h)); e.dataTransfer.effectAllowed = "copy"; }}>
       {children}
     </button>
@@ -136,20 +138,21 @@ export function HlPanel({ highlights, title, onHl, onAllNote, onExport, sheet }:
   const [menu, setMenu] = useState(false);
   const tags = useMemo(() => allTags(highlights), [highlights]);
   const shown = useMemo(() => sortHighlights(filterHighlights(highlights, { color, tag }), sort), [highlights, color, tag, sort]);
-  const label = (sort === "page" ? "By page" : "Newest first") + (color ? ` · ${color}` : "") + (tag ? ` · #${tag}` : "");
+  const colorName = (c: HlColor) => t(c[0].toUpperCase() + c.slice(1)); // Yellow / Green / Blue / Red / Purple
+  const label = (sort === "page" ? t("By page") : t("Newest first")) + (color ? ` · ${colorName(color)}` : "") + (tag ? ` · #${tag}` : "");
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className={cx("relative flex shrink-0 items-center gap-2 border-b border-line", sheet ? "px-4 pb-3" : "p-[14px]")}>
-        <span className="flex-1 font-semibold">Highlights · {highlights.length}</span>
+        <span className="flex-1 font-semibold">{t("Highlights · {n}", { n: highlights.length })}</span>
         <button onClick={() => setMenu(!menu)} className="flex items-center gap-1 text-[12px] text-muted hover:text-ink" aria-haspopup="menu">{label}<span aria-hidden className="text-[9px]">▾</span></button>
         {menu && (
-          <PopMenu onClose={() => setMenu(false)} className="right-[14px] top-[40px]" items={[
-            { label: "By page", on: sort === "page", run: () => setSort("page") },
-            { label: "Newest first", on: sort === "date", run: () => setSort("date") },
+          <PopMenu onClose={() => setMenu(false)} className="end-[14px] top-[40px]" items={[
+            { label: t("By page"), on: sort === "page", run: () => setSort("page") },
+            { label: t("Newest first"), on: sort === "date", run: () => setSort("date") },
             "-",
-            { label: "All colours", on: !color, run: () => setColor(null) },
-            ...HL_COLORS.map((c) => ({ label: c.name[0].toUpperCase() + c.name.slice(1), swatch: c.hex, on: color === c.name, run: () => setColor(c.name) })),
-            ...(tags.length ? ["-" as const, { label: "All tags", on: !tag, run: () => setTag(null) }, ...tags.map((t) => ({ label: "#" + t, on: tag === t, run: () => setTag(t) }))] : []),
+            { label: t("All colours"), on: !color, run: () => setColor(null) },
+            ...HL_COLORS.map((c) => ({ label: colorName(c.name), swatch: c.hex, on: color === c.name, run: () => setColor(c.name) })),
+            ...(tags.length ? ["-" as const, { label: t("All tags"), on: !tag, run: () => setTag(null) }, ...tags.map((tg) => ({ label: "#" + tg, on: tag === tg, run: () => setTag(tg) }))] : []),
           ]} />
         )}
       </div>
@@ -157,20 +160,20 @@ export function HlPanel({ highlights, title, onHl, onAllNote, onExport, sheet }:
         {shown.map((h) => (
           <DragHl key={h.id} h={h} title={title} onClick={() => onHl(h)} className="flex flex-col gap-[5px] border-b border-line pb-[10px] text-start">
             <span className="flex items-center gap-1.5 text-[11.5px] text-muted">
-              <span className="size-2 rounded-[2px]" style={{ background: hlHex(h.color) }} />p. {h.page}{h.tags.length ? ` · ${h.tags.map((t) => "#" + t).join(" ")}` : ""}
-              <span className="flex-1" />{h.image ? "area" : "text"}
+              <span className="size-2 rounded-[2px]" style={{ background: hlHex(h.color) }} />{t("p. {n}", { n: h.page })}{h.tags.length ? ` · ${h.tags.map((tg) => "#" + tg).join(" ")}` : ""}
+              <span className="flex-1" />{h.image ? t("area") : t("text")}
             </span>
             <HlBody h={h} size={13.5} lh={19} />
             {h.comment && <span dir="auto" className="text-[12.5px] text-muted">{h.comment}</span>}
           </DragHl>
         ))}
         {/* Lumen 21 empty state (the design's "Open reader" action is moot here: this panel lives in the reader) */}
-        {!highlights.length && <EmptyState className="!px-2" glyph="pdf" text="No highlights yet. Select text on a page, or switch on Area to capture a figure." />}
-        {highlights.length > 0 && !shown.length && <div className="py-3 text-[12.5px] text-muted">No highlights match this filter.</div>}
+        {!highlights.length && <EmptyState className="!px-2" glyph="pdf" text={t("No highlights yet. Select text on a page, or switch on Area to capture a figure.")} />}
+        {highlights.length > 0 && !shown.length && <div className="py-3 text-[12.5px] text-muted">{t("No highlights match this filter.")}</div>}
       </div>
       <div className={cx("mt-auto flex shrink-0 flex-col gap-2 border-t border-line py-3", sheet ? "px-4" : "px-[14px]")}>
-        <button disabled={!highlights.length} onClick={onAllNote} className="flex h-[34px] items-center justify-center rounded-[9px] bg-accent font-semibold text-accent-fg disabled:opacity-50">Make a note from all highlights</button>
-        <button disabled={!highlights.length} onClick={onExport} className="flex h-[30px] items-center justify-center text-muted hover:text-ink disabled:opacity-50">Export as Markdown</button>
+        <button disabled={!highlights.length} onClick={onAllNote} className="flex h-[34px] items-center justify-center rounded-[9px] bg-accent font-semibold text-accent-fg disabled:opacity-50">{t("Make a note from all highlights")}</button>
+        <button disabled={!highlights.length} onClick={onExport} className="flex h-[30px] items-center justify-center text-muted hover:text-ink disabled:opacity-50">{t("Export as Markdown")}</button>
       </div>
     </div>
   );

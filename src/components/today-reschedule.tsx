@@ -3,7 +3,9 @@
 // from round 3) changes the window and lists every move.
 import { Minus, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
-import { dayLabel, proposeReschedule, shiftDay, shortDate, type PlanCourse, type PlanSettings } from "../lib/plan";
+import { proposeReschedule, shiftDay, type PlanCourse, type PlanSettings } from "../lib/plan";
+import { t } from "../lib/i18n";
+import { planDayLabel as dayLabel, planShortDate as shortDate } from "./today-item";
 import { toast } from "../lib/store";
 import { Glyph } from "./Glyph";
 import { acceptMoves } from "./today-data";
@@ -18,12 +20,12 @@ export function MissedBanner({ today, settings, courses, missed }: { today: stri
   const days = n ?? Math.min(10, Math.max(2, Math.ceil(base.overdue / Math.max(1, settings.maxNew))));
   const r = useMemo(() => proposeReschedule(today, settings, courses, days), [today, settings, courses, days]);
   if (!r.overdue || hidden) return null;
-  const span = days >= 10 ? "the next 2 weeks" : `the next ${days} study days`;
-  const topics = `${r.overdue} topic${r.overdue === 1 ? " is" : "s are"} overdue.`;
+  const span = days >= 10 ? t("the next 2 weeks") : t("the next {n} study day|the next {n} study days", { n: days });
+  const topics = t("{n} topic is overdue.|{n} topics are overdue.", { n: r.overdue });
   const dismiss = () => { try { localStorage.setItem(dismissKey(today), "1"); } catch { /* ignore */ } setHidden(true); };
   const accept = async () => {
     await acceptMoves(r.moves);
-    toast(`Rescheduled ${r.moves.length} topic${r.moves.length === 1 ? "" : "s"}`);
+    toast(t("Rescheduled {n} topic|Rescheduled {n} topics", { n: r.moves.length }));
     setOpen(false);
   };
   // 14 bars: overdue + the next 13 days
@@ -34,35 +36,35 @@ export function MissedBanner({ today, settings, courses, missed }: { today: stri
   const bars = (vals: number[], color: (i: number) => string, label: string) => (
     <div className="flex flex-1 flex-col gap-1.5">
       <span className="text-[11.5px] text-muted">{label}</span>
-      <div className="flex h-[70px] items-end gap-1 border-b border-line" role="img" aria-label={`${label}: ${vals.join(", ")} lessons per day`}>
+      <div className="flex h-[70px] items-end gap-1 border-b border-line" role="img" aria-label={t("{label}: {values} lessons per day", { label, values: vals.join(t(", ")) })}>
         {vals.map((v, i) => <span key={i} className="flex-1 rounded-t-[3px]" style={{ height: `${(v / max) * 100}%`, background: color(i) }} />)}
       </div>
     </div>
   );
   return (
-    <section aria-label="Missed days" className="today-missed mb-3 flex flex-col gap-3 rounded-[12px] px-4 py-3.5" style={{ border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", background: "color-mix(in srgb, var(--warning) 8%, var(--surface))" }}>
+    <section aria-label={t("Missed days")} className="today-missed mb-3 flex flex-col gap-3 rounded-[12px] px-4 py-3.5" style={{ border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", background: "color-mix(in srgb, var(--warning) 8%, var(--surface))" }}>
       <div className="flex flex-wrap items-center gap-2.5">
         <Glyph name="s-revise" size={17} color="var(--warning)" />
-        <span className="min-w-[200px] flex-1">{missed > 0 && <b className="font-semibold">You missed {missed} study day{missed === 1 ? "" : "s"}. </b>}{topics} Spread them over {span}?</span>
-        <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="text-muted hover:text-ink">Adjust</button>
-        <button onClick={dismiss} className="text-muted hover:text-ink">Not now</button>
-        <button onClick={accept} className="flex h-[30px] items-center rounded-[8px] bg-accent px-3 font-semibold text-accent-fg hover:brightness-110">Accept new dates</button>
+        <span className="min-w-[200px] flex-1">{missed > 0 && <b className="font-semibold">{t("You missed {n} study day.|You missed {n} study days.", { n: missed })} </b>}{topics} {t("Spread them over {span}?", { span })}</span>
+        <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="text-muted hover:text-ink">{t("Adjust")}</button>
+        <button onClick={dismiss} className="text-muted hover:text-ink">{t("Not now")}</button>
+        <button onClick={accept} className="flex h-[30px] items-center rounded-[8px] bg-accent px-3 font-semibold text-accent-fg hover:brightness-110">{t("Accept new dates")}</button>
       </div>
       <div className="hidden items-end gap-6 sm:flex">
-        {bars(before, (i) => (i === 0 ? "var(--danger)" : "color-mix(in srgb, var(--text) 30%, transparent)"), "Before")}
-        {bars(after, () => "color-mix(in srgb, var(--success) 70%, transparent)", "After")}
-        <span className="w-[220px] text-[12px] leading-[17px] text-muted">Dates keep prerequisite order ("after its prerequisite"). Only due dates in roadmaps change.</span>
+        {bars(before, (i) => (i === 0 ? "var(--danger)" : "color-mix(in srgb, var(--text) 30%, transparent)"), t("Before"))}
+        {bars(after, () => "color-mix(in srgb, var(--success) 70%, transparent)", t("After"))}
+        <span className="w-[220px] text-[12px] leading-[17px] text-muted">{t("Dates keep prerequisite order (\"after its prerequisite\"). Only due dates in roadmaps change.")}</span>
       </div>
       {open && (
         <div className="flex flex-col gap-3 border-t border-line pt-3">
           <div className="flex items-center gap-3">
-            <span className="text-[13px] text-muted">Spread over</span>
+            <span className="text-[13px] text-muted">{t("Spread over")}</span>
             <div className="flex items-center rounded-[8px] border border-line">
-              <button aria-label="Fewer days" disabled={days <= 1} onClick={() => setN(Math.max(1, days - 1))} className="flex size-11 items-center justify-center text-muted hover:text-ink disabled:opacity-30 sm:size-8"><Minus size={14} /></button>
-              <span className="min-w-[56px] text-center text-[13px] font-semibold tabular-nums" aria-live="polite">{days} day{days === 1 ? "" : "s"}</span>
-              <button aria-label="More days" disabled={days >= 14} onClick={() => setN(Math.min(14, days + 1))} className="flex size-11 items-center justify-center text-muted hover:text-ink disabled:opacity-30 sm:size-8"><Plus size={14} /></button>
+              <button aria-label={t("Fewer days")} disabled={days <= 1} onClick={() => setN(Math.max(1, days - 1))} className="flex size-11 items-center justify-center text-muted hover:text-ink disabled:opacity-30 sm:size-8"><Minus size={14} /></button>
+              <span className="min-w-[56px] text-center text-[13px] font-semibold tabular-nums" aria-live="polite">{t("{n} day|{n} days", { n: days })}</span>
+              <button aria-label={t("More days")} disabled={days >= 14} onClick={() => setN(Math.min(14, days + 1))} className="flex size-11 items-center justify-center text-muted hover:text-ink disabled:opacity-30 sm:size-8"><Plus size={14} /></button>
             </div>
-            <span className="text-[12px] text-muted">study days only</span>
+            <span className="text-[12px] text-muted">{t("study days only")}</span>
           </div>
           <ul className="flex flex-col gap-1 text-[13px]">
             {r.moves.map((m) => (
@@ -70,8 +72,8 @@ export function MissedBanner({ today, settings, courses, missed }: { today: stri
                 <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: m.color }} />
                 <span dir="auto" className="font-medium">{m.topic}</span>
                 <span dir="auto" className="text-muted">{m.courseTitle}</span>
-                <span className="text-muted tabular-nums">{m.from ? shortDate(m.from) : "no date"} → {shortDate(m.to)} ({dayLabel(today, m.to)})</span>
-                {m.why !== "overdue" && <span className="text-[12px] text-muted">after its prerequisite</span>}
+                <span className="text-muted tabular-nums">{t("{from} → {to}", { from: m.from ? shortDate(m.from) : t("no date"), to: shortDate(m.to) })} ({dayLabel(today, m.to)})</span>
+                {m.why !== "overdue" && <span className="text-[12px] text-muted">{t("after its prerequisite")}</span>}
               </li>
             ))}
           </ul>

@@ -5,6 +5,7 @@
 //    connected notes first and say so, then load the rest on demand.
 import { useSyncExternalStore } from "react";
 import { indexStatus, onIndexStatus, type IndexStatus } from "./search";
+import { t } from "./i18n";
 
 /** A vault this size gets the progressive states. */
 export const BIG_VAULT = 700;
@@ -17,7 +18,7 @@ export const useIndexStatus = (): IndexStatus => useSyncExternalStore(onIndexSta
 
 /** "Indexing 512 / 738" while the search index catches up (null when it is idle or the vault is small enough to be instant). */
 export function indexLabel(s: IndexStatus): string | null {
-  return s.running && s.total - s.done > 20 ? `Indexing ${s.done} / ${s.total}` : null;
+  return s.running && s.total - s.done > 20 ? t("Indexing {done} / {total}", { done: s.done, total: s.total }) : null;
 }
 
 export interface GraphProgress {
@@ -39,7 +40,7 @@ export function graphProgressive(ids: string[], degree: (id: string) => number, 
   const total = ids.length;
   if (all || total < BIG_VAULT || total <= first) return { progressive: false, shown: total, total, label: null, ids };
   const pick = ids.map((id, i) => ({ id, i, d: degree(id) })).sort((a, b) => b.d - a.d || a.i - b.i).slice(0, first).map((x) => x.id);
-  return { progressive: true, shown: pick.length, total, label: `Showing the ${pick.length} most linked of ${total} notes`, ids: pick };
+  return { progressive: true, shown: pick.length, total, label: t("Showing the {shown} most linked of {total} notes", { shown: pick.length, total }), ids: pick };
 }
 
 /** Hook form for GraphView: index status + the progressive pick. */

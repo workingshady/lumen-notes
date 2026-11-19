@@ -14,6 +14,11 @@ import { plainExcerpt } from "../components/nav-text";
 import { cx, STATUS_COLOR } from "../components/ui";
 import { SpaceIcon } from "../components/SpaceIcon";
 import { EdgeSeg, isTidyKey, LineSample, Seg, Switch, TidyBanner, TidyButton, type EdgeShape, type TidyStats } from "../components/graph-display";
+import { fmtNum, t, tk } from "../lib/i18n";
+
+/** Learning status / note type / colour-by labels (the ids are stored values). */
+const KEY_NAME: Record<string, string> = { todo: tk("Todo"), learning: tk("Learning"), review: tk("Review"), mastered: tk("Mastered"), none: tk("No status"), moc: tk("Map of content"), folder: tk("Folder"), type: tk("Type"), status: tk("Status"), compact: tk("Compact"), roomy: tk("Roomy") };
+const keyName = (k: string) => (KEY_NAME[k] ? t(KEY_NAME[k]) : k.charAt(0).toUpperCase() + k.slice(1));
 
 type GNode = SimulationNodeDatum & { id: string; label: string; kind: "note" | "tag"; note?: Note; deg: number; color: string };
 /** `tag`: note -> tag-node edge; `shared`: dashed edge between two notes that share a tag (design 04 D6). */
@@ -71,7 +76,7 @@ function DepthSlider({ value, onChange, disabled }: { value: number; onChange: (
     <div className="relative h-4">
       <div className="absolute inset-x-0 top-1.5 h-1 rounded-[2px] bg-surface-2"><span className="absolute inset-y-0 left-0 rounded-[2px] bg-ink opacity-70" style={{ width: `${pct}%` }} /></div>
       <span className="pointer-events-none absolute top-0 -ml-2 size-4 rounded-full bg-ink" style={{ left: `${pct}%` }} />
-      <input type="range" min={1} max={3} step={1} value={value} disabled={disabled} aria-label="Local graph depth" onChange={(e) => onChange(Number(e.target.value))} className="absolute inset-0 w-full cursor-pointer opacity-0 disabled:cursor-default" />
+      <input type="range" min={1} max={3} step={1} value={value} disabled={disabled} aria-label={t("Local graph depth")} onChange={(e) => onChange(Number(e.target.value))} className="absolute inset-0 w-full cursor-pointer opacity-0 disabled:cursor-default" />
     </div>
   );
 }
@@ -169,8 +174,8 @@ export function GraphView({ localTo }: { localTo?: string }) {
     const folderKeys = [...count.keys()].filter((k) => !k.startsWith("@")).sort((a, b) => (v.folderMap.get(a)?.name ?? "").localeCompare(v.folderMap.get(b)?.name ?? ""));
     const colorOfKey = (k: string) => colorBy === "status" ? STATUS_C[k] ?? STATUS_C.none : colorBy === "type" ? TYPE_C[k] ?? "#9AA0AA"
       : k === "@moc" ? MOC_C : k === "@journal" ? JOURNAL_C : k === "@root" ? "#4B5260" : v.folderMap.get(k)?.color ?? FOLDER_PAL[folderKeys.indexOf(k) % FOLDER_PAL.length];
-    const nameOf = (k: string) => colorBy !== "folder" ? (k === "none" ? "No status" : k === "moc" ? "Map of content" : k.charAt(0).toUpperCase() + k.slice(1))
-      : k === "@moc" ? "Map of content" : k === "@journal" ? "Journal" : k === "@root" ? "Unfiled" : v.folderMap.get(k)?.name ?? k;
+    const nameOf = (k: string) => colorBy !== "folder" ? keyName(k)
+      : k === "@moc" ? t("Map of content") : k === "@journal" ? t("Journal") : k === "@root" ? t("Unfiled") : v.folderMap.get(k)?.name ?? k;
     const order = colorBy === "folder" ? [...folderKeys, "@root", "@moc", "@journal"] : colorBy === "status" ? ["todo", "learning", "review", "mastered", "none"] : Object.keys(TYPE_C);
     const legend = order.filter((k) => count.has(k)).map((k) => ({ k, n: nameOf(k), c: colorOfKey(k), count: count.get(k)! }));
     // "@orphans" (Checks › Orphans) keeps only notes with no link in or out.
@@ -232,7 +237,7 @@ export function GraphView({ localTo }: { localTo?: string }) {
     const r = tidy(input, edges, { mode, dir: "TB", spacing: disp.spacing === "roomy" ? 1.6 : 1, layerGap: 70, nodeGap: 14, center: local ? center : selId, keepPinned: disp.keepPinned });
     const prev = new Map(ns.map((n) => [n.id, { x: n.x ?? 0, y: n.y ?? 0 }]));
     a.moveTo(r.pos, true);
-    const label = choice === "top" ? "top-down" : choice === "radial" ? "radial" : "free";
+    const label = choice === "top" ? t("top-down") : choice === "radial" ? t("radial") : t("free");
     setPreview({ stats: { ...r, label }, prev, prevFrozen: fz, next: { pos: r.pos, pinned: new Set(disp.keepPinned ? fz?.pinned ?? [] : []) }, layout: choice });
   };
   const cancelTidy = () => { if (!preview) return; api.current?.moveTo(preview.prev, !!preview.prevFrozen); setPreview(null); };
@@ -243,7 +248,7 @@ export function GraphView({ localTo }: { localTo?: string }) {
     FROZEN.set(key, next);
     setDisp({ layout });
     setPreview(null);
-    toast(`Tidied up · ${stats.moved} card${stats.moved === 1 ? "" : "s"} moved`, { label: "Undo", run: () => {
+    toast(t("Tidied up · {n} card moved|Tidied up · {n} cards moved", { n: stats.moved }), { label: t("Undo"), run: () => {
       api.current?.moveTo(prev, !!prevFrozen);
       if (prevFrozen) FROZEN.set(key, prevFrozen); else FROZEN.delete(key);
     } });
@@ -258,7 +263,7 @@ export function GraphView({ localTo }: { localTo?: string }) {
     const cur = new Map((a?.nodes() ?? []).map((n) => [n.id, { x: n.x ?? 0, y: n.y ?? 0 }]));
     FROZEN.delete(viewKey);
     a?.moveTo(cur, false);
-    toast("Free layout · physics on", { label: "Undo", run: () => { FROZEN.set(viewKey, fz); a?.moveTo(fz.pos, true); setDisp({ layout: "top" }); } });
+    toast(t("Free layout · physics on"), { label: t("Undo"), run: () => { FROZEN.set(viewKey, fz); a?.moveTo(fz.pos, true); setDisp({ layout: "top" }); } });
   };
   const reset = () => {
     setDispRaw(DISPLAY_DEFAULT); ls.set(DISPLAY_KEY, JSON.stringify(DISPLAY_DEFAULT)); ls.set(TAGS_KEY, "off");
@@ -283,26 +288,26 @@ export function GraphView({ localTo }: { localTo?: string }) {
     <>
       <div className="flex items-center gap-1.5 text-[12px] text-muted">
         <span className="size-2 shrink-0 rounded-[3px]" style={{ background: sel.color }} />
-        <span className="truncate">{folderOf(selNote)}<span className="md:hidden"> · {sel.deg} links</span></span>
+        <span className="truncate"><bdi>{folderOf(selNote)}</bdi><span className="md:hidden"> · {t("{n} link|{n} links", { n: sel.deg })}</span></span>
         <span className="hidden flex-1 md:inline" />
         {selNote.status && (
-          <span className="hidden items-center gap-1 capitalize md:flex" style={{ color: STATUS_COLOR[selNote.status] }}>
-            <span className="size-1.5 rounded-full" style={{ background: STATUS_COLOR[selNote.status] }} />{selNote.status}
+          <span className="hidden items-center gap-1 md:flex" style={{ color: STATUS_COLOR[selNote.status] }}>
+            <span className="size-1.5 rounded-full" style={{ background: STATUS_COLOR[selNote.status] }} />{keyName(selNote.status)}
           </span>
         )}
       </div>
       <span dir="auto" className="text-[17px] font-[650] md:text-[15px]">{selNote.title}</span>
-      <span dir="auto" className="line-clamp-2 text-[13.5px] leading-5 text-muted md:text-[12.5px] md:leading-[19px]">{plainExcerpt(selNote.body, 90) || "Empty note"}</span>
+      <span dir="auto" className="line-clamp-2 text-[13.5px] leading-5 text-muted md:text-[12.5px] md:leading-[19px]">{plainExcerpt(selNote.body, 90) || t("Empty note")}</span>
     </>
   );
 
   const tagCard = selTag && sel && (
     <>
-      <div className="flex items-center gap-1.5 text-[12px] text-muted"><TagDot size={12} />Tag · {sel.deg} notes</div>
+      <div className="flex items-center gap-1.5 text-[12px] text-muted"><TagDot size={12} />{t("Tag")} · {t("{n} note|{n} notes", { n: sel.deg })}</div>
       <span dir="auto" className="text-[17px] font-[650] md:text-[15px]">#{selTag}</span>
       <div className="mt-0.5 flex items-center gap-2 pb-1">
-        <button onClick={() => go("notes", { tag: selTag, spaceId: "all", folderId: null, filter: null, noteId: null })} className="flex h-11 flex-1 items-center justify-center rounded-[8px] border border-line bg-bg px-3 font-medium hover:border-accent md:h-[30px] md:flex-none">Show notes</button>
-        <button onClick={() => { setQ(`tag:#${selTag}`); setSelId(null); }} className="flex h-11 flex-1 items-center justify-center rounded-[8px] border border-line px-3 hover:bg-surface md:h-[30px] md:flex-none">Filter graph</button>
+        <button onClick={() => go("notes", { tag: selTag, spaceId: "all", folderId: null, filter: null, noteId: null })} className="flex h-11 flex-1 items-center justify-center rounded-[8px] border border-line bg-bg px-3 font-medium hover:border-accent md:h-[30px] md:flex-none">{t("Show notes")}</button>
+        <button onClick={() => { setQ(`tag:#${selTag}`); setSelId(null); }} className="flex h-11 flex-1 items-center justify-center rounded-[8px] border border-line px-3 hover:bg-surface md:h-[30px] md:flex-none">{t("Filter graph")}</button>
       </div>
     </>
   );
@@ -320,29 +325,29 @@ export function GraphView({ localTo }: { localTo?: string }) {
 
   const label = "text-[12px] text-muted";
   const linkRows: [keyof Display, ReactNode, string, string | undefined, number, number][] = [
-    ["links", "Links", "var(--muted)", undefined, 1.5, linkCount],
-    ["tagNodes", "Note to tag", TAG_C, "4 4", 1.5, graph.tagEdges],
-    ["shared", "Shared tags", TAG_C, "1.5 4", 2, graph.sharedEdges],
+    ["links", t("Links"), "var(--muted)", undefined, 1.5, linkCount],
+    ["tagNodes", t("Note to tag"), TAG_C, "4 4", 1.5, graph.tagEdges],
+    ["shared", t("Shared tags"), TAG_C, "1.5 4", 2, graph.sharedEdges],
   ];
   const checkRows = checks && (
-    <div className="flex flex-col gap-[7px] border-t border-line pt-3" aria-label="Connection checks">
-      <span className={label}>Checks</span>
-      <button onClick={() => setIso((x) => (x === "@orphans" ? null : "@orphans"))} title={iso === "@orphans" ? "Show all" : "Show only notes with no links"} className={cx("flex items-center gap-2 text-left leading-4", iso === "@orphans" && "text-accent")}>
-        <span className={cx("size-2.5 shrink-0 rounded-full border-[1.5px]", checks.orphans.length ? "border-warn" : "border-ok")} /><span className="flex-1">Orphans · no links</span><span className="text-[12px] text-muted">{checks.orphans.length}</span>
+    <div className="flex flex-col gap-[7px] border-t border-line pt-3" aria-label={t("Connection checks")}>
+      <span className={label}>{t("Checks")}</span>
+      <button onClick={() => setIso((x) => (x === "@orphans" ? null : "@orphans"))} title={iso === "@orphans" ? t("Show all") : t("Show only notes with no links")} className={cx("flex items-center gap-2 text-start leading-4", iso === "@orphans" && "text-accent")}>
+        <span className={cx("size-2.5 shrink-0 rounded-full border-[1.5px]", checks.orphans.length ? "border-warn" : "border-ok")} /><span className="flex-1">{t("Orphans · no links")}</span><span className="text-[12px] text-muted">{checks.orphans.length}</span>
       </button>
-      <button onClick={() => setShowBroken((b) => !b)} aria-expanded={showBroken} className="flex items-center gap-2 text-left leading-4">
-        <span className={cx("size-2.5 shrink-0 rounded-full border-[1.5px]", checks.broken.length ? "border-bad" : "border-ok")} /><span className="flex-1">Broken links</span><span className="text-[12px] text-muted">{checks.broken.length}</span>
+      <button onClick={() => setShowBroken((b) => !b)} aria-expanded={showBroken} className="flex items-center gap-2 text-start leading-4">
+        <span className={cx("size-2.5 shrink-0 rounded-full border-[1.5px]", checks.broken.length ? "border-bad" : "border-ok")} /><span className="flex-1">{t("Broken links")}</span><span className="text-[12px] text-muted">{checks.broken.length}</span>
       </button>
       {showBroken && (checks.broken.length ? (
         <div className="flex max-h-40 flex-col gap-0.5 overflow-y-auto rounded-[8px] border border-line bg-bg p-1">
           {checks.broken.slice(0, 50).map((b, i) => (
-            <button key={i} onClick={() => openNote(b.note.id)} title={`Open “${b.note.title}”`} className="flex flex-col rounded-[6px] px-2 py-1 text-left hover:bg-surface-2">
+            <button key={i} onClick={() => openNote(b.note.id)} title={t("Open “{title}”", { title: b.note.title })} className="flex flex-col rounded-[6px] px-2 py-1 text-start hover:bg-surface-2">
               <span dir="auto" className="truncate text-[12.5px]">{b.note.title}</span>
-              <span dir="auto" className="truncate font-mono text-[11px] text-bad">[[{b.target}]]</span>
+              <span dir="ltr" className="truncate text-start font-mono text-[11px] text-bad">[[{b.target}]]</span>
             </button>
           ))}
         </div>
-      ) : <span className="text-[12px] text-muted">Every [[link]] points to a note.</span>)}
+      ) : <span className="text-[12px] text-muted">{t("Every [[link]] points to a note.")}</span>)}
     </div>
   );
 
@@ -350,31 +355,31 @@ export function GraphView({ localTo }: { localTo?: string }) {
     <div className="flex flex-col gap-3.5 overflow-y-auto px-3.5 py-3">
       <label className="flex h-8 shrink-0 items-center gap-2 rounded-[6px] border border-line bg-bg px-2.5 text-muted focus-within:border-accent">
         <Search size={13} className="shrink-0" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter… tag:#math" className="min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-muted" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Filter… tag:#math")} className="min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-muted" />
       </label>
       <div className="flex flex-col gap-2.5">
-        <Switch label="Tags as nodes" on={disp.tagNodes} onChange={(x) => setDisp({ tagNodes: x })} />
-        <Switch label="Orphans" on={orphans} onChange={setOrphans} />
-        <Switch label="Journal notes" on={journal} onChange={setJournal} />
+        <Switch label={t("Tags as nodes")} on={disp.tagNodes} onChange={(x) => setDisp({ tagNodes: x })} />
+        <Switch label={t("Orphans")} on={orphans} onChange={setOrphans} />
+        <Switch label={t("Journal notes")} on={journal} onChange={setJournal} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <span className={label}>Colour by</span>
-        <Seg label="Colour by" value={colorBy} onChange={(c) => { setColorBy(c); setIso(null); }} options={(["folder", "type", "status"] as ColorBy[]).map((c) => [c, <span className="capitalize">{c}</span>])} />
+        <span className={label}>{t("Colour by")}</span>
+        <Seg label={t("Colour by")} value={colorBy} onChange={(c) => { setColorBy(c); setIso(null); }} options={(["folder", "type", "status"] as ColorBy[]).map((c) => [c, <span>{keyName(c)}</span>])} />
       </div>
       <div className="flex flex-col gap-2">
-        <div className="flex justify-between text-[12px]"><span className="text-muted">Local graph depth</span><span className="tabular-nums">{depth}</span></div>
+        <div className="flex justify-between text-[12px]"><span className="text-muted">{t("Local graph depth")}</span><span className="tabular-nums">{fmtNum(depth)}</span></div>
         <DepthSlider value={depth} onChange={(d) => { setDepth(d); if (!local && (selId ?? center)) showLocal((selId ?? center)!); }} />
       </div>
       <div className="flex flex-col gap-1.5 border-t border-line pt-3">
-        <span className={label}>Layout</span>
-        <Seg label="Layout" value={disp.layout} onChange={chooseLayout} h={26} options={[["free", "Free"], ["top", "Top-down"], ["radial", "Radial"]]} />
+        <span className={label}>{t("Layout")}</span>
+        <Seg label={t("Layout")} value={disp.layout} onChange={chooseLayout} h={26} options={[["free", t("Free")], ["top", t("Top-down")], ["radial", t("Radial")]]} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <span className={label}>Edges</span>
+        <span className={label}>{t("Edges")}</span>
         <EdgeSeg value={disp.edges} onChange={(e) => setDisp({ edges: e })} />
       </div>
-      <div className="flex flex-col gap-0.5" aria-label="Show links">
-        <span className={cx(label, "pb-1")}>Show links</span>
+      <div className="flex flex-col gap-0.5" aria-label={t("Show links")}>
+        <span className={cx(label, "pb-1")}>{t("Show links")}</span>
         {linkRows.map(([k, l, c, dash, w, n]) => (
           <div key={k} className="flex h-8 items-center">
             <Switch label={<><LineSample color={c} dash={dash} width={w} /><span className="truncate">{l}</span></>} right={<span className="text-[12px] text-muted">{disp[k] ? n : ""}</span>} on={!!disp[k]} onChange={(x) => setDisp({ [k]: x } as Partial<Display>)} />
@@ -382,22 +387,22 @@ export function GraphView({ localTo }: { localTo?: string }) {
         ))}
       </div>
       <div className="flex flex-col gap-0.5 border-t border-line pt-3">
-        <span className={cx(label, "pb-1")}>Declutter</span>
-        <div className="flex h-8 items-center"><Switch label="Dim notes outside focus" on={disp.dim} onChange={(x) => setDisp({ dim: x })} /></div>
-        <div className="flex h-8 items-center"><Switch label="Keep pinned notes" on={disp.keepPinned} onChange={(x) => setDisp({ keepPinned: x })} /></div>
+        <span className={cx(label, "pb-1")}>{t("Declutter")}</span>
+        <div className="flex h-8 items-center"><Switch label={t("Dim notes outside focus")} on={disp.dim} onChange={(x) => setDisp({ dim: x })} /></div>
+        <div className="flex h-8 items-center"><Switch label={t("Keep pinned notes")} on={disp.keepPinned} onChange={(x) => setDisp({ keepPinned: x })} /></div>
         <div className="flex h-8 items-center gap-2.5">
-          <span className="flex-1">Spacing</span>
+          <span className="flex-1">{t("Spacing")}</span>
           <div className="flex gap-0.5 rounded-[7px] border border-line bg-bg p-0.5 text-[12px]">
-            {(["compact", "roomy"] as const).map((s) => <button key={s} onClick={() => setDisp({ spacing: s })} aria-pressed={disp.spacing === s} className={cx("flex h-[22px] items-center rounded-[5px] px-2 capitalize", disp.spacing === s ? "bg-surface-2 font-semibold" : "text-muted hover:text-ink")}>{s}</button>)}
+            {(["compact", "roomy"] as const).map((s) => <button key={s} onClick={() => setDisp({ spacing: s })} aria-pressed={disp.spacing === s} className={cx("flex h-[22px] items-center rounded-[5px] px-2", disp.spacing === s ? "bg-surface-2 font-semibold" : "text-muted hover:text-ink")}>{keyName(s)}</button>)}
           </div>
         </div>
       </div>
       {checkRows}
       <div className="flex flex-col gap-[7px] border-t border-line pt-3">
-        {tagsOn && disp.tagNodes && <span className="flex items-center gap-2 leading-4"><span className="flex w-2.5 justify-center"><TagDot size={12} /></span><span className="flex-1">Tag</span></span>}
+        {tagsOn && disp.tagNodes && <span className="flex items-center gap-2 leading-4"><span className="flex w-2.5 justify-center"><TagDot size={12} /></span><span className="flex-1">{t("Tag")}</span></span>}
         {graph.legend.map((l) => (
-          <button key={l.k} onClick={() => setIso((x) => (x === l.k ? null : l.k))} title={iso === l.k ? "Show all" : "Isolate"} className={cx("flex items-center gap-2 text-left leading-4", iso && iso !== l.k && "opacity-40")}>
-            <span className="size-2.5 shrink-0 rounded-full" style={{ background: l.c }} /><span className="flex-1 truncate">{l.n}</span><span className="text-[12px] text-muted">{l.count}</span>
+          <button key={l.k} onClick={() => setIso((x) => (x === l.k ? null : l.k))} title={iso === l.k ? t("Show all") : t("Isolate")} className={cx("flex items-center gap-2 text-start leading-4", iso && iso !== l.k && "opacity-40")}>
+            <span className="size-2.5 shrink-0 rounded-full" style={{ background: l.c }} /><span className="flex-1 truncate" dir="auto">{l.n}</span><span className="text-[12px] text-muted">{fmtNum(l.count)}</span>
           </button>
         ))}
       </div>
@@ -410,19 +415,19 @@ export function GraphView({ localTo }: { localTo?: string }) {
   );
   const phoneSheet = (
     <div className="absolute inset-x-0 bottom-0 z-30 flex max-h-[85%] flex-col rounded-t-[14px] border-t border-line bg-surface text-[14px] sheet-in">
-      <div className="flex justify-center pt-2.5"><button aria-label="Close display" onClick={togglePanel} className="h-1 w-9 rounded-full bg-line" /></div>
+      <div className="flex justify-center pt-2.5"><button aria-label={t("Close display")} onClick={togglePanel} className="h-1 w-9 rounded-full bg-line" /></div>
       <div className="flex min-h-0 flex-col gap-3 overflow-y-auto px-4 pt-3">
-        <span className="text-[16px] font-[650]">Display</span>
+        <span className="text-[16px] font-[650]">{t("Display")}</span>
         <EdgeSeg big value={disp.edges} onChange={(e) => setDisp({ edges: e })} />
         <div className="flex flex-wrap gap-2">
-          {chip(disp.links, "Links", () => setDisp({ links: !disp.links }), "var(--info)")}
-          {chip(disp.tagNodes, "Tags as nodes", () => setDisp({ tagNodes: !disp.tagNodes }), "var(--link)")}
-          {chip(disp.shared, "Shared tags", () => setDisp({ shared: !disp.shared }), "var(--link)")}
-          {chip(orphans, "Orphans", () => setOrphans(!orphans))}
-          {chip(journal, "Journal", () => setJournal(!journal))}
+          {chip(disp.links, t("Links"), () => setDisp({ links: !disp.links }), "var(--info)")}
+          {chip(disp.tagNodes, t("Tags as nodes"), () => setDisp({ tagNodes: !disp.tagNodes }), "var(--link)")}
+          {chip(disp.shared, t("Shared tags"), () => setDisp({ shared: !disp.shared }), "var(--link)")}
+          {chip(orphans, t("Orphans"), () => setOrphans(!orphans))}
+          {chip(journal, t("Journal"), () => setJournal(!journal))}
         </div>
         <TidyButton big onClick={() => { togglePanel(); startTidy(); }} busy={!!preview} />
-        <button onClick={() => setMore((m) => !m)} aria-expanded={more} className="flex h-10 items-center gap-1.5 text-[13px] text-muted">{more ? <ChevronUp size={14} /> : <ChevronDown size={14} />}More: filter, colour, layout, checks</button>
+        <button onClick={() => setMore((m) => !m)} aria-expanded={more} className="flex h-10 items-center gap-1.5 text-[13px] text-muted">{more ? <ChevronUp size={14} /> : <ChevronDown size={14} />}{t("More: filter, colour, layout, checks")}</button>
         {more && <div className="-mx-3.5 border-t border-line text-[13px] [&>div]:pb-2">{panelBody}</div>}
       </div>
       <div className="flex h-6 shrink-0 items-center justify-center safe-b"><span className="h-1 w-[108px] rounded-full bg-muted opacity-45" /></div>
@@ -434,13 +439,13 @@ export function GraphView({ localTo }: { localTo?: string }) {
       {/* Phone header: back · Graph · Global / Local · display */}
       {phone && !embedded && (
         <div className="safe-t relative z-20 flex h-14 shrink-0 items-center gap-2 px-2">
-          <button aria-label="Back" onClick={leave} className="flex size-11 items-center justify-center"><ArrowLeft size={20} /></button>
-          <span className="flex-1 text-[17px] font-[650]">Graph</span>
+          <button aria-label={t("Back")} onClick={leave} className="flex size-11 items-center justify-center"><ArrowLeft size={20} /></button>
+          <span className="flex-1 text-[17px] font-[650]">{t("Graph")}</span>
           <div className="flex rounded-[10px] border border-line bg-surface p-[3px] text-[13px]">
-            <button onClick={() => { setLocal(false); setFocusId(null); }} className={cx("flex h-8 items-center rounded-[7px] px-3", !local ? "bg-surface-2 font-semibold" : "text-muted")}>Global</button>
-            <button onClick={() => { const id = selId ?? center; if (id) showLocal(id); }} className={cx("flex h-8 items-center rounded-[7px] px-3", local ? "bg-surface-2 font-semibold" : "text-muted")}>Local · {depth}</button>
+            <button onClick={() => { setLocal(false); setFocusId(null); }} className={cx("flex h-8 items-center rounded-[7px] px-3", !local ? "bg-surface-2 font-semibold" : "text-muted")}>{t("Global")}</button>
+            <button onClick={() => { const id = selId ?? center; if (id) showLocal(id); }} className={cx("flex h-8 items-center rounded-[7px] px-3", local ? "bg-surface-2 font-semibold" : "text-muted")}>{t("Local · {n}", { n: depth })}</button>
           </div>
-          <button aria-label="Graph display settings" onClick={togglePanel} className={cx("flex size-11 items-center justify-center", open && "text-accent")}><SlidersHorizontal size={20} /></button>
+          <button aria-label={t("Graph display settings")} onClick={togglePanel} className={cx("flex size-11 items-center justify-center", open && "text-accent")}><SlidersHorizontal size={20} /></button>
         </div>
       )}
       <div className={cx("relative overflow-hidden", phone && !embedded ? "min-h-0 flex-1" : "h-full")}>
@@ -451,18 +456,18 @@ export function GraphView({ localTo }: { localTo?: string }) {
         {/* Desktop / tablet header */}
         {!embedded && !phone && (
           <div className="absolute left-5 top-4 z-10 flex items-center gap-2.5">
-            <span className="text-[16px] font-[650]">Graph</span>
+            <span className="text-[16px] font-[650]">{t("Graph")}</span>
             {ui.spaceId !== "all" && !local && width >= 1100 && (
               <div className="relative">
                 <button onClick={() => setSpaceMenu((m) => !m)} className="flex h-7 items-center gap-1.5 rounded-[8px] border border-line bg-surface px-2.5 text-muted hover:text-ink">
-                  {!allSpaces && <SpaceIcon space={space} size={15} />}<span>{allSpaces ? "All spaces" : "This space"}</span><ChevronDown size={12} />
+                  {!allSpaces && <SpaceIcon space={space} size={15} />}<span>{allSpaces ? t("All spaces") : t("This space")}</span><ChevronDown size={12} />
                 </button>
                 {spaceMenu && (
                   <>
                     <div className="fixed inset-0 z-20" onClick={() => setSpaceMenu(false)} />
                     <div className="absolute left-0 top-9 z-30 flex w-48 flex-col gap-px rounded-[12px] border border-line bg-surface-2 p-1.5 shadow-[0_16px_40px_rgba(0,0,0,.45)] fade-in">
-                      {[["This space", false], ["All spaces", true]].map(([l, a]) => (
-                        <button key={l as string} onClick={() => { setAllSpaces(a as boolean); setSpaceMenu(false); }} className={cx("flex h-8 items-center gap-2 rounded-[8px] px-2.5 text-left hover:bg-bg", allSpaces === a && "font-semibold")}>
+                      {[[t("This space"), false], [t("All spaces"), true]].map(([l, a]) => (
+                        <button key={l as string} onClick={() => { setAllSpaces(a as boolean); setSpaceMenu(false); }} className={cx("flex h-8 items-center gap-2 rounded-[8px] px-2.5 text-start hover:bg-bg", allSpaces === a && "font-semibold")}>
                           {!a && <SpaceIcon space={space} size={15} />}{a ? l : `${space?.name ?? l}`}
                         </button>
                       ))}
@@ -471,10 +476,10 @@ export function GraphView({ localTo }: { localTo?: string }) {
                 )}
               </div>
             )}
-            {local && <button onClick={() => { setLocal(false); setFocusId(null); }} className="flex h-7 items-center gap-1.5 rounded-[8px] border border-line bg-surface px-2.5 text-muted hover:text-ink"><Locate size={12} /> Local · {depth}<X size={12} /></button>}
-            <span className="text-[12px] text-muted">{graph.notes} notes · {linkCount} links{tagsOn ? ` · ${graph.tagEdges + graph.sharedEdges} tag links` : ""}</span>
-            {graph.progress && <span className="flex items-center gap-2 text-[12px] text-muted">· {graph.progress}<button onClick={() => setShowAll(true)} className="flex h-6 items-center rounded-[7px] border border-line px-2 text-ink hover:bg-surface-2">Show all</button></span>}
-            {showAll && !local && <button onClick={() => setShowAll(false)} className="flex h-6 items-center rounded-[7px] border border-line px-2 text-[12px] text-muted hover:text-ink">Most linked only</button>}
+            {local && <button onClick={() => { setLocal(false); setFocusId(null); }} className="flex h-7 items-center gap-1.5 rounded-[8px] border border-line bg-surface px-2.5 text-muted hover:text-ink"><Locate size={12} /> {t("Local · {n}", { n: depth })}<X size={12} /></button>}
+            <span className="text-[12px] text-muted">{t("{n} note|{n} notes", { n: graph.notes })} · {t("{n} link|{n} links", { n: linkCount })}{tagsOn ? ` · ${t("{n} tag link|{n} tag links", { n: graph.tagEdges + graph.sharedEdges })}` : ""}</span>
+            {graph.progress && <span className="flex items-center gap-2 text-[12px] text-muted">· {graph.progress}<button onClick={() => setShowAll(true)} className="flex h-6 items-center rounded-[7px] border border-line px-2 text-ink hover:bg-surface-2">{t("Show all")}</button></span>}
+            {showAll && !local && <button onClick={() => setShowAll(false)} className="flex h-6 items-center rounded-[7px] border border-line px-2 text-[12px] text-muted hover:text-ink">{t("Most linked only")}</button>}
             {indexing && <span className="flex items-center gap-1.5 text-[12px] text-muted"><span className="size-[7px] rounded-full bg-info" />{indexing}</span>}
           </div>
         )}
@@ -487,18 +492,18 @@ export function GraphView({ localTo }: { localTo?: string }) {
             <div className="absolute z-10 hidden w-[268px] flex-col gap-2 rounded-[14px] border border-line bg-surface-2 p-3.5 shadow-[0_16px_40px_rgba(0,0,0,.45)] md:flex fade-in" style={cardStyle}>
               {card}
               <div className="mt-0.5 flex items-center gap-2">
-                <button onClick={() => openNote(selNote!.id)} className="flex h-[30px] items-center rounded-[8px] border border-line bg-bg px-3 font-medium hover:border-accent">Open</button>
-                <button onClick={() => showLocal(selNote!.id)} className="flex h-[30px] items-center gap-1.5 rounded-[8px] border border-line px-3 hover:bg-surface"><Locate size={13} />Local graph</button>
+                <button onClick={() => openNote(selNote!.id)} className="flex h-[30px] items-center rounded-[8px] border border-line bg-bg px-3 font-medium hover:border-accent">{t("Open")}</button>
+                <button onClick={() => showLocal(selNote!.id)} className="flex h-[30px] items-center gap-1.5 rounded-[8px] border border-line px-3 hover:bg-surface"><Locate size={13} />{t("Local graph")}</button>
                 <span className="flex-1" />
-                <span className="text-[12px] text-muted">{sel!.deg} links</span>
+                <span className="text-[12px] text-muted">{t("{n} link|{n} links", { n: sel!.deg })}</span>
               </div>
             </div>
             <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col gap-2.5 rounded-t-[14px] border-t border-line bg-surface px-5 pt-2.5 safe-b md:hidden sheet-in">
-              <div className="flex justify-center"><button aria-label="Close preview" onClick={() => setSelId(null)} className="h-1 w-9 rounded-full bg-line" /></div>
+              <div className="flex justify-center"><button aria-label={t("Close preview")} onClick={() => setSelId(null)} className="h-1 w-9 rounded-full bg-line" /></div>
               {card}
               <div className="flex gap-2.5 pb-2 pt-1">
-                <button onClick={() => openNote(selNote!.id)} className="flex h-12 flex-1 items-center justify-center rounded-[12px] bg-accent font-semibold text-accent-fg">Open note</button>
-                <button aria-label="Local graph" onClick={() => showLocal(selNote!.id)} className="flex size-12 items-center justify-center rounded-[12px] border border-line"><Locate size={18} /></button>
+                <button onClick={() => openNote(selNote!.id)} className="flex h-12 flex-1 items-center justify-center rounded-[12px] bg-accent font-semibold text-accent-fg">{t("Open note")}</button>
+                <button aria-label={t("Local graph")} onClick={() => showLocal(selNote!.id)} className="flex size-12 items-center justify-center rounded-[12px] border border-line"><Locate size={18} /></button>
               </div>
               <div className="flex h-6 items-center justify-center"><span className="h-1 w-[108px] rounded-full bg-muted opacity-45" /></div>
             </div>
@@ -509,7 +514,7 @@ export function GraphView({ localTo }: { localTo?: string }) {
           <>
             <div className="absolute z-10 hidden w-[268px] flex-col gap-2 rounded-[14px] border border-line bg-surface-2 p-3.5 shadow-[0_16px_40px_rgba(0,0,0,.45)] md:flex fade-in" style={cardStyle}>{tagCard}</div>
             <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col gap-2.5 rounded-t-[14px] border-t border-line bg-surface px-5 pb-4 pt-2.5 safe-b md:hidden sheet-in">
-              <div className="flex justify-center"><button aria-label="Close preview" onClick={() => setSelId(null)} className="h-1 w-9 rounded-full bg-line" /></div>
+              <div className="flex justify-center"><button aria-label={t("Close preview")} onClick={() => setSelId(null)} className="h-1 w-9 rounded-full bg-line" /></div>
               {tagCard}
             </div>
           </>
@@ -521,15 +526,15 @@ export function GraphView({ localTo }: { localTo?: string }) {
             {open ? (
               <div className="mt-1 flex max-h-[calc(100vh-120px)] w-[272px] flex-col overflow-hidden rounded-[14px] border border-line bg-surface fade-in">
                 <div className="flex h-11 shrink-0 items-center gap-2 border-b border-line pl-3.5 pr-2.5">
-                  <SlidersHorizontal size={14} className="text-muted" /><span className="flex-1 font-semibold">Display</span>
-                  <button onClick={reset} className="px-1 text-[12px] text-muted hover:text-ink">Reset</button>
-                  <button aria-label="Collapse display" onClick={togglePanel} className="text-muted hover:text-ink"><ChevronUp size={15} /></button>
+                  <SlidersHorizontal size={14} className="text-muted" /><span className="flex-1 font-semibold">{t("Display")}</span>
+                  <button onClick={reset} className="px-1 text-[12px] text-muted hover:text-ink">{t("Reset")}</button>
+                  <button aria-label={t("Collapse display")} onClick={togglePanel} className="text-muted hover:text-ink"><ChevronUp size={15} /></button>
                 </div>
                 {panelBody}
                 <div className="flex shrink-0 flex-col border-t border-line p-3.5"><TidyButton onClick={() => startTidy()} busy={!!preview} /></div>
               </div>
             ) : (
-              <button aria-label="Graph display settings" title="Display" onClick={togglePanel} className="flex size-11 items-center justify-center rounded-[12px] border border-line bg-surface hover:text-accent">
+              <button aria-label={t("Graph display settings")} title={t("Display")} onClick={togglePanel} className="flex size-11 items-center justify-center rounded-[12px] border border-line bg-surface hover:text-accent">
                 <SlidersHorizontal size={18} />
               </button>
             )}
@@ -540,8 +545,8 @@ export function GraphView({ localTo }: { localTo?: string }) {
         {/* Link / Tag legend (20b) when tag links are on and the panel is closed */}
         {tagsOn && !open && !embedded && !(phone && (card || tagCard)) && (
           <div className={cx("absolute left-3 z-10 flex flex-col gap-1 rounded-[8px] bg-bg px-2 py-1.5 text-[11.5px] text-muted", phone ? "bottom-16" : "bottom-[60px]")}>
-            <span className="flex items-center gap-1.5"><span className="h-[1.5px] w-4 bg-muted" />Link</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 border-t-[1.5px] border-dashed border-link" />Tag</span>
+            <span className="flex items-center gap-1.5"><span className="h-[1.5px] w-4 bg-muted" />{t("Link")}</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 border-t-[1.5px] border-dashed border-link" />{t("Tag")}</span>
           </div>
         )}
 
@@ -549,9 +554,9 @@ export function GraphView({ localTo }: { localTo?: string }) {
         {!open && !embedded && !(phone && card) && (
           <div className={cx("absolute right-4 z-10 flex flex-wrap gap-1.5", "bottom-4 left-4", card && "md:hidden")}>
             {graph.legend.map((l) => (
-              <button key={l.k} onClick={() => setIso((x) => (x === l.k ? null : l.k))} title={iso === l.k ? "Show all" : "Isolate"}
+              <button key={l.k} onClick={() => setIso((x) => (x === l.k ? null : l.k))} title={iso === l.k ? t("Show all") : t("Isolate")}
                 className={cx("flex h-7 items-center gap-1.5 rounded-full border bg-surface px-2.5 text-[12px]", iso === l.k ? "border-accent" : "border-line", iso && iso !== l.k && "opacity-50")}>
-                <span className="size-2 rounded-full" style={{ background: l.c }} />{l.n}
+                <span className="size-2 rounded-full" style={{ background: l.c }} /><bdi>{l.n}</bdi>
               </button>
             ))}
           </div>
@@ -629,7 +634,7 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
     const shown = links.filter((l) => l.tag || l.shared || showLinks).map((l) => ({ a: byId.get(idOf(l.source)), b: byId.get(idOf(l.target)), tag: !!(l.tag || l.shared) })).filter((l): l is { a: GNode; b: GNode; tag: boolean } => !!l.a && !!l.b);
     const linkC = paint("var(--link)");
     openExport({
-      name: focus ? `graph-${byId.get(focus)?.label ?? "local"}` : "graph", title: "Export graph", themable: true,
+      name: focus ? `graph-${byId.get(focus)?.label ?? "local"}` : "graph", title: t("Export graph"), themable: true,
       build: async (pr) => {
         const r = await graphSvg(
           // Labels: only the most connected nodes (top 30 %, at least 3 links) so a dense graph stays readable.
@@ -924,15 +929,15 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
       />
       {controls && (
         <div className="absolute bottom-4 left-4 z-10 hidden gap-0.5 rounded-[10px] border border-line bg-surface p-[3px] md:flex">
-          {([["Zoom in", <Plus size={14} />, () => zoomBy(1.25)], ["Zoom out", <Minus size={14} />, () => zoomBy(0.8)], ["Fit", <Scan size={14} />, fit], ["Export image (SVG, PNG, JPEG, WebP)", <ImageDown size={14} />, exportImage]] as const).map(([l, i, f]) => (
+          {([[t("Zoom in"), <Plus size={14} />, () => zoomBy(1.25)], [t("Zoom out"), <Minus size={14} />, () => zoomBy(0.8)], [t("Fit"), <Scan size={14} />, fit], [t("Export image (SVG, PNG, JPEG, WebP)"), <ImageDown size={14} />, exportImage]] as const).map(([l, i, f]) => (
             <button key={l} aria-label={l} title={l} onClick={f} className="flex h-7 w-[30px] items-center justify-center rounded-[7px] text-ink hover:bg-surface-2">{i}</button>
           ))}
         </div>
       )}
       {!onSelect && hover?.note && (
         <div className={cx("pointer-events-none absolute bottom-4 left-4 max-w-xs rounded-[12px] border border-line bg-surface-2 p-3 text-[12.5px] shadow-xl fade-in")}>
-          <div className="font-semibold">{hover.note.title}</div>
-          <div className="text-muted">{hover.note.type}{hover.note.status ? ` · ${hover.note.status}` : ""} · {hover.deg} links</div>
+          <div className="font-semibold" dir="auto">{hover.note.title}</div>
+          <div className="text-muted">{hover.note.type}{hover.note.status ? ` · ${keyName(hover.note.status)}` : ""} · {t("{n} link|{n} links", { n: hover.deg })}</div>
           <div className="mt-1 line-clamp-3 text-muted">{hover.note.body.slice(0, 200)}</div>
         </div>
       )}

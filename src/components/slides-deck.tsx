@@ -8,7 +8,10 @@ import { updateNote } from "../lib/actions";
 import { autoSplit, moveSlide, planSlide, setSlideDirectives, type DeckSlide, type SplitAt } from "../lib/deck";
 import { setUI } from "../lib/store";
 import { Glyph } from "./Glyph";
-import { SlideFrame, SlideThumb, LAYOUT_LABELS, variantOf, type Variant } from "./SlideThumb";
+import { fmtNum, t, tk, tx } from "../lib/i18n";
+import { SlideFrame, SlideThumb, LAYOUT_LABELS, layoutLabel, variantOf, type Variant } from "./SlideThumb";
+
+const VARIANT_LABEL: Record<Variant, string> = { normal: tk("Normal"), invert: tk("Invert"), accent: tk("Accent") };
 import { SlideStage, type BoxPos } from "./Slides";
 import { cx } from "./ui";
 
@@ -50,9 +53,9 @@ export function OverviewGrid({ note, slides, i, onPick, className }: { note: Pic
   return (
     <div ref={ref} className={cx("grid content-start", className)} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap }}>
       {w > 0 && slides.map((s, k) => (
-        <button key={k} ref={k === i ? cur : undefined} onClick={(e) => { e.stopPropagation(); onPick(k); }} className="flex flex-col gap-1.5 text-left">
+        <button key={k} ref={k === i ? cur : undefined} onClick={(e) => { e.stopPropagation(); onPick(k); }} className="flex flex-col gap-1.5 text-start">
           <LiveSlide note={note} slide={s} width={tw} selected={k === i} />
-          <span className="text-[12px]" style={{ color: k === i ? "var(--accent)" : "var(--muted)" }}>{k + 1}{k === i ? " · current" : ""}</span>
+          <span className="text-[12px]" style={{ color: k === i ? "var(--accent)" : "var(--muted)" }}>{k === i ? t("{n} · current", { n: k + 1 }) : fmtNum(k + 1)}</span>
         </button>
       ))}
     </div>
@@ -80,27 +83,27 @@ export function DocToDeckDialog({ note, slides, split, onSplit, onPresent, onSav
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg text-[13px] text-ink">
       <div className="absolute inset-0 bg-[rgba(5,6,8,.6)]" onClick={onClose} />
-      <div role="dialog" aria-label="Make slides" className="relative flex h-[700px] max-h-[calc(100dvh-32px)] w-[1060px] max-w-[calc(100vw-32px)] flex-col overflow-hidden rounded-[14px] border border-line bg-surface">
+      <div role="dialog" aria-label={t("Make slides")} className="relative flex h-[700px] max-h-[calc(100dvh-32px)] w-[1060px] max-w-[calc(100vw-32px)] flex-col overflow-hidden rounded-[14px] border border-line bg-surface">
         <div className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-4">
           <Glyph name="slides" size={18} />
-          <span className="min-w-0 flex-1 truncate text-[17px] font-[650]" dir="auto">Make slides from “{note.title}”</span>
-          <span className="text-muted">Split at</span>
-          <div className="flex gap-0.5 rounded-[8px] border border-line bg-bg p-[3px] text-[12px]">{opt("h1", "# H1")}{opt("h2", "## H2")}{opt("hr", "---")}</div>
+          <span className="min-w-0 flex-1 truncate text-[17px] font-[650]">{tx("Make slides from “{title}”", { title: <bdi dir="auto">{note.title}</bdi> })}</span>
+          <span className="text-muted">{t("Split at")}</span>
+          <div dir="ltr" className="flex gap-0.5 rounded-[8px] border border-line bg-bg p-[3px] text-[12px]">{opt("h1", "# H1")}{opt("h2", "## H2")}{opt("hr", "---")}</div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           <div ref={ref} className="grid content-start" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap }}>
             {w > 0 && slides.map((s, k) => (
               <div key={k} className="flex flex-col gap-1.5">
                 <LiveSlide note={note} slide={s} width={tw} />
-                <span className="text-[12px] text-muted">{k + 1} · {layoutOf(s) || "default"}</span>
+                <span className="text-[12px] text-muted">{fmtNum(k + 1)} · {layoutLabel(layoutOf(s) || "default")}</span>
               </div>
             ))}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2.5 border-t border-line px-5 py-3.5">
-          <span className="min-w-0 flex-1 text-muted">{slides.length} slide{slides.length === 1 ? "" : "s"} · layouts picked from content · the note is not changed</span>
-          <button onClick={onPresent} className="flex h-[34px] items-center px-3.5 text-muted hover:text-ink">Present without saving</button>
-          <button onClick={onSave} className="flex h-[34px] items-center rounded-[10px] bg-accent px-4 font-semibold text-accent-fg hover:brightness-110">Save as deck</button>
+          <span className="min-w-0 flex-1 text-muted">{t("{n} slide|{n} slides", { n: slides.length })} · {t("layouts picked from content · the note is not changed")}</span>
+          <button onClick={onPresent} className="flex h-[34px] items-center px-3.5 text-muted hover:text-ink">{t("Present without saving")}</button>
+          <button onClick={onSave} className="flex h-[34px] items-center rounded-[10px] bg-accent px-4 font-semibold text-accent-fg hover:brightness-110">{t("Save as deck")}</button>
         </div>
       </div>
     </div>
@@ -158,17 +161,17 @@ export function DeckWorkspace({ note, slides, i, setI, tab, setTab, onPresent, w
     return () => ro.disconnect();
   }, [tab]);
 
-  const seg = (t: DeckTab | "edit", l: string) => (
-    <button key={t} onClick={() => (t === "edit" ? setUI({ mode: "edit" }) : setTab(t))} className={cx("flex h-6 items-center px-2.5", tab === t ? "rounded-[6px] bg-surface-2 font-semibold text-ink" : "text-muted hover:text-ink")}>{l}</button>
+  const seg = (id: DeckTab | "edit", l: string) => (
+    <button key={id} onClick={() => (id === "edit" ? setUI({ mode: "edit" }) : setTab(id))} className={cx("flex h-6 items-center px-2.5", tab === id ? "rounded-[6px] bg-surface-2 font-semibold text-ink" : "text-muted hover:text-ink")}>{l}</button>
   );
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg text-[13px] text-ink">
       <div className="flex h-12 shrink-0 items-center gap-2.5 border-b border-line px-5">
         <span className="min-w-0 truncate font-semibold" dir="auto">{note.title}</span>
-        <span className="shrink-0 text-muted">{n} slide{n === 1 ? "" : "s"}</span>
+        <span className="shrink-0 text-muted">{t("{n} slide|{n} slides", { n })}</span>
         <span className="flex-1" />
-        <div className="flex gap-0.5 rounded-[9px] border border-line bg-surface p-[3px] text-[12px]">{seg("edit", "Edit")}{seg("arrange", "Arrange")}{seg("overview", "Overview")}</div>
-        <button onClick={onPresent} title="Present (P)" className="flex h-8 items-center rounded-[9px] bg-accent px-3.5 font-semibold text-accent-fg hover:brightness-110">Present</button>
+        <div className="flex gap-0.5 rounded-[9px] border border-line bg-surface p-[3px] text-[12px]">{seg("edit", t("Edit"))}{seg("arrange", t("Arrange"))}{seg("overview", t("Overview"))}</div>
+        <button onClick={onPresent} title={t("Present (P)")} className="flex h-8 items-center rounded-[9px] bg-accent px-3.5 font-semibold text-accent-fg hover:brightness-110">{t("Present")}</button>
       </div>
       {tab === "overview" ? (
         <div className="min-h-0 flex-1 overflow-y-auto px-[60px] py-12">
@@ -186,26 +189,26 @@ export function DeckWorkspace({ note, slides, i, setI, tab, setTab, onPresent, w
               </SlideFrame>
             )}
           </div>
-          <div className="hidden w-[329px] shrink-0 flex-col gap-3 overflow-y-auto border-l border-line bg-surface p-3.5 lg:flex">
-            <span className="font-semibold">Layout · slide {i + 1}</span>
+          <div className="hidden w-[329px] shrink-0 flex-col gap-3 overflow-y-auto border-s border-line bg-surface p-3.5 lg:flex">
+            <span className="font-semibold">{t("Layout · slide {n}", { n: i + 1 })}</span>
             <div className="grid grid-cols-3 gap-2">
               {LAYOUT_LABELS.map(([k, l]) => (
                 <button key={k} onClick={() => pickLayout(k)} title={`<!-- layout: ${k} -->`} className="flex flex-col items-center gap-1">
                   <SlideThumb layout={k} width={84} selected={layout === k} />
-                  <span className="text-[11px]" style={{ color: layout === k ? "var(--accent)" : "var(--muted)" }}>{l}</span>
+                  <span className="text-[11px]" style={{ color: layout === k ? "var(--accent)" : "var(--muted)" }}>{t(l)}</span>
                 </button>
               ))}
             </div>
-            <span className="pt-1.5 text-[12px] text-muted">Style</span>
+            <span className="pt-1.5 text-[12px] text-muted">{t("Style")}</span>
             <div className="grid grid-cols-3 gap-0.5 rounded-[8px] border border-line bg-bg p-[3px] text-[12px]">
               {(["normal", "invert", "accent"] as const).map((v) => (
-                <button key={v} onClick={() => pickVariant(v)} className={cx("flex h-[26px] items-center justify-center capitalize", variant === v ? "rounded-[6px] bg-surface-2 font-semibold" : "text-muted hover:text-ink")}>{v}</button>
+                <button key={v} onClick={() => pickVariant(v)} className={cx("flex h-[26px] items-center justify-center", variant === v ? "rounded-[6px] bg-surface-2 font-semibold" : "text-muted hover:text-ink")}>{t(VARIANT_LABEL[v])}</button>
               ))}
             </div>
-            <span className="text-[12px] leading-[17px] text-muted">Writes &lt;!-- layout: {layout || "two-cols"} --&gt; above the slide. Drag thumbnails to reorder; the amber line shows the drop.</span>
-            <span className="mt-2 border-t border-line pt-3 text-[12px] text-muted">Boxes</span>
-            <span className="text-[12px] leading-[17px] text-muted">{hasBoxes ? "Drag a box on the slide to move it; corners resize. Amber guides snap to the centre and other boxes (hold Alt to place freely)." : "Place text or an image anywhere on this slide."}</span>
-            <button onClick={addBox} className="flex h-8 items-center justify-center gap-1.5 rounded-[8px] border border-line hover:bg-surface-2"><Plus size={14} />Add box</button>
+            <span className="text-[12px] leading-[17px] text-muted">{tx("Writes {code} above the slide. Drag thumbnails to reorder; the amber line shows the drop.", { code: <bdi dir="ltr">&lt;!-- layout: {layout || "two-cols"} --&gt;</bdi> })}</span>
+            <span className="mt-2 border-t border-line pt-3 text-[12px] text-muted">{t("Boxes")}</span>
+            <span className="text-[12px] leading-[17px] text-muted">{hasBoxes ? t("Drag a box on the slide to move it; corners resize. Amber guides snap to the centre and other boxes (hold Alt to place freely).") : t("Place text or an image anywhere on this slide.")}</span>
+            <button onClick={addBox} className="flex h-8 items-center justify-center gap-1.5 rounded-[8px] border border-line hover:bg-surface-2"><Plus size={14} />{t("Add box")}</button>
           </div>
         </div>
       )}
@@ -241,14 +244,14 @@ function Rail({ note, slides, i, setI }: { note: Note; slides: DeckSlide[]; i: n
     addEventListener("pointermove", move);
     addEventListener("pointerup", up);
   };
-  const line = <div className="ml-[26px] h-0.5 shrink-0 rounded-[1px] bg-accent" />;
+  const line = <div className="ms-[26px] h-0.5 shrink-0 rounded-[1px] bg-accent" />;
   return (
-    <div className="hidden w-[245px] shrink-0 flex-col gap-2.5 overflow-y-auto border-r border-line p-3 md:flex" style={{ touchAction: "none" }}>
+    <div className="hidden w-[245px] shrink-0 flex-col gap-2.5 overflow-y-auto border-e border-line p-3 md:flex" style={{ touchAction: "none" }}>
       {drag && drag.ins === 0 && drag.from !== 0 && line}
       {slides.map((s, k) => (
         <div key={k} className="contents">
           <div ref={(el) => { rows.current[k] = el; }} onPointerDown={(e) => down(e, k)} className="flex cursor-grab select-none items-start gap-2">
-            <span className="w-[18px] shrink-0 pt-1 text-right text-[11px] text-muted">{k + 1}</span>
+            <span className="w-[18px] shrink-0 pt-1 text-end text-[11px] text-muted">{fmtNum(k + 1)}</span>
             <div className="relative">
               <LiveSlide note={note} slide={s} width={168} selected={k === i} />
               {drag?.from === k && <span className="absolute inset-0 rounded-[6px] bg-[rgba(242,169,59,.06)]" style={{ outline: "2px dashed var(--accent)", outlineOffset: -2 }} />}

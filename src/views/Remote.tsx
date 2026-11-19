@@ -5,6 +5,9 @@ import { SlideFrame } from "../components/SlideThumb";
 import { useWidth } from "../components/slides-deck";
 import { clock, elapsedOf, prettyCode, wsUrl, type DeckCmd, type DeckState } from "../components/study-remote-link";
 import { API_BASE } from "../lib/api";
+import { digits, t, tk } from "../lib/i18n";
+
+const DEVICE: Record<string, string> = { laptop: tk("laptop"), tablet: tk("tablet"), desktop: tk("desktop") };
 
 /**
  * /remote/<code>            phone remote for a desktop presenter (WebSocket via the SlidesRemote Durable Object)
@@ -27,10 +30,10 @@ function EnterCode() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-5 bg-[#0A0C0F] p-6 text-ink">
       <Smartphone size={28} className="text-accent" />
-      <div className="flex flex-col items-center gap-1 text-center"><span className="text-[20px] font-[650]">Phone remote</span><span className="text-[14px] text-muted">Enter the code shown on the presenter screen.</span></div>
-      <input autoFocus value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && clean.length === 8) nav(`/remote/${clean}`); }} maxLength={9} placeholder="ABCD-2345" inputMode="text" autoCapitalize="characters"
+      <div className="flex flex-col items-center gap-1 text-center"><span className="text-[20px] font-[650]">{t("Phone remote")}</span><span className="text-[14px] text-muted">{t("Enter the code shown on the presenter screen.")}</span></div>
+      <input autoFocus value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && clean.length === 8) nav(`/remote/${clean}`); }} maxLength={9} placeholder="ABCD-2345" dir="ltr" inputMode="text" autoCapitalize="characters"
         className="h-14 w-full max-w-[280px] rounded-[12px] border border-line bg-surface text-center font-mono text-[24px] tracking-[.12em] uppercase placeholder:text-muted/50 focus:border-accent focus:outline-none" />
-      <button disabled={clean.length !== 8} onClick={() => nav(`/remote/${clean}`)} className="h-[52px] w-full max-w-[280px] rounded-[12px] bg-accent font-semibold text-accent-fg disabled:opacity-40">Connect</button>
+      <button disabled={clean.length !== 8} onClick={() => nav(`/remote/${clean}`)} className="h-[52px] w-full max-w-[280px] rounded-[12px] bg-accent font-semibold text-accent-fg disabled:opacity-40">{t("Connect")}</button>
     </div>
   );
 }
@@ -92,7 +95,7 @@ function PhoneRemote({ code }: { code: string }) {
     return () => removeEventListener("keydown", k);
   });
 
-  const status = conn === "missing" ? "No presentation with this code" : conn === "offline" ? "Offline · retrying" : conn === "connecting" ? "Connecting…" : conn === "presenter-away" ? "Presenter disconnected" : "";
+  const status = conn === "missing" ? t("No presentation with this code") : conn === "offline" ? t("Offline · retrying") : conn === "connecting" ? t("Connecting…") : conn === "presenter-away" ? t("Presenter disconnected") : "";
   const live = conn === "live" && st;
   const btn = "text-[12px] text-muted hover:text-ink disabled:opacity-40";
   return (
@@ -101,9 +104,9 @@ function PhoneRemote({ code }: { code: string }) {
       <div className="safe-t h-8 shrink-0" />
       <div className="flex shrink-0 items-center gap-2.5 px-5 py-3">
         <span className="size-2 shrink-0 rounded-full" style={{ background: live ? "var(--success)" : conn === "missing" ? "var(--danger)" : "var(--warning)" }} />
-        <span className="min-w-0 flex-1 truncate font-semibold" dir="auto" title={`Pairing code ${prettyCode(code)}`}>{status || `Remote · ${st?.device ?? "laptop"}`}</span>
-        <button disabled={!live} onClick={() => send("timer")} onDoubleClick={() => send("timer-reset")} title={st?.pausedAt ? "Resume timer (double-click resets)" : "Pause timer (double-click resets)"}
-          className={`font-mono text-[15px] font-medium tabular-nums ${st?.pausedAt ? "text-muted" : ""}`}>{st ? clock(elapsedOf(st)) : "00:00"}</button>
+        <span className="min-w-0 flex-1 truncate font-semibold" dir="auto" title={t("Pairing code {code}", { code: prettyCode(code) })}>{status || t("Remote · {device}", { device: t(DEVICE[st?.device ?? "laptop"] ?? st?.device ?? "laptop") })}</span>
+        <button disabled={!live} onClick={() => send("timer")} onDoubleClick={() => send("timer-reset")} title={st?.pausedAt ? t("Resume timer (double-click resets)") : t("Pause timer (double-click resets)")}
+          className={`font-mono text-[15px] font-medium tabular-nums ${st?.pausedAt ? "text-muted" : ""}`}>{digits(st ? clock(elapsedOf(st)) : "00:00")}</button>
       </div>
       <div className="flex shrink-0 flex-col gap-2.5 px-4"
         onTouchStart={(e) => (touch.current = { x: e.touches[0].clientX, t: Date.now() })}
@@ -124,18 +127,18 @@ function PhoneRemote({ code }: { code: string }) {
                   send(e.clientX - r.left < r.width / 3 ? "prev" : "next");
                 }}>
                 <SlideStage key={st.i + st.md} note={{ id: st.noteId, spaceId: st.spaceId }} md={st.md} dirs={st.dirs} blank={st.blank} frameless bare onZoom={(src, alt) => setZoom({ src, alt })} />
-                {st.blank && <span className="absolute inset-0 flex items-center justify-center gap-2 text-[13px] text-muted"><EyeOff size={15} />Screen blanked</span>}
+                {st.blank && <span className="absolute inset-0 flex items-center justify-center gap-2 text-[13px] text-muted"><EyeOff size={15} />{t("Screen blanked")}</span>}
               </div>
             </SlideFrame>
           ) : (
-            <div className="flex aspect-video w-full items-center justify-center rounded-[12px] border border-line bg-bg px-6 text-center text-muted">{status || "Waiting for the presenter…"}</div>
+            <div className="flex aspect-video w-full items-center justify-center rounded-[12px] border border-line bg-bg px-6 text-center text-muted">{status || t("Waiting for the presenter…")}</div>
           )}
         </div>
         <div className="flex items-center gap-3">
-          <span className="flex-1 text-[12px] text-muted">{st ? (st.i < st.n - 1 ? "Next" : "Last slide") : "Next"}</span>
-          {st && <span className="text-[12px] tabular-nums text-muted">{st.i + 1} / {st.n}</span>}
-          <button disabled={!live} onClick={() => send("blank")} aria-pressed={!!st?.blank} className={btn} style={st?.blank ? { color: "var(--accent)" } : undefined}>{st?.blank ? "Unblank" : "Blank"}</button>
-          <button onClick={() => nav("/")} className={btn}>Leave</button>
+          <span className="flex-1 text-[12px] text-muted">{st && st.i >= st.n - 1 ? t("Last slide") : t("Next")}</span>
+          {st && <span className="text-[12px] tabular-nums text-muted">{t("{i} / {n}", { i: st.i + 1, n: st.n })}</span>}
+          <button disabled={!live} onClick={() => send("blank")} aria-pressed={!!st?.blank} className={btn} style={st?.blank ? { color: "var(--accent)" } : undefined}>{st?.blank ? t("Unblank") : t("Blank@@screen")}</button>
+          <button onClick={() => nav("/")} className={btn}>{t("Leave")}</button>
         </div>
         {st && st.i < st.n - 1 && (
           st.nextMd !== undefined
@@ -144,11 +147,11 @@ function PhoneRemote({ code }: { code: string }) {
         )}
       </div>
       <div className="mx-4 mt-3.5 min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap rounded-[12px] bg-surface p-3.5 text-[15px] leading-[23px]" dir="auto">
-        {st?.notes || <span className="text-muted">{st ? "No speaker notes on this slide." : "Speaker notes appear here."}</span>}
+        {st?.notes || <span className="text-muted">{st ? t("No speaker notes on this slide.") : t("Speaker notes appear here.")}</span>}
       </div>
-      <div className="grid shrink-0 grid-cols-[1fr_2fr] gap-2.5 p-4">
-        <button aria-label="Previous slide" disabled={!live || st!.i === 0} onClick={() => send("prev")} className="flex h-[72px] items-center justify-center rounded-[14px] border border-line text-[22px] active:bg-surface-2 disabled:opacity-40">←</button>
-        <button aria-label="Next slide" disabled={!live || st!.i >= st!.n - 1} onClick={() => send("next")} className="flex h-[72px] items-center justify-center rounded-[14px] bg-accent text-[22px] font-bold text-accent-fg active:brightness-110 disabled:opacity-40">→</button>
+      <div dir="ltr" className="grid shrink-0 grid-cols-[1fr_2fr] gap-2.5 p-4">
+        <button aria-label={t("Previous slide")} disabled={!live || st!.i === 0} onClick={() => send("prev")} className="flex h-[72px] items-center justify-center rounded-[14px] border border-line text-[22px] active:bg-surface-2 disabled:opacity-40">←</button>
+        <button aria-label={t("Next slide")} disabled={!live || st!.i >= st!.n - 1} onClick={() => send("next")} className="flex h-[72px] items-center justify-center rounded-[14px] bg-accent text-[22px] font-bold text-accent-fg active:brightness-110 disabled:opacity-40">→</button>
       </div>
       <div className="safe-b h-6 shrink-0" />
       {zoom && <ImageZoom src={zoom.src} alt={zoom.alt} onClose={() => setZoom(null)} />}
@@ -181,7 +184,7 @@ function Audience({ id }: { id: string }) {
   });
   return (
     <div className="flex h-full items-center justify-center bg-black text-muted" onClick={() => send("next")} onDoubleClick={() => void document.documentElement.requestFullscreen?.()}>
-      {st ? <SlideStage key={st.i + st.md} note={{ id: st.noteId, spaceId: st.spaceId }} md={st.md} dirs={st.dirs} blank={st.blank} frameless /> : "Waiting for the presenter… (F for full screen)"}
+      {st ? <SlideStage key={st.i + st.md} note={{ id: st.noteId, spaceId: st.spaceId }} md={st.md} dirs={st.dirs} blank={st.blank} frameless /> : t("Waiting for the presenter… (F for full screen)")}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { go } from "../lib/store";
 import { useTodayData } from "./today-data";
 import { PlanRow, usePlanHandlers } from "./today-item";
 import { cx } from "./ui";
+import { t } from "../lib/i18n";
 
 const ORDER: SectionId[] = ["continue", "new", "reviews", "practice"];
 
@@ -20,17 +21,17 @@ export function TodayCard({ className }: { className?: string }) {
   return (
     <div className={cx("today-card flex flex-col gap-3 rounded-[14px] border border-line bg-surface p-4 xl:px-5", className)}>
       <div className="flex items-baseline justify-between gap-2">
-        <button onClick={() => go("today")} className="flex items-center gap-1 text-[14px] font-semibold hover:text-accent">Today<ChevronRight size={14} className="text-muted" /></button>
-        <span className="text-[12px] text-muted tabular-nums">{data.ready ? `${plan.doneMinutes} / ${plan.planned} min · goal ${goal}` : ""}</span>
+        <button onClick={() => go("today")} className="flex items-center gap-1 text-[14px] font-semibold hover:text-accent">{t("Today")}<ChevronRight size={14} className="text-muted" /></button>
+        <span className="text-[12px] text-muted tabular-nums">{data.ready ? t("{done} / {planned} min · goal {goal}", { done: plan.doneMinutes, planned: plan.planned, goal }) : ""}</span>
       </div>
       {data.ready && (plan.noSources ? (
-        <span className="text-[13px] text-muted">Add a course roadmap or a learning path and Today plans your day.</span>
+        <span className="text-[13px] text-muted">{t("Add a course roadmap or a learning path and Today plans your day.")}</span>
       ) : !open.length ? (
-        <span className="text-[13px] text-muted">{all.length ? "Everything planned for today is done." : "Nothing due today."}</span>
+        <span className="text-[13px] text-muted">{all.length ? t("Everything planned for today is done.") : t("Nothing due today.")}</span>
       ) : (
         <div className="flex flex-col gap-2">
           {open.slice(0, 3).map((it) => <PlanRow key={it.id} it={it} h={h} compact />)}
-          {open.length > 3 && <button onClick={() => go("today")} className="h-11 self-start text-[13px] text-muted hover:text-ink sm:h-auto">{open.length - 3} more in the plan</button>}
+          {open.length > 3 && <button onClick={() => go("today")} className="h-11 self-start text-[13px] text-muted hover:text-ink sm:h-auto">{t("{n} more in the plan", { n: open.length - 3 })}</button>}
         </div>
       ))}
     </div>

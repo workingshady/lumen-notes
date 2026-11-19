@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div dir="{{ dir }}" style="position:absolute;inset:0;display:flex;background:var(--bg);color:var(--tx);font-family:{{ ff }};font-size:13px;overflow:hidden">
+  <div style="display:{{ deskOnly }};height:100%"><dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,100%" style="height:100%"></dc-import></div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+    <div style="padding:{{ hp }};display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--bd)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="display:{{ phoneOnly }};font-size:18px;width:28px">{{ back }}</span>
+        <dc-import name="LumenGlyph" glyph="lesson" size="{{ 18 }}" color="var(--le)" tile="#B48EF0" hint-size="31px,31px"></dc-import>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-weight:650;font-size:{{ h1 }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ concept }}</span>
+          <div style="display:flex;gap:6px;overflow:hidden"><sc-for list="{{ chips }}" as="c" hint-placeholder-count="3"><span style="height:20px;padding:0 8px 0 3px;border-radius:999px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:5px;font-size:11.5px;white-space:nowrap"><span style="width:3px;height:12px;border-radius:2px;background:{{ c.c }}"></span>{{ c.n }}</span></sc-for></div></div>
+        <div style="display:{{ deskOnly }};gap:2px;padding:3px;border-radius:9px;background:var(--sf);border:1px solid var(--bd);font-size:12.5px"><sc-for list="{{ modes }}" as="m" hint-placeholder-count="3"><span style="height:26px;padding:0 10px;border-radius:7px;display:flex;align-items:center;background:{{ m.bg }};color:{{ m.c }};font-weight:{{ m.w }}">{{ m.l }}</span></sc-for></div>
+        <span style="display:{{ deskOnly }};color:var(--mu);font-size:12px;white-space:nowrap">{{ progress }}</span>
+        <span style="height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;white-space:nowrap">{{ endL }}</span>
+      </div>
+      <div style="display:{{ phoneOnly }};flex-direction:column;gap:8px"><div style="display:grid;grid-template-columns:repeat(3,1fr);padding:3px;border-radius:9px;background:var(--sf);border:1px solid var(--bd)"><sc-for list="{{ modes }}" as="m" hint-placeholder-count="3"><span style="height:34px;border-radius:7px;display:flex;align-items:center;justify-content:center;background:{{ m.bg }};color:{{ m.c }};font-weight:{{ m.w }}">{{ m.l }}</span></sc-for></div><span style="height:4px;border-radius:2px;background:var(--sf2);overflow:hidden"><span style="display:block;height:100%;width:{{ pw }};background:var(--le)"></span></span></div>
+      <div style="display:{{ deskOnly }};height:4px;border-radius:2px;background:var(--sf2);overflow:hidden"><span style="display:block;height:100%;width:{{ pw }};background:var(--le)"></span></div>
+    </div>
+
+    <div style="flex:1;overflow:hidden;display:flex;justify-content:center;padding:{{ bp }}">
+      <div style="width:{{ cw }};max-width:100%;display:flex;flex-direction:column;gap:14px">
+        <sc-for list="{{ msgs }}" as="m" hint-placeholder-count="5">
+          <div style="display:{{ m.userS }};align-self:flex-end;max-width:78%;border-radius:14px;background:var(--sf2);padding:10px 14px;line-height:21px">{{ m.t }}</div>
+          <div style="display:{{ m.stepS }};flex-direction:column;gap:10px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:14px 16px">
+            <span style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--mu);font-weight:600;letter-spacing:.04em">{{ m.k }}</span>
+            <span style="font-family:{{ rf }};font-size:{{ rfs }};line-height:1.65">{{ m.t }}</span>
+            <span style="display:{{ m.citeS }};font-size:12px;color:var(--ln)">{{ m.cite }}</span>
+            <div style="display:{{ m.actS }};gap:8px;flex-wrap:wrap"><sc-for list="{{ m.acts }}" as="a" hint-placeholder-count="3"><span style="height:32px;padding:0 12px;border-radius:9px;border:1px solid {{ a.b }};background:{{ a.bg }};color:{{ a.c }};display:flex;align-items:center;font-weight:{{ a.w }}">{{ a.l }}</span></sc-for></div>
+          </div>
+          <div style="display:{{ m.qS }};flex-direction:column;gap:10px;border-radius:14px;background:var(--sf);border:1px solid color-mix(in srgb,var(--le) 40%,transparent);padding:14px 16px">
+            <span style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--le);font-weight:600;letter-spacing:.04em">{{ m.k }}</span>
+            <span style="font-family:{{ rf }};font-size:{{ rfs }};line-height:1.6;font-weight:500">{{ m.t }}</span>
+            <div style="min-height:44px;border-radius:9px;background:var(--bg);border:1px solid {{ m.ab }};padding:10px 12px;line-height:20px;color:{{ m.ac }}">{{ m.ans }}</div>
+            <div style="display:{{ m.hintS }};gap:6px;flex-wrap:wrap;align-items:center"><sc-for list="{{ m.hints }}" as="h" hint-placeholder-count="3"><span style="height:28px;padding:0 10px;border-radius:999px;border:1px solid {{ h.b }};background:{{ h.bg }};color:{{ h.c }};display:flex;align-items:center;gap:6px;font-size:12.5px">{{ h.l }}</span></sc-for><span style="flex:1"></span><span style="height:30px;padding:0 14px;border-radius:9px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">{{ sendL }}</span></div>
+          </div>
+          <div style="display:{{ m.fbS }};flex-direction:column;gap:6px;border-radius:12px;background:color-mix(in srgb,{{ m.fc }} 9%,transparent);border:1px solid color-mix(in srgb,{{ m.fc }} 32%,transparent);padding:10px 14px">
+            <span style="display:flex;align-items:center;gap:8px;font-weight:600;color:{{ m.fc }}"><dc-import name="LumenGlyph" glyph="{{ m.fg }}" size="{{ 15 }}" hint-size="15px,15px"></dc-import>{{ m.k }}</span>
+            <span style="line-height:20px">{{ m.t }}</span>
+            <span style="display:{{ m.quoteS }};font-family:{{ rf }};border-inline-start:3px solid {{ m.fc }};padding-inline-start:10px;color:var(--mu);line-height:20px">“{{ m.quote }}”</span>
+          </div>
+          <div style="display:{{ m.clarS }};flex-direction:column;gap:10px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:14px 16px">
+            <div style="display:flex;align-items:baseline;gap:10px"><span style="font-weight:600;flex:1">{{ clarT }}</span><b style="font-size:22px">72</b><span style="color:var(--mu)">/ 100</span></div>
+            <sc-for list="{{ clar }}" as="c" hint-placeholder-count="4"><div style="display:grid;grid-template-columns:{{ clarCols }};gap:10px;align-items:center"><span style="color:var(--mu)">{{ c.l }}</span><span style="height:8px;border-radius:4px;background:var(--sf2);overflow:hidden;display:flex;justify-content:flex-start"><span style="width:{{ c.v }};background:{{ c.c }}"></span></span><span style="font-size:12px;color:var(--mu)">{{ c.r }}</span></div></sc-for>
+          </div>
+        </sc-for>
+
+        <sc-if value="{{ isSummary }}">
+          <div style="border-radius:16px;background:var(--sf);border:1px solid var(--bd);padding:20px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;align-items:center;gap:12px"><span style="width:44px;height:44px;border-radius:50%;background:color-mix(in srgb,var(--ok) 16%,transparent);display:flex;align-items:center;justify-content:center"><dc-import name="LumenGlyph" glyph="s-done" size="{{ 22 }}" color="var(--ok)" hint-size="22px,22px"></dc-import></span><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:650">{{ sumT }}</span><span style="color:var(--mu)">{{ sumSub }}</span></div><b style="font-size:24px">3 / 3</b></div>
+            <div style="display:grid;grid-template-columns:{{ sumCols }};gap:14px">
+              <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ok)">{{ gotL }}</span><sc-for list="{{ got }}" as="g" hint-placeholder-count="3"><span style="display:flex;gap:8px;line-height:19px"><dc-import name="LumenGlyph" glyph="s-done" size="{{ 14 }}" color="var(--ok)" hint-size="14px,14px"></dc-import>{{ g }}</span></sc-for></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--wa)">{{ gapL }}</span><sc-for list="{{ gaps }}" as="g" hint-placeholder-count="2"><span style="display:flex;gap:8px;line-height:19px"><dc-import name="LumenGlyph" glyph="s-revise" size="{{ 14 }}" color="var(--wa)" hint-size="14px,14px"></dc-import>{{ g }}</span></sc-for></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:center"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--le);flex:1">{{ cardsL }}</span><span style="color:var(--mu);font-size:12px">4 of 5 picked</span></div>
+              <sc-for list="{{ cards }}" as="c" hint-placeholder-count="5"><div style="min-height:40px;border-radius:9px;background:var(--bg);border:1px solid var(--bd);padding:8px 10px;display:flex;align-items:center;gap:10px;opacity:{{ c.op }}"><span style="width:16px;height:16px;border-radius:4px;background:{{ c.cb }};border:{{ c.cbd }};box-sizing:border-box;flex-shrink:0"></span><span style="flex:1;line-height:18px">{{ c.q }}</span><span style="color:var(--mu);font-size:12px;display:{{ deskOnly }}">{{ c.a }}</span></div></sc-for></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="height:38px;padding:0 16px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">{{ markL }}</span><span style="height:38px;padding:0 14px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center">{{ saveL }}</span><span style="height:38px;padding:0 14px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center">{{ schedL }}</span></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isState }}">
+          <div style="margin-top:40px;align-self:center;width:{{ stW }};border-radius:16px;background:var(--sf);border:1px solid var(--bd);padding:22px;display:flex;flex-direction:column;gap:12px">
+            <dc-import name="LumenGlyph" glyph="{{ stG }}" size="{{ 22 }}" color="{{ stC }}" tile="{{ stTile }}" hint-size="38px,38px"></dc-import>
+            <span style="font-size:17px;font-weight:650">{{ stT }}</span><span style="color:var(--mu);line-height:20px">{{ stD }}</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="height:36px;padding:0 14px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">{{ stA }}</span><span style="display:{{ stBS }};height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--bd);align-items:center">{{ stB }}</span></div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+    <sc-if value="{{ showComposer }}">
+      <div style="padding:{{ cpad }};display:flex;justify-content:center;border-top:1px solid var(--bd)"><div style="width:{{ cw }};max-width:100%;min-height:46px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:10px;padding:0 6px 0 14px"><span style="flex:1;color:var(--mu)">{{ composerPh }}</span><span style="width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><dc-import name="LumenGlyph" glyph="voice" size="{{ 16 }}" hint-size="16px,16px"></dc-import></span><span style="width:34px;height:34px;border-radius:9px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:700">{{ sendArrow }}</span></div></div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;explain&quot;,&quot;socratic&quot;,&quot;feynman&quot;],&quot;default&quot;:&quot;explain&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;chat&quot;,&quot;summary&quot;,&quot;nonotes&quot;,&quot;signedout&quot;,&quot;offline&quot;],&quot;default&quot;:&quot;chat&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;arabic&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const mode = this.props.mode ?? 'explain', st = this.props.state ?? 'chat', p = !!this.props.phone, ar = !!this.props.arabic;
+    const tr = (en, a) => ar ? a : en;
+    const modes = [['explain',tr('Explain','شرح')],['socratic',tr('Socratic','سقراطي')],['feynman',tr('Feynman','فاينمان')]].map(([k,l]) => ({ l, bg:k===mode?'var(--sf2)':'transparent', c:k===mode?'var(--tx)':'var(--mu)', w:k===mode?600:450 }));
+    const chips = [['CS231n','#39C5CF'],['Karpathy','#E3B341'],['DL Spec.','#E8893A']].slice(0, p?2:3).map(([n,c]) => ({ n, c }));
+    const A = (l, on) => ({ l, b: on?'var(--ac)':'var(--bd)', bg: on?'color-mix(in srgb,var(--ac) 12%,transparent)':'transparent', c:'var(--tx)', w: on?600:450 });
+    const H = (l, s) => ({ l, b: s==='used'?'color-mix(in srgb,var(--le) 45%,transparent)':'var(--bd)', bg: s==='used'?'color-mix(in srgb,var(--le) 12%,transparent)':'transparent', c: s==='off'?'var(--mu)':'var(--tx)' });
+    const base = { userS:'none', stepS:'none', qS:'none', fbS:'none', clarS:'none', k:'', t:'', cite:'', citeS:'none', actS:'none', acts:[], ans:'', ab:'var(--bd)', ac:'var(--mu)', hintS:'none', hints:[], fc:'var(--ok)', fg:'s-done', quote:'', quoteS:'none' };
+    const U = t => ({ ...base, userS:'block', t });
+    const Step = (k,t,cite,acts) => ({ ...base, stepS:'flex', k, t, cite, citeS: cite?'block':'none', actS: acts?'flex':'none', acts: acts||[] });
+    const Q = (k,t,ans,hints,ab) => ({ ...base, qS:'flex', k, t, ans, ac: ans?'var(--tx)':'var(--mu)', ab: ab||'var(--bd)', hintS:'flex', hints });
+    const FB = (kind,t,quote) => { const m = { ok:['var(--ok)','s-done',tr('Correct','صحيح')], part:['var(--wa)','s-revise',tr('Partly','جزئيًا')], no:['var(--da)','c-danger',tr('Not yet','ليس بعد')], gap:['var(--wa)','c-warning',tr('Gap found','فجوة')], jar:['var(--in)','c-info',tr('Jargon to explain','مصطلح يحتاج شرحًا')], wrong:['var(--da)','c-danger',tr('Not quite right','غير دقيق')] }[kind]; return { ...base, fbS:'flex', fc:m[0], fg:m[1], k:m[2], t, quote, quoteS: quote?'block':'none' }; };
+    let msgs = [];
+    if (st === 'chat') {
+      if (mode === 'explain') msgs = [
+        Step(tr('STEP 2 OF 4','الخطوة ٢ من ٤'), tr('Every operation in the network knows its own local derivative. For z = wx + b, ∂z/∂w is simply x — the input that flowed through on the forward pass.','كل عملية في الشبكة تعرف مشتقتها المحلية. في z = wx + b تكون ∂z/∂w ببساطة x، أي المدخل الذي مرّ في الانتشار الأمامي.'), tr('From your note “Backprop, by hand” · CS231n','من ملاحظتك «Backprop, by hand»'), [A(tr('Got it','فهمت'),1),A(tr('Explain differently','اشرح بطريقة أخرى')),A(tr('Example','مثال'))]),
+        U(tr('Example please','مثال من فضلك')),
+        Step(tr('EXAMPLE','مثال'), tr('Take x = 2, w = 3, b = 1 and loss L = (a − 5)². Forward: z = 7. Backward: ∂L/∂z = 2(7 − 5) = 4, so ∂L/∂w = 4 · x = 8.','لنأخذ x = 2 و w = 3 و b = 1 والخسارة L = (a − 5)². أماميًا: z = 7. عكسيًا: ∂L/∂z = 4، إذن ∂L/∂w = 4 · x = 8.'), tr('Worked example from Karpathy · micrograd','مثال من Karpathy · micrograd'), [A(tr('Got it','فهمت'),1),A(tr('Explain differently','اشرح بطريقة أخرى'))])
+      ];
+      if (mode === 'socratic') msgs = [
+        Q(tr('QUESTION 2 OF 5','السؤال ٢ من ٥'), tr('If the gradient arriving at a node is 4 and the node multiplies its input by 3, what gradient does it pass back to that input?','إذا وصل إلى عقدة تدرّج قيمته 4 وكانت تضرب مدخلها في 3، فما التدرّج الذي تمرّره إلى المدخل؟'), tr('7, because you add them','7 لأننا نجمعهما'), [H(tr('Hint 1 · used','تلميح ١'),'used'),H(tr('Hint 2','تلميح ٢')),H(tr('Show answer','أظهر الإجابة'),'off')], 'var(--da)'),
+        FB('no', tr('Gradients multiply along the chain, they don\'t add. Try again — what is 4 × 3?','التدرجات تُضرب على طول السلسلة ولا تُجمع. حاول مجددًا: كم 4 × 3؟')),
+        U('12'),
+        FB('ok', tr('Yes — upstream × local = 12. That\'s the whole idea of the chain rule.','نعم، التدرج القادم × المحلي = 12. هذه هي فكرة قاعدة السلسلة.'))
+      ];
+      if (mode === 'feynman') msgs = [
+        U(tr('Backprop is when the network goes backwards and fixes the weights using gradient descent, and it uses the Jacobian to do it fast.','الانتشار العكسي هو عندما ترجع الشبكة إلى الخلف وتصلح الأوزان بالانحدار التدريجي، وتستخدم مصفوفة جاكوبي لتسريعه.')),
+        FB('wrong', tr('Backprop only computes the gradients. Updating the weights is the optimizer\'s job (gradient descent, AdamW).','الانتشار العكسي يحسب التدرجات فقط؛ أما تحديث الأوزان فهو عمل المُحسِّن.'), tr('fixes the weights using gradient descent','تصلح الأوزان بالانحدار التدريجي')),
+        FB('jar', tr('You used “Jacobian” without explaining it. Can you say what it is in one sentence?','استخدمت «جاكوبي» دون شرح. هل يمكنك تعريفه بجملة واحدة؟'), tr('uses the Jacobian to do it fast','تستخدم مصفوفة جاكوبي')),
+        FB('gap', tr('Missing: the chain rule — multiplying upstream by local gradients. That\'s the core of the idea.','ينقص: قاعدة السلسلة، أي ضرب التدرج القادم في المحلي.')),
+        { ...base, clarS:'flex' }
+      ];
+    }
+    const clar = [[tr('Accuracy','الدقة'),'60%','var(--wa)',tr('1 wrong claim','ادعاء خاطئ')],[tr('Completeness','الاكتمال'),'55%','var(--wa)',tr('chain rule missing','قاعدة السلسلة')],[tr('Plain words','لغة بسيطة'),'80%','var(--ok)',tr('1 unexplained term','مصطلح واحد')],[tr('Structure','البنية'),'90%','var(--ok)',tr('clear order','ترتيب واضح')]].map(([l,v,c,r]) => ({ l, v, c, r }));
+    const cards = [[tr('What does backprop compute?','ماذا يحسب الانتشار العكسي؟'),tr('Gradients of the loss','تدرجات الخسارة'),1],[tr('Chain rule at one node?','قاعدة السلسلة عند عقدة؟'),tr('upstream × local','القادم × المحلي'),1],[tr('∂z/∂w for z = wx + b?','∂z/∂w؟'),'x',1],[tr('Why cache activations?','لماذا نخزّن التنشيطات؟'),tr('Needed going back','نحتاجها عكسيًا'),1],[tr('Who updates the weights?','من يحدّث الأوزان؟'),tr('The optimizer','المُحسِّن'),0]].map(([q,a,on]) => ({ q, a, op: on?1:.55, cb: on?'var(--le)':'transparent', cbd: on?'none':'1.5px solid var(--mu)' }));
+    const STATES = {
+      nonotes: ['note','var(--mu)','#9AA0AA',tr('No notes on this concept yet','لا توجد ملاحظات عن هذا المفهوم'),tr('The tutor teaches from your notes. You have none on “LoRA” yet. You can use general knowledge instead — answers will be labelled “Not from your notes”.','يعلّم المدرّس من ملاحظاتك، ولا توجد ملاحظات عن «LoRA» بعد. يمكنك استخدام المعرفة العامة وستُوسَم الإجابات بأنها ليست من ملاحظاتك.'),tr('Use general knowledge','استخدم المعرفة العامة'),tr('Write a lesson note first','اكتب ملاحظة درس أولًا')],
+      signedout: ['s-locked','var(--mu)','#9AA0AA',tr('Unlock to use the tutor','افتح القفل لاستخدام المدرّس'),tr('The tutor runs on your Cloudflare and needs this device to be unlocked.','يعمل المدرّس على Cloudflare الخاص بك ويحتاج إلى فتح هذا الجهاز.'),tr('Unlock','فتح'),''],
+      offline: ['c-info','var(--in)','#7AA2F7',tr('The tutor needs a connection','المدرّس يحتاج إلى اتصال'),tr('Your past sessions and flashcards still work offline.','جلساتك السابقة وبطاقاتك تعمل دون اتصال.'),tr('Review cards instead','راجع البطاقات'),tr('See past sessions','الجلسات السابقة')]
+    }[st];
+    const concept = st==='nonotes' ? tr('Fine-tuning with LoRA','الضبط الدقيق بـ LoRA') : tr('Backpropagation','الانتشار العكسي');
+    const prog = { explain:[tr('Step 2 of 4','الخطوة ٢ من ٤'),'50%'], socratic:[tr('Question 2 of 5','السؤال ٢ من ٥'),'40%'], feynman:[tr('Round 1 · 3 notes found','الجولة ١'),'30%'] }[mode];
+    return { msgs, clar, cards, modes, chips, concept, progress: st==='summary'?tr('Done','انتهى'):prog[0], pw: st==='summary'?'100%':prog[1],
+      isSummary: st==='summary', isState: !!STATES, showComposer: st==='chat',
+      stG: STATES?STATES[0]:'note', stC: STATES?STATES[1]:'', stTile: STATES?STATES[2]:'', stT: STATES?STATES[3]:'', stD: STATES?STATES[4]:'', stA: STATES?STATES[5]:'', stB: STATES?STATES[6]:'', stBS: STATES&&STATES[6]?'flex':'none',
+      composerPh: { explain:tr('Ask about this step…','اسأل عن هذه الخطوة…'), socratic:tr('Type your answer…','اكتب إجابتك…'), feynman:tr('Fix your explanation, or say it again…','صحّح شرحك أو أعد قوله…') }[mode],
+      sendL: tr('Answer','أجب'), endL: st==='summary'?tr('Close','إغلاق'):tr('End session','إنهاء الجلسة'), clarT: tr('Clarity score','درجة الوضوح'),
+      sumT: tr('Backpropagation · session done','انتهت الجلسة'), sumSub: tr('Explain · 4 steps · 3 of 3 check questions','شرح · ٤ خطوات · ٣ من ٣'), gotL: tr('You got','أتقنت'), gapL: tr('Gaps','فجوات'), cardsL: tr('Suggested flashcards','بطاقات مقترحة'),
+      got: [tr('Local gradient of z = wx + b','المشتقة المحلية'),tr('Upstream × local at a node','القادم × المحلي'),tr('Why activations are cached','سبب التخزين')], gaps: [tr('Who updates the weights (optimizer)','من يحدّث الأوزان'),tr('Vanishing gradients with sigmoid','تلاشي التدرجات')],
+      markL: tr('Mark concept learned','علّم المفهوم كمُتقَن'), saveL: tr('Save 4 cards','احفظ ٤ بطاقات'), schedL: tr('Schedule a review','جدولة مراجعة'),
+      dir: ar?'rtl':'ltr', ff: ar?"'IBM Plex Sans Arabic',Inter,sans-serif":'Inter,system-ui,sans-serif', rf: ar?"'Noto Naskh Arabic','Source Serif 4',serif":"'Source Serif 4',Georgia,serif", rfs: ar?'17px':'16px', back: ar?'→':'←', sendArrow: ar?'←':'→',
+      deskOnly: p?'none':'flex', phoneOnly: p?'flex':'none', hp: p?'12px 16px':'16px 28px 12px', h1: p?'16px':'18px', bp: p?'14px 16px':'24px 32px', cw: p?'380px':'720px', cpad: p?'10px 16px 20px':'14px 32px', stW: p?'100%':'480px', sumCols: p?'1fr':'1fr 1fr', clarCols: p?'90px 1fr':'110px 1fr 140px' };
+  }
+}
+</script>
+</body>
+</html>

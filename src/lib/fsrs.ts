@@ -13,6 +13,7 @@
 // D from their ease, last review = due − interval (see `memoryOf`). Card fields stay compatible with SM-2 readers:
 // `interval` = scheduled days (0 while in learning steps), `ease` is left untouched.
 import type { Card } from "../../shared/types";
+import { t } from "./i18n";
 
 export type Grade = 0 | 1 | 2 | 3; // Again, Hard, Good, Easy (UI order; FSRS rating = grade + 1)
 type Rating = 1 | 2 | 3 | 4;
@@ -160,10 +161,10 @@ export function previewIntervals(c: Card, now = Date.now(), p: FsrsParams = DEFA
 }
 export function fmtInterval(ms: number) {
   const m = ms / MIN;
-  if (m < 60) return `${Math.max(1, Math.round(m))}m`;
-  if (m < 60 * 24) return `${Math.round(m / 60)}h`;
+  if (m < 60) return t("{n}m", { n: Math.max(1, Math.round(m)) });
+  if (m < 60 * 24) return t("{n}h", { n: Math.round(m / 60) });
   const d = m / 1440;
-  return d < 30 ? `${Math.round(d)}d` : d < 365 ? `${Math.round(d / 30)}mo` : `${(d / 365).toFixed(1)}y`;
+  return d < 30 ? t("{n}d", { n: Math.round(d) }) : d < 365 ? t("{n}mo", { n: Math.round(d / 30) }) : t("{n}y", { n: +(d / 365).toFixed(1) });
 }
 /** True while the card is in (re)learning steps: it comes back within minutes, so a session shows it again. */
 export const inSteps = (c: Card) => c.state === "learning" || c.state === "relearning";

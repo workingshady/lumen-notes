@@ -1,5 +1,6 @@
 import { API_BASE, unfurl, type Unfurl } from "../lib/api";
 import { icon } from "./ws-icons";
+import { fmtNum, t } from "../lib/i18n";
 import { hydrateTimestamps, mediaCtl, remoteCtl } from "./video-players"; // video notes (D8): player registry + [12:34] chips
 
 /*
@@ -26,23 +27,23 @@ export const fileName = (src: string) => { try { return decodeURIComponent(new U
 export function videoThumbHtml(provider: "youtube" | "vimeo", id: string, href: string, start = 0) {
   const site = provider === "youtube" ? "youtube.com" : "vimeo.com";
   return `<figure class="vthumb" data-provider="${provider}" data-id="${esc(id)}" data-start="${start}" data-href="${esc(href)}">`
-    + `<div class="embed video"><button type="button" class="vt-frame" aria-label="Play video"><img class="vt-img" alt="" hidden>`
+    + `<div class="embed video"><button type="button" class="vt-frame" aria-label="${esc(t("Play video"))}"><img class="vt-img" alt="" hidden>`
     + `<span class="vt-play">${icon("play", 26)}</span>`
     + `<span class="vt-bottom"><span class="vt-meta"><span class="vt-title" dir="auto"></span><span class="vt-sub">${site}</span></span></span><span class="vt-dur" hidden></span></button></div>`
-    + `<figcaption class="embed-cap"><span class="cap-wide">Plays inline · no autoplay</span><span class="cap-phone" dir="auto">${site}</span><a href="${esc(href)}" target="_blank" rel="noopener noreferrer">Open on ${provider === "youtube" ? "YouTube" : "Vimeo"} ↗</a></figcaption></figure>`;
+    + `<figcaption class="embed-cap"><span class="cap-wide">${esc(t("Plays inline · no autoplay"))}</span><span class="cap-phone" dir="auto">${site}</span><a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(t("Open on {site} ↗", { site: provider === "youtube" ? "YouTube" : "Vimeo" }))}</a></figcaption></figure>`;
 }
 export const videoFileHtml = (src: string, name = fileName(src)) => `<div class="embed vfile" data-src="${esc(src)}" data-name="${esc(name)}"><video src="${esc(src)}" controls preload="metadata" playsinline></video></div>`;
 export const audioFileHtml = (src: string, name = fileName(src)) => `<div class="embed afile" data-src="${esc(src)}" data-name="${esc(name)}"><audio src="${esc(src)}" controls preload="metadata"></audio></div>`;
 /** `att` = attachment id when the PDF is an `att:` attachment (lets "Open as PDF note" point the note at the file). */
-export const pdfHtml = (src: string, name = fileName(src), att = "") => `<div class="embed pdfcard" data-src="${esc(src)}" data-name="${esc(name)}"${att ? ` data-att-id="${esc(att)}"` : ""}><div class="pdf-head">${icon("file-text", 15, 'style="color:var(--danger)"')}<b class="pdf-name">${esc(name)}</b><span class="pdf-meta"></span><span class="sp"></span><span class="pdf-page"></span></div><div class="pdf-body"><a class="pdf-fallback" href="${esc(src)}" target="_blank" rel="noopener">Open ${esc(name)}</a></div></div>`;
+export const pdfHtml = (src: string, name = fileName(src), att = "") => `<div class="embed pdfcard" data-src="${esc(src)}" data-name="${esc(name)}"${att ? ` data-att-id="${esc(att)}"` : ""}><div class="pdf-head">${icon("file-text", 15, 'style="color:var(--danger)"')}<b class="pdf-name">${esc(name)}</b><span class="pdf-meta"></span><span class="sp"></span><span class="pdf-page"></span></div><div class="pdf-body"><a class="pdf-fallback" href="${esc(src)}" target="_blank" rel="noopener">${esc(t("Open {name}", { name }))}</a></div></div>`;
 export function linkCardHtml(href: string) {
   let host = href;
   try { host = new URL(href).hostname.replace(/^www\./, ""); } catch { /* keep */ }
   return `<a class="link-card lc-loading" href="${esc(href)}" target="_blank" rel="noopener noreferrer" data-unfurl="${esc(href)}">`
     + `<span class="lc-body"><span class="lc-title" dir="auto">${esc(host)}</span><span class="lc-desc" dir="auto"></span><span class="lc-host"><img alt="" loading="lazy" src="${API_BASE}/api/ws/favicon?d=${esc(host)}" onerror="this.style.visibility='hidden'">${esc(host)}</span>`
     + `<span class="lc-skel"><i></i><i></i><i></i><i></i></span></span>`
-    + `<span class="lc-fail">${icon("link-2", 16)}<span class="lc-fail-t"><b>${esc(host)}</b><code>${esc(href)}</code></span><span class="lc-retry" role="button" tabindex="0">${icon("refresh-cw", 13)}Retry</span></span>`
-    + `<span class="lc-media"></span><span class="lc-more" role="button" tabindex="0" title="More" hidden>${icon("ellipsis", 16)}</span></a>`;
+    + `<span class="lc-fail">${icon("link-2", 16)}<span class="lc-fail-t"><b>${esc(host)}</b><code>${esc(href)}</code></span><span class="lc-retry" role="button" tabindex="0">${icon("refresh-cw", 13)}${esc(t("Retry"))}</span></span>`
+    + `<span class="lc-media"></span><span class="lc-more" role="button" tabindex="0" title="${esc(t("More"))}" hidden>${icon("ellipsis", 16)}</span></a>`;
 }
 
 // ------------------------------------------------------------------ hydration
@@ -99,15 +100,15 @@ function bar(media: HTMLMediaElement, el: HTMLElement) {
   const dur = el.querySelector<HTMLElement>(".mb-dur");
   const vol = el.querySelector<HTMLElement>(".mb-vol");
   const audio = media instanceof HTMLAudioElement;
-  const t = audio ? fmt2 : fmt;
+  const tf = audio ? fmt2 : fmt;
   const sync = () => {
     const p = media.duration ? media.currentTime / media.duration : 0;
     fill.style.width = `${p * 100}%`;
     if (knob) knob.style.insetInlineStart = `${p * 100}%`;
-    if (cur) cur.textContent = el.classList.contains("vfile") ? `${t(media.currentTime)} / ${t(media.duration)}` : t(media.currentTime);
-    if (dur) dur.textContent = t(media.duration);
+    if (cur) cur.textContent = el.classList.contains("vfile") ? `${tf(media.currentTime)} / ${tf(media.duration)}` : tf(media.currentTime);
+    if (dur) dur.textContent = tf(media.duration);
     play.innerHTML = icon(media.paused ? "play" : "pause", Number(play.dataset.s || 15));
-    play.setAttribute("aria-label", media.paused ? "Play" : "Pause");
+    play.setAttribute("aria-label", media.paused ? t("Play") : t("Pause"));
     if (vol) vol.innerHTML = icon(media.muted ? "volume-x" : "volume-2", 16);
   };
   ["timeupdate", "loadedmetadata", "play", "pause", "volumechange", "durationchange"].forEach((e) => media.addEventListener(e, sync));
@@ -130,7 +131,7 @@ function videoFile(el: HTMLElement) {
   v.replaceWith(stage);
   stage.append(v);
   stage.insertAdjacentHTML("beforeend", `<span class="vf-name">${esc(name)}</span>`);
-  el.insertAdjacentHTML("beforeend", `<div class="vf-bar"><button type="button" class="mb-play" data-s="15"></button><span class="mb-cur"></span><span class="mb-track"><span class="mb-fill"></span></span><button type="button" class="mb-vol" aria-label="Mute"></button><button type="button" class="mb-full" aria-label="Full screen">${icon("maximize-2", 15)}</button></div>`);
+  el.insertAdjacentHTML("beforeend", `<div class="vf-bar"><button type="button" class="mb-play" data-s="15"></button><span class="mb-cur"></span><span class="mb-track"><span class="mb-fill"></span></span><button type="button" class="mb-vol" aria-label="${esc(t("Mute"))}"></button><button type="button" class="mb-full" aria-label="${esc(t("Full screen"))}">${icon("maximize-2", 15)}</button></div>`);
   stage.addEventListener("click", () => void (v.paused ? v.play() : v.pause()));
   el.querySelector(".mb-full")!.addEventListener("click", () => { const anyV = v as HTMLVideoElement & { webkitEnterFullscreen?: () => void }; if (v.requestFullscreen) void v.requestFullscreen(); else anyV.webkitEnterFullscreen?.(); });
   bar(v, el);
@@ -143,7 +144,7 @@ function audioFile(el: HTMLElement) {
   a.controls = false;
   a.hidden = true;
   const name = el.dataset.name || "audio";
-  el.insertAdjacentHTML("beforeend", `<button type="button" class="mb-play" data-s="14"></button><span class="mb-cur"></span><span class="mb-track"><span class="mb-fill"></span><span class="mb-knob"></span></span><span class="mb-dur"></span><button type="button" class="mb-speed" title="Playback speed">1×</button><button type="button" class="mb-vol" aria-label="Mute"></button><span class="mb-div"></span><span class="mb-name">${icon("file-audio", 14)}<span>${esc(name)}</span></span><span class="mb-both"></span>`);
+  el.insertAdjacentHTML("beforeend", `<button type="button" class="mb-play" data-s="14"></button><span class="mb-cur"></span><span class="mb-track"><span class="mb-fill"></span><span class="mb-knob"></span></span><span class="mb-dur"></span><button type="button" class="mb-speed" title="${esc(t("Playback speed"))}">1×</button><button type="button" class="mb-vol" aria-label="${esc(t("Mute"))}"></button><span class="mb-div"></span><span class="mb-name">${icon("file-audio", 14)}<span>${esc(name)}</span></span><span class="mb-both"></span>`);
   const both = el.querySelector<HTMLElement>(".mb-both")!;
   const upd = () => (both.textContent = `${fmt2(a.currentTime)} / ${fmt2(a.duration)}`);
   ["timeupdate", "loadedmetadata", "durationchange"].forEach((e) => a.addEventListener(e, upd));
@@ -171,10 +172,10 @@ async function pdfCard(el: HTMLElement, ctx: EmbedCtx) {
   const name = el.dataset.name || "document.pdf";
   const head = el.querySelector<HTMLElement>(".pdf-head")!;
   const body = el.querySelector<HTMLElement>(".pdf-body")!;
-  head.insertAdjacentHTML("beforeend", `<span class="pdf-sep"></span><button type="button" class="pdf-zo" aria-label="Zoom out">${icon("zoom-out", 15)}</button><button type="button" class="pdf-zi" aria-label="Zoom in">${icon("zoom-in", 15)}</button><button type="button" class="pdf-full">${icon("maximize-2", 13)}<span>Open full screen</span></button>`);
+  head.insertAdjacentHTML("beforeend", `<span class="pdf-sep"></span><button type="button" class="pdf-zo" aria-label="${esc(t("Zoom out"))}">${icon("zoom-out", 15)}</button><button type="button" class="pdf-zi" aria-label="${esc(t("Zoom in"))}">${icon("zoom-in", 15)}</button><button type="button" class="pdf-full">${icon("maximize-2", 13)}<span>${esc(t("Open full screen"))}</span></button>`);
   // In the app (not on public pages): open this file in the PDF reader as a `type: pdf` note (lib/pdf-note.ts).
   if (ctx.quote) {
-    head.insertAdjacentHTML("beforeend", `<button type="button" class="pdf-full pdf-open-note" title="Open in the PDF reader with highlights">${icon("bookmark", 13)}<span>Open as PDF note</span></button>`);
+    head.insertAdjacentHTML("beforeend", `<button type="button" class="pdf-full pdf-open-note" title="${esc(t("Open in the PDF reader with highlights"))}">${icon("bookmark", 13)}<span>${esc(t("Open as PDF note"))}</span></button>`);
     head.querySelector(".pdf-open-note")!.addEventListener("click", () => { const file = el.dataset.attId ? `att:${el.dataset.attId}` : src; void import("../lib/pdf-note").then((m) => m.openPdfFromCard(file, name)); });
   }
   const pageEl = head.querySelector<HTMLElement>(".pdf-page")!;
@@ -193,9 +194,9 @@ async function pdfCard(el: HTMLElement, ctx: EmbedCtx) {
     const buf = await res.arrayBuffer();
     const bytes = buf.byteLength; // read before pdf.js transfers the buffer to its worker
     doc = await lib.getDocument({ data: new Uint8Array(buf) }).promise;
-    metaEl.textContent = `${doc.numPages} page${doc.numPages === 1 ? "" : "s"} · ${size(bytes)}`;
+    metaEl.textContent = t("{n} page · {size}|{n} pages · {size}", { n: doc.numPages, size: size(bytes) });
   } catch {
-    metaEl.textContent = "Couldn't open this PDF";
+    metaEl.textContent = t("Couldn't open this PDF");
     return;
   }
   body.replaceChildren();
@@ -241,7 +242,7 @@ async function pdfCard(el: HTMLElement, ctx: EmbedCtx) {
     const top = body.scrollTop + body.clientHeight / 3;
     let n = 1;
     for (const p of pages) if (p.offsetTop - body.offsetTop <= top) n = Number(p.dataset.page);
-    pageEl.textContent = `${n} / ${doc.numPages}`;
+    pageEl.textContent = `${fmtNum(n)} / ${fmtNum(doc.numPages)}`;
     return n;
   };
   body.addEventListener("scroll", cur, { passive: true });
@@ -254,7 +255,7 @@ async function pdfCard(el: HTMLElement, ctx: EmbedCtx) {
   if (ctx.quote) {
     const btn = document.createElement("button");
     btn.type = "button"; btn.className = "pdf-quote"; btn.hidden = true;
-    btn.innerHTML = `${icon("quote", 13)}<span>Quote in note</span>`;
+    btn.innerHTML = `${icon("quote", 13)}<span>${esc(t("Quote in note"))}</span>`;
     el.append(btn);
     let pending: { text: string; page: number } | null = null;
     body.addEventListener("mouseup", () => setTimeout(() => {
@@ -318,7 +319,7 @@ function linkCard(a: HTMLAnchorElement, ctx: EmbedCtx) {
       a.querySelector(".lc-menu")?.remove();
       const m = document.createElement("span");
       m.className = "lc-menu";
-      m.innerHTML = `<span role="button" tabindex="0">${icon("link-2", 14)}Convert to plain link</span>`;
+      m.innerHTML = `<span role="button" tabindex="0">${icon("link-2", 14)}${esc(t("Convert to plain link"))}</span>`;
       m.firstElementChild!.addEventListener("click", (ev) => { ev.preventDefault(); ev.stopPropagation(); ctx.convert!(href); });
       a.append(m);
       const off = (ev: MouseEvent) => { if (!m.contains(ev.target as Node)) { m.remove(); removeEventListener("click", off, true); } };

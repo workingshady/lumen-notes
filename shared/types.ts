@@ -119,8 +119,61 @@ export interface AttachmentMeta extends Synced {
   size: number;
 }
 
-export type Kind = "space" | "note" | "folder" | "version" | "card" | "session" | "attachment" | "review";
-export const KINDS: Kind[] = ["space", "note", "folder", "version", "card", "session", "attachment", "review"];
+// ---------- Ask chat threads + AI tutor sessions (kind "chat"; docs/CHAT_AND_TUTOR.md) ----------
+export type ChatMode = "ask" | "explain" | "socratic" | "feynman";
+export interface ChatScope { kind: "vault" | "space" | "note" | "path"; spaceId?: string; noteId?: string; pathId?: string }
+/** A cited passage kept on an answer (text trimmed to keep threads small). */
+export interface ChatSource { n: number; noteId: string; title: string; heading?: string; text: string }
+/** Tutor card on a message: what the tutor UI draws (step, question, feedback, hint, Feynman review, summary). */
+export interface TutorCard {
+  kind: "step" | "question" | "feedback" | "hint" | "answer" | "review" | "summary" | "explanation";
+  verdict?: "correct" | "partly" | "not_yet";
+  /** 1-based position + total (step 2 of 4, question 1 of 3). */
+  i?: number; of?: number;
+  /** Feynman review: clarity score 0–100, reasons, quoted issues. */
+  score?: number;
+  reasons?: { label: string; score: number; note?: string }[];
+  issues?: { quote: string; kind: "gap" | "wrong" | "jargon"; comment: string }[];
+}
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  at: number;
+  /** Passages the answer was given (Ask) or the tutor's numbered notes. */
+  sources?: ChatSource[];
+  /** The standalone query a follow-up was rewritten into ("Searched for: …"). */
+  rewrite?: string;
+  /** 1 = thumbs up, -1 = thumbs down. */
+  feedback?: 1 | -1;
+  /** 1 = answered from general knowledge (not from your notes), on explicit request. */
+  general?: 1;
+  /** "none" = the notes don't cover it (the UI offers general knowledge). */
+  empty?: "none";
+  followups?: string[];
+  tutor?: TutorCard;
+}
+export interface ChatThread extends Synced {
+  title: string;
+  mode: ChatMode;
+  scope: ChatScope;
+  /** Tutor: the learning-path concept (path note id + concept key), or a lesson note studied on its own. */
+  pathId?: string;
+  conceptKey?: string;
+  noteId?: string;
+  pinned: 0 | 1;
+  messages: ChatMessage[];
+  /** Running summary of turns older than the window (and of messages dropped by the cap). */
+  summary?: string;
+  /** How many leading messages `summary` already covers. */
+  summarized?: number;
+  /** Tutor session state (src/lib/tutor.ts TutorState), JSON-safe. */
+  tutor?: Record<string, unknown>;
+  createdAt: number;
+}
+
+export type Kind = "space" | "note" | "folder" | "version" | "card" | "session" | "attachment" | "review" | "chat";
+export const KINDS: Kind[] = ["space", "note", "folder", "version", "card", "session", "attachment", "review", "chat"];
 
 export interface SyncItem {
   kind: Kind;

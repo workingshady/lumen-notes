@@ -4,18 +4,19 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { turnTargetOf, type TurnTarget } from "../lib/blocks";
+import { isRtl, t, tk } from "../lib/i18n";
 import { toast } from "../lib/store";
 import { Glyph } from "./Glyph";
 import { blocksOf, duplicate, ensureId, moveBy, remove, turn, type BlockMenuRequest } from "./editor-blocks";
 
 /** Turn-into grid: the design's 12 (text, H1–H3, lists, quote, code, toggle, info, tip) + the other callouts. */
 const TURN: { t: TurnTarget; label: string; glyph: string }[] = [
-  { t: "paragraph", label: "Text", glyph: "text" }, { t: "h1", label: "Heading 1", glyph: "h1" }, { t: "h2", label: "Heading 2", glyph: "h2" },
-  { t: "h3", label: "Heading 3", glyph: "h3" }, { t: "bullet", label: "Bulleted list", glyph: "list" }, { t: "numbered", label: "Numbered list", glyph: "numbered" },
-  { t: "todo", label: "Task list", glyph: "task" }, { t: "quote", label: "Quote", glyph: "quote" }, { t: "code", label: "Code", glyph: "code" },
-  { t: "toggle", label: "Toggle", glyph: "expand" }, { t: "callout:info", label: "Info callout", glyph: "c-info" }, { t: "callout:tip", label: "Tip callout", glyph: "c-tip" },
-  { t: "callout:note", label: "Note callout", glyph: "c-note" }, { t: "callout:warning", label: "Warning callout", glyph: "c-warning" }, { t: "callout:important", label: "Important callout", glyph: "c-warning" },
-  { t: "callout:question", label: "Question callout", glyph: "c-question" }, { t: "callout:example", label: "Example callout", glyph: "c-example" }, { t: "callout:danger", label: "Danger callout", glyph: "c-danger" },
+  { t: "paragraph", label: tk("Text"), glyph: "text" }, { t: "h1", label: tk("Heading 1"), glyph: "h1" }, { t: "h2", label: tk("Heading 2"), glyph: "h2" },
+  { t: "h3", label: tk("Heading 3"), glyph: "h3" }, { t: "bullet", label: tk("Bulleted list"), glyph: "list" }, { t: "numbered", label: tk("Numbered list"), glyph: "numbered" },
+  { t: "todo", label: tk("Task list"), glyph: "task" }, { t: "quote", label: tk("Quote"), glyph: "quote" }, { t: "code", label: tk("Code"), glyph: "code" },
+  { t: "toggle", label: tk("Toggle"), glyph: "expand" }, { t: "callout:info", label: tk("Info callout"), glyph: "c-info" }, { t: "callout:tip", label: tk("Tip callout"), glyph: "c-tip" },
+  { t: "callout:note", label: tk("Note callout"), glyph: "c-note" }, { t: "callout:warning", label: tk("Warning callout"), glyph: "c-warning" }, { t: "callout:important", label: tk("Important callout"), glyph: "c-warning" },
+  { t: "callout:question", label: tk("Question callout"), glyph: "c-question" }, { t: "callout:example", label: tk("Example callout"), glyph: "c-example" }, { t: "callout:danger", label: tk("Danger callout"), glyph: "c-danger" },
 ];
 const COLS = 6;
 const MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
@@ -49,17 +50,17 @@ export function BlockMenu({ req, title, onClose: close }: { req: BlockMenuReques
   const { lines, blocks } = blocksOf(view.state);
   const curT = n === 1 && blocks[idx[0]] ? turnTargetOf(blocks[idx[0]], lines[blocks[idx[0]].a]) : null;
   const acts: { key: string; label: string; glyph: string; k?: string; run: () => void; danger?: boolean; flip?: boolean }[] = [
-    { key: "dup", label: n > 1 ? `Duplicate ${n} blocks` : "Duplicate", glyph: "columns-2", k: K.dup, run: () => done(() => duplicate(view, idx)) },
-    ...(n === 1 ? [{ key: "link", label: "Copy link to block", glyph: "wikilink", run: () => done(() => copyLink()) }] : []),
-    { key: "up", label: "Move up", glyph: "expand", k: K.up, flip: true, run: () => done(() => moveBy(view, -1, idx)) },
-    { key: "down", label: "Move down", glyph: "expand", k: K.down, run: () => done(() => moveBy(view, 1, idx)) },
-    { key: "del", label: n > 1 ? `Delete ${n} blocks` : "Delete", glyph: "c-danger", k: K.del, run: () => done(() => remove(view, idx)), danger: true },
+    { key: "dup", label: n > 1 ? t("Duplicate {n} blocks", { n }) : t("Duplicate"), glyph: "columns-2", k: K.dup, run: () => done(() => duplicate(view, idx)) },
+    ...(n === 1 ? [{ key: "link", label: t("Copy link to block"), glyph: "wikilink", run: () => done(() => copyLink()) }] : []),
+    { key: "up", label: t("Move up"), glyph: "expand", k: K.up, flip: true, run: () => done(() => moveBy(view, -1, idx)) },
+    { key: "down", label: t("Move down"), glyph: "expand", k: K.down, run: () => done(() => moveBy(view, 1, idx)) },
+    { key: "del", label: n > 1 ? t("Delete {n} blocks", { n }) : t("Delete"), glyph: "c-danger", k: K.del, run: () => done(() => remove(view, idx)), danger: true },
   ];
   function copyLink() {
     const id = ensureId(view, idx[0]);
     if (!id) return;
     const link = `[[${title}#^${id}]]`;
-    void navigator.clipboard?.writeText(link).then(() => toast(`Copied ${link}`), () => toast(link));
+    void navigator.clipboard?.writeText(link).then(() => toast(t("Copied {link}", { link })), () => toast(link));
   }
   const total = TURN.length + acts.length;
   const pick = (i: number) => (i < TURN.length ? done(() => turn(view, idx, TURN[i].t)) : acts[i - TURN.length].run());
@@ -67,8 +68,9 @@ export function BlockMenu({ req, title, onClose: close }: { req: BlockMenuReques
     if (sel < 0 && /Arrow/.test(e.key)) { e.preventDefault(); setSel(TURN.length); return; }
     const inGrid = sel < TURN.length;
     let d = 0;
-    if (e.key === "ArrowRight") d = inGrid ? 1 : 0;
-    else if (e.key === "ArrowLeft") d = inGrid ? -1 : 0;
+    const fwd = isRtl() ? -1 : 1; // the grid flows with the interface direction
+    if (e.key === "ArrowRight") d = inGrid ? fwd : 0;
+    else if (e.key === "ArrowLeft") d = inGrid ? -fwd : 0;
     else if (e.key === "ArrowDown") d = inGrid ? (sel + COLS < TURN.length ? COLS : TURN.length - sel) : 1;
     else if (e.key === "ArrowUp") d = inGrid ? -COLS : sel === TURN.length ? -(((TURN.length - 1) % COLS) + 1) : -1;
     else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(sel); return; }
@@ -79,7 +81,7 @@ export function BlockMenu({ req, title, onClose: close }: { req: BlockMenuReques
   const cell = (it: (typeof TURN)[number], i: number) => {
     const on = sel === i, cur = curT === it.t;
     return (
-      <button key={it.t} role="menuitem" title={it.label} aria-label={`Turn into ${it.label}`} onMouseEnter={() => setSel(i)} onClick={() => pick(i)}
+      <button key={it.t} role="menuitem" title={t(it.label)} aria-label={t("Turn into {type}", { type: t(it.label) })} onMouseEnter={() => setSel(i)} onClick={() => pick(i)}
         className={phone ? "flex size-12 shrink-0 items-center justify-center rounded-[10px] border border-line" : "flex h-8 items-center justify-center rounded-[7px]"}
         style={{ background: cur || (on && !phone) ? "var(--bg)" : "transparent", color: cur ? "var(--accent)" : "var(--text)", boxShadow: on && !cur && !phone ? "inset 0 0 0 1px var(--border)" : undefined }}>
         <Glyph name={it.glyph} size={phone ? 20 : 16} />
@@ -102,7 +104,7 @@ export function BlockMenu({ req, title, onClose: close }: { req: BlockMenuReques
       >
         <FocusOnMount />
         {phone && <div className="flex justify-center pb-2.5"><span className="h-1 w-9 rounded-[2px] bg-line" /></div>}
-        <span className={phone ? "pb-2 text-[11px] font-semibold uppercase tracking-[.06em] text-muted" : "px-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted"}>Turn into{n > 1 ? ` · ${n} blocks` : ""}</span>
+        <span className={phone ? "pb-2 text-[11px] font-semibold uppercase tracking-[.06em] text-muted" : "px-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted"}>{n > 1 ? t("Turn into · {n} blocks", { n }) : t("Turn into")}</span>
         {phone
           ? <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-3">{TURN.map(cell)}</div>
           : <div className="grid grid-cols-6 gap-0.5 px-1 pb-1">{TURN.map(cell)}</div>}
@@ -115,7 +117,7 @@ export function BlockMenu({ req, title, onClose: close }: { req: BlockMenuReques
               style={{ color: it.danger ? "var(--danger)" : "var(--text)", background: sel === i && !phone ? "var(--bg)" : "transparent" }}>
               <Glyph name={it.glyph} size={phone ? 18 : 15} style={it.flip ? { transform: "rotate(180deg)" } : undefined} />
               <span className="flex-1">{it.label}</span>
-              {it.k && !phone && <span className="font-mono text-[11px] font-medium text-muted">{it.k}</span>}
+              {it.k && !phone && <span dir="ltr" className="font-mono text-[11px] font-medium text-muted">{it.k}</span>}
             </button>
           );
         })}

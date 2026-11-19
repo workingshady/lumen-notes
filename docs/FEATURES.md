@@ -144,7 +144,7 @@ Chosen over tldraw because Excalidraw is MIT-licensed with no production license
 | **Arabic + English mixed**: per-paragraph automatic direction (`dir="auto"`) in preview and blog; per-line direction in the editor | ✅ |
 | Arabic fonts (IBM Plex Sans Arabic, Noto Naskh Arabic) paired with Inter / Source Serif | ✅ |
 | Arabic-aware search (ignores tashkeel/tatweel; أ/إ/آ = ا, ة = ه, ى = ي) | ✅ |
-| Full Arabic UI translation (RTL app chrome) | 🔜 |
+| **Full Arabic interface** (`lib/i18n.ts`, catalog `src/i18n/ar.ts`, docs `docs/I18N.md`): Settings › Appearance › Language English / العربية / Auto (device language), live switch; direction follows the language (`<html dir lang>`, mirrored shell: sidebar on the right, flipped chevrons/arrows, logical spacing); `t()` with interpolation + Arabic plural rules (`Intl.PluralRules`), English fallback; Western or Arabic-Indic digits; Arabic month names and relative times via `Intl`; LTR islands for code, URLs, English titles; coverage test `scripts/i18n.test.ts` | ✅ |
 
 ## 6. Versioning
 | Feature | Status |
@@ -164,6 +164,8 @@ Chosen over tldraw because Excalidraw is MIT-licensed with no production license
 | **Review › Advanced** (Settings › Reading › Review): max interval (days), new cards a day (0 = no limit; counted from today's review log), learning / relearning steps (e.g. `1m 10m`), all wired into scheduling + the workload chart; **review log** (Dexie `reviews`, synced as kind `review`: card, time, grade, state before, elapsed and scheduled days; undo removes the row); **Optimize from history** fits the 21 FSRS-6 weights to the log (`lib/fsrs-optimize.ts`: per-rating initial-stability pretrain + coordinate-descent on log loss with an L2 pull to the defaults, ≥ 50 reviews a day or more apart), "Use defaults" resets. Weights and limits are per device (settings) | ✅ |
 | **Concept practice** (path concept sheet): AI quiz (MCQ + short answer) from the concept's notes, falls back to their flashcards offline; save questions as cards; **test out** marks the concept learned | ✅ |
 | **Ask your vault** (`lib/ask-retrieve.ts`, `/api/ai/ask`): question → on-device BM25 passages → streamed Workers AI answer with numbered citations; scope vault / space / note + links / learning path; Arabic + English; AI tab › Ask vault, palette "Ask your notes…" (Ctrl/⌘⇧A) | ✅ |
+| **Ask as a chat** (round 5, `lib/chat.ts` + `lib/ask.ts`, `/api/ai/chat`, docs/CHAT_AND_TUTOR.md): threads synced as kind `chat` (Dexie `chats`); follow-ups rewritten into a standalone query (shown as "Searched for: …"), retrieval with the raw turn + the rewrite (rank-fused); last 4 turns + a running summary of older ones; streaming, Stop, Regenerate, 3 follow-up chips, 👍/👎 stored on the message, Copy / Save as note / Make flashcards; "Not in your notes" → explicit, labelled "Answer from general knowledge"; thread list (pin / rename / delete) on desktop, sheet on phone; caps 40 messages / 200 threads. Design pending (round 5 §1) | ✅ (logic), 🎨 design pending |
+| **AI tutor** (round 5, `lib/tutor.ts`, `components/TutorSession.tsx`, `/api/ai/tutor`): Explain (steps + Got it / Explain differently / Example + 3-question check), Socratic (guiding questions, hint ladder Hint 1 → Hint 2 → Show answer, correct / partly / not yet), Feynman (you explain; quoted gaps / wrong statements / jargon, clarity score with reasons, dictation where the browser has it); grounded in the concept's notes with [n] citations; end-of-session summary (right, gaps, 3–5 cards → "## Tutor cards", Mark concept learned when ≥ 80 %, Schedule a review); history per concept in the concept sheet. Entry: concept sheet "Learn with tutor", note ⋯ › Tutor, Ask's Ask/Tutor switch. Design pending (round 5 §2) | ✅ (logic), 🎨 design pending |
 | Learning status + progress dashboard (notes by status, streak, due cards, words written) | ✅ |
 | Study streak / activity heatmap | ✅ |
 | Cornell notes template, lesson template with objectives / summary / questions | ✅ |
@@ -196,6 +198,10 @@ Chosen over tldraw because Excalidraw is MIT-licensed with no production license
 | Export whole vault as `.zip` (folders → directories, canvases as `.canvas`) | ✅ |
 | Full JSON backup + restore | ✅ |
 | Obsidian vault compatible (Markdown + `[[links]]` + `.canvas`) | ✅ |
+| **Import dialog** (`docs/IMPORT.md`): source cards → drop zone / file / folder picker → reading progress → preview (tree with checkboxes, counts, warnings, target space + folder, new folder) → import progress → result with Open and **Undo import** (one tagged batch); + menu, Ctrl+K "Import…", Import & export › From another app; phone full-screen steps. Design pending from Claude Design (round 5 §4) | ✅ |
+| **Anki** `.apkg` / `.colpkg` (anki21b zstd + schema 18, anki21, anki2): one flashcards note per deck (folders per parent deck), Basic (+ reversed) → `Q :: A`, Cloze → `{{cN::}}`, Image Occlusion → `occlusion` block, HTML → Markdown, images / audio → attachments, tags, field mapping for custom note types, **review history** → review log + FSRS state (Anki FSRS memory or replay) with due dates kept (toggle) | ✅ |
+| **Notion** export (Markdown & CSV zip, nested zips): pages → notes with the folder tree, ids stripped, links → `[[Title]]`, databases → **bases** with row notes + front-matter properties, files → attachments, warnings for embeds / outside links | ✅ |
+| **Obsidian** vault (folder or zip) and Markdown folders: folders, attachments (`![[img.png]]`, relative paths), links, tags, front matter (block lists normalised), `.canvas`, `.base`, simple `.excalidraw.md` → whiteboard; title conflicts Skip / Rename (links follow) / Merge | ✅ |
 
 ## 8b. Sharing
 | Feature | Status |
@@ -297,6 +303,11 @@ Project spaces become a hub for building software. Nothing connects to GitHub/Bi
 | Attachments in D1 (free, chunked) · optional R2 if a card is added later | ✅ |
 | Sync to Cloudflare D1 (last-write-wins per note by `updatedAt`, incremental `since` cursor) | ✅ |
 | Single-owner passcode auth (PBKDF2 hash + HMAC bearer tokens) | ✅ |
+| **User accounts** behind the `ACCOUNTS_ENABLED` switch (off): `GET /api/accounts/config`, `/api/auth/*` (404 while off), migration `0010_users.sql` (users, identities, sessions, email_tokens, oauth_states, auth_attempts, audit, user_items). Docs `docs/ACCOUNTS.md`, tests `scripts/auth.test.ts` | 🟡 built, not enabled |
+| Accounts · email + password: register (terms, strength meter), email verification, PBKDF2-SHA256 100k + per-user salt, lockout like `/unlock`, forgot / reset password (signs other devices out) | 🟡 built, not enabled |
+| Accounts · **Continue with Google** (OAuth code + PKCE + state cookie + nonce, ID token checked against Google JWKS; Google button per Google's branding) and **magic link** (15 min, single use); email via Resend behind a `Mailer` interface ("would send" log on localhost only) | 🟡 built, not enabled |
+| Accounts · sessions (`lms_` bearer tokens, hashed; list, sign out one / everywhere), profile page (avatar glyph or photo, name, email + verified badge, language, time zone, sign-in methods), export all data, delete account (typed confirm). Per-user data in `user_items` (owner `items` untouched) | 🟡 built, not enabled |
+| Accounts · off-state UI: unlock screen "Accounts are coming" line; Settings › Account = local profile + "Sign-in and registration · coming soon" card. Demo preview of the active screens: `?demo=1&accounts=preview` | ✅ |
 | PWA (manifest, installable) | ✅ |
 | Android APK via Capacitor from the same build | ✅ (config) |
 | iOS via Capacitor | 🔜 |

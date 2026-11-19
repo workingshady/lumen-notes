@@ -7,6 +7,7 @@ import { cx } from "../components/ui";
 import { StatusGlyph } from "./roadmap-parts";
 import { overdue } from "./roadmap-outline";
 import { DAY, fmtDay, fmtLong, isoDay, todayIso } from "./spaces-util";
+import { fmtNum, isRtl, t as tr, tx } from "../lib/i18n";
 
 const LANE = 180;
 
@@ -38,15 +39,15 @@ export function Timeline({ mods, target, onSelect, onDue, fresh }: { mods: Modul
   }, []);
   return (
     <div className="flex min-h-full min-w-[760px] flex-col px-4 py-4 md:px-8">
-      {!dates.length && <p className="mb-3 text-[13px] text-muted">Give topics a due date (topic sheet → Due, or <code>due:2026-12-01</code> in the Markdown) to place them here.</p>}
+      {!dates.length && <p className="mb-3 text-[13px] text-muted">{tx("Give topics a due date (topic sheet → Due, or {code} in the Markdown) to place them here.", { code: <code dir="ltr">due:2026-12-01</code> })}</p>}
       <div className="grid h-[30px] shrink-0 items-center border-b border-line text-[12px] text-muted" style={{ gridTemplateColumns: `${LANE}px 1fr` }}>
-        <span>Module</span>
+        <span>{tr("Module")}</span>
         <div className="grid" style={{ gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))` }}>{Array.from({ length: weeks }, (_, i) => <span key={i}>{fmtDay(lo + i * 7 * DAY)}</span>)}</div>
       </div>
       <div ref={area} className="relative flex-1">
-        <div className="pointer-events-none absolute inset-y-0 right-0" style={{ left: LANE }}>
-          <div className="absolute inset-y-0 w-0.5 bg-accent" style={{ left: `${frac(now) * 100}%` }} title="Today" />
-          {!isNaN(tgt) && <div className="absolute inset-y-0 border-l-[1.5px] border-dashed border-muted opacity-60" style={{ left: `${frac(tgt) * 100}%` }}><span className="absolute left-1.5 top-1 whitespace-nowrap text-[11px] text-muted">Target · {fmtDay(target!)}</span></div>}
+        <div className="pointer-events-none absolute inset-y-0 end-0" style={{ insetInlineStart: LANE }}>
+          <div className="absolute inset-y-0 w-0.5 bg-accent" style={{ insetInlineStart: `${frac(now) * 100}%` }} title={tr("Today")} />
+          {!isNaN(tgt) && <div className="absolute inset-y-0 border-s-[1.5px] border-dashed border-muted opacity-60" style={{ insetInlineStart: `${frac(tgt) * 100}%` }}><span className="absolute start-1.5 top-1 whitespace-nowrap text-[11px] text-muted">{tr("Target · {date}", { date: fmtDay(target!) })}</span></div>}
         </div>
         {lanes.map(({ m, items }, i) => {
           const p = progress([m]);
@@ -62,7 +63,7 @@ export function Timeline({ mods, target, onSelect, onDue, fresh }: { mods: Modul
           });
           return (
             <div key={i} className="grid border-b border-line" style={{ gridTemplateColumns: `${LANE}px 1fr`, minHeight: Math.max(96, 14 + ends.length * 38 + 16) }}>
-              <div className="flex flex-col gap-1 py-3.5 pr-3"><span className="truncate font-semibold" dir="auto">{m.name}</span><span className="text-[12px] text-muted">{p.total && p.done === p.total ? `${p.done}/${p.total} done` : `${p.done}/${p.total}`}</span></div>
+              <div className="flex flex-col gap-1 py-3.5 pe-3"><span className="truncate font-semibold" dir="auto">{m.name}</span><span className="text-[12px] text-muted">{p.total && p.done === p.total ? tr("{done}/{total} done", { done: p.done, total: p.total }) : `${fmtNum(p.done)}/${fmtNum(p.total)}`}</span></div>
               <div className="relative">
                 {placed.map((x) => <TimelineBar key={x.t.line} t={x.t} left={x.left} top={14 + x.row * 38} pxPerDay={laneW / ((hi - lo) / DAY)} fresh={fresh.has(x.t.name.toLowerCase())}
                   onSelect={onSelect} onDrop={(due) => onDue(x.t, due)} freeze={(on) => { frozen.current = on ? scale : null; }} />)}
@@ -85,7 +86,7 @@ function TimelineBar({ t, left, top, pxPerDay, onSelect, onDrop, freeze, fresh }
   const late = overdue(t, shown);
   const done = t.status === "done";
   const down = (e: RPointerEvent) => { if (e.button !== 0) return; drag.current = { x: e.clientX, moved: false }; try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* synthetic pointer */ } freeze(true); };
-  const move = (e: RPointerEvent) => { const d = drag.current; if (!d) return; const x = e.clientX - d.x; if (Math.abs(x) > 3) d.moved = true; if (d.moved) setDx(x); };
+  const move = (e: RPointerEvent) => { const d = drag.current; if (!d) return; const x = e.clientX - d.x; if (Math.abs(x) > 3) d.moved = true; if (d.moved) setDx(isRtl() ? -x : x); };
   const up = () => {
     const d = drag.current;
     drag.current = null;
@@ -100,18 +101,18 @@ function TimelineBar({ t, left, top, pxPerDay, onSelect, onDrop, freeze, fresh }
   return (
     <>
       {dx !== 0 && (
-        <div aria-hidden className={base} style={{ left, top, background: fill, border: "1px solid var(--border)", opacity: 0.35 }}><StatusGlyph t={t} size={14} />{t.name}</div>
+        <div aria-hidden className={base} style={{ insetInlineStart: left, top, background: fill, border: "1px solid var(--border)", opacity: 0.35 }}><StatusGlyph t={t} size={14} />{t.name}</div>
       )}
       <button onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => { drag.current = null; setDx(0); freeze(false); }}
-        title={`${t.name} · due ${fmtLong(due)}. Click to open · drag sideways to change the date`} data-bar={t.name}
+        title={`${t.name} · ${tr("due {date}. Click to open · drag sideways to change the date", { date: fmtLong(due) })}`} data-bar={t.name}
         className={cx(base, "touch-none select-none", dx ? "z-20 cursor-grabbing" : "cursor-grab hover:brightness-110", fresh && "rm-unlock")}
-        style={{ left: left + dx, top: dx ? top + 6 : top, background: fill, border: dx ? "1.5px solid var(--accent)" : `1px solid ${late ? "var(--danger)" : "var(--border)"}`, boxShadow: dx ? "0 12px 28px rgba(0,0,0,.45)" : undefined }}>
+        style={{ insetInlineStart: left + dx, top: dx ? top + 6 : top, background: fill, border: dx ? "1.5px solid var(--accent)" : `1px solid ${late ? "var(--danger)" : "var(--border)"}`, boxShadow: dx ? "0 12px 28px rgba(0,0,0,.45)" : undefined }}>
         <StatusGlyph t={t} size={14} />{t.name}
       </button>
       {dx !== 0 && (
         <div role="status" className="pointer-events-none absolute z-30 whitespace-nowrap rounded-[8px] border border-line bg-surface-2 px-2.5 py-1.5 text-[12px]"
-          style={{ left: left + dx, top: top - 40, boxShadow: "0 10px 24px rgba(0,0,0,.4)" }}>
-          Due <b className="font-semibold">{fmtLong(shown)}</b> · was {fmtDay(due)}
+          style={{ insetInlineStart: left + dx, top: top - 40, boxShadow: "0 10px 24px rgba(0,0,0,.4)" }}>
+          {tx("Due {date} · was {old}", { date: <b className="font-semibold">{fmtLong(shown)}</b>, old: fmtDay(due) })}
         </div>
       )}
     </>

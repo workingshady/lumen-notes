@@ -11,6 +11,7 @@ import {
   addStage, autoOrganize, buildPath, filterCount, matchesFilter, mergeConcepts, moveConcept, NO_FILTER, norm, pathProgress, resolveCourses, scheduleNewlyDone, serializePath, UNPLACED,
   type BuiltConcept, type GroupBy, type PathFilter,
 } from "../lib/path";
+import { fmtNum, t } from "../lib/i18n";
 import { toast, useVault } from "../lib/store";
 import { Graph } from "./path-graph";
 import { OverlapsPanel, PathHeader, PathHeaderPhone, useOverlaps } from "./path-header";
@@ -57,9 +58,9 @@ export function PathView({ note }: { note: Note }) {
   const realStages = path.stages.filter((s) => s.name !== UNPLACED).map((s) => s.name);
   const allCollapsed = realStages.length > 0 && realStages.every((s) => cols.includes(s));
 
-  function auto() { save(autoOrganize(note.body, path)); toast("Stages rebuilt from prerequisites across all courses"); }
+  function auto() { save(autoOrganize(note.body, path)); toast(t("Stages rebuilt from prerequisites across all courses")); }
   async function aiOrganize() {
-    if (!getToken()) return toast("AI needs sync on (Settings → Sync).");
+    if (!getToken()) return toast(t("AI needs sync on (Settings → Sync)."));
     setBusy(true);
     try {
       const list = path.concepts.map((c) => `- ${c.def.name} [${[...new Set(c.coverage.map((x) => x.course.title))].join(", ")}]${c.needs.length ? ` (needs: ${c.needs.map((n) => path.byKey.get(n)?.def.name).join(", ")})` : ""}`).join("\n");
@@ -77,7 +78,7 @@ export function PathView({ note }: { note: Note }) {
         }
       }
       save(body);
-      toast("Organized with AI. Check the stages and adjust.");
+      toast(t("Organized with AI. Check the stages and adjust."));
     } catch (e) { toast((e as Error).message); } finally { setBusy(false); }
   }
 
@@ -85,7 +86,7 @@ export function PathView({ note }: { note: Note }) {
   const view = tab === "stages"
     ? phone ? <StagesPhone path={path} note={note} onOpen={openConcept} save={save} confirm={confirm} keep={keep} group={group} allOpen={allOpen} />
       : <Stages path={path} note={note} onOpen={openConcept} save={save} confirm={confirm} keep={keep} group={group} collapsed={cols} setCollapsed={setCols} sel={sel} />
-    : empty ? <div className="mx-auto flex max-w-md flex-col items-center gap-3 p-10 text-center text-[13px] text-muted"><Glyph name="path" size={24} color="var(--muted)" />Add courses to this path, or build it yourself in Stages. Each course keeps its own roadmap; the path merges overlapping topics into concepts.</div>
+    : empty ? <div className="mx-auto flex max-w-md flex-col items-center gap-3 p-10 text-center text-[13px] text-muted"><Glyph name="path" size={24} color="var(--muted)" />{t("Add courses to this path, or build it yourself in Stages. Each course keeps its own roadmap; the path merges overlapping topics into concepts.")}</div>
     : tab === "graph" ? <ReactFlowProvider><Graph path={path} note={note} save={save} onOpen={openConcept} sel={sel} keep={keep} focus={focus} setFocus={setFocus} /></ReactFlowProvider>
     : tab === "matrix" ? <Matrix path={path} onOpen={openConcept} keep={keep} group={group} f={f} setF={setF} noteId={note.id} />
     : tab === "timeline" ? <Timeline path={path} onOpen={openConcept} keep={keep} noteId={note.id} />
@@ -98,10 +99,10 @@ export function PathView({ note }: { note: Note }) {
         <PathHeaderPhone note={note} path={path} stats={prog} ovCount={ov.pairs.length} onOverlaps={() => setOvOpen(true)} onAuto={auto} onAI={aiOrganize} busy={busy} />
         <TabBar tab={tab} setTab={setTab} revise={prog.review} phone />
         <div className="flex shrink-0 gap-2 px-4 pb-3">
-          <button onClick={() => setFilterSheet(true)} className="flex h-9 items-center gap-1.5 rounded-[10px] border border-line px-3 text-[13px]"><Glyph name="filter" size={15} />Filter{n > 0 && <span className="rounded-full bg-surface-2 px-1.5 text-[11px] leading-[17px]">{n}</span>}</button>
-          <button onClick={() => setOvOpen(true)} className="flex h-9 items-center gap-1.5 rounded-[10px] border border-line px-3 text-[13px]"><Glyph name="overlap" size={15} />{ov.pairs.length} overlaps</button>
+          <button onClick={() => setFilterSheet(true)} className="flex h-9 items-center gap-1.5 rounded-[10px] border border-line px-3 text-[13px]"><Glyph name="filter" size={15} />{t("Filter")}{n > 0 && <span className="rounded-full bg-surface-2 px-1.5 text-[11px] leading-[17px]">{fmtNum(n)}</span>}</button>
+          <button onClick={() => setOvOpen(true)} className="flex h-9 items-center gap-1.5 rounded-[10px] border border-line px-3 text-[13px]"><Glyph name="overlap" size={15} />{t("{n} overlap|{n} overlaps", { n: ov.pairs.length })}</button>
           <span className="flex-1" />
-          {tab === "stages" && <button onClick={() => setAllOpen((a) => !a)} className="flex h-9 items-center text-[13px] text-muted">{allOpen ? "Collapse all" : "Expand all"}</button>}
+          {tab === "stages" && <button onClick={() => setAllOpen((a) => !a)} className="flex h-9 items-center text-[13px] text-muted">{allOpen ? t("Collapse all") : t("Expand all")}</button>}
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">{view}</div>
         {selected && <ConceptSheet c={selected} path={path} note={note} save={save} onClose={() => setSel(null)} onOpen={openConcept} onFocus={focusIn} phone />}
