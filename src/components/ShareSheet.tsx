@@ -1,3 +1,4 @@
+import { localOgCard, publishOgImage } from "../lib/og";
 import { ArrowUpRight, Check, CircleCheck, CloudOff, Copy, Globe, Info, Link2, Share2, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import type { Note, Space } from "../../shared/types";
@@ -62,6 +63,15 @@ export function ShareSheet({ target, open, onClose }: { target: ShareTarget; ope
   const synced = !!getToken();
   const [copied, setCopied] = useState(false);
   useEffect(() => setCopied(false), [shareId]);
+  // OG image (Lumen 21): render the 1200×630 card from local data and upload its PNG for link previews.
+  useEffect(() => {
+    if (!open || !synced) return;
+    const t = setTimeout(() => void localOgCard(target).then((card) => Promise.all([
+      shareId ? publishOgImage("s", shareId, card) : null,
+      isNote && target.note.published ? publishOgImage("post", target.note.slug || target.note.id, card) : null,
+    ])), 400);
+    return () => clearTimeout(t);
+  }, [open, synced, shareId, published, title]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setShare = async (on: boolean) => {
     if (!on) return turnOffLink(target);

@@ -31,6 +31,8 @@ const CalendarView = lazy(() => Productivity().then((m) => ({ default: m.Calenda
 const TableView = lazy(() => Productivity().then((m) => ({ default: m.TableView })));
 const ReviewView = lazy(() => Productivity().then((m) => ({ default: m.ReviewView })));
 const TrashView = lazy(() => Productivity().then((m) => ({ default: m.TrashView })));
+const PathsList = lazy(() => import("./views/path-list").then((m) => ({ default: m.PathsList })));
+const TodayView = lazy(() => import("./views/TodayView").then((m) => ({ default: m.TodayView })));
 const GraphView = lazy(() => import("./views/GraphView").then((m) => ({ default: m.GraphView })));
 const SpaceView = lazy(() => import("./views/SpaceView").then((m) => ({ default: m.SpaceView })));
 const SettingsView = lazy(() => import("./views/Settings").then((m) => ({ default: m.SettingsView })));
@@ -171,6 +173,7 @@ function Workspace() {
   let main: React.ReactNode = null;
   if (notesView) main = note ? <NoteView key={note.id} note={note} /> : <PickNote />;
   else if (ui.view === "home") main = <Home />;
+  else if (ui.view === "today") main = <TodayView />;
   else if (ui.view === "tasks") main = <TasksView />;
   else if (ui.view === "kanban") main = <KanbanView />;
   else if (ui.view === "calendar") main = <CalendarView />;
@@ -239,6 +242,7 @@ function Workspace() {
 
 function PickNote() {
   const ui = useUI();
+  if (ui.filter === "paths") return <Suspense fallback={null}><PathsList /></Suspense>;
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2.5 px-10 text-center">
       <span className="text-[16px] font-semibold">Pick a note</span>

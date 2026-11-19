@@ -6,7 +6,7 @@ import type { Note } from "../../shared/types";
 import { NOTE_TYPES, STATUSES } from "../../shared/types";
 import { createNote, updateNote } from "../lib/actions";
 import {
-  BUILTIN, NONE, canon, condToExpr, editable, flatten, fmtDate, getValue, groupRows, impliedProps, isDateProp, isStatus, isType, knownProps, label,
+  BUILTIN, NONE, canon, condToExpr, copiesOf, moveMessage, swapValue, editable, flatten, fmtDate, getValue, groupRows, impliedProps, isDateProp, isStatus, isType, knownProps, label,
   newView, parseBase, propsOf, runView, serializeBase, show, unflatten, unsupported, writeBase, yamlName, ymd, asTime,
   type BaseConfig, type BaseViewDef, type Cond, type Ctx, type FilterNode, type Group as RowGroup, type Row, type SortRule, type Val, type ViewType,
 } from "../lib/base";
@@ -49,8 +49,12 @@ async function moveTo(r: Row, prop: string, from: string, to: string, ctx: Ctx, 
   if (!editable(k)) { toast(`${label(k)} can't be changed by dragging`, undefined, { icon: "info" }); return; }
   const cur = getValue(r.n, prop, ctx, r.props);
   if (Array.isArray(cur)) {
-    const next = [...new Set([...cur.filter((x) => x !== from), ...(to === NONE ? [] : [to])])];
-    return writeValue(r.n, prop, k === "tags" ? next.join(", ") : next.length ? `[${next.join(", ")}]` : null, spaces);
+    // one copy of a multi-value note: only the dragged value changes ("Moved from #cv to #nlp, still in #llm")
+    const vals = cur.map(String);
+    const next = swapValue(vals, from, to);
+    await writeValue(r.n, prop, k === "tags" ? next.join(", ") : next.length ? `[${next.join(", ")}]` : null, spaces);
+    if (vals.length > 1 || next.length > 1) toast(moveMessage(prop, from, to, vals), undefined, { icon: "check" });
+    return;
   }
   return writeValue(r.n, prop, to === NONE ? null : to, spaces);
 }
@@ -217,11 +221,11 @@ export function BaseView({ note }: { note: Note }) {
         {view.type === "table" ? (
           <TableView rows={visible} cols={cols} view={view} ctx={ctx} spaces={spaces} groupBy={groupBy} wide={wide} more={more} edit={edit} />
         ) : view.type === "board" ? (
-          <BoardView rows={rows} cols={cols} groupBy={groupBy!} ctx={ctx} spaces={spaces} wide={wide} onNew={(k) => newNote(k === NONE ? {} : { [canon(groupBy!.property)]: k })} />
+          <BoardView rows={rows} cols={cols} groupBy={groupBy!} multi={view.groupMulti} ctx={ctx} spaces={spaces} wide={wide} onNew={(k) => newNote(k === NONE ? {} : { [canon(groupBy!.property)]: k })} />
         ) : view.type === "calendar" ? (
           <CalendarView rows={rows} view={view} ctx={ctx} spaces={spaces} wide={wide} />
         ) : (
-          <CardsView rows={visible} cols={cols} ctx={ctx} groupBy={groupBy} list={view.type === "list"} wide={wide} more={more} />
+          <CardsView rows={visible} cols={cols} ctx={ctx} groupBy={groupBy} multi={view.groupMulti} list={view.type === "list"} wide={wide} more={more} />
         )}
         {!rows.length && <div className="px-6 py-14 text-center text-[13px] text-muted">{search ? `No notes match “${search}”.` : "No notes match this view's filters."}</div>}
       </div>
@@ -242,6 +246,15 @@ export function BaseView({ note }: { note: Note }) {
             <PropSelect value={groupBy?.property ?? ""} props={allProps} allowNone={view.type !== "board"} onChange={(p) => edit((_c, w) => { w.groupBy = p ? { property: p, direction: w.groupBy?.direction ?? "ASC" } : undefined; })} />
             {groupBy && <DirButton dir={groupBy.direction} onClick={() => edit((_c, w) => { w.groupBy = { property: groupBy.property, direction: groupBy.direction === "ASC" ? "DESC" : "ASC" }; })} />}
           </div>
+          {groupBy && (
+            <label className="block space-y-1">
+              <span className="text-[12px] font-medium text-muted">Notes with several values</span>
+              <select aria-label="Notes with several values" value={view.groupMulti ?? "each"} onChange={(e) => edit((_c, w) => { w.groupMulti = e.target.value === "first" ? "first" : "each"; })} className={cx(inputCls, "text-[13px]")}>
+                <option value="each">Show in each group</option>
+                <option value="first">First group only</option>
+              </select>
+            </label>
+          )}
         </div>
       </Sheet>
       <Sheet open={panel === "props"} onClose={() => setPanel(null)} title={view.type === "table" ? "Columns" : "Shown properties"}>
@@ -339,10 +352,15 @@ function TableView({ rows, cols, view, ctx, spaces, groupBy, wide, more, edit }:
     const d = sortOf(p);
     vv.sort = d === "ASC" ? [{ property: p, direction: "DESC" }] : d === "DESC" ? undefined : [{ property: p, direction: "ASC" }];
   });
-  const groups: RowGroup[] = groupBy ? groupRows(rows, groupBy, ctx) : [{ key: "", label: "", rows }];
-  const body = (r: Row, gk: string) => (
+  const groups: RowGroup[] = groupBy ? groupRows(rows, groupBy, ctx, { multi: view.groupMulti }) : [{ key: "", label: "", rows }];
+  const copies = groupBy ? copiesOf(groups) : new Map<string, string[]>();
+  const gLabel = new Map(groups.map((g) => [g.key, g.label]));
+  const body = (r: Row, gk: string) => {
+    const others = (copies.get(r.n.id) ?? []).filter((k) => k !== gk);
+    return (
     <tr key={gk + r.n.id} onClick={() => openNote(r.n.id)} className="base-row">
-      <td className="base-sticky"><span className="flex items-center gap-2"><span className="size-[7px] shrink-0 rounded-full" style={{ background: r.n.status ? STATUS_COLOR[r.n.status] : "var(--muted)" }} /><span dir="auto" className="truncate font-medium">{r.n.title || "Untitled"}</span></span></td>
+      <td className="base-sticky"><span className="flex items-center gap-2"><span className="size-[7px] shrink-0 rounded-full" style={{ background: r.n.status ? STATUS_COLOR[r.n.status] : "var(--muted)" }} /><span dir="auto" className="truncate font-medium">{r.n.title || "Untitled"}</span>
+        {others.length > 0 && <span className="base-also shrink-0" title={`Also in: ${others.map((k) => gLabel.get(k) ?? k).join(", ")}`}>also in {others.length} group{others.length === 1 ? "" : "s"}</span>}</span></td>
       {cols.map((p) => (
         <td key={p} onClick={editable(p) ? (e) => e.stopPropagation() : undefined}>
           {editable(p) ? <CellEdit r={r} p={p} ctx={ctx} spaces={spaces} /> : <span className="block truncate"><ValueView v={getValue(r.n, p, ctx, r.props)} p={p} /></span>}
@@ -350,7 +368,8 @@ function TableView({ rows, cols, view, ctx, spaces, groupBy, wide, more, edit }:
       ))}
       <td aria-hidden />
     </tr>
-  );
+    );
+  };
   return (
     <div className="base-scroll h-full overflow-auto">
       <table className="base-table" style={{ width: all.reduce((a, p) => a + w(p), 0) + 40 }}>
@@ -380,11 +399,12 @@ function TableView({ rows, cols, view, ctx, spaces, groupBy, wide, more, edit }:
 }
 
 // ------------------------------------------------------------------ board
-function BoardView({ rows, cols, groupBy, ctx, spaces, wide, onNew }: { rows: Row[]; cols: string[]; groupBy: SortRule; ctx: Ctx; spaces: { id: string; name: string }[]; wide: boolean; onNew: (key: string) => void }) {
+function BoardView({ rows, cols, groupBy, multi, ctx, spaces, wide, onNew }: { rows: Row[]; cols: string[]; groupBy: SortRule; multi?: BaseViewDef["groupMulti"]; ctx: Ctx; spaces: { id: string; name: string }[]; wide: boolean; onNew: (key: string) => void }) {
   const scroller = useRef<HTMLDivElement>(null);
   const byId = useMemo(() => new Map(rows.map((r) => [r.n.id, r])), [rows]);
   const { drag, start, ghost, wasDrag } = useDragCards((id, from, to) => { const r = byId.get(id); if (r) void moveTo(r, groupBy.property, from, to, ctx, spaces); }, scroller);
-  const groups = useMemo(() => groupRows(rows, groupBy, ctx, { allStatuses: true }), [rows, groupBy, ctx]);
+  const groups = useMemo(() => groupRows(rows, groupBy, ctx, { allStatuses: true, multi }), [rows, groupBy, ctx, multi]);
+  const copies = useMemo(() => copiesOf(groups), [groups]);
   const isStatusCol = canon(groupBy.property) === "status";
   return (
     <div ref={scroller} className={cx("base-board h-full overflow-auto", drag && "is-dragging", wide ? "px-6 py-4" : "px-3 py-3")}>
@@ -398,13 +418,19 @@ function BoardView({ rows, cols, groupBy, ctx, spaces, wide, onNew }: { rows: Ro
               <button aria-label={`New note in ${g.label}`} title="New note here" onClick={() => onNew(g.key)} className="flex size-6 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink"><Plus size={14} /></button>
             </header>
             <div className="flex min-h-[60px] flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2">
-              {g.rows.slice(0, 300).map((r) => (
-                <article key={r.n.id} onPointerDown={(e) => start(e, r.n.id, g.key, r.n.title)} onClick={() => !wasDrag() && openNote(r.n.id)}
-                  className={cx("base-card cursor-pointer select-none rounded-[10px] border border-line bg-bg p-2.5 hover:border-accent/60", drag?.id === r.n.id && "opacity-40")}>
+              {g.rows.slice(0, 300).map((r) => {
+                const cp = copies.get(r.n.id);
+                const dup = !!cp && cp[0] !== g.key; // a later copy of a note shown in several columns
+                return (
+                <article key={r.n.id} data-copy={dup ? "dup" : cp ? "home" : undefined} onPointerDown={(e) => start(e, r.n.id, g.key, r.n.title)} onClick={() => !wasDrag() && openNote(r.n.id)}
+                  title={cp ? `In ${cp.length} columns: ${cp.map((k) => groups.find((x) => x.key === k)?.label ?? k).join(", ")}` : undefined}
+                  className={cx("base-card cursor-pointer select-none rounded-[10px] border border-line bg-bg p-2.5 hover:border-accent/60", dup && "base-card-dup", drag?.id === r.n.id && drag.from === g.key && "opacity-40")}>
                   <div dir="auto" className="text-[13.5px] font-semibold leading-5">{r.n.title || "Untitled"}</div>
                   <CardProps r={r} cols={cols.filter((p) => canon(p) !== canon(groupBy.property))} ctx={ctx} />
+                  {dup && <div className="mt-1 text-[11px] text-muted" dir="auto">Copy · also in {cp.filter((k) => k !== g.key).map((k) => (canon(groupBy.property) === "tags" ? "#" : "") + (groups.find((x) => x.key === k)?.label ?? k)).join(", ")}</div>}
                 </article>
-              ))}
+                );
+              })}
               {g.rows.length > 300 && <div className="px-1 text-[12px] text-muted">+{g.rows.length - 300} more</div>}
             </div>
           </section>
@@ -423,8 +449,8 @@ function CardProps({ r, cols, ctx }: { r: Row; cols: string[]; ctx: Ctx }) {
 
 // ------------------------------------------------------------------ gallery + list
 const COVER = /^(https?:\/\/\S+\.(png|jpe?g|gif|webp|avif|svg))(\?\S*)?$/i;
-function CardsView({ rows, cols, ctx, groupBy, list, wide, more }: { rows: Row[]; cols: string[]; ctx: Ctx; groupBy?: SortRule; list: boolean; wide: boolean; more: ReactNode }) {
-  const groups: RowGroup[] = groupBy ? groupRows(rows, groupBy, ctx) : [{ key: "", label: "", rows }];
+function CardsView({ rows, cols, ctx, groupBy, multi, list, wide, more }: { rows: Row[]; cols: string[]; ctx: Ctx; groupBy?: SortRule; multi?: BaseViewDef["groupMulti"]; list: boolean; wide: boolean; more: ReactNode }) {
+  const groups: RowGroup[] = groupBy ? groupRows(rows, groupBy, ctx, { multi }) : [{ key: "", label: "", rows }];
   const text = (n: Note) => noteDerived("baseExcerpt", n, (x) => (isMd(x) ? excerpt(splitFrontMatter(x.body.slice(0, 6000)).body.replace(/^\s*#\s.*$/m, "").replace(/```[\s\S]*?```/g, " "), 140) : x.type));
   return (
     <div className={cx("h-full overflow-y-auto", wide ? "px-6 py-4" : "px-3 py-3")}>

@@ -10,6 +10,8 @@ import extSettings from "./ext/settings";
 import extWorkspace from "./ext/workspace";
 import extPractice from "./ext/practice";
 import registerAsk from "./ext/ask";
+import registerHub from "./ext/hub";
+import extOg, { ogPages } from "./ext/og"; // OG images + share/blog page meta (round 4 assets)
 import { accountRouter } from "./accounts";
 
 export type Env = {
@@ -379,7 +381,7 @@ const toPost = (n: Note, full = false): Post => ({
 async function branding(env: Env["Bindings"]) {
   const r = await env.DB.prepare("SELECT data FROM items WHERE kind = 'space' AND id = 'inbox'").first<{ data: string }>();
   const p = r ? ((JSON.parse(r.data) as { props?: Record<string, string> }).props ?? {}) : {};
-  return { name: p.blogName || env.BLOG_NAME || "Lumen", tagline: p.tagline ?? "", author: p.author ?? "", avatar: p.avatar ?? "🕯️" };
+  return { name: p.blogName || env.BLOG_NAME || "Lumen", tagline: p.tagline ?? "", author: p.author ?? "", avatar: p.avatar ?? "glyph:owl" };
 }
 api.get("/public/posts", async (c) => c.json({ blog: await branding(c.env), posts: (await posts(c.env.DB)).map((n) => toPost(n)) }, 200, { "cache-control": "public, max-age=60" }));
 api.get("/public/posts/:slug", async (c) => {
@@ -491,6 +493,8 @@ const helpers = { auth, getNote, putNote, upserts, hmac, safeEqual };
 export type Helpers = typeof helpers;
 for (const ext of [extHome, extSpaces, extNavigate, extStudy, extSettings, extWorkspace, extPractice]) ext(api, helpers);
 registerAsk(api, helpers); // "Ask your vault" (worker/ext/ask.ts)
+registerHub(api, helpers); // project hub "Ask" (worker/ext/hub.ts)
+extOg(api, helpers); ogPages(app); // OG image routes + /s/:token, /blog/:slug meta (worker/ext/og.ts)
 
 app.route("/api", api);
 app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));

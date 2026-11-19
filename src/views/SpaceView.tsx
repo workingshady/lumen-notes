@@ -1,19 +1,20 @@
-import { Archive, ArchiveRestore, Check, Columns3, EllipsisVertical, FileText, FileUp, Flag, GraduationCap, LayoutTemplate, List, Loader2, MoreHorizontal, Pencil, Play, Plus, Settings2, Share, Share2, Sparkles, Target, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Check, EllipsisVertical, FileText, FileUp, Flag, GraduationCap, LayoutTemplate, Loader2, MoreHorizontal, Pencil, Play, Plus, Settings2, Share2, Sparkles, Target, Trash2 } from "lucide-react";
 import { ProjectHub } from "./ProjectHub";
-import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { SPACE_KINDS, type Note, type Space } from "../../shared/types";
 import { createNote, updateNote } from "../lib/actions";
 import { aiRun, getToken } from "../lib/api";
 import { DEFAULT_SPACE, patch, save } from "../lib/db";
 import { PRESETS } from "../lib/canvas";
-import { cycleTask, progress, roadmap, setTaskStatus, tasks, type Module, type Task, type TaskStatus } from "../lib/parse";
+import { progress, roadmap, tasks, type Module, type Task } from "../lib/parse";
 import { openNote, setUI, toast, useUI, useVault } from "../lib/store";
 import { ROADMAP_PRESETS } from "../lib/templates";
 import { KIND_LABEL } from "../components/Sidebar";
 import { Button, cx, Empty, Field, inputCls, Sheet } from "../components/ui";
 import { ShareSheet } from "../components/ShareSheet";
+import { SpaceIcon, SpaceIconPicker } from "../components/SpaceIcon";
 import { currentTopic, openTopicNote, Ring, RoadmapView, type RoadmapViewKind } from "./RoadmapView";
-import { DAY, fmtDay, fmtFull, fmtWdDay, recentLabel, todayIso, usePhone } from "./spaces-util";
+import { DAY, fmtDay, fmtFull, recentLabel, todayIso, usePhone } from "./spaces-util";
 
 /** Plain outline (headings + bullets, e.g. a syllabus) → roadmap Markdown. Existing `- [x]` markers are kept. */
 export function outlineToRoadmap(text: string) {
@@ -122,29 +123,23 @@ export function SpaceView() {
   );
   const iconBox = (size: number, r: number, fs: number, onClick?: () => void) => (
     <div onClick={onClick} className={cx("flex shrink-0 items-center justify-center", onClick && "cursor-pointer")}
-      style={{ width: size, height: size, borderRadius: r, fontSize: fs, background: `color-mix(in srgb, ${color} 18%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 50%, transparent)` }}>{sp.icon}</div>
+      style={{ width: size, height: size, borderRadius: r, fontSize: fs, background: `color-mix(in srgb, ${color} 18%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 50%, transparent)` }}><SpaceIcon space={sp} size={Math.round(size * 0.43)} color={color} /></div>
   );
 
   // ---------------------------------------------------------------- phone course page (design 1E / 1E′)
   if (phone && isCourse && rm) {
     const tree = view === "tree";
-    const sub = tree ? (deadline && daysLeft !== null ? (daysLeft >= 0 ? `${daysLeft} days to ${fmtDay(deadline)}` : `${-daysLeft} days over ${fmtDay(deadline)}`) : `${p?.done ?? 0} of ${p?.total ?? 0} topics`)
-      : ["Course", deadline ? `Target ${fmtDay(deadline)}` : null, daysLeft !== null ? `${Math.abs(daysLeft)} days${daysLeft < 0 ? " over" : ""}` : null].filter(Boolean).join(" · ");
+    // design 15H: 38px glyph tile, name 16/650, "9 of 24 · target 20 Dec"; share lives in the ⋯ menu
+    const sub = [`${p?.done ?? 0} of ${p?.total ?? 0}`, deadline ? `target ${fmtDay(deadline)}` : null].filter(Boolean).join(" · ");
     return (
       <div className="relative flex h-full flex-col">
-        <div className="safe-t shrink-0"><div className={cx("relative flex items-center gap-3 px-4", tree ? "py-2.5" : "py-3")}>
-          {iconBox(tree ? 40 : 48, tree ? 10 : 12, tree ? 20 : 24)}
-          <div className={cx("flex min-w-0 flex-1 flex-col", tree ? "gap-0.5" : "gap-[3px]")}>
-            <span className={cx("truncate font-[650]", tree ? "text-[17px]" : "text-[19px]")} dir="auto">{sp.name}</span>
+        <div className="safe-t shrink-0"><div className="relative flex items-center gap-3 px-4 py-2">
+          <SpaceIcon space={sp} size={22} tile color={color} />
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="truncate text-[16px] font-[650]" dir="auto">{sp.name}</span>
             <span className="truncate text-[12px] text-muted">{sub}</span>
           </div>
-          {p && <Ring pct={p.pct} size={tree ? 44 : 48} />}
-          {/* Share (info colour once shared, as on the phone share screens) + overflow menu */}
-          <div className="-mr-2 flex">
-            <button aria-label={sp.shareId ? "Shared · manage link" : "Share space"} title={sp.shareId ? "Shared · manage link" : "Share space"} onClick={() => setShare(true)}
-              className="flex h-12 w-11 items-center justify-center" style={{ color: sp.shareId ? "var(--info)" : "var(--text)" }}><Share size={19} /></button>
-            <button aria-label="More" onClick={() => setMenu((x) => !x)} className="flex h-12 w-11 items-center justify-center"><EllipsisVertical size={20} /></button>
-          </div>
+          <button aria-label="More" onClick={() => setMenu((x) => !x)} className="-mr-2 flex h-11 w-11 items-center justify-center text-muted"><EllipsisVertical size={20} /></button>
           {menuEl && <div className="absolute right-4 top-full z-30">{menuEl}</div>}
         </div></div>
         <div className="min-h-0 flex-1"><RoadmapView note={rm} compact target={deadline || null} view={view} onView={setView} /></div>
@@ -157,6 +152,43 @@ export function SpaceView() {
       </div>
     );
   }
+
+  const moreBtn = (
+    <div className="relative">
+      <button aria-label="More" title="More" onClick={() => setMenu((x) => !x)} className="flex size-[34px] items-center justify-center rounded-[10px] border border-line text-muted hover:bg-surface-2 hover:text-ink"><MoreHorizontal size={16} /></button>
+      {menuEl && <div className="absolute right-0 top-10 z-30">{menuEl}</div>}
+    </div>
+  );
+  // ---------------------------------------------------------------- course page with a roadmap (design R4 RoadmapDesk 15A)
+  if (isCourse && rm) {
+    const sub = [sp.props.provider, "course", p ? `${p.done} of ${p.total} topics done` : null, deadline ? `target ${fmtDay(deadline)}` : null].filter(Boolean).join(" · ");
+    const header = (
+      <div className="flex items-center gap-3.5">
+        <SpaceIcon space={sp} size={24} tile color={color} />
+        <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+          <span className="truncate whitespace-nowrap text-[20px] font-[650] tracking-[-.02em]" dir="auto" title={sp.description || undefined}>{sp.name}{sp.description ? ` · ${sp.description}` : ""}</span>
+          <span className={cx("truncate whitespace-nowrap text-muted", daysLeft !== null && daysLeft < 0 && "text-bad")}>{sp.props.url ? <a href={sp.props.url} target="_blank" rel="noreferrer" className="hover:text-ink">{sub}</a> : sub}</span>
+        </div>
+        {p && <><span className="h-1.5 w-[150px] shrink-0 overflow-hidden rounded-[3px] bg-surface-2" title={`${learning} learning`}><span className="block h-full bg-ok" style={{ width: `${p.pct}%` }} /></span><span className="w-[34px] shrink-0 text-muted">{p.pct}%</span></>}
+        {cur && <button className="flex h-[34px] max-w-[260px] shrink-0 items-center gap-2 whitespace-nowrap rounded-[10px] bg-accent px-3.5 font-semibold text-accent-fg hover:brightness-110" onClick={() => void openTopicNote(rm, cur, v.byTitle)}><Play size={13} className="shrink-0" /><span className="truncate">Continue: {cur.name}</span></button>}
+        {moreBtn}
+      </div>
+    );
+    return (
+      <div className="relative flex h-full flex-col overflow-hidden">
+        <div className="safe-t min-h-0 flex-1"><RoadmapView note={rm} compact header={header} target={deadline || null} view={view} onView={setView} /></div>
+        {hidden}
+      </div>
+    );
+  }
+  // ---------------------------------------------------------------- project hub (design R4 HubDesk 15J…U)
+  if (isProject) return (
+    <div className="relative flex h-full flex-col overflow-hidden">
+      <ProjectHub sp={sp} color={color} more={moreBtn} onSettings={() => setEdit(true)}
+        overview={<ProjectBody sp={sp} rm={rm} mods={mods} notes={notes} allTasks={allTasks} daysLeft={daysLeft} deadline={deadline} onCreate={addRoadmap} onEdit={() => setEdit(true)} />} />
+      {hidden}
+    </div>
+  );
 
   return (
     <div className={cx("relative h-full", isCourse && rm ? "flex flex-col overflow-hidden" : "overflow-y-auto")}>
@@ -248,14 +280,13 @@ function Menu({ items, title, onClose, onKeep }: { items: MenuItem[]; title?: st
 }
 
 type T = Task & { note: Note };
-const COLS: { s: TaskStatus; n: string; c: string }[] = [{ s: "todo", n: "Todo", c: "var(--muted)" }, { s: "doing", n: "Doing", c: "var(--info)" }, { s: "done", n: "Done", c: "var(--success)" }];
-
+/**
+ * Project overview, second row (kept from Lumen 03 under the hub's R4 cards): deadline + time used, milestones (roadmap
+ * modules), recent notes. Task cards live on the hub's Board tab.
+ */
 function ProjectBody({ sp, rm, mods, notes, allTasks, daysLeft, deadline, onCreate, onEdit }: {
   sp: Space; rm?: Note; mods: Module[]; notes: Note[]; allTasks: T[]; daysLeft: number | null; deadline?: string; onCreate: () => void; onEdit: () => void;
 }) {
-  const [list, setList] = useState(false);
-  const [over, setOver] = useState<TaskStatus | null>(null);
-  const [allDone, setAllDone] = useState(false);
   const done = allTasks.filter((t) => t.done).length;
   const taskPct = allTasks.length ? Math.round((done / allTasks.length) * 100) : 0;
   const end = deadline ? Date.parse(deadline + "T00:00:00") : NaN;
@@ -265,110 +296,45 @@ function ProjectBody({ sp, rm, mods, notes, allTasks, daysLeft, deadline, onCrea
   const steps = (mods.length > 1 ? mods.map((m) => ({ name: m.name, due: m.due, done: m.topics.length > 0 && m.topics.every((t) => t.status === "done" || t.status === "skipped") }))
     : (mods[0]?.topics ?? []).map((t) => ({ name: t.name, due: t.due, done: t.status === "done" || t.status === "skipped" })));
   const curIdx = steps.findIndex((s) => !s.done);
-  const sourceCount = new Set(allTasks.map((t) => t.note.id)).size;
-  const today = todayIso();
-  const move = (t: T, s: TaskStatus) => { if (t.status !== s) void updateNote(t.note.id, { body: setTaskStatus(t.note.body, t.line, s) }); };
-  const drop = (s: TaskStatus) => (e: DragEvent) => {
-    e.preventDefault();
-    setOver(null);
-    const key = e.dataTransfer.getData("text/x-lumen-task");
-    const t = allTasks.find((x) => `${x.note.id}:${x.line}` === key);
-    if (t) move(t, s);
-  };
-  const dueText = (t: T) => (t.done || !t.due ? "" : t.due < today ? "Overdue" : fmtWdDay(t.due));
-
   return (
-    <div className="flex flex-col gap-[22px] px-4 py-6 md:px-12 md:pt-[22px]">
-      <div className="grid gap-5 md:grid-cols-[260px_1fr]">
-        <button onClick={onEdit} title="Change deadline" className="flex flex-col gap-1.5 rounded-[14px] border border-line bg-surface px-5 py-[18px] text-left text-[13px] hover:border-muted">
-          <span className="text-muted">Deadline</span>
-          {deadline && daysLeft !== null ? (
-            <>
-              <span className={cx("text-[44px] font-[650] leading-[52px] tracking-[-.03em]", daysLeft < 0 && "text-bad")}>{Math.abs(daysLeft)} <span className="text-[18px] font-medium tracking-normal text-muted">{daysLeft < 0 ? "days over" : "days"}</span></span>
-              <span className="text-muted">{fmtFull(deadline)} · {Math.max(0, Math.round(daysLeft / 7))} weeks</span>
-            </>
-          ) : <span className="py-3 text-[15px] text-muted">No deadline set</span>}
-          <span className="mt-1.5 h-1.5 overflow-hidden rounded-[3px] bg-surface-2"><span className="block h-full bg-ink opacity-70" style={{ width: `${timePct ?? 0}%` }} /></span>
-          <span className="text-[12px] text-muted">{timePct !== null ? `${timePct}% of time used · ` : ""}{taskPct}% of tasks done</span>
-        </button>
-        <div className="flex flex-col gap-4 rounded-[14px] border border-line bg-surface px-6 py-[18px] text-[13px]">
-          <span className="text-[14px] font-semibold">Milestones</span>
-          {steps.length ? (
-            <div className="flex items-start overflow-x-auto">
-              {steps.map((s, i) => {
-                const isCur = i === curIdx;
-                return (
-                  <div key={i} className="flex min-w-[96px] flex-1 flex-col gap-2">
-                    <div className="flex items-center">
-                      <span className="box-border flex size-[22px] shrink-0 items-center justify-center rounded-full"
-                        style={{ background: s.done ? "var(--success)" : "transparent", border: s.done ? "none" : isCur ? "2px solid var(--accent)" : "1.5px solid var(--muted)", boxShadow: isCur ? "0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent)" : "none" }}>
-                        {s.done && <Check size={12} strokeWidth={3} style={{ color: "var(--bg)" }} />}
-                      </span>
-                      <span className="mx-1.5 h-0.5 flex-1" style={{ background: i === steps.length - 1 ? "transparent" : s.done ? "var(--success)" : "var(--border)" }} />
-                    </div>
-                    <span className={cx("pr-2", isCur ? "font-semibold" : "font-[450]")} dir="auto">{s.name}</span>
-                    <span className={cx("text-[12px]", isCur ? "text-accent" : "text-muted")}>{s.due ? fmtDay(s.due) : ""}</span>
+    <div className="grid items-start gap-3.5 md:grid-cols-[220px_1fr_300px]">
+      <button onClick={onEdit} title="Change deadline" className="flex flex-col gap-1.5 rounded-[14px] border border-line bg-surface p-4 text-left text-[13px] hover:border-muted">
+        <span className="font-semibold">Deadline</span>
+        {deadline && daysLeft !== null ? (
+          <>
+            <span className={cx("text-[36px] font-[650] leading-[44px] tracking-[-.03em]", daysLeft < 0 && "text-bad")}>{Math.abs(daysLeft)} <span className="text-[15px] font-medium tracking-normal text-muted">{daysLeft < 0 ? "days over" : "days"}</span></span>
+            <span className="text-muted">{fmtFull(deadline)}</span>
+          </>
+        ) : <span className="py-3 text-[15px] text-muted">No deadline set</span>}
+        <span className="mt-1.5 h-1.5 overflow-hidden rounded-[3px] bg-surface-2"><span className="block h-full bg-ink opacity-70" style={{ width: `${timePct ?? 0}%` }} /></span>
+        <span className="text-[12px] text-muted">{timePct !== null ? `${timePct}% of time used · ` : ""}{taskPct}% of tasks done</span>
+      </button>
+      <div className="flex min-w-0 flex-col gap-3 rounded-[14px] border border-line bg-surface p-4 text-[13px]">
+        <span className="font-semibold">Milestones</span>
+        {steps.length ? (
+          <div className="flex items-start overflow-x-auto">
+            {steps.map((s, i) => {
+              const isCur = i === curIdx;
+              return (
+                <div key={i} className="flex min-w-[96px] flex-1 flex-col gap-2">
+                  <div className="flex items-center">
+                    <span className="box-border flex size-[22px] shrink-0 items-center justify-center rounded-full"
+                      style={{ background: s.done ? "var(--success)" : "transparent", border: s.done ? "none" : isCur ? "2px solid var(--accent)" : "1.5px solid var(--muted)", boxShadow: isCur ? "0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent)" : "none" }}>
+                      {s.done && <Check size={12} strokeWidth={3} style={{ color: "var(--bg)" }} />}
+                    </span>
+                    <span className="mx-1.5 h-0.5 flex-1" style={{ background: i === steps.length - 1 ? "transparent" : s.done ? "var(--success)" : "var(--border)" }} />
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 text-muted">No milestones yet.<Button size="sm" variant="primary" onClick={onCreate}><Plus size={14} />Create milestones</Button>{rm && <button onClick={() => openNote(rm.id, "edit")} className="text-link">Edit</button>}</div>
-          )}
-        </div>
-      </div>
-      <div className="grid gap-5 md:grid-cols-[1fr_340px]">
-        <div className="flex min-w-0 flex-col gap-3 text-[13px]">
-          <div className="flex items-center gap-2.5"><span className="text-[14px] font-semibold">Tasks</span><span className="text-[12px] text-muted">from {sourceCount} note{sourceCount === 1 ? "" : "s"} in this space</span>
-            <span className="flex-1" />
-            <button onClick={() => setList((x) => !x)} className="flex items-center gap-1.5 text-[12px] text-muted hover:text-ink">{list ? <Columns3 size={13} /> : <List size={13} />}{list ? "Board" : "List"}</button>
+                  <span className={cx("pr-2", isCur ? "font-semibold" : "font-[450]")} dir="auto">{s.name}</span>
+                  <span className={cx("text-[12px]", isCur ? "text-accent" : "text-muted")}>{s.due ? fmtDay(s.due) : ""}</span>
+                </div>
+              );
+            })}
           </div>
-          {!allTasks.length ? <div className="rounded-[14px] bg-surface p-4 text-muted">No tasks yet. Write <code>- [ ] task</code> in any note in this space (<code>- [/]</code> = doing).</div>
-            : list ? (
-              <div className="flex flex-col rounded-[14px] bg-surface p-1.5">
-                {allTasks.map((t) => (
-                  <div key={t.note.id + t.line} className="flex items-center gap-2.5 rounded-[8px] px-2.5 py-2 hover:bg-surface-2">
-                    <button title={`${t.status} · click to advance`} onClick={() => void updateNote(t.note.id, { body: cycleTask(t.note.body, t) })} className="flex size-4 shrink-0 items-center justify-center rounded-[5px]"
-                      style={t.status === "done" ? { background: "var(--success)" } : { border: `1.5px solid ${t.status === "doing" ? "var(--info)" : "var(--muted)"}`, background: t.status === "doing" ? "linear-gradient(90deg, var(--info) 50%, transparent 50%)" : undefined }}>
-                      {t.status === "done" && <Check size={11} strokeWidth={3} style={{ color: "var(--bg)" }} />}
-                    </button>
-                    <button onClick={() => openNote(t.note.id)} className={cx("min-w-0 flex-1 truncate text-left font-medium", t.done && "text-muted line-through")} dir="auto">{t.text}</button>
-                    <span className="max-w-[35%] truncate text-[11.5px] text-muted">{t.note.title}</span>
-                    <span className={cx("w-16 shrink-0 text-right text-[11.5px]", dueText(t) === "Overdue" ? "text-bad" : "text-muted")}>{dueText(t)}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-3">
-                {COLS.map((col) => {
-                  const items = allTasks.filter((t) => t.status === col.s);
-                  // Done keeps only the latest two cards unless expanded (design: "Done 14" with two cards).
-                  const shown = col.s === "done" && !allDone ? items.slice(-2).reverse() : items.slice(0, 20);
-                  return (
-                    <div key={col.s} onDragOver={(e) => { e.preventDefault(); setOver(col.s); }} onDragLeave={() => setOver(null)} onDrop={drop(col.s)}
-                      className="flex flex-col gap-2 rounded-[14px] bg-surface p-2.5" style={over === col.s ? { boxShadow: "inset 0 0 0 1.5px var(--accent)" } : undefined}>
-                      <button disabled={col.s !== "done"} onClick={() => setAllDone((x) => !x)} title={col.s === "done" ? (allDone ? "Show the latest two" : `Show all ${items.length}`) : undefined} className="flex items-center gap-2 px-1 pb-1 pt-0.5 text-left font-medium text-muted enabled:hover:text-ink"><span className="size-2 rounded-full" style={{ background: col.c }} />{col.n}<span className="text-[12px]">{items.length}</span></button>
-                      {shown.map((t) => {
-                        const due = dueText(t);
-                        return (
-                          <button key={t.note.id + t.line} draggable onDragStart={(e) => { e.dataTransfer.setData("text/x-lumen-task", `${t.note.id}:${t.line}`); e.dataTransfer.effectAllowed = "move"; }}
-                            onClick={() => openNote(t.note.id)} onContextMenu={(e) => { e.preventDefault(); void updateNote(t.note.id, { body: cycleTask(t.note.body, t) }); }}
-                            title="Drag to another column to change its status · right-click: next status"
-                            className="flex cursor-grab flex-col gap-1.5 rounded-[10px] bg-surface-2 px-3 py-2.5 text-left hover:brightness-110 active:cursor-grabbing">
-                            <span className={cx("font-medium leading-[18px]", t.done && "text-muted line-through")} dir="auto">{t.text}</span>
-                            <span className="flex items-center gap-1.5 text-[11.5px] text-muted"><FileText size={12} className="shrink-0" /><span className="min-w-0 flex-1 truncate">{t.note.title}</span>{due && <span className={due === "Overdue" ? "text-bad" : ""}>{due}</span>}</span>
-                          </button>
-                        );
-                      })}
-                      {col.s !== "done" && items.length > 20 && <span className="px-1 text-[12px] text-muted">+{items.length - 20} more</span>}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-        </div>
-        <RecentNotes notes={notes.filter((n) => n.id !== rm?.id)} />
+        ) : (
+          <div className="flex flex-wrap items-center gap-3 text-muted">No milestones yet.<Button size="sm" variant="primary" onClick={onCreate}><Plus size={14} />Create milestones</Button>{rm && <button onClick={() => openNote(rm.id, "edit")} className="text-link">Edit</button>}</div>
+        )}
       </div>
+      <RecentNotes notes={notes.filter((n) => n.id !== rm?.id)} />
     </div>
   );
 }
@@ -405,6 +371,21 @@ function RecentNotes({ notes }: { notes: Note[] }) {
   );
 }
 
+/** Space settings › Icon: the current icon on a tile; opens the round-4 icon picker (popover / phone sheet). */
+function SpaceIconField({ sp, onChange }: { sp: Space; onChange: (icon: string, color: string | null) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLButtonElement>(null);
+  const phone = usePhone();
+  return (
+    <>
+      <button ref={ref} type="button" aria-label="Change space icon" onClick={() => setOpen((x) => !x)} className={cx("flex size-10 items-center justify-center rounded-[6px] border bg-bg", open ? "border-accent" : "border-line hover:border-muted")}>
+        <SpaceIcon space={sp} size={15} />
+      </button>
+      <SpaceIconPicker open={open} onClose={() => setOpen(false)} phone={phone} anchor={ref.current} icon={sp.icon} color={sp.color} name={sp.name} kind={sp.kind} onChange={onChange} />
+    </>
+  );
+}
+
 function EditSpace({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ui = useUI();
   const v = useVault();
@@ -416,7 +397,7 @@ function EditSpace({ open, onClose }: { open: boolean; onClose: () => void }) {
     <Sheet open={open} onClose={onClose} title="Space settings">
       <div className="space-y-4 text-[13px]" key={sp.id}>
         <div className="flex gap-2">
-          <Field label="Icon"><input className={inputCls + " w-14 text-center text-[18px]"} defaultValue={sp.icon} onBlur={(e) => set({ icon: e.target.value || "📁" })} /></Field>
+          <Field label="Icon"><SpaceIconField sp={sp} onChange={(icon, color) => set({ icon, color })} /></Field>
           <div className="flex-1"><Field label="Name"><input className={inputCls} defaultValue={sp.name} onBlur={(e) => e.target.value.trim() && set({ name: e.target.value.trim() })} /></Field></div>
         </div>
         <Field label="Description"><input className={inputCls} defaultValue={sp.description} onBlur={(e) => set({ description: e.target.value })} /></Field>

@@ -50,6 +50,10 @@ views:
   - type: calendar
     name: Due dates
     date: due            # Lumen key: which date property places notes on the calendar
+  - type: board
+    name: By tag
+    groupBy: { property: file.tags }
+    groupMulti: each     # Lumen key: notes with several values show in each group (each, default) or the first only (first)
 ```
 ~~~
 The YAML can also be the whole body after the front-matter and H1 (like a raw `.base` file pasted in).
@@ -89,7 +93,14 @@ A filter is one expression string, or a nested `and:` / `or:` / `not:` list of t
 - **Board**: one column per value of the group property (all four statuses are always shown for `status`). Drag a card
   to another column to change that property (mouse: drag; touch: long-press then drag; the board auto-scrolls at the
   edges). Columns scroll-snap on phones (swipe between them). `+` in a column creates a note with that value.
-  Multi-value properties (tags) put a note in each of its columns; dragging swaps just that value.
+  Notes in several groups: see below.
+- **Notes in several groups**: when the group property has several values (tags, a list front-matter property such as
+  `courses: [CS231n, fast.ai]`), the note shows in **each** group, in tables, boards, galleries and lists. Tables put an
+  "also in N groups" marker on the row (hover for the group names). Boards show the same card in each column; every
+  copy after the first is drawn dashed with "Copy · also in #llm". Dragging one copy changes only that value and says
+  so in a toast: "Moved from #cv to #nlp, still in #llm" (dropping on a column the note is already in just removes the
+  dragged value). The Group / Columns sheet has *Notes with several values: show in each group / first group only*,
+  stored as `groupMulti: each | first` on the view (default `each`; kept when Lumen rewrites the YAML).
 - **Gallery**: cards with an excerpt (or a `cover:`/`image:` URL) and the shown properties. **List**: compact rows.
 - **Calendar**: month grid (Monday first) by `date:` (default `file.ctime`). Drag a note to another day to change a
   front-matter date; tap a day to list its notes. Notes without a date are counted below the grid.

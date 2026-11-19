@@ -6,8 +6,9 @@ import { RangeSetBuilder, StateEffect, StateField } from "@codemirror/state";
 import { tags } from "@lezer/highlight";
 import { Decoration, EditorView, ViewPlugin, type DecorationSet, type ViewUpdate } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
-import { BookOpen, ChevronDown, ChevronUp, CircleCheck, CircleX, Code2, Play, SquareTerminal, X } from "lucide-react";
+import { BookOpen, Check, ChevronDown, ChevronUp, CircleCheck, CircleX, Code2, Play, SquareTerminal, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Glyph } from "./Glyph";
 import { cx } from "./ui";
 
 export type CodeTab = "json" | "script";
@@ -50,7 +51,7 @@ export function ValidChip({ error, big }: { error: string | null; big?: boolean 
   return error ? (
     <span className={cx("flex items-center gap-1 rounded-full bg-bad/14 px-2.5 font-semibold text-bad", big ? "h-7 text-[12.5px]" : "h-6 text-[12px]")}><CircleX size={12} />Invalid</span>
   ) : (
-    <span className={cx("flex items-center gap-1 rounded-full bg-ok/14 px-2.5 font-semibold text-ok", big ? "h-7 text-[12.5px]" : "h-6 text-[12px]")}>Valid ✓</span>
+    <span className={cx("flex items-center gap-1 rounded-full bg-ok/14 px-2.5 font-semibold text-ok", big ? "h-7 text-[12.5px]" : "h-6 text-[12px]")}>Valid <Check size={13} strokeWidth={2.5} /></span>
   );
 }
 
@@ -123,7 +124,7 @@ export function RunButton({ onRun, big }: { onRun: () => void; big?: boolean }) 
   );
 }
 
-/** Output strip under the script editor: muted mono lines, ✓/✖ lines in semantic colour. */
+/** Output strip under the script editor: muted mono lines; done / error lines (the runner prefixes ✓ / ✖) get a check / x glyph in semantic colour. */
 export function OutputStrip({ logs, onClear, empty }: { logs: string[]; onClear: () => void; empty: string }) {
   return (
     <div className="mx-3 mt-2.5 flex max-h-40 shrink-0 flex-col gap-1 overflow-auto rounded-[10px] bg-bg px-3 py-2 font-mono text-[11.5px] leading-[18px] text-muted md:mx-0 md:mt-0 md:rounded-none md:border-t md:border-line md:px-3.5 md:py-2.5 md:text-[12px] md:leading-[19px]">
@@ -132,7 +133,7 @@ export function OutputStrip({ logs, onClear, empty }: { logs: string[]; onClear:
         {logs.length > 0 && <button onClick={onClear} className="font-medium normal-case tracking-normal hover:text-ink">Clear</button>}
       </div>
       {logs.length ? logs.map((l, i) => (
-        <span key={i} className={cx("whitespace-pre-wrap break-words", l.startsWith("✓") && "text-ok", l.startsWith("✖") && "text-bad")}>{l.startsWith("✓") || l.startsWith("✖") ? l : `› ${l}`}</span>
+        <span key={i} className={cx("whitespace-pre-wrap break-words", l.startsWith("✓") && "text-ok", l.startsWith("✖") && "text-bad")}>{l.startsWith("✓") ? <span className="inline-flex items-start gap-1.5"><Check size={13} className="mt-[3px] shrink-0" />{l.slice(1).trim()}</span> : l.startsWith("✖") ? <span className="inline-flex items-start gap-1.5"><Glyph name="x" size={13} className="mt-[3px] shrink-0" />{l.slice(1).trim()}</span> : `› ${l}`}</span>
       )) : <span className="font-sans">{empty}</span>}
     </div>
   );

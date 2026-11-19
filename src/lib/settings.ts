@@ -65,10 +65,13 @@ export interface Settings {
   ttsRate: number;
   /** Flashcards (FSRS): desired retention = chance of still remembering a card when it comes due (0.8–0.95). */
   retention: number;
+  /** Today study plan (lib/plan.ts): daily minutes, study weekdays (0 = Sun), max new lessons a day, course titles by priority. */
+  planDailyMinutes: number; planStudyDays: number[]; planMaxNew: number; planCourseOrder: string[];
 }
 const DEFAULTS: Settings = {
   theme: "auto", accentHue: null, readingFont: "serif", fontSize: 16, measure: 68, density: "comfortable",
-  blogName: "Lumen", tagline: "Notes from what I'm learning", author: "", avatar: "🕯️", johnnyDecimal: false, spellcheck: true, dailyTemplate: "journal", diagramFolder: "sub", diagramAutoSave: false, diagramAiNames: false, diagramExport: DIAGRAM_EXPORT_DEFAULTS, focusMode: "read", focusDim: true, highlightOnExit: "ask", ttsRate: 1, retention: 0.9,
+  blogName: "Lumen", tagline: "Notes from what I'm learning", author: "", avatar: "glyph:owl", johnnyDecimal: false, spellcheck: true, dailyTemplate: "journal", diagramFolder: "sub", diagramAutoSave: false, diagramAiNames: false, diagramExport: DIAGRAM_EXPORT_DEFAULTS, focusMode: "read", focusDim: true, highlightOnExit: "ask", ttsRate: 1, retention: 0.9,
+  planDailyMinutes: 60, planStudyDays: [1, 2, 3, 4, 5, 6], planMaxNew: 2, planCourseOrder: [],
 };
 
 const KEY = "lumen.settings";

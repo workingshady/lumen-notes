@@ -1,4 +1,4 @@
-import { Route, CalendarDays, ChevronDown, ChevronRight, ChevronsUpDown, FileText, FolderTree as FolderTreeIcon, House, Inbox, LayoutDashboard, Layers, ListChecks, NotebookPen, Plus, Rss, Search, Settings, Trash2, Waypoints } from "lucide-react";
+import { Route, CalendarCheck, CalendarDays, ChevronDown, ChevronRight, ChevronsUpDown, FileText, FolderTree as FolderTreeIcon, House, Inbox, LayoutDashboard, Layers, ListChecks, NotebookPen, Plus, Rss, Search, Settings, Trash2, Waypoints } from "lucide-react";
 import { useMemo, useState } from "react";
 import { SPACE_KINDS, type Folder, type Space } from "../../shared/types";
 import { createFolder, createNote, dailyNote, deleteFolder, moveFolder, moveNote } from "../lib/actions";
@@ -11,27 +11,34 @@ import { num, tr, useRtl } from "./ws-dir";
 import { PRESETS } from "../lib/canvas";
 import { useDueCards } from "./Review";
 import { cx } from "./ui";
+import { SidebarSmartFolders } from "./SmartFolders";
 import { AccountSwitcher } from "./AccountSwitcher";
+import { Glyph } from "./Glyph";
+import { AvatarGlyph, SpaceIcon, SpaceTile as SpaceTileBox } from "./SpaceIcon";
+import { useFaviconBadge } from "../lib/favicon";
+import { useAvatarImage } from "../lib/home-meta";
 
 export const KIND_LABEL: Record<Space["kind"], string> = { project: "Project", area: "Area", course: "Course", resource: "Resource", archive: "Archive" };
 const colorOf = (c: string | null | undefined) => (c ? PRESETS[c] ?? c : null);
 
-type NavKey = "home" | "inbox" | "daily" | "tasks" | "calendar" | "review" | "graph" | "canvas" | "paths" | "blog";
+type NavKey = "home" | "today" | "inbox" | "daily" | "tasks" | "calendar" | "review" | "graph" | "canvas" | "paths" | "blog";
 interface NavItem { key: NavKey; icon: React.ReactNode; label: string; count?: number; learn?: boolean }
 
 /** Which nav item is active for the current UI state. */
 function activeKey(ui: UI): NavKey | null {
   if (ui.view === "notes") return ui.filter === "visual" ? "canvas" : ui.filter === "paths" ? "paths" : ui.filter === "published" ? "blog" : ui.spaceId === "inbox" && !ui.folderId && !ui.tag && !ui.noteId ? "inbox" : null;
-  return ({ home: "home", tasks: "tasks", kanban: "tasks", calendar: "calendar", review: "review", graph: "graph" } as Partial<Record<View, NavKey>>)[ui.view] ?? null;
+  return ({ home: "home", today: "today", tasks: "tasks", kanban: "tasks", calendar: "calendar", review: "review", graph: "graph" } as Partial<Record<View, NavKey>>)[ui.view] ?? null;
 }
 
 function useNav(): NavItem[] {
   const v = useVault();
   const due = useDueCards(v.notes)?.length ?? 0;
+  useFaviconBadge(due);
   const openTasks = useMemo(() => v.notes.filter((n) => n.type !== "roadmap").reduce((a, n) => a + noteDerived("openTasks", n, (x) => tasks(x.body).filter((t) => !t.done).length), 0), [v.notes]);
   const inbox = v.notes.filter((n) => n.spaceId === "inbox").length;
   return [
     { key: "home", icon: <House size={16} />, label: "Home" },
+    { key: "today", icon: <CalendarCheck size={16} />, label: "Today" },
     { key: "inbox", icon: <Inbox size={16} />, label: "Inbox", count: inbox },
     { key: "daily", icon: <NotebookPen size={16} />, label: "Daily note" },
     { key: "tasks", icon: <ListChecks size={16} />, label: "Tasks", count: openTasks },
@@ -47,6 +54,7 @@ function useNav(): NavItem[] {
 async function runNav(k: NavKey, spaceId: string) {
   const sp = spaceId === "all" ? "inbox" : spaceId;
   if (k === "home") go("home");
+  else if (k === "today") go("today");
   else if (k === "inbox") go("notes", { spaceId: "inbox", folderId: null, tag: null, filter: null, noteId: null });
   else if (k === "daily") openNote((await dailyNote(sp)).id, "edit");
   else if (k === "canvas") go("notes", { spaceId: "all", folderId: null, tag: null, filter: "visual" });
@@ -55,14 +63,9 @@ async function runNav(k: NavKey, spaceId: string) {
   else go(k as View);
 }
 
-/** Space switcher tile: emoji on a tinted square in the space color. */
+/** Space switcher tile: the space glyph on a tinted square in the space colour (design LumenSidebar: 28 → glyph 12, rail 32 → 13). */
 function SpaceTile({ space, size = 28 }: { space?: Space; size?: number }) {
-  const c = colorOf(space?.color) ?? "#A371F7";
-  return (
-    <div className="flex shrink-0 items-center justify-center" style={{ width: size, height: size, borderRadius: size / 4, background: `color-mix(in srgb, ${c} 20%, transparent)`, border: `1px solid color-mix(in srgb, ${c} 50%, transparent)`, fontSize: size / 2 }}>
-      {space?.icon ?? "🗂️"}
-    </div>
-  );
+  return <SpaceTileBox space={space} size={size} glyph={size >= 32 ? 13 : size >= 28 ? 12 : Math.round(size * 0.6)} />;
 }
 
 function useSpaceMeta(space?: Space) {
@@ -136,6 +139,7 @@ export function Sidebar({ rail }: { rail?: boolean }) {
         </nav>
 
         {ui.spaceId !== "all" && <FolderTree spaceId={ui.spaceId} />}
+        <SidebarSmartFolders />
         <Tags />
 
         <div className="px-2 pt-2.5">
@@ -163,7 +167,8 @@ function RailBtn({ label, active, dot, onClick, children }: { label: string; act
 
 function Avatar({ size = 26 }: { size?: number }) {
   const s = useSettings();
-  return <button onClick={() => go("settings")} title={s.author || "Profile"} className="flex shrink-0 items-center justify-center rounded-full border border-line bg-surface-2 text-[14px]" style={{ width: size, height: size }}>{s.avatar}</button>;
+  const img = useAvatarImage();
+  return <button onClick={() => go("settings")} title={s.author || "Profile"} className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface-2" style={{ width: size, height: size }}>{img ? <img src={img} alt="" className="size-full object-cover" /> : <AvatarGlyph value={s.avatar} size={12} />}</button>;
 }
 
 function SpaceSwitcher({ onClose }: { onClose: () => void }) {
@@ -174,7 +179,7 @@ function SpaceSwitcher({ onClose }: { onClose: () => void }) {
     <>
       <div className="fixed inset-0 z-30" onClick={onClose} />
       <div className="absolute inset-x-2.5 top-[52px] z-40 max-h-[60vh] overflow-y-auto rounded-[12px] border border-line bg-surface p-1.5 shadow-xl fade-in" onClick={onClose}>
-        <button className={row(ui.spaceId === "all")} onClick={() => setUI({ spaceId: "all", folderId: null, filter: null })}><span className="w-5 text-center">🗂️</span> All spaces</button>
+        <button className={row(ui.spaceId === "all")} onClick={() => setUI({ spaceId: "all", folderId: null, filter: null })}><Glyph name="folder" size={16} tile="var(--muted)" tileScale={1.5} color="var(--muted)" /> All spaces</button>
         {SPACE_KINDS.map((k) => {
           const list = v.spaces.filter((s) => s.kind === k && !s.archived);
           if (!list.length) return null;
@@ -183,7 +188,7 @@ function SpaceSwitcher({ onClose }: { onClose: () => void }) {
               <div className="px-2 py-1 text-[10.5px] font-semibold uppercase tracking-[.06em] text-muted">{KIND_LABEL[k]}s</div>
               {list.map((s) => (
                 <button key={s.id} className={row(ui.spaceId === s.id)} onClick={() => go(s.id === "inbox" || k === "area" || k === "resource" ? "notes" : "space", { spaceId: s.id, folderId: null, tag: null, filter: null })}>
-                  <SpaceTile space={s} size={20} /><span className="flex-1 truncate text-left">{s.name}</span>
+                  <SpaceIcon space={s} size={16} tile tileScale={1.5} /><span dir="auto" className="flex-1 truncate text-start">{s.name}</span>
                   {colorOf(s.color) && <span className="size-1.5 rounded-full" style={{ background: colorOf(s.color)! }} />}
                 </button>
               ))}
@@ -193,7 +198,7 @@ function SpaceSwitcher({ onClose }: { onClose: () => void }) {
         {v.spaces.some((s) => s.archived) && (
           <details className="mt-1.5" onClick={(e) => e.stopPropagation()}>
             <summary className="cursor-pointer px-2 py-1 text-[11px] text-muted">Archived · {v.spaces.filter((s) => s.archived).length}</summary>
-            {v.spaces.filter((s) => s.archived).map((s) => <button key={s.id} className={row(false)} onClick={() => { onClose(); go("space", { spaceId: s.id, folderId: null }); }}><span className="w-5 text-center">{s.icon}</span>{s.name}</button>)}
+            {v.spaces.filter((s) => s.archived).map((s) => <button key={s.id} className={row(false)} onClick={() => { onClose(); go("space", { spaceId: s.id, folderId: null }); }}><SpaceIcon space={s} size={16} tile tileScale={1.5} /><span dir="auto" className="truncate">{s.name}</span></button>)}
           </details>
         )}
         <div className="my-1 h-px bg-line" />

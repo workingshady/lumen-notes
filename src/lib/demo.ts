@@ -26,7 +26,7 @@ export const DEMO_SETTINGS: Partial<Settings> = {
   blogName: "Night Shift Notes",
   tagline: "Learning in public, one lamp-lit page at a time",
   author: "Amir Hakim",
-  avatar: "🦉",
+  avatar: "glyph:owl",
   johnnyDecimal: false,
   spellcheck: true,
 };
@@ -426,31 +426,31 @@ export async function seedDemo(db: LumenDB = defaultDb): Promise<void> {
     color: null, description: "", props: {}, roadmapId: null, sort: 0, archived: 0, createdAt: at(120, "12:00"), updatedAt: at(1, "12:00"), deleted: 0, dirty: 0, ...p,
   });
   const spaces: Space[] = [
-    space({ id: S.inbox, name: "Inbox", kind: "area", icon: "📥", description: "Default space", sort: 0, createdAt: at(130, "12:00"), updatedAt: at(130, "12:00") }),
+    space({ id: S.inbox, name: "Inbox", kind: "area", icon: "glyph:inbox", description: "Default space", sort: 0, createdAt: at(130, "12:00"), updatedAt: at(130, "12:00") }),
     space({
-      id: S.ml, name: "ML Foundations", kind: "course", icon: "🧠", color: "#A371F7", sort: 1, roadmapId: DEMO_IDS.mlRoadmap, shareId: SHARE.ml,
+      id: S.ml, name: "ML Foundations", kind: "course", icon: "glyph:neural", color: "#A371F7", sort: 1, roadmapId: DEMO_IDS.mlRoadmap, shareId: SHARE.ml,
       description: "My path through Stanford's machine-learning course: lessons, flashcards and the roadmap I follow.",
       props: { provider: "Coursera · Stanford Online", url: "https://www.coursera.org/specializations/machine-learning-introduction", target: iso(37) },
       createdAt: at(oct(1), "10:00"), updatedAt: ago(120),
     }),
     space({
-      id: S.arabic, name: "Arabic Grammar", kind: "course", icon: "🕌", color: "#39C5CF", sort: 2, roadmapId: "dm-ar-roadmap",
+      id: S.arabic, name: "Arabic Grammar", kind: "course", icon: "glyph:language", color: "#39C5CF", sort: 2, roadmapId: "dm-ar-roadmap",
       description: "Nahw and sarf from Madinah Book 1, with drills and flashcards.",
       props: { provider: "Madinah Arabic · Book 1", url: "https://www.madinaharabic.com/", target: iso(90) },
       createdAt: at(sep(20), "10:00"), updatedAt: at(1, "22:15"),
     }),
     space({
-      id: S.thesis, name: "Thesis: Sparse attention", kind: "project", icon: "🚀", color: "#E8893A", sort: 3, roadmapId: "dm-th-milestones",
+      id: S.thesis, name: "Thesis: Sparse attention", kind: "project", icon: "glyph:project", color: "#E8893A", sort: 3, roadmapId: "dm-th-milestones",
       description: "MSc thesis: block-sparse attention for long-document classification.",
       props: { goal: "submit a 40-page MSc thesis on sparse attention for long documents", deadline: iso(91) },
       createdAt: now - 63 * DAY, updatedAt: ago(118),
     }),
-    space({ id: S.net, name: "Networking", kind: "area", icon: "🌐", color: "#57AB5A", sort: 4, description: "Protocols I keep having to look up.", createdAt: at(aug(10), "10:00"), updatedAt: at(nov(10), "21:00") }),
-    space({ id: S.health, name: "Health & sleep", kind: "area", icon: "💪", color: "#E5534B", sort: 5, description: "Daily notes, sleep and training.", createdAt: at(aug(1), "10:00") }),
-    space({ id: S.math, name: "Math reference", kind: "resource", icon: "📚", color: "#E3B341", sort: 6, description: "Formulas and identities I reach for.", createdAt: at(aug(5), "10:00") }),
-    space({ id: "dm-s-calc", name: "Calculus refresher", kind: "archive", icon: "📐", sort: 7, archived: 1, createdAt: at(130, "10:00"), updatedAt: at(100, "10:00") }),
-    space({ id: "dm-s-spanish", name: "Spanish A1", kind: "archive", icon: "🗣️", sort: 8, archived: 1, createdAt: at(130, "10:00"), updatedAt: at(110, "10:00") }),
-    space({ id: "dm-s-drafts", name: "Old blog drafts", kind: "archive", icon: "🗃️", sort: 9, archived: 1, createdAt: at(130, "10:00"), updatedAt: at(115, "10:00") }),
+    space({ id: S.net, name: "Networking", kind: "area", icon: "glyph:globe", color: "#57AB5A", sort: 4, description: "Protocols I keep having to look up.", createdAt: at(aug(10), "10:00"), updatedAt: at(nov(10), "21:00") }),
+    space({ id: S.health, name: "Health & sleep", kind: "area", icon: "glyph:health", color: "#E5534B", sort: 5, description: "Daily notes, sleep and training.", createdAt: at(aug(1), "10:00") }),
+    space({ id: S.math, name: "Math reference", kind: "resource", icon: "glyph:book", color: "#E3B341", sort: 6, description: "Formulas and identities I reach for.", createdAt: at(aug(5), "10:00") }),
+    space({ id: "dm-s-calc", name: "Calculus refresher", kind: "archive", icon: "glyph:math", sort: 7, archived: 1, createdAt: at(130, "10:00"), updatedAt: at(100, "10:00") }),
+    space({ id: "dm-s-spanish", name: "Spanish A1", kind: "archive", icon: "glyph:language", sort: 8, archived: 1, createdAt: at(130, "10:00"), updatedAt: at(110, "10:00") }),
+    space({ id: "dm-s-drafts", name: "Old blog drafts", kind: "archive", icon: "glyph:archive", sort: 9, archived: 1, createdAt: at(130, "10:00"), updatedAt: at(115, "10:00") }),
   ];
 
   // ---------------------------------------------------------------- folders

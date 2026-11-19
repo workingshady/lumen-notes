@@ -8,20 +8,20 @@ export const TEMPLATES: Template[] = [
   { id: "blank", name: "Blank note", type: "note", title: "Untitled", hint: "Empty page", body: "" },
   {
     id: "lesson", name: "Lesson", type: "lesson", status: "learning", title: "New lesson", hint: "Objectives, notes, summary, questions",
-    body: `## 🎯 Objectives
+    body: `## Objectives
 -
 
-## 📝 Notes
+## Notes
 
 
-## 🔑 Key terms
+## Key terms
 Term :: Definition
 
-## 🧠 Summary
+## Summary
 > [!summary]
 > In one paragraph…
 
-## ❓ Questions to review
+## Questions to review
 - [ ]
 `,
   },
@@ -197,6 +197,72 @@ views:
   - type: calendar
     name: Calendar
     date: file.mtime
+\`\`\`
+`,
+  },
+  {
+    id: "dashboard-path", name: "AI Engineer path dashboard", type: "dashboard", title: "AI Engineer path", hint: "Dashboard: study minutes, concepts learned, cards due, heatmap",
+    body: `Charts over your study sessions, flashcards and newest learning path. Drag a tile's grip to move it, its corner to resize it; edit the YAML below (format: docs/DASHBOARDS.md).
+
+\`\`\`dashboard
+tiles:
+  - id: minutes
+    title: Minutes per course per week
+    type: stackedBar
+    source: sessions
+    x: at
+    bucket: week
+    y: minutes
+    aggregate: sum
+    series: course
+    range: 12w
+    layout: { x: 0, y: 0, w: 8, h: 4 }
+  - id: mastered
+    title: Concepts mastered
+    type: number
+    source: path
+    filter: mastered == true
+    layout: { x: 8, y: 0, w: 4, h: 2 }
+  - id: week
+    title: Study time this week
+    type: number
+    source: sessions
+    y: minutes
+    aggregate: sum
+    range: 7d
+    layout: { x: 8, y: 2, w: 4, h: 2 }
+  - id: learned
+    title: Concepts learned over time
+    type: area
+    source: path
+    x: learnedOn
+    bucket: week
+    range: 20w
+    cumulative: true
+    layout: { x: 0, y: 4, w: 7, h: 4 }
+  - id: status
+    title: Status split
+    type: donut
+    source: path
+    x: status
+    layout: { x: 7, y: 4, w: 5, h: 4 }
+  - id: due
+    title: Cards due, next 14 days
+    type: bar
+    source: cards
+    x: dueOn
+    bucket: day
+    range: next 14d
+    layout: { x: 0, y: 8, w: 6, h: 4 }
+  - id: heatmap
+    title: Study heatmap, 20 weeks
+    type: heatmap
+    source: sessions
+    x: at
+    y: minutes
+    aggregate: sum
+    range: 20w
+    layout: { x: 6, y: 8, w: 6, h: 4 }
 \`\`\`
 `,
   },

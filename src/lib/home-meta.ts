@@ -63,8 +63,9 @@ export function pickAvatar(capture = false) {
 }
 
 // ------------------------------------------------------------------ dashboard layout (Customize home)
-export type SectionId = "due" | "progress" | "activity" | "continue" | "pinned";
+export type SectionId = "today" | "due" | "progress" | "activity" | "continue" | "pinned";
 export const SECTIONS: { id: SectionId; name: string; hint: string }[] = [
+  { id: "today", name: "Today", hint: "Your study plan for the day" },
   { id: "due", name: "Due today", hint: "Flashcards, tasks, notes to revisit" },
   { id: "progress", name: "Learning progress", hint: "Status of your notes and courses" },
   { id: "activity", name: "Study activity", hint: "Heatmap, streak, time this week" },
@@ -92,7 +93,7 @@ export function setHomeLayout(l: HomeLayout) {
   lsubs.forEach((f) => f());
 }
 /** Design 3C order on phones (until the user reorders). */
-export const PHONE_DEFAULT: SectionId[] = ["due", "continue", "activity", "progress", "pinned"];
+export const PHONE_DEFAULT: SectionId[] = ["today", "due", "continue", "activity", "progress", "pinned"];
 export const resetHomeLayout = () => setHomeLayout(DEFAULT_LAYOUT);
 
 // ------------------------------------------------------------------ quick capture

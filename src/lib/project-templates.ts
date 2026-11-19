@@ -44,9 +44,9 @@ flowchart LR
 > …
 
 ## Milestones
-- [ ] Spec approved 📅 ${inDays(7)} #epic/${t.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 20) || "mvp"}
-- [ ] MVP behind flag 📅 ${inDays(21)}
-- [ ] GA 📅 ${inDays(35)}
+- [ ] Spec approved @due(${inDays(7)}) #epic/${t.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 20) || "mvp"}
+- [ ] MVP behind flag @due(${inDays(21)})
+- [ ] GA @due(${inDays(35)})
 `,
   rfc: () => `## Summary
 What this proposes, in three sentences.
@@ -118,12 +118,12 @@ What "done" looks like.
 
 ## Steps
 - [>] Research & spike ~2d !p2 #epic/discovery
-- [ ] Write the RFC ~1d !p1 📅 ${inDays(5)} #epic/design
-- [ ] Build the core ~5d !p1 📅 ${inDays(14)} #epic/build
-- [ ] Tests & review ~2d 📅 ${inDays(17)} #epic/build
-- [ ] Release + announce ~1d 📅 ${inDays(21)} #epic/launch
+- [ ] Write the RFC ~1d !p1 @due(${inDays(5)}) #epic/design
+- [ ] Build the core ~5d !p1 @due(${inDays(14)}) #epic/build
+- [ ] Tests & review ~2d @due(${inDays(17)}) #epic/build
+- [ ] Release + announce ~1d @due(${inDays(21)}) #epic/launch
 
-Markers: [>] backlog · [ ] todo · [/] doing · [?] review · [x] done · [-] cancelled. Inline: !p1 priority, ~3d estimate, 📅 due, 🛫 start, #epic/name, @owner, REQ-12.
+Markers: [>] backlog · [ ] todo · [/] doing · [?] review · [x] done · [-] cancelled. Inline: !p1 priority, ~3d estimate, @due(2026-12-01) due, @start(2026-11-20) start, #epic/name, @owner, REQ-12.
 `,
   meeting: () => `**Date:** ${today()} · **Attendees:** @…
 
@@ -137,7 +137,7 @@ Markers: [>] backlog · [ ] todo · [/] doing · [?] review · [x] done · [-] c
 - …
 
 ## Action items
-- [ ] … @owner 📅 ${inDays(3)}
+- [ ] … @owner @due(${inDays(3)})
 `,
   spec: () => `## Overview
 

@@ -5,7 +5,7 @@ import { db, DEFAULT_SPACE } from "./db";
 import { wikiLinks } from "./parse";
 import { scheduleIndex } from "./search";
 
-export type View = "home" | "notes" | "tasks" | "kanban" | "calendar" | "review" | "graph" | "table" | "space" | "settings" | "trash";
+export type View = "home" | "today" | "notes" | "tasks" | "kanban" | "calendar" | "review" | "graph" | "table" | "space" | "settings" | "trash";
 export type Mode = "edit" | "split" | "read" | "focus" | "slides" | "review" | "diagrams";
 export type Panel = null | "outline" | "backlinks" | "properties" | "versions" | "ai";
 
@@ -16,8 +16,8 @@ export interface UI {
   spaceId: string;
   folderId: string | null;
   tag: string | null;
-  /** Sidebar quick filters: "visual" = canvases + whiteboards, "published" = blog posts. */
-  filter: "visual" | "published" | "paths" | null;
+  /** Sidebar quick filters: "visual" = canvases + whiteboards, "published" = blog posts, "smart:<id>" = a smart folder (lib/smart.ts, applied by NoteList). */
+  filter: "visual" | "published" | "paths" | `smart:${string}` | null;
   mode: Mode;
   panel: Panel;
   sidebar: boolean;
@@ -186,7 +186,7 @@ function canvasFiles(body: string): string[] {
 /** Notes visible in the current scope (space / folder / tag). */
 export function scoped(v: Vault, u: Pick<UI, "spaceId" | "folderId" | "tag"> & { filter?: UI["filter"] }) {
   return v.notes.filter((n) => (u.spaceId === "all" || n.spaceId === u.spaceId) && (!u.folderId || n.folderId === u.folderId) && (!u.tag || n.tags.includes(u.tag))
-    && (!u.filter || (u.filter === "visual" ? n.type === "canvas" || n.type === "whiteboard" : u.filter === "paths" ? n.type === "path" : !!n.published)));
+    && (!u.filter || u.filter.startsWith("smart:") || (u.filter === "visual" ? n.type === "canvas" || n.type === "whiteboard" : u.filter === "paths" ? n.type === "path" : !!n.published)));
 }
 
 // ------------------------------------------------------------------ toasts

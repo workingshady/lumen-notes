@@ -25,7 +25,7 @@ class NotFound extends Error { status = 404; }
 async function branding() {
   const p = (await db.spaces.get(DEFAULT_SPACE))?.props ?? {};
   const s = getSettings();
-  return { name: p.blogName || s.blogName || "Lumen", tagline: p.tagline ?? s.tagline ?? "", author: p.author ?? s.author ?? "", avatar: p.avatar ?? s.avatar ?? "🕯️" };
+  return { name: p.blogName || s.blogName || "Lumen", tagline: p.tagline ?? s.tagline ?? "", author: p.author ?? s.author ?? "", avatar: p.avatar ?? s.avatar ?? "glyph:owl" };
 }
 async function posts() {
   const all = (await db.notes.toArray()).filter((n) => !n.deleted && n.published);

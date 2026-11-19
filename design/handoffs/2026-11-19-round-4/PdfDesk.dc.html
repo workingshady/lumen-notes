@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:absolute;inset:0;display:flex;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:13px;overflow:hidden">
+  <div style="display:{{ deskOnly }};height:100%"><dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,100%" style="height:100%"></dc-import></div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+    <div style="height:{{ barH }};padding:0 {{ px }};display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd);flex-shrink:0">
+      <dc-import name="LumenGlyph" glyph="pdf" size="{{ 18 }}" color="var(--da)" hint-size="18px,18px"></dc-import><span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">Attention Is All You Need</span>
+      <span style="display:{{ deskOnly }};align-items:center;gap:6px;color:var(--mu)"><span style="width:80px;height:4px;border-radius:2px;background:var(--sf2)"><span style="display:block;width:27%;height:100%;border-radius:2px;background:var(--tx)"></span></span>27%</span>
+      <div style="display:{{ deskOnly }};gap:2px;padding:3px;border-radius:9px;background:var(--sf);border:1px solid var(--bd);font-size:12px"><span style="height:24px;padding:0 9px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;font-weight:600">Scroll</span><span style="height:24px;padding:0 9px;display:flex;align-items:center;color:var(--mu)">Single</span></div>
+      <span style="display:{{ deskOnly }};height:28px;padding:0 10px;border-radius:7px;border:1px solid var(--bd);align-items:center;gap:6px">Fit width ▾</span>
+      <span style="font:500 12px 'JetBrains Mono',monospace;color:var(--mu)">4 / 15</span>
+      <span style="height:28px;padding:0 10px;border-radius:7px;border:1px solid {{ areaB }};background:{{ areaBg }};display:flex;align-items:center;gap:6px"><dc-import name="LumenGlyph" glyph="occlusion" size="{{ 14 }}" hint-size="14px,14px"></dc-import><span style="display:{{ deskOnly }}">Area</span></span>
+      <span style="display:{{ deskOnly }};height:28px;width:28px;border-radius:7px;border:1px solid var(--bd);align-items:center;justify-content:center"><dc-import name="LumenGlyph" glyph="query" size="{{ 14 }}" hint-size="14px,14px"></dc-import></span>
+      <span style="color:var(--mu);font-size:16px">⋯</span>
+    </div>
+    <sc-if value="{{ searchOn }}"><div style="height:44px;padding:0 {{ px }};display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd);background:var(--sf)"><div style="width:280px;height:30px;border-radius:6px;background:var(--bg);border:1px solid var(--ac);display:flex;align-items:center;gap:8px;padding:0 10px">scaled dot-product<span style="width:1.5px;height:15px;background:var(--ac)"></span></div><span style="color:var(--mu)">3 of 7 · pages 4, 5, 9</span><span>↑</span><span>↓</span></div></sc-if>
+    <div style="flex:1;display:flex;min-height:0">
+      <div style="display:{{ railShow }};width:220px;flex-shrink:0;border-right:1px solid var(--bd);background:var(--sf);flex-direction:column">
+        <div style="display:flex;gap:2px;margin:10px;padding:3px;border-radius:8px;background:var(--bg);border:1px solid var(--bd);font-size:12px"><sc-for list="{{ railTabs }}" as="t" hint-placeholder-count="3"><span style="flex:1;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:{{ t.bg }};font-weight:{{ t.w }};color:{{ t.c }}">{{ t.l }}</span></sc-for></div>
+        <sc-if value="{{ railThumbs }}" hint-placeholder-val="{{ true }}"><div style="padding:0 30px;display:flex;flex-direction:column;gap:14px;overflow:hidden"><sc-for list="{{ thumbs }}" as="t" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:110px;height:142px;background:var(--page);border-radius:2px;box-shadow:{{ t.ring }};position:relative;padding:12px 10px;box-sizing:border-box;display:flex;flex-direction:column;gap:5px"><span style="height:3px;width:100%;background:var(--ink);opacity:.25"></span><span style="height:3px;width:90%;background:var(--ink);opacity:.25"></span><span style="height:3px;width:95%;background:{{ t.hl }};opacity:.7"></span><span style="height:30px;width:100%;background:var(--ink);opacity:.08;margin:4px 0"></span><span style="height:3px;width:80%;background:var(--ink);opacity:.25"></span><span style="display:{{ t.hitS }};position:absolute;right:4px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--ac)"></span></div><span style="font-size:11px;color:{{ t.c }}">{{ t.n }}</span></div></sc-for></div></sc-if>
+        <sc-if value="{{ railHl }}"><div style="padding:0 10px;display:flex;flex-direction:column;gap:8px;overflow:hidden"><sc-for list="{{ hls }}" as="h" hint-placeholder-count="5"><div style="border-radius:8px;background:var(--bg);border-left:3px solid {{ h.c }};padding:8px 10px;display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;color:var(--mu)">p. {{ h.p }}{{ h.tag }}</span><span style="font-family:'Source Serif 4',serif;font-size:13px;line-height:18px">{{ h.t }}</span><span style="display:{{ h.cS }};font-size:12px;color:var(--mu)">{{ h.cm }}</span></div></sc-for></div></sc-if>
+      </div>
+      <div style="flex:1;position:relative;overflow:hidden;background:{{ canvasBg }};display:flex;justify-content:center;padding-top:{{ pageTop }}">
+        <sc-if value="{{ hasPage }}" hint-placeholder-val="{{ true }}">
+          <div style="width:{{ pw }};height:{{ ph }};background:var(--page);color:var(--ink);box-shadow:0 6px 30px rgba(0,0,0,.35);padding:{{ pp }};box-sizing:border-box;display:flex;flex-direction:column;gap:{{ pg }};font-family:'Source Serif 4',Georgia,serif;font-size:{{ pfs }};line-height:1.5;position:relative;flex-shrink:0">
+            <span style="font-family:Inter,sans-serif;font-weight:700;font-size:1.25em">3.2 Attention</span>
+            <span>An attention function can be described as mapping a query and a set of key-value pairs to an output, where the query, keys, values, and output are all vectors. <span style="background:{{ hl1 }};border-radius:2px">The output is computed as a weighted sum of the values</span>, where the weight assigned to each value is computed by a compatibility function.</span>
+            <span style="font-family:Inter,sans-serif;font-weight:700">3.2.1 Scaled Dot-Product Attention</span>
+            <span>We call our particular attention “<span style="background:{{ searchHl }};box-shadow:{{ searchRing }};border-radius:2px">Scaled Dot-Product Attention</span>”. The input consists of queries and keys of dimension d<sub>k</sub>, and values of dimension d<sub>v</sub>. <span style="background:{{ selBg }};border-radius:2px">We compute the dot products of the query with all keys, divide each by √d<sub>k</sub>, and apply a softmax function</span> to obtain the weights on the values.</span>
+            <div style="height:{{ figH }};border:1px solid rgba(0,0,0,.15);border-radius:2px;display:flex;align-items:center;justify-content:center;font:12px Inter,sans-serif;opacity:.7;position:relative">Figure 2 · Scaled Dot-Product Attention<span style="display:{{ areaS }};position:absolute;left:12%;top:10%;width:56%;height:78%;border:2px dashed var(--ac);background:color-mix(in srgb,var(--ac) 10%,transparent);border-radius:3px"></span></div>
+            <span style="opacity:.75">Attention(Q, K, V) = softmax(QKᵀ / √d<sub>k</sub>) V</span>
+            <span style="display:{{ m1 }};position:absolute;right:-26px;top:{{ m1y }};width:16px;height:16px;border-radius:4px;background:#E3B341;font:600 10px Inter;color:#1F1D1A;display:{{ m1 }};align-items:center;justify-content:center">1</span>
+            <span style="display:{{ m2 }};position:absolute;right:-26px;top:{{ m2y }};width:16px;height:16px;border-radius:4px;background:#7AA2F7;font:600 10px Inter;color:#0F1115;align-items:center;justify-content:center">✎</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ selBar }}">
+          <div style="position:absolute;left:{{ barX }};top:{{ barY }};display:flex;align-items:center;gap:4px;padding:4px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 14px 34px rgba(0,0,0,.45);font-family:Inter,sans-serif">
+            <sc-for list="{{ swatches }}" as="s" hint-placeholder-count="5"><span style="width:24px;height:24px;border-radius:6px;background:{{ s.c }};box-shadow:{{ s.ring }}"></span></sc-for>
+            <span style="width:1px;height:20px;background:var(--bd);margin:0 3px"></span>
+            <sc-for list="{{ selActs }}" as="a" hint-placeholder-count="4"><span style="height:28px;padding:0 9px;border-radius:7px;display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap"><dc-import name="LumenGlyph" glyph="{{ a.g }}" size="{{ 14 }}" color="var(--mu)" hint-size="14px,14px"></dc-import>{{ a.l }}</span></sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isSkel }}"><div style="width:{{ pw }};height:{{ ph }};background:var(--sf);border-radius:2px;padding:{{ pp }};box-sizing:border-box;display:flex;flex-direction:column;gap:12px"><span style="height:16px;width:40%;border-radius:4px;background:var(--sf2)"></span><sc-for list="{{ skel }}" as="s" hint-placeholder-count="8"><span style="height:9px;width:{{ s }};border-radius:4px;background:var(--sf2)"></span></sc-for><span style="font:12px Inter;color:var(--mu);margin-top:auto">Loading part 2 of 3 · 1.4 of 2.1 MB</span></div></sc-if>
+        <sc-if value="{{ isLock }}"><div style="align-self:center;margin-top:-80px;width:380px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:22px;display:flex;flex-direction:column;gap:12px"><dc-import name="LumenGlyph" glyph="s-locked" size="{{ 24 }}" color="var(--mu)" hint-size="24px,24px"></dc-import><span style="font-size:16px;font-weight:650">This PDF has a password</span><span style="color:var(--mu);line-height:19px">Lumen never stores it. You'll be asked each time it opens.</span><div style="height:38px;border-radius:7px;background:var(--bg);border:1px solid var(--ac);display:flex;align-items:center;padding:0 10px;letter-spacing:.2em">••••••</div><span style="height:36px;border-radius:9px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600">Open</span></div></sc-if>
+        <sc-if value="{{ isScan }}"><div style="position:absolute;left:50%;top:14px;transform:translateX(-50%);height:36px;padding:0 14px;border-radius:999px;background:var(--sf2);border:1px solid var(--bd);display:flex;align-items:center;gap:8px;white-space:nowrap;font-family:Inter"><dc-import name="LumenGlyph" glyph="c-info" size="{{ 15 }}" color="var(--in)" hint-size="15px,15px"></dc-import>Scanned PDF: no text to select. Use <b style="font-weight:600">Area</b> to highlight figures and paragraphs.</div></sc-if>
+      </div>
+      <div style="display:{{ panelShow }};width:320px;flex-shrink:0;border-left:1px solid var(--bd);background:var(--sf);flex-direction:column">
+        <div style="padding:14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd)"><span style="font-weight:600;flex:1">Highlights · 9</span><span style="font-size:12px;color:var(--mu)">By page ▾</span></div>
+        <div style="padding:10px 14px;display:flex;flex-direction:column;gap:10px;overflow:hidden"><sc-for list="{{ hls }}" as="h" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;gap:5px;padding-bottom:10px;border-bottom:1px solid var(--bd)"><div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mu)"><span style="width:8px;height:8px;border-radius:2px;background:{{ h.c }}"></span>p. {{ h.p }}{{ h.tag }}<span style="flex:1"></span>{{ h.kind }}</div><span style="font-family:'Source Serif 4',serif;font-size:13.5px;line-height:19px">{{ h.t }}</span><span style="display:{{ h.cS }};font-size:12.5px;color:var(--mu)">{{ h.cm }}</span></div></sc-for></div>
+        <div style="margin-top:auto;padding:12px 14px;border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:8px"><span style="height:34px;border-radius:9px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600">Make a note from all highlights</span><span style="height:30px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Export as Markdown</span></div>
+      </div>
+    </div>
+    <div style="display:{{ contS }};position:absolute;left:50%;bottom:20px;transform:translateX(-50%);height:40px;padding:0 8px 0 14px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd);align-items:center;gap:12px;box-shadow:0 12px 28px rgba(0,0,0,.4);white-space:nowrap">Continue where you left off · p. 4 (27%)<span style="height:28px;padding:0 10px;border-radius:7px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">Continue</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;read&quot;,&quot;area&quot;,&quot;highlights&quot;,&quot;search&quot;,&quot;continue&quot;,&quot;skeleton&quot;,&quot;password&quot;,&quot;scanned&quot;],&quot;default&quot;:&quot;read&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;invert&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.props.state ?? 'read', p = !!this.props.phone, inv = !!this.props.invert;
+    const HL = ['#E3B341','#57AB5A','#7AA2F7','#E5534B','#A371F7'];
+    const hls = [['4','The output is computed as a weighted sum of the values','',0,'text',''],['4','We compute the dot products of the query with all keys, divide each by √dk','Why √dk: keeps softmax out of tiny-gradient zones.',2,'text',' · #attention'],['4','Figure 2 · Scaled Dot-Product Attention','',4,'area',''],['5','Multi-head attention allows the model to jointly attend to information from different subspaces','',1,'text',''],['9','We used the Adam optimizer with β1 = 0.9, β2 = 0.98','Compare with AdamW notes.',3,'text','']].map(([pp,t,cm,ci,kind,tag]) => ({ p:pp, t, cm, cS: cm?'block':'none', c:HL[ci], kind, tag }));
+    const railMode = st==='highlights' ? 'hl' : 'thumbs';
+    const railTabs = [['Pages','thumbs'],['Outline','outline'],['Highlights','hl']].map(([l,k]) => ({ l, bg:k===railMode?'var(--sf2)':'transparent', w:k===railMode?600:450, c:k===railMode?'var(--tx)':'var(--mu)' }));
+    const thumbs = [3,4,5,6].map(n => ({ n, c: n===4?'var(--ac)':'var(--mu)', ring: n===4?'0 0 0 2px var(--ac)':'0 1px 4px rgba(0,0,0,.3)', hl: n===4||n===5 ? '#E3B341' : 'var(--ink)', hitS: st==='search'&&(n===4||n===5)?'block':'none' }));
+    const swatches = HL.map((c,i) => ({ c, ring: i===0?'0 0 0 2px var(--sf2), 0 0 0 3.5px var(--tx)':'none' }));
+    const selActs = [['d-draft','Note'],['flashcards','Card'],['columns-2','Copy'],['wikilink','Link']].map(([g,l]) => ({ g, l }));
+    const page = !['skeleton','password'].includes(st);
+    return { hls, railTabs, thumbs, swatches, selActs, skel:['100%','96%','92%','100%','88%','95%','70%','98%'],
+      hasPage: page, isSkel: st==='skeleton', isLock: st==='password', isScan: st==='scanned',
+      railThumbs: railMode==='thumbs', railHl: railMode==='hl', searchOn: st==='search',
+      selBar: st==='read' || st==='area', areaS: st==='area'?'block':'none', areaB: st==='area'?'var(--ac)':'var(--bd)', areaBg: st==='area'?'color-mix(in srgb,var(--ac) 12%,transparent)':'transparent',
+      selBg: st==='read' ? 'color-mix(in srgb,#7AA2F7 35%,transparent)' : (st==='highlights'||st==='search'?'color-mix(in srgb,#7AA2F7 30%,transparent)':'transparent'),
+      hl1: st==='scanned'||st==='skeleton' ? 'transparent' : 'color-mix(in srgb,#E3B341 45%,transparent)',
+      searchHl: st==='search' ? 'color-mix(in srgb,var(--ac) 40%,transparent)' : 'transparent', searchRing: st==='search' ? '0 0 0 2px var(--ac)' : 'none',
+      m1: st==='scanned'?'none':'flex', m2: st==='highlights'||st==='read'?'flex':'none', m1y:'52px', m2y:'176px',
+      barX: p ? '16px' : (st==='area' ? '34%' : '28%'), barY: p ? '330px' : (st==='area' ? '520px' : '220px'),
+      panelShow: st==='highlights'&&!p ? 'flex' : 'none', railShow: !p && st!=='password' ? 'flex' : 'none', contS: st==='continue' ? 'flex' : 'none',
+      canvasBg: inv ? '#0A0C0F' : 'color-mix(in srgb,var(--sf) 50%,var(--bg))',
+      deskOnly: p?'none':'flex', barH: p?'52px':'48px', px: p?'12px':'20px', pageTop: p?'12px':'28px',
+      pw: p?'392px':'640px', ph: p?'760px':'830px', pp: p?'22px 20px':'48px 56px', pg: p?'10px':'14px', pfs: p?'13px':'15px', figH: p?'130px':'190px' };
+  }
+}
+</script>
+</body>
+</html>

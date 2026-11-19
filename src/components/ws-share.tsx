@@ -1,3 +1,4 @@
+import { SpaceIcon } from "./SpaceIcon";
 import { Capacitor } from "@capacitor/core";
 import { Inbox, PenLine, X } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -139,14 +140,14 @@ export function ShareSheet() {
           <div className="flex flex-wrap gap-2">
             {chips.map((c) => (
               <button key={c.id} onClick={() => setSpace(c.id)} className={chip(space === c.id)} style={space === c.id ? onStyle : undefined}>
-                {c.id === "inbox" ? <Inbox size={15} /> : <span>{c.icon}</span>}{c.name}
+                {c.id === "inbox" ? <Inbox size={15} /> : <SpaceIcon space={c} size={15} />}{c.name}
               </button>
             ))}
             <button onClick={() => setMore((m) => !m)} className="flex h-10 items-center rounded-full border border-line px-3 text-muted">More…</button>
           </div>
           {more && (
             <div className="flex max-h-48 flex-col overflow-y-auto rounded-[10px] border border-line bg-bg p-1">
-              {live.map((c) => <button key={c.id} onClick={() => { setSpace(c.id); setMore(false); }} className={cx("flex h-9 items-center gap-2 rounded-[6px] px-2 text-start", space === c.id ? "bg-surface-2 font-semibold" : "hover:bg-surface-2")}><span>{c.icon}</span>{c.name}</button>)}
+              {live.map((c) => <button key={c.id} onClick={() => { setSpace(c.id); setMore(false); }} className={cx("flex h-9 items-center gap-2 rounded-[6px] px-2 text-start", space === c.id ? "bg-surface-2 font-semibold" : "hover:bg-surface-2")}><SpaceIcon space={c} size={15} />{c.name}</button>)}
             </div>
           )}
         </div>

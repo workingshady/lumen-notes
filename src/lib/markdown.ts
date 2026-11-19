@@ -9,18 +9,24 @@ import hljs from "highlight.js/lib/common";
 import { attMime, resolveAtt } from "./attachments";
 import { blockSource, pendingBlock, setPendingBlock } from "./blocks";
 import { audioFileHtml, hydrateEmbeds, linkCardHtml, pdfHtml, videoFileHtml, videoThumbHtml, type EmbedCtx } from "../components/ws-embeds";
+import { timestampChip } from "../components/video-players";
+import { fromMatch, TS_AT } from "./video-notes";
 import { icon } from "../components/ws-icons";
+import { glyphSvg } from "./glyph-svg";
+import { hasGlyph } from "./glyphs";
+import { clozeEnabled } from "./cloze";
+import { clozePlugin, occlusionHtml } from "./cloze-md";
 
 type MD = ReturnType<typeof MarkdownIt>;
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const enc = (s: string) => encodeURIComponent(s);
 
-// Callout icons (design: Components · Callouts) as Lucide SVGs.
-const CALLOUT_ICONS: Record<string, string> = {
-  note: "info", info: "info", tip: "lightbulb", hint: "lightbulb", important: "triangle-alert", warning: "triangle-alert", caution: "triangle-alert",
-  danger: "octagon-alert", error: "octagon-alert", example: "list", question: "circle-help", faq: "circle-help", quote: "quote",
-  success: "circle-check", check: "circle-check", todo: "clipboard-list", abstract: "list", summary: "list", bug: "bug",
+// Callout glyphs (design R4, Lumen 13 B4 "Callouts": c-note … c-abstract).
+const CALLOUT_GLYPH: Record<string, string> = {
+  note: "c-note", info: "c-info", tip: "c-tip", hint: "c-tip", important: "c-warning", warning: "c-warning", caution: "c-warning",
+  danger: "c-danger", error: "c-danger", example: "c-example", question: "c-question", faq: "c-question", quote: "c-quote", cite: "c-quote",
+  success: "c-success", check: "c-success", done: "c-success", todo: "task", abstract: "c-abstract", summary: "c-abstract", tldr: "c-abstract", bug: "c-danger", failure: "c-danger",
 };
 const MERMAID_KIND = (src: string) => (src.trim().split(/\r?\n/).find((l) => l.trim() && !/^\s*%%/.test(l)) ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
 
@@ -32,7 +38,7 @@ function strongDir(s: string): "ltr" | "rtl" | "auto" {
 
 /** Opening HTML of a callout / panel (blockquote `> [!type]` and `::: info` panels share it). */
 function calloutOpen(md: MD, callout: string, title: string, fold: string, line: string, dir: string) {
-  const ic = `<span class="callout-icon">${icon(CALLOUT_ICONS[callout] ?? "info", 15)}</span>`;
+  const ic = `<span class="callout-icon">${glyphSvg(CALLOUT_GLYPH[callout] ?? "c-info", 17)}</span>`;
   const type = callout[0].toUpperCase() + callout.slice(1);
   if (fold) {
     // Folded: chevron · icon · Type (colored) · title · "folded" (design: 5A "Question … folded")
@@ -74,8 +80,10 @@ export function parseBlockInfo(info: string): BlockSpec | null {
   if (name.startsWith("callout-")) { attrs.callout = name.slice(8); name = "panel"; }
   name = ALIAS[name] ?? name;
   if (PANELS.has(name)) { attrs.callout = name; name = "panel"; }
-  if (name === "column" && /^\d+(\.\d+)?%$/.test(title)) { attrs.width = title; title = ""; }
+  if (name === "column" && /^\d+(\.\d+)?(%|px)$/.test(title)) { attrs.width = title; title = ""; }
   if (name === "columns" && /^\d$/.test(title)) { attrs.count = title; title = ""; }
+  // `::: columns cards` / `divided` / `boxed` = the {.cards} style class, written as a word
+  if (name === "columns" && /^(cards|divided|boxed)$/i.test(title)) { classes.push(title.toLowerCase()); title = ""; }
   return { name, title, classes, attrs };
 }
 
@@ -126,8 +134,9 @@ function layoutBlocks(md: MD) {
     switch (s.name) {
       case "columns": return `<div ${cls("md-cols")}${line}${s.attrs.count ? ` style="--n:${num(s.attrs.count, 2)}"` : ""}>`;
       case "column": {
-        const w = s.attrs.width && /^\d+(\.\d+)?%?$/.test(s.attrs.width) ? (s.attrs.width.endsWith("%") ? s.attrs.width : s.attrs.width + "%") : "";
-        return `<div ${cls("md-col")}${line}${w ? ` style="flex:0 1 ${w}"` : ""}>`;
+        const px = s.attrs.width && /^\d+(\.\d+)?px$/.test(s.attrs.width) ? s.attrs.width : "";
+        const w = !px && s.attrs.width && /^\d+(\.\d+)?%?$/.test(s.attrs.width) ? (s.attrs.width.endsWith("%") ? s.attrs.width : s.attrs.width + "%") : "";
+        return `<div ${cls("md-col")}${line}${px ? ` style="flex:0 0 ${px}"` : w ? ` style="flex:0 1 ${w}"` : ""}>`;
       }
       case "tabs": return `<div ${cls("md-tabs")}${line}>`;
       case "wide": case "full": return `<div ${cls("md-" + s.name)}${line}>`;
@@ -173,7 +182,14 @@ function layoutBlocks(md: MD) {
         continue;
       }
       if (p?.type === "paragraph_open" && inl?.type === "inline" && /^\{(\s*\.[\w-]+)+\s*\}$/.test(inl.content.trim())) {
-        toks[open].meta = { classes: [...inl.content.matchAll(/\.([\w-]+)/g)].map((x) => x[1]) };
+        toks[open].meta = { ...(toks[open].meta ?? {}), classes: [...inl.content.matchAll(/\.([\w-]+)/g)].map((x) => x[1]) };
+        toks.splice(i + 1, 3);
+      }
+      // Pandoc caption under the table: `Table: Activations compared` (or `: …`) → the table's header line (R4-16J)
+      const p2 = toks[i + 1], inl2 = toks[i + 2];
+      const cap = p2?.type === "paragraph_open" && inl2?.type === "inline" ? /^(?:Table)?:\s+(\S.*)$/.exec(inl2.content.trim()) : null;
+      if (cap && !cap[1].includes("\n")) {
+        toks[open].meta = { ...(toks[open].meta ?? {}), caption: cap[1] };
         toks.splice(i + 1, 3);
       }
     }
@@ -182,8 +198,10 @@ function layoutBlocks(md: MD) {
     const t = tokens[idx];
     const line = t.attrGet("data-line") ?? (t.map ? String(t.map[0]) : null);
     t.attrs = (t.attrs ?? []).filter(([k]) => k !== "data-line");
-    const cls = ((t.meta as { classes?: string[] } | null)?.classes ?? []).map((c) => " tbl-" + esc(c)).join("");
-    return `<div class="tbl${cls}"${line != null ? ` data-line="${line}"` : ""}><div class="tbl-scroll">` + self.renderToken(tokens, idx, opts);
+    const meta = t.meta as { classes?: string[]; caption?: string } | null;
+    const cls = (meta?.classes ?? []).map((c) => " tbl-" + esc(c)).join("");
+    const cap = meta?.caption ? ` data-caption="${esc(meta.caption)}"` : "";
+    return `<div class="tbl${cls}"${cap}${line != null ? ` data-line="${line}"` : ""}><div class="tbl-scroll">` + self.renderToken(tokens, idx, opts);
   };
   md.renderer.rules.table_close = (tokens, idx, opts, _env, self) => self.renderToken(tokens, idx, opts) + "</div></div>";
 
@@ -203,8 +221,10 @@ function layoutBlocks(md: MD) {
   });
 }
 
-const STATUS_C: [RegExp, string][] = [[/\b(done|complete[d]?|approved|accepted|green|ok|live|shipped|pass(ed)?)\b/i, "green"], [/\b(blocked|blocker|fail(ed)?|rejected|red|at risk|overdue|stopped)\b/i, "red"], [/\b(review|in review|waiting|on hold|yellow|pending|proposed)\b/i, "yellow"], [/\b(in progress|progress|doing|active|blue|wip|building)\b/i, "blue"], [/\b(purple|idea|exploring)\b/i, "purple"]];
-const statusColor = (t: string, c?: string) => (c && /^(green|red|yellow|blue|purple|grey|gray)$/.test(c) ? c.replace("gray", "grey") : STATUS_C.find(([re]) => re.test(t))?.[1] ?? "grey");
+const STATUS_C: [RegExp, string][] = [[/\b(done|complete[d]?|approved|accepted|green|ok|live|shipped|pass(ed)?)\b/i, "green"], [/\b(blocked|blocker|fail(ed)?|rejected|red|at risk|overdue|stopped)\b/i, "red"], [/\b(review|in review|waiting|on hold|yellow|amber|pending|proposed|revise)\b/i, "amber"], [/\b(in progress|progress|doing|active|blue|wip|building|learning)\b/i, "blue"], [/\b(purple|violet|idea|exploring|has cards)\b/i, "violet"]];
+// :status[…]{colour}: green · amber · red · blue · violet · grey (R4); yellow / purple / gray / orange are aliases.
+const STATUS_ALIAS: Record<string, string> = { yellow: "amber", purple: "violet", gray: "grey", orange: "amber" };
+const statusColor = (t: string, c?: string) => { const k = c ? STATUS_ALIAS[c.toLowerCase()] ?? c.toLowerCase() : ""; return /^(green|amber|red|blue|violet|grey)$/.test(k) ? k : STATUS_C.find(([re]) => re.test(t))?.[1] ?? "grey"; };
 
 function build() {
   const md: MD = new MarkdownIt({
@@ -238,6 +258,7 @@ function build() {
   md.renderer.rules.footnote_caption = (tokens, idx) => { const m = tokens[idx].meta as { id: number; subId: number }; return String(m.id + 1) + (m.subId > 0 ? `:${m.subId}` : ""); };
   md.renderer.rules.footnote_anchor = (tokens, idx, opts, env, slf) => ` <a href="#fnref${slf.rules.footnote_anchor_name!(tokens, idx, opts, env, slf)}${(tokens[idx].meta as { subId: number }).subId > 0 ? `:${(tokens[idx].meta as { subId: number }).subId}` : ""}" class="footnote-backref">↩</a>`;
   md.use((katexPlugin as { default?: unknown }).default ?? katexPlugin, { throwOnError: false, enableMathBlockInHtml: true });
+  md.use(clozePlugin); // {{c1::cloze}}, ==cloze== in flashcard notes (env.cloze), review gaps (lib/cloze-md.ts)
 
   // Fenced specials: mermaid, canvas (JSON Canvas), query (Dataview-lite).
   const fence = md.renderer.rules.fence!;
@@ -248,6 +269,7 @@ function build() {
     if (lang === "mermaid") return `<div class="mermaid-card"${line} tabindex="-1"><div class="mm-head"><span>mermaid · ${esc(MERMAID_KIND(t.content))}</span><span class="mm-tools"><button type="button" class="mm-zout" title="Zoom out (−)" aria-label="Zoom out">${icon("minus", 13)}</button><button type="button" class="mm-zlabel" title="Fit (0) · double-click the diagram to switch between fit and 100%">Fit</button><button type="button" class="mm-zin" title="Zoom in (+)" aria-label="Zoom in">${icon("plus", 13)}</button><button type="button" class="mm-z100" title="Actual size (100%)">1:1</button><span class="mm-sep"></span><button type="button" class="mm-export" title="Export: SVG, PNG, JPEG, WebP · copy image">${icon("download", 13)}</button><button type="button" class="mm-src" title="Show source">${icon("code", 14)}</button><button type="button" class="mm-full" title="Full screen">${icon("maximize-2", 13)}</button></span></div><div class="mermaid-block" data-src="${enc(t.content)}"><div class="muted">Rendering diagram…</div></div><pre class="mm-code" hidden><code>${esc(t.content)}</code></pre></div>`;
     if (lang === "canvas") return `<div class="canvas-embed"${line} data-canvas="${enc(t.content)}"></div>`;
     if (lang === "query") return `<div class="query-block"${line} data-q="${enc(t.content.trim())}"></div>`;
+    if (lang === "occlusion") return occlusionHtml(t.content, line); // image-occlusion cards (lib/cloze-md.ts)
     return fence(tokens, idx, opts, env, self).replace("<pre", `<pre${line}`);
   };
 
@@ -276,7 +298,8 @@ function build() {
     const m = tokens[idx].meta as { title: string; heading: string; label: string; embed?: boolean };
     // ![[Note]] / ![[Note#Heading]] → live include (filled on hydrate); files (![[x.png]]) stay links.
     if (m.embed && !/\.[a-z0-9]{2,5}$/i.test(m.title)) return `<span class="transclude" data-note="${esc(m.title)}" data-heading="${esc(m.heading)}"><a class="wikilink" href="#" data-note="${esc(m.title)}" data-heading="${esc(m.heading)}">${esc(m.label)}</a></span>`;
-    return `<a class="wikilink" href="#" data-note="${esc(m.title)}" data-heading="${esc(m.heading)}">${esc(m.label)}</a>`;
+    // [[Paper#^hl-id|Paper · p. 4]] → PDF highlight back-link chip (opens the reader at that highlight; lib/pdf-format.ts).
+    return `<a class="wikilink${m.heading.startsWith("^hl-") ? " pdf-ref" : ""}" href="#" data-note="${esc(m.title)}" data-heading="${esc(m.heading)}">${esc(m.label)}</a>`;
   };
 
   // #tags
@@ -291,6 +314,20 @@ function build() {
     return true;
   });
   md.renderer.rules.hashtag = (tokens, idx) => { const t = String((tokens[idx].meta as { tag: string }).tag); return `<a class="tag" href="#" data-tag="${esc(t.toLowerCase())}">#${esc(t)}</a>`; };
+
+  // [12:34] / [1:02:03] / [12:34](#video-2) → timestamp chip that seeks the note's player (video notes, docs/VIDEO_NOTES.md).
+  // "[12:34](url)" stays a normal link and "[12:34][ref]" a reference link; [^1] footnotes and [ ] task boxes never match.
+  md.inline.ruler.before("link", "vtimestamp", (state: StateInline, silent: boolean) => {
+    if (state.src.charCodeAt(state.pos) !== 0x5b) return false;
+    const m = TS_AT.exec(state.src.slice(state.pos));
+    if (!m) return false;
+    const next = state.src[state.pos + m[0].length];
+    if (!m[6] && (next === "(" || next === "[")) return false;
+    if (!silent) state.push("vtimestamp", "", 0).meta = fromMatch(m);
+    state.pos += m[0].length;
+    return true;
+  });
+  md.renderer.rules.vtimestamp = (tokens, idx) => { const m = tokens[idx].meta as { seconds: number; video: number; label: string }; return timestampChip(m.seconds, m.video, m.label); };
 
   // Attachments: ![](att:id) and [x](att:id)
   md.validateLink = (url) => !/^(javascript|vbscript|file|data):/i.test(url.trim()) || /^data:image\/(png|jpe?g|gif|webp);/i.test(url.trim());
@@ -352,18 +389,20 @@ function build() {
     }
   });
 
-  // 📅 2026-11-18 / @due(2026-11-18) → date chip (design 5A: task with due date).
-  // (done at render time: 📅 isn't a markdown-it terminator char, so an inline rule would never see it)
+  // Stored due-date syntax (U+1F4C5 calendar char + date, or @due(2026-11-18)) → date chip with the `due` glyph.
+  // (done at render time: the calendar char isn't a markdown-it terminator char, so an inline rule would never see it)
   const dueChip = (date: string) => {
     const d = new Date(date + "T00:00");
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    return `<span class="${d < today ? "due over" : "due"}">${icon("calendar", 13)}${d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).replace(",", "")}</span>`;
+    return `<span class="${d < today ? "due over" : "due"}">${glyphSvg("due", 13)}${d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).replace(",", "")}</span>`;
   };
   md.renderer.rules.text = (tokens, idx) => {
     let h = esc(tokens[idx].content);
-    if (/📅|@due\(/u.test(h)) h = h.replace(/(?:📅\s*|@due\()(\d{4}-\d{2}-\d{2})\)?/gu, (_m, d: string) => dueChip(d));
+    if (/\u{1F4C5}|@due\(/u.test(h)) h = h.replace(/(?:\u{1F4C5}\s*|@due\()(\d{4}-\d{2}-\d{2})\)?/gu, (_m, d: string) => dueChip(d));
     // :status[In review]{yellow} → coloured pill (Confluence status lozenge); colour guessed from the text when omitted.
     if (h.includes(":status[")) h = h.replace(/:status\[([^\]]{1,40})\](?:\{(\w+)\})?/g, (_m, t: string, c?: string) => `<span class="status-pill" data-c="${statusColor(t, c)}">${t}</span>`);
+    // :glyph[s-learning] → a Lumen glyph inline (cards, headings); unknown names stay as text
+    if (h.includes(":glyph[")) h = h.replace(/:glyph\[([\w-]{1,32})\]/g, (m, n: string) => (hasGlyph(n) ? `<span class="md-glyph" data-g="${n}">${glyphSvg(n, 15)}</span>` : m));
     return h;
   };
 
@@ -464,7 +503,7 @@ let instance: MD | null = null;
 export function render(src: string): string {
   instance ??= build();
   // Front-matter becomes blank lines (not removed) so data-line numbers match the editor's lines.
-  return instance.render(src.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, (m) => "\n".repeat((m.match(/\n/g) ?? []).length)));
+  return instance.render(src.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, (m) => "\n".repeat((m.match(/\n/g) ?? []).length)), { cloze: clozeEnabled(src) });
 }
 
 // ------------------------------------------------------------------ post-render hydration
@@ -696,21 +735,34 @@ function hydrateTables(root: HTMLElement) {
       const cls = max <= 22 ? "c-short" : max >= 32 ? "c-long" : "";
       if (cls) for (const r of all) r.cells[c]?.classList.add(cls);
     }
+    // Header line (R4-16J): "Caption · 5 rows" · Filter (a field once clicked) · full screen.
     const tools = document.createElement("div");
     tools.className = "tbl-tools";
-    const meta = `<span class="tbl-count">${rows.length} row${rows.length === 1 ? "" : "s"}</span>`;
-    tools.innerHTML = meta + (rows.length > 8 ? `<label class="tbl-filter">${icon("search", 12)}<input type="search" placeholder="Filter rows" aria-label="Filter rows"></label>` : "")
-      + `<button type="button" class="tbl-full" title="Full screen" aria-label="Show table full screen">${icon("maximize-2", 13)}</button>`;
+    const caption = wrap.dataset.caption ?? "";
+    const nrows = (n: number, of?: number) => `${of != null ? `${n} of ${of}` : n} row${(of ?? n) === 1 ? "" : "s"}`;
+    tools.innerHTML = `<span class="tbl-count">${caption ? `${esc(caption)} · ` : ""}${nrows(rows.length)}</span>`
+      + (rows.length >= 5 ? `<label class="tbl-filter">${glyphSvg("query", 12)}<span class="tbl-filter-l">Filter</span><input type="search" placeholder="Filter rows" aria-label="Filter rows"></label>` : "")
+      + `<button type="button" class="tbl-full" title="Full screen" aria-label="Show table full screen">${glyphSvg("full", 12)}</button>`;
     wrap.prepend(tools);
     const input = tools.querySelector("input");
     const count = tools.querySelector<HTMLElement>(".tbl-count")!;
+    const filter = tools.querySelector<HTMLElement>(".tbl-filter");
+    filter?.addEventListener("click", () => { filter.classList.add("on"); input?.focus(); });
+    input?.addEventListener("blur", () => { if (!input.value) filter?.classList.remove("on"); });
+    input?.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.stopPropagation(); input.value = ""; input.dispatchEvent(new Event("input")); input.blur(); } });
     input?.addEventListener("input", () => {
       const q = input.value.trim().toLowerCase();
       let shown = 0;
       for (const r of rows) { const hit = !q || (r.textContent ?? "").toLowerCase().includes(q); r.hidden = !hit; if (hit) shown++; }
-      count.textContent = q ? `${shown} of ${rows.length} rows` : `${rows.length} row${rows.length === 1 ? "" : "s"}`;
+      count.textContent = (caption ? `${caption} · ` : "") + (q ? nrows(shown, rows.length) : nrows(rows.length));
     });
-    tools.querySelector(".tbl-full")!.addEventListener("click", () => { if (document.fullscreenElement === wrap) void document.exitFullscreen(); else void wrap.requestFullscreen?.(); });
+    const full = tools.querySelector<HTMLButtonElement>(".tbl-full")!;
+    full.addEventListener("click", () => { if (document.fullscreenElement === wrap) void document.exitFullscreen(); else void wrap.requestFullscreen?.(); });
+    wrap.addEventListener("fullscreenchange", () => {
+      const on = document.fullscreenElement === wrap;
+      full.innerHTML = glyphSvg(on ? "x" : "full", 12);
+      full.title = on ? "Exit full screen (Esc)" : "Full screen";
+    });
     // Sort: asc → desc → original order. Only the view changes; the Markdown stays as written.
     const heads = [...(table.tHead?.rows[0]?.cells ?? [])];
     if (body && rows.length > 1) heads.forEach((th, col) => {
@@ -800,6 +852,21 @@ function hydrateToc(root: HTMLElement) {
     toc.innerHTML = `<div class="md-toc-t">Contents</div>` + (hs.length ? `<ol>${hs.map((h, i) => `<li class="toc-${h.tagName.toLowerCase()}"><a href="#" data-i="${i}" dir="auto">${esc(h.textContent ?? "")}</a></li>`).join("")}</ol>` : `<div class="muted">No headings yet.</div>`);
     toc.onclick = (e) => { const a = (e.target as HTMLElement).closest<HTMLAnchorElement>("a[data-i]"); if (!a) return; e.preventDefault(); e.stopPropagation(); hs[Number(a.dataset.i)]?.scrollIntoView({ behavior: "smooth", block: "start" }); };
   }
+  // The section being read is bold (R4 "Contents" box): the last heading above the top fifth of the pane.
+  if (!hs.length) return;
+  const pane = root.closest<HTMLElement>(".read-pane, .focus-read, [data-scroll]") ?? null;
+  const spy = () => {
+    if (!root.isConnected) { (pane ?? window).removeEventListener("scroll", spy); return; }
+    const top = (pane ? pane.getBoundingClientRect().top : 0) + Math.min(160, (pane?.clientHeight ?? innerHeight) / 5);
+    let cur = 0;
+    hs.forEach((h, i) => { if (h.getBoundingClientRect().top <= top) cur = i; });
+    for (const toc of tocs) toc.querySelectorAll<HTMLElement>("a[data-i]").forEach((a) => a.classList.toggle("on", Number(a.dataset.i) === cur));
+  };
+  const host = root as HTMLElement & { _tocSpy?: [EventTarget, () => void] };
+  if (host._tocSpy) host._tocSpy[0].removeEventListener("scroll", host._tocSpy[1]);
+  host._tocSpy = [pane ?? window, spy];
+  (pane ?? window).addEventListener("scroll", spy, { passive: true });
+  requestAnimationFrame(spy);
 }
 /** `![[Note]]` / `![[Note#Heading]]`: the note or section rendered in place (3 levels deep at most, no loops). */
 function hydrateIncludes(root: HTMLElement, ctx: HydrateCtx) {
@@ -817,7 +884,9 @@ function hydrateIncludes(root: HTMLElement, ctx: HydrateCtx) {
     const box = document.createElement("div");
     box.className = "transclusion";
     box.dataset.from = key;
-    box.innerHTML = `<div class="tc-head">${icon("corner-down-right", 12)}<a class="wikilink" href="#" data-note="${esc(title)}" data-heading="${esc(heading)}">${esc(title)}${heading ? ` › ${esc(heading)}` : ""}</a></div><div class="tc-body">${render(src).replace(/ data-line="\d+"/g, "")}</div>`;
+    // R4-16J: dashed frame, source chip "Note › Section" and "Go to source →" (opens the note at that section / block)
+    const link = `href="#" data-note="${esc(title)}" data-heading="${esc(heading)}"`;
+    box.innerHTML = `<div class="tc-head"><a class="wikilink tc-chip" ${link} title="Live copy of ${esc(title)}${heading ? ` › ${esc(heading)}` : ""}">${glyphSvg(blockId ? "block-embed" : "include", 12)}<span>${esc(title)}${heading ? ` › ${esc(heading)}` : ""}</span></a><span class="tc-fill"></span><a class="wikilink tc-go" ${link}>Go to source →</a></div><div class="tc-body">${render(src).replace(/ data-line="\d+"/g, "")}</div>`;
     const p = span.parentElement;
     if (p?.tagName === "P" && p.childNodes.length === 1) p.replaceWith(box); else span.replaceWith(box);
     hydrateIncludes(box.querySelector<HTMLElement>(".tc-body")!, ctx); // nested includes; the rest hydrates with the page
@@ -830,11 +899,15 @@ function blockTarget(el: HTMLElement) {
   return (el.classList.contains("blk-after") ? (el.previousElementSibling as HTMLElement | null) : el.closest<HTMLElement>("[data-line]") ?? el.parentElement) ?? el;
 }
 function findBlock(root: ParentNode, id: string) {
+  if (id.startsWith("h:")) {
+    const want = id.slice(2).replace(/[*_`[\]]/g, "").trim().toLowerCase();
+    return [...root.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6")].find((x) => !x.closest(".transclusion, .md-toc") && (x.textContent ?? "").replace(/\s*\^[\w-]+\s*$/, "").trim().toLowerCase() === want) ?? null;
+  }
   return [...root.querySelectorAll<HTMLElement>("[data-block-id]")].find((x) => x.dataset.blockId === id && !x.closest(".transclusion")) ?? null;
 }
 function flashBlock(el: HTMLElement) {
   const t = blockTarget(el);
-  requestAnimationFrame(() => { t.scrollIntoView({ block: "center", behavior: "smooth" }); t.classList.add("blk-flash"); setTimeout(() => t.classList.remove("blk-flash"), 1800); });
+  requestAnimationFrame(() => { t.scrollIntoView({ block: "center", behavior: "smooth" }); t.classList.remove("blk-flash"); void t.offsetWidth; t.classList.add("blk-flash"); setTimeout(() => t.classList.remove("blk-flash"), 1700); });
 }
 function hydrateBlockRefs(root: HTMLElement) {
   if (!root.dataset.blkNav) {
@@ -842,7 +915,10 @@ function hydrateBlockRefs(root: HTMLElement) {
     root.addEventListener("click", (e) => {
       const a = (e.target as HTMLElement).closest<HTMLAnchorElement>("a.wikilink");
       const h = a?.dataset.heading ?? "";
-      if (!a || !h.startsWith("^")) return;
+      if (!a) return;
+      // [[Note#Heading]] / include "Go to source": remember the section so the note opens scrolled to it
+      if (h && !h.startsWith("^")) { if (a.dataset.note) setPendingBlock(a.dataset.note, "h:" + h); return; }
+      if (!h.startsWith("^")) return;
       const id = h.slice(1), title = a.dataset.note ?? "";
       if (!title) { e.preventDefault(); e.stopPropagation(); const el = findBlock(root, id); if (el) flashBlock(el); return; }
       setPendingBlock(title, id);
@@ -856,8 +932,27 @@ function hydrateBlockRefs(root: HTMLElement) {
   }
 }
 
+/** Callouts with one short paragraph read as one line: glyph · **Title** — text (R4-16J "Watch out — …"). */
+function hydrateCallouts(root: HTMLElement) {
+  root.querySelectorAll<HTMLElement>("div.callout:not([data-ok])").forEach((c) => {
+    c.dataset.ok = "1";
+    const body = c.querySelector<HTMLElement>(":scope > .callout-body");
+    const title = c.querySelector<HTMLElement>(":scope > .callout-title > span[dir]");
+    const p = body?.children.length === 1 && body.firstElementChild?.tagName === "P" ? (body.firstElementChild as HTMLElement) : null;
+    if (!p || !title || (p.textContent ?? "").length > 360) return;
+    const b = document.createElement("b");
+    b.className = "callout-lead";
+    b.innerHTML = title.innerHTML;
+    p.prepend(b, " — ");
+    c.classList.add("callout-inline");
+  });
+}
+
 export function hydrate(root: HTMLElement, ctx: HydrateCtx = {}) {
   hydrateIncludes(root, ctx);
+  hydrateCallouts(root);
+  // a paragraph of only :status[] pills lays out as a pill row (6 px gaps)
+  root.querySelectorAll<HTMLElement>("p").forEach((p) => { if (p.children.length > 1 && [...p.childNodes].every((n) => (n.nodeType === 1 ? (n as Element).classList.contains("status-pill") : !(n.textContent ?? "").trim()))) p.classList.add("pill-row"); });
   hydrateBlockRefs(root);
   hydrateTabs(root);
   hydrateTables(root);
@@ -877,7 +972,7 @@ export function hydrate(root: HTMLElement, ctx: HydrateCtx = {}) {
     const id = img.dataset.att!;
     const [url, mime] = await Promise.all([resolveAtt(id), attMime(id)]);
     const name = img.alt || "file";
-    const html = mime.startsWith("video/") ? videoFileHtml(url, name) : mime.startsWith("audio/") ? audioFileHtml(url, name) : mime === "application/pdf" ? pdfHtml(url, name) : null;
+    const html = mime.startsWith("video/") ? videoFileHtml(url, name) : mime.startsWith("audio/") ? audioFileHtml(url, name) : mime === "application/pdf" ? pdfHtml(url, name, id) : null;
     if (html) {
       const t = document.createElement("template");
       t.innerHTML = html;

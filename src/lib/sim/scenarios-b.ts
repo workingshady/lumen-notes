@@ -11,7 +11,7 @@ export function seedBig(count: number) {
     const r = rng(count);
     const SPACES = 12, FOLDERS = 60;
     const topics = ["Algebra", "Biology", "Chemistry", "Databases", "Economics", "French", "Geometry", "History", "Immunology", "Java", "Kotlin", "Logic"];
-    for (let s = 0; s < SPACES; s++) v.spaces.push(space({ id: `bg-s-${s}`, name: topics[s], kind: (["course", "area", "project", "resource"] as const)[s % 4], icon: "📁", color: `hsl(${s * 30} 60% 55%)`, sort: s + 1, props: s % 4 === 2 ? { goal: "finish", deadline: c.iso(30 + s) } : {} }));
+    for (let s = 0; s < SPACES; s++) v.spaces.push(space({ id: `bg-s-${s}`, name: topics[s], kind: (["course", "area", "project", "resource"] as const)[s % 4], icon: "glyph:folder", color: `hsl(${s * 30} 60% 55%)`, sort: s + 1, props: s % 4 === 2 ? { goal: "finish", deadline: c.iso(30 + s) } : {} }));
     for (let f = 0; f < FOLDERS; f++) v.folders.push(folder({ id: `bg-f-${f}`, spaceId: `bg-s-${f % SPACES}`, parentId: f >= SPACES * 2 && f % 3 === 0 ? `bg-f-${f - SPACES}` : null, name: `${String(f).padStart(2, "0")} Folder`, color: f % 4 ? null : "#39C5CF", sort: f }));
     const title = (i: number) => `${topics[i % SPACES]} note ${String(i).padStart(5, "0")}`;
     const types: NoteType[] = ["note", "note", "note", "lesson", "lesson", "journal", "flashcards", "moc", "post", "slides"];
@@ -55,9 +55,9 @@ export async function seedSharing(): Promise<Vault> {
   const c = clock();
   const v = emptyVault();
   v.spaces.push(
-    space({ id: "sh-s-course", name: "Linear Algebra (shared)", kind: "course", icon: "📐", color: "#A371F7", sort: 1, shareId: "simShCourse1", roadmapId: "sh-rm", description: "A shared course page.", props: { provider: "MIT OCW 18.06", url: "https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/", target: c.iso(25), secret: "should never be exposed in a share" } }),
-    space({ id: "sh-s-proj", name: "Open-source app (shared)", kind: "project", icon: "🛠️", color: "#E8893A", sort: 2, shareId: "simShProj01", props: { goal: "ship 1.0", deadline: c.iso(20) } }),
-    space({ id: "sh-s-blog", name: "Blog", kind: "area", icon: "✍️", color: "#57AB5A", sort: 3 }),
+    space({ id: "sh-s-course", name: "Linear Algebra (shared)", kind: "course", icon: "glyph:math", color: "#A371F7", sort: 1, shareId: "simShCourse1", roadmapId: "sh-rm", description: "A shared course page.", props: { provider: "MIT OCW 18.06", url: "https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/", target: c.iso(25), secret: "should never be exposed in a share" } }),
+    space({ id: "sh-s-proj", name: "Open-source app (shared)", kind: "project", icon: "glyph:code", color: "#E8893A", sort: 2, shareId: "simShProj01", props: { goal: "ship 1.0", deadline: c.iso(20) } }),
+    space({ id: "sh-s-blog", name: "Blog", kind: "area", icon: "glyph:highlight", color: "#57AB5A", sort: 3 }),
   );
   v.folders.push(folder({ id: "sh-f-posts", spaceId: "sh-s-blog", name: "Posts" }), folder({ id: "sh-f-drafts", spaceId: "sh-s-blog", name: "Drafts" }));
   const n = (p: Parameters<typeof note>[0]) => v.notes.push(note(p));
@@ -91,10 +91,10 @@ export async function seedEdge(): Promise<Vault> {
   const c = clock();
   const v = emptyVault();
   v.spaces.push(
-    space({ id: "ed-s", name: "Edge cases", kind: "area", icon: "🧪", color: "#E5534B", sort: 1, description: "Broken and weird data." }),
-    space({ id: "ed-s-deleted", name: "Deleted space (tombstone)", kind: "project", icon: "🪦", sort: 2, deleted: 1 }),
+    space({ id: "ed-s", name: "Edge cases", kind: "area", icon: "glyph:flask", color: "#E5534B", sort: 1, description: "Broken and weird data." }),
+    space({ id: "ed-s-deleted", name: "Deleted space (tombstone)", kind: "project", icon: "glyph:archive", sort: 2, deleted: 1 }),
     space({ id: "ed-s-weird", name: "\u200B\u200F\u202EWeird space name with RTL override\u202C", kind: "resource", icon: "", color: "not-a-color", sort: 3, props: { deadline: "not-a-date", target: "2026-13-45" } }),
-    space({ id: "ed-s-long", name: "A space name that is far too long to fit in any sidebar row without truncation ".repeat(3), kind: "course", icon: "🦄", sort: 4, roadmapId: "ed-missing-roadmap-id" }),
+    space({ id: "ed-s-long", name: "A space name that is far too long to fit in any sidebar row without truncation ".repeat(3), kind: "course", icon: "🦄" /* legacy emoji, unknown → initials */, sort: 4, roadmapId: "ed-missing-roadmap-id" }),
   );
   v.folders.push(
     folder({ id: "ed-f-ok", spaceId: "ed-s", name: "Normal folder" }),
@@ -124,7 +124,7 @@ export async function seedEdge(): Promise<Vault> {
   n({ id: "ed-long-title", title: longTitle, text: "Very long title.\n", updated: c.ago(19) });
   n({ id: "ed-zw", title: "Zero\u200Bwidth\u200C‍title\uFEFF", text: "Zero-width characters in the title.\n", updated: c.ago(20) });
   n({ id: "ed-rtl-mark", title: "\u200FRTL mark at start · \u202Ereversed\u202C · \u061Cمختلط", text: "RTL/LRM/RLO marks in the title.\n", updated: c.ago(21) });
-  n({ id: "ed-emoji-title", title: "👩‍👩‍👧‍👦🏳️‍🌈🇸🇦 Emoji-only-ish title 🧪", text: "Emoji ZWJ sequences.\n", updated: c.ago(22) });
+  n({ id: "ed-emoji-title", title: "Emoji in the body only", text: "Emoji ZWJ sequences in user content: 👩‍👩‍👧‍👦🏳️‍🌈🇸🇦 🧪\n", updated: c.ago(22) });
   n({ id: "ed-in-deleted-folder", title: "Note in a deleted folder", folder: "ed-f-deleted", text: "My folder is a tombstone.\n", updated: c.ago(23) });
   n({ id: "ed-in-missing-folder", title: "Note in a missing folder", folder: "ed-f-does-not-exist", text: "folderId points nowhere.\n", updated: c.ago(24) });
   n({ id: "ed-in-missing-space", title: "Note in a missing space", space: "ed-s-missing", text: "spaceId points nowhere.\n", updated: c.ago(25) });
@@ -157,7 +157,7 @@ export const CONFLICT_NOTE = "cf-note";
 export async function seedConflicts(): Promise<Vault> {
   const c = clock();
   const v = emptyVault();
-  v.spaces.push(space({ id: "cf-s", name: "History lab", kind: "area", icon: "🕰️", color: "#E3B341", sort: 1 }));
+  v.spaces.push(space({ id: "cf-s", name: "History lab", kind: "area", icon: "glyph:shape-hex", color: "#E3B341", sort: 1 }));
   const base = (k: number) => `---\ntype: lesson\nstatus: learning\n---\n# Attention\n\nRevision ${k}. ${words(30 + k * 6, false)}\n\n${k % 3 === 0 ? "- [x] Done step\n" : "- [ ] Open step\n"}${k > 30 ? "\n## Added later\nMore content.\n" : ""}`;
   const main = note({ id: CONFLICT_NOTE, title: "Attention (conflicted note)", space: "cf-s", type: "lesson", status: "learning", body: base(60), updated: c.ago(4) });
   v.notes.push(main);

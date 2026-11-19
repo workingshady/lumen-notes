@@ -15,6 +15,8 @@ Research basis: Obsidian (plain Markdown files, `[[links]]`, backlinks, graph vi
 | GitHub-flavoured Markdown: tables, task lists, strikethrough, footnotes | ✅ | |
 | LaTeX math: inline `$…$` and block `$$…$$` (KaTeX) | ✅ | |
 | Mermaid diagrams via fenced code blocks | ✅ | flowchart, sequence, class, state, ER, gantt, mindmap, timeline |
+| **Diagram files** (`.mermaid`, note type `diagram`): source + live preview, zoom/pan viewer, saved to a `diagrams/` folder, a note's Mermaid block → diagram file → canvas file card (links both ways), Diagrams tab per space, Settings › Diagrams (default theme, hand-drawn look, export defaults, open .mermaid in, max render size, folder, auto-save, AI names); round 4 viewer: dot grid, − % + · Fit · Copy SVG, drag to pan, Ctrl+wheel zoom | ✅ | |
+| **Export dialog** for diagrams, whole canvases and the graph: SVG / PNG / JPEG / WebP with scale, quality, background, theme, padding; copy image / SVG / source | ✅ | |
 | Code highlighting (highlight.js, 190+ languages) + copy button | ✅ | |
 | Obsidian-style callouts `> [!note]`, `[!tip]`, `[!warning]`, `[!example]`, `[!question]` | ✅ | foldable with `[!note]-` |
 | Wiki links `[[Note]]`, `[[Note\|alias]]` + backlinks panel | ✅ | |
@@ -40,11 +42,11 @@ Research basis: Obsidian (plain Markdown files, `[[links]]`, backlinks, graph vi
 | **Page layout blocks** | ✅ | `::: columns` + `::: column 30%` (2, 3, main + sidebar; stack on narrow screens; `{.cards}` `{.divided}`), `::: tabs` (each heading = a tab), `::: expand Title`, panels `::: info/note/tip/warning/danger/success Title`, `::: wide`, `::: full`, `::: aside`, `::: center`; Pandoc/Quarto spellings accepted (`:::: {.columns}`, `{.panel-tabset}`, `.column-page`). More › Insert layout adds them |
 | **Tables** | ✅ | framed scroll box, sticky header, zebra rows, click a header to sort (view only), filter box on long tables, row count, full screen, sticky first column + scroll fade on wide tables, columns sized by content; `{.wide .compact .nowrap .plain}` under a table |
 | **Doc extras** | ✅ | `![[Note]]` / `![[Note#Heading]]` live includes (3 levels, no loops), `:status[In review]` pills (colour from the text or `{green}`), `[[toc]]` contents box |
-| **Focus / Zen** | ✅ | chrome hidden, centered column, typewriter feel |
-| **Slides** | ✅ | `---` separates slides; images (uploaded or URL), YouTube/Vimeo and uploaded video, Mermaid, math, tables, code; media auto-fits the slide; keyboard / swipe; fullscreen |
+| **Focus / Zen** | ✅ | chrome hidden, centered column, typewriter feel; **Read** and **Write** sub-modes, highlighter that saves highlights into the Markdown, read aloud (text to speech) and an outline drawer; round 4: 640 px measure, left outline drawer (O) with the current section, highlighter bar (5 colours · Note · Card = cloze card into "Cards · <note>"), read aloud sentence by sentence (current sentence underlined, later paragraphs dimmed, speed chip, voice), Settings › Reading rows (font, size, width, highlighter palette, voice, write focus, study plan) |
+| **Slides** | ✅ | `---` separates slides; images (uploaded or URL), YouTube/Vimeo and uploaded video, Mermaid, math, tables, code; media auto-fits the slide; keyboard / swipe; fullscreen. **Arrange workspace** (A): slide rail with drag-to-reorder, layout picker (11 layouts + blank) writing `<!-- layout: … -->`, style Normal / Invert / Accent (`_class`), free boxes with four corner handles, amber snap guides and coordinates; overview grid (O); phone remote shows current + next slide and notes |
 | **Slide layouts** | ✅ | `<!-- layout: … -->` per slide: title, section, default, center, two-cols, image-left/right (`split: 40%`), cards, stat, quote, full, blank; regions `::left::` `::right::` `::1::`…; Marp `![bg](url)` / `![bg left:40%](url)`; `class: invert/accent`; text auto-shrinks to fit (to 62%) |
 | **Free placement** | ✅ | `::: box x=10 y=20 w=40 h=30 {.card .center}` (percent of the slide); Arrange mode (A) drags/resizes boxes and writes the numbers back; + Box adds one |
-| **Doc → deck** | ✅ | any note without `---` slides is laid out automatically: H1 cover, section slides, layout picked from content (2 sub-sections → two-cols, 3–6 → cards, numbers → stat, quote, image + text, diagram/table full), long prose → speaker notes, long lists/tables → "(cont.)" slides; "Save as deck" / More › Make a slide deck turns it into editable slide Markdown |
+| **Doc → deck** | ✅ | any note without `---` slides is laid out automatically: H1 cover, section slides, layout picked from content (2 sub-sections → two-cols, 3–6 → cards, numbers → stat, quote, image + text, diagram/table full), long prose → speaker notes, long lists/tables → "(cont.)" slides; "Save as deck" / More › Make a slide deck turns it into editable slide Markdown. Presenting a non-deck note first shows the **preview dialog** (Split at `# H1` / `## H2` / `---`, "Present without saving", "Save as deck" → opens the new deck in Arrange) |
 | **Presenting** | ✅ | overview grid (O), type a number + Enter to jump, B / . black screen, P presenter view, audience window, phone remote |
 | **Review** | ✅ | flashcards from the note (`Question :: Answer` or `?` lines) |
 | Canvas | ✅ | infinite board of cards/notes/links/groups |
@@ -62,6 +64,8 @@ Model: **Space → Folders → Notes**. PARA gives the space kinds, Johnny-Decim
 | **Course roadmap** (roadmap.sh-style): modules → topics, status per topic `todo · learning · done · skipped`, prerequisites that lock/unlock topics, milestones, target dates, progress % per module and course | ✅ |
 | Roadmap stored as plain Markdown (`## Module`, `- [/] Topic (needs: A) 📅 2026-12-01 → [[Note]]`), so it's editable in the editor, by scripts, by the REST API, or as a `.md` file | ✅ |
 | Roadmap views: **Outline** (collapsible modules), **Skill tree** (auto-laid-out graph, locked topics dimmed), **Timeline** (by target date) | ✅ |
+| Round 4 roadmap (see `docs/ROADMAPS_AND_HUB.md`): module fold state remembered per roadmap + Expand/Collapse all; drag ghost, insert line, "becomes prerequisite", refused loop with the reason; notes tray + empty-roadmap builder ("Add all N as topics"); skill tree by module with foldable modules, curved links coloured by status, minimap; timeline drag with ghost + new-date tooltip; topic sheet with Organize + inline delete confirm; phone ⋯ menu per topic; quiet unlock moment + "X is now open." | ✅ |
+| Project hub (Round 4): header with health badge (On track / At risk / Behind + reasons), plain links row, tabs Overview · Docs (status header, owner, 5 states) · Board (6 columns, glyph chips, drag writes the marker, filters, per-column add) · Requirements (MoSCoW + traceability) · Timeline (Gantt from cards, Mermaid export) · Diagrams · Assistant (plain labels, free "Ask" via `/api/ai/project`) | ✅ |
 | Click a topic → open or create its lesson note in the course space (lesson template prefilled) | ✅ |
 | Roadmap templates (blank, "Learn a language", "CS fundamentals", "Web dev") + import a roadmap from any Markdown outline | ✅ |
 | **Project space** overview: goal, deadline countdown, milestones, tasks board from the space's notes, recent notes | ✅ |
@@ -83,7 +87,8 @@ Model: **Space → Folders → Notes**. PARA gives the space kinds, Johnny-Decim
 | Trash with restore (soft delete) | ✅ |
 | Sort: updated, created, title; filter by type/status/tag | ✅ |
 | "Database" table view of notes (sortable columns: type, status, tags, updated) | ✅ |
-| Saved searches / smart folders | 🔜 |
+| **Smart folders** (see `docs/SMART_FOLDERS.md`): save any search as a sidebar folder with a live count (extra operators `due:` `has:` `no:` `updated:` `created:`), synced, pin / rename / reorder / colour, Save as base; phone folders sheet | ✅ |
+| **Unlinked mentions** in the Links tab (title + aliases, Arabic prefixes, Link / Link all with undo / Ignore) + graph **Tag links**: tag nodes or shared-tag edges, legend | ✅ |
 
 ## 4. Search & navigation
 | Feature | Status |
@@ -160,9 +165,12 @@ Chosen over tldraw because Excalidraw is MIT-licensed with no production license
 | Study streak / activity heatmap | ✅ |
 | Cornell notes template, lesson template with objectives / summary / questions | ✅ |
 | FSRS scheduler | ✅ |
-| Cloze deletions `==text==` | 🔜 |
+| **Cloze cards** `{{c1::answer::hint}}` anywhere (`==text==` only in flashcard notes / `cloze: true`; coloured highlights never count) + **image occlusion** (```` ```occlusion ```` block, draw boxes with mouse or finger, hide-one / hide-all, one card per box or group); see `docs/FLASHCARDS.md` | ✅ |
 
 | **Bases** (`type: base`, Obsidian Bases YAML, see `docs/BASES.md`): Table · Board · Gallery · List · Calendar views of notes with filters, sort, group, inline editing, drag cards between columns/days (writes front matter) | ✅ |
+
+| **Today** study plan (sidebar › Today, Home card; see `docs/TODAY.md`): Continue · New lessons · Reviews · Practice from paths, roadmaps and due cards, each with minutes and a reason; missed days → spread over the next days (writes 📅 dates); week view + goals; Settings › Study plan | ✅ |
+| **Dashboards** (note type `dashboard`, see `docs/DASHBOARDS.md`): number, bar, stacked, line, area, donut, heatmap, ring, table, list tiles from cards, sessions, notes, paths or bases; drag / resize on a 12-column grid; keyboard + data-table accessible charts. **Multi-group bases** (`groupMulti: each | first`) | ✅ |
 
 ## 7b. Productivity views
 | Feature | Status |
@@ -173,7 +181,8 @@ Chosen over tldraw because Excalidraw is MIT-licensed with no production license
 | **Study timer** (Pomodoro 25/5) attached to a note, logs minutes studied to the dashboard | ✅ |
 | **AI assist** (Cloudflare Workers AI, free tier): summarize note, generate flashcards, explain selection, suggest tags | ✅ |
 | Share-to-Lumen (Android share sheet / PWA share target) → clip text or URL into an Inbox note | ✅ |
-| PDF viewer with highlights → notes | 🔜 |
+| **PDF reader** (note type `pdf`, see `docs/PDF.md`): virtualized pages, thumbnails / outline / highlights rail, search with scrollbar markers, zoom, resume where you left off, dark-mode page inversion (images kept), password + scanned-PDF states; text and **area** highlights in 5 colours with comments and tags; highlight → note / flashcard / canvas card with a `[[PDF#^hl-id]]` back-link that opens the page and flashes it; PDFs library with % read | ✅ |
+| **Video notes with timestamps** (see `docs/VIDEO_NOTES.md`): Alt+T inserts `[12:34]`, chips seek YouTube / Vimeo / uploaded video (`[12:34](#video-2)` picks a player), speed 0.75–2×, flashcard at this moment, pause while typing, docked player on phone | ✅ |
 
 ## 8. Import / export
 | Feature | Status |
@@ -205,7 +214,7 @@ One concept-first roadmap on top of several overlapping courses. Each course kee
 | Prerequisites merged across all courses; locked/unlocked concepts | ✅ |
 | **Mastery rules**: a concept is *learned* when you mark it ("I already know this") or finish its lessons in **any one** course (other courses = optional material); *locked* until its prerequisites are learned; *mastered* when spaced reviews reach the 14-day step; learning a concept counts as an implicit review of its direct prerequisites. Course lesson ticks stay per course | ✅ |
 | Collapsible path summary (auto-collapsed for paths with > 6 courses); course chips open the course page; Back returns to the page a note was opened from | ✅ |
-| **Slash commands** (`lib/slash.ts`): `/` at line start or after a space opens a grouped menu (Basic · Layout · Panels & callouts · Media & embeds · Knowledge · Advanced, 55 blocks, Confluence/Notion/Obsidian names as aliases); `//` = today's date; never inside URLs or code fences. Same catalog drives the visual **Insert layout** gallery in the note ⋯ menu | ✅ |
+| **Slash commands** (`lib/slash.ts`): `/` at line start or after a space opens a grouped menu (Basic · Layout · Panels & callouts · Media & embeds · Knowledge · Advanced, 60 blocks with glyphs, hints and shortcuts, a Recent group, no-results suggestions, phone bottom sheet; Confluence/Notion/Obsidian names as aliases); `//` = today's date; never inside URLs or code fences. Same catalog drives the **Insert gallery** (layout thumbnails + preview, note ⋯ › Insert…) and the block menu. R4 details: `docs/EDITOR.md` | ✅ |
 | **Browser history**: every page (note, space, list, filter) is a history entry: browser / Android Back + Forward, phone gesture and the in-app Back arrow walk the same sequence; Back closes sheets / modes / keyboard first; clickable breadcrumb (space → its page, folder → its list) | ✅ |
 | **Stages** board (drag concepts between stages, rename/reorder stages, "Not placed yet" lane) | ✅ |
 | **Matrix**: concepts × courses with per-course status and overlap count (2×, 3×) | ✅ |
@@ -215,8 +224,16 @@ One concept-first roadmap on top of several overlapping courses. Each course kee
 | Concept sheet: status in every course (edits that course's roadmap), resources, lesson notes, merge, rename | ✅ |
 | Resources per concept: YouTube/Vimeo/course videos play inline; articles/books/courses as links; links in course lesson notes collected automatically | ✅ |
 | Auto-organize (stages from prerequisite depth) and AI organize (Workers AI groups + merges) | ✅ |
+| **Styled by reference** (not drawn in the round-4 design, built in its language): Organize ▾ (Auto / AI) menu with the `organize` glyph; "Merge with another concept" and "Take out of the path" rows in the concept sheet's collapsible "Merge or take out" section with the inline confirm bar | ✅ |
 | Dev simulator scenario "Learning paths" (ML Foundations + CS231n + fast.ai) | ✅ |
 | **Drag-and-drop editing**: roadmap outline (reorder topics/modules, drop on a topic = prerequisite, + New module, drag notes in from the Notes tray, Alt+↑/↓), skill tree (+ Topic chip, connect to empty canvas = new dependent topic, click an arrow to remove); path stages (reorder/move/merge concepts, reorder stages, drop notes, Alt+arrows), path graph `needs:` edges; loops refused; phones use ⋯ menus instead of drag; empty roadmap opens as a builder | ✅ |
+| **Round 4 (Lumen 14 / PathDesk)**: collapsible header (collapsed above 6 courses: ring, learned · learning · to revise · mastered, overlaps badge); course chips with colour bar + course-kind glyph (space prop `format: video|book|lecture|notebook|paper|podcast|article`, else guessed from provider/url) + done/total, "+N more" searchable course list; Organize ▾ (Auto / AI) | ✅ |
+| **Overlaps panel**: Merge / They're different per pair with a reason (same name, same notes cited, N shared lessons), **Review all** = bulk decisions + one Apply | ✅ |
+| **Filters shared by every tab** (Course · Status · Stage, plus To revise / Only overlapping / Not placed) and **Group by** stage / course / status, remembered per path; phone: scrolling pill tabs + Filter sheet ("Show N concepts") | ✅ |
+| Stages: columns collapse to a 44 px strip, Expand/Collapse all, design concept cards (status, course dots, N courses, N res, revise pill), dashed Not placed yet, drag ghost + insert line + invalid-drop states; phone accordion (one stage open at a time) | ✅ |
+| Graph: Step N columns per stage (sub-columns by prerequisite depth), course bars + stage badge, focus chain (ancestors + dependants, "Only this chain"), collapse a stage into a summary node, minimap, zoom/fit, collapsible legend, "Focus in graph" from the concept sheet, drag a dot to add a dashed path prerequisite (loops shown as invalid) | ✅ |
+| Matrix: collapsible groups, rotated abbreviated course headers (full name on hover), sticky concept column, overlap column, Only overlapping / Missing from my courses; scrolls with 28+ courses. Timeline: collapsible lanes, lesson bars by date, revision lane, today line. Revise: one concept, taught-in chips, recall prompt from its flashcards, resources, Again / Got it (next step shown), Coming up | ✅ |
+| Concept sheet: remembered collapsible sections (Mastery with Todo/Learning/Learned/Mastered + progress to 14 days, Practice quiz in place with ≥ 80 % = learned, Taught in rows with status + Open + drag, Prerequisites/Unlocks chips, Resources, Notes, Merge or take out with the inline confirm bar); phone full-height sheet. New learning path dialog (course chips, Organize from outlines with a stage preview, or empty stages); paths list cards (`views/path-list.tsx`) | ✅ |
 
 ## 3c. Project hub (software projects, links only)
 Project spaces become a hub for building software. Nothing connects to GitHub/Bitbucket: repo, PR, Figma and Jira are plain links.
@@ -265,6 +282,8 @@ Project spaces become a hub for building software. Nothing connects to GitHub/Bi
 | Feature | Status |
 |---|---|
 | Local-first IndexedDB (Dexie). Works fully offline | ✅ |
+| **Several accounts** on one device (each its own passcode, D1 database and local DB): switch, add, sign out in Settings; sign-in routed by the passcode | ✅ |
+| **Big vaults** (700+ notes): paged note list, search index and graph layout built in the background, one shared vault snapshot | ✅ |
 | Attachments in D1 (free, chunked) · optional R2 if a card is added later | ✅ |
 | Sync to Cloudflare D1 (last-write-wins per note by `updatedAt`, incremental `since` cursor) | ✅ |
 | Single-owner passcode auth (PBKDF2 hash + HMAC bearer tokens) | ✅ |

@@ -1,4 +1,6 @@
 // Pure Markdown parsing helpers: front-matter, links, tags, tasks, flashcards, outline, roadmaps.
+import { clozeCards } from "./cloze";
+import { occlusionCards, type Occlusion } from "./occlusion";
 
 export function splitFrontMatter(md: string): { data: Record<string, string>; body: string } {
   const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(md);
@@ -119,28 +121,45 @@ export const NEXT_TASK: Record<TaskStatus, TaskStatus> = { todo: "doing", doing:
 export const cycleTask = (md: string, t: Task) => setTaskStatus(md, t.line, NEXT_TASK[t.status]);
 
 // ------------------------------------------------------------------ flashcards
-export interface Flashcard { q: string; a: string; key: string }
+/**
+ * Basic cards have only q / a / key. Cloze and image-occlusion cards (lib/cloze.ts, lib/occlusion.ts) add `kind`,
+ * the source `line` (0-based, full note) and the data Review needs; their q / a are plain-text fallbacks.
+ */
+export interface Flashcard {
+  q: string; a: string; key: string;
+  kind?: "cloze" | "occlusion";
+  line?: number;
+  cloze?: { block: string; n: number };
+  occlusion?: { data: Occlusion; target: string[] };
+}
 export function hash(s: string) {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return (h >>> 0).toString(36);
 }
-/** `Question :: Answer` on one line, or `Question\n?\nAnswer lines` (blank line ends the answer). */
+/**
+ * `Question :: Answer` on one line, or `Question\n?\nAnswer lines` (blank line ends the answer),
+ * then cloze cards ({{c1::…}}, ==…== in flashcard notes) and ```occlusion image cards, appended in that order.
+ */
 export function flashcards(md: string): Flashcard[] {
   const out: Flashcard[] = [];
+  const used = new Set<number>();
   const lines = stripCode(splitFrontMatter(md).body).split("\n");
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
     const one = /^(?:[-*]\s+)?(.+?)\s+::\s+(.+)$/.exec(l);
-    if (one) { out.push({ q: one[1].trim(), a: one[2].trim(), key: hash(one[1].trim()) }); continue; }
+    if (one) { out.push({ q: one[1].trim(), a: one[2].trim(), key: hash(one[1].trim()) }); used.add(i); continue; }
     if (lines[i + 1]?.trim() === "?" && l.trim()) {
       const ans: string[] = [];
       let j = i + 2;
       while (j < lines.length && lines[j].trim()) ans.push(lines[j++]);
       out.push({ q: l.trim(), a: ans.join("\n"), key: hash(l.trim()) });
+      for (let k = i; k < j; k++) used.add(k);
       i = j;
     }
   }
+  for (const c of clozeCards(md, used)) out.push({ q: c.q, a: c.a, key: c.key, kind: "cloze", line: c.line, cloze: { block: c.block, n: c.n } });
+  for (const c of occlusionCards(md)) out.push({ q: `Image: ${c.label}`, a: c.label, key: c.key, kind: "occlusion", line: c.line, occlusion: { data: c.data, target: c.target } });
   return out;
 }
 
@@ -152,6 +171,9 @@ export interface Topic { name: string; status: TopicStatus; needs: string[]; due
 export interface Module { name: string; line: number; due: string | null; topics: Topic[] }
 
 const TOPIC_RE = /^\s*[-*+]\s+\[( |\/|x|X|-)\]\s+(.*)$/;
+/** A roadmap date: `(calendar emoji) 2026-12-01` (written by the app), or the plain-text forms `due:2026-12-01` / `@due(2026-12-01)`. */
+const RM_DUE = /(?:\u{1F4C5}\s*|(?<![\w/])due:\s*|@due\()(\d{4}-\d{2}-\d{2})\)?/u;
+const RM_DUE_G = /\s*(?:\u{1F4C5}\s*|(?<![\w/])due:\s*|@due\()\d{4}-\d{2}-\d{2}\)?/gu;
 /**
  * Roadmap Markdown:
  *   ## Module name 📅 2026-12-01
@@ -164,8 +186,8 @@ export function roadmap(md: string): Module[] {
   md.split("\n").forEach((l, line) => {
     const h = /^#{1,3}\s+(.+)$/.exec(l);
     if (h) {
-      const due = /📅\s*(\d{4}-\d{2}-\d{2})/.exec(h[1]);
-      mods.push({ name: h[1].replace(/📅\s*\d{4}-\d{2}-\d{2}/, "").trim(), line, due: due?.[1] ?? null, topics: [] });
+      const due = RM_DUE.exec(h[1]);
+      mods.push({ name: h[1].replace(RM_DUE_G, "").trim(), line, due: due?.[1] ?? null, topics: [] });
       return;
     }
     const m = TOPIC_RE.exec(l);
@@ -173,9 +195,9 @@ export function roadmap(md: string): Module[] {
     if (!mods.length) mods.push({ name: "Topics", line: -1, due: null, topics: [] });
     let rest = m[2];
     const needs = /\(needs:\s*([^)]+)\)/i.exec(rest);
-    const due = /📅\s*(\d{4}-\d{2}-\d{2})/.exec(rest);
+    const due = RM_DUE.exec(rest);
     const note = /(?:→|->)\s*\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/.exec(rest);
-    rest = rest.replace(/\(needs:[^)]*\)/i, "").replace(/📅\s*\d{4}-\d{2}-\d{2}/, "").replace(/(?:→|->)\s*\[\[[^\]]+\]\]/, "").trim();
+    rest = rest.replace(/\(needs:[^)]*\)/i, "").replace(RM_DUE_G, "").replace(/(?:→|->)\s*\[\[[^\]]+\]\]/, "").trim();
     mods[mods.length - 1].topics.push({
       name: rest, status: MARK[m[1]], needs: needs ? needs[1].split(",").map((s) => s.trim()).filter(Boolean) : [],
       due: due?.[1] ?? null, note: note?.[1].trim() ?? null, line, module: mods.length - 1, locked: false,
@@ -232,7 +254,7 @@ export function topicBlock(lines: string[], line: number): [number, number] {
 function topicName(l: string): string {
   const m = TOPIC_RE.exec(l);
   if (!m) return "";
-  return m[2].replace(/\(needs:[^)]*\)/i, "").replace(/📅\s*\d{4}-\d{2}-\d{2}/u, "").replace(/(?:→|->)\s*\[\[[^\]]+\]\]/, "").trim();
+  return m[2].replace(/\(needs:[^)]*\)/i, "").replace(RM_DUE_G, "").replace(/(?:→|->)\s*\[\[[^\]]+\]\]/, "").trim();
 }
 function editLine(md: string, line: number, f: (l: string) => string) {
   const lines = md.split("\n");
@@ -247,10 +269,10 @@ function insertBeforeTail(l: string, frag: string, tail: RegExp) {
 /** Replace a topic's `(needs: …)` list (removed when empty). */
 export const setTopicNeeds = (md: string, line: number, needs: string[]) => editLine(md, line, (l) => {
   const s = l.replace(/\s*\(needs:[^)]*\)/i, "");
-  return needs.length ? insertBeforeTail(s, `(needs: ${needs.join(", ")})`, /\s(📅|→|->)/u) : s;
+  return needs.length ? insertBeforeTail(s, `(needs: ${needs.join(", ")})`, /\s(\u{1F4C5}|due:|@due\(|→|->)/u) : s;
 });
 export const setTopicDue = (md: string, line: number, due: string | null) => editLine(md, line, (l) => {
-  const s = l.replace(/\s*📅\s*\d{4}-\d{2}-\d{2}/u, "");
+  const s = l.replace(RM_DUE_G, "");
   return due ? insertBeforeTail(s, `📅 ${due}`, /\s(→|->)/) : s;
 });
 
@@ -264,6 +286,29 @@ export function topicAncestors(all: Topic[], t: Topic): Set<number> {
     for (const n of x.needs) { const d = byName.get(n.toLowerCase()); if (d && !out.has(d.line)) { out.add(d.line); stack.push(d); } }
   }
   return out;
+}
+/**
+ * The prerequisite chain that makes `from` (transitively) need `to`: [from, …, to] by name, or null.
+ * Explains a refused drop ("A already needs B → C, so this would make a loop").
+ */
+export function needChain(all: Topic[], from: Topic, to: Topic): string[] | null {
+  if (from.line === to.line) return null;
+  const byName = new Map(all.map((x) => [x.name.toLowerCase(), x]));
+  const prev = new Map<number, Topic>();
+  const seen = new Set([from.line]);
+  const queue = [from];
+  while (queue.length && !prev.has(to.line)) {
+    const x = queue.shift()!;
+    for (const n of x.needs) {
+      const d = byName.get(n.toLowerCase());
+      if (!d || seen.has(d.line)) continue;
+      seen.add(d.line); prev.set(d.line, x); queue.push(d);
+    }
+  }
+  if (!prev.has(to.line)) return null;
+  const path: string[] = [];
+  for (let c: Topic | undefined = to; c; c = c.line === from.line ? undefined : prev.get(c.line)) path.unshift(c.name);
+  return path;
 }
 /** Can `prereq` become a prerequisite of `t`? (not itself, not already, no cycle) */
 export function canAddNeed(all: Topic[], t: Topic, prereq: Topic) {

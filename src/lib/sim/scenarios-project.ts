@@ -7,7 +7,7 @@ export async function seedProject(): Promise<Vault> {
   const d = (n: number) => c.iso(n);
   const v = emptyVault();
   v.spaces.push(INBOX, space({
-    id: "pj-s", name: "Smart Summaries (AI feature)", kind: "project", icon: "🤖", color: "6", sort: 1, createdAt: c.at(24), updatedAt: c.ago(30),
+    id: "pj-s", name: "Smart Summaries (AI feature)", kind: "project", icon: "glyph:robot-arm", color: "6", sort: 1, createdAt: c.at(24), updatedAt: c.ago(30),
     description: "LLM summaries for support tickets, shipped behind a flag.",
     props: {
       goal: "Ship AI ticket summaries to 100% of agents with p95 < 2 s and ≥ 4/5 helpfulness",

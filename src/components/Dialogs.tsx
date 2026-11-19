@@ -13,6 +13,7 @@ import { ROADMAP_PRESETS } from "../lib/templates";
 import { fmtBytes, Modal, usePhone } from "../views/spaces-util";
 import { KIND_LABEL } from "./Sidebar";
 import { cx } from "./ui";
+import { SpaceIcon, SpaceIconPicker } from "./SpaceIcon";
 
 const KIND_HINT: Record<SpaceKind, string> = {
   project: "A goal with a deadline and milestones.",
@@ -22,7 +23,8 @@ const KIND_HINT: Record<SpaceKind, string> = {
   archive: "Finished. Hidden, still searchable.",
 };
 const KIND_GLYPH: Record<SpaceKind, typeof Briefcase> = { project: Briefcase, area: Compass, course: GraduationCap, resource: Library, archive: Archive };
-const KIND_ICON: Record<SpaceKind, string> = { project: "🚀", area: "🌱", course: "🎓", resource: "📚", archive: "🗄️" };
+/** Default stored icon per kind (glyph form, see src/lib/space-icon.ts). */
+const KIND_ICON: Record<SpaceKind, string> = { project: "glyph:project", area: "glyph:area", course: "glyph:course", resource: "glyph:resource", archive: "glyph:archive" };
 
 /** Space templates per kind. Course → roadmaps; project → milestone plans; area/resource → starter folders. */
 type SpaceTemplate = { name: string; detail?: string; roadmap?: string; folders?: string[] };
@@ -70,6 +72,8 @@ export function NewSpaceDialog() {
   const [provider, setProvider] = useState("");
   const [description, setDescription] = useState("");
   const [more, setMore] = useState(false);
+  const [picker, setPicker] = useState(false);
+  const iconBtn = useRef<HTMLButtonElement>(null);
   const cards = useRef<(HTMLButtonElement | null)[]>([]);
   const close = () => setUI({ newSpace: false });
   const templates = TEMPLATES_BY_KIND[kind];
@@ -128,7 +132,12 @@ export function NewSpaceDialog() {
         <div className={cx("grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 gap-y-4 pt-5", pad)}>
           <span className="font-medium text-muted">Name</span>
           <div className="flex gap-2">
-            <input aria-label="Icon" className={fieldCls.replace("w-full", "w-10") + " shrink-0 px-0 text-center text-[18px]"} value={icon} placeholder={KIND_ICON[kind]} onChange={(e) => setIcon(e.target.value.slice(0, 4))} />
+            <button ref={iconBtn} type="button" aria-label="Space icon" aria-haspopup="dialog" aria-expanded={picker} onClick={() => setPicker((x) => !x)}
+              className={cx("flex size-10 shrink-0 items-center justify-center rounded-[6px] border bg-bg", picker ? "border-accent" : "border-line hover:border-muted")}>
+              <SpaceIcon space={{ icon: icon || KIND_ICON[kind], name, color, kind }} size={15} />
+            </button>
+            <SpaceIconPicker open={picker} onClose={() => setPicker(false)} phone={phone} anchor={iconBtn.current} icon={icon || KIND_ICON[kind]} color={color} name={name} kind={kind}
+              onChange={(ic, c) => { setIcon(ic); setColor(c); }} />
             <input autoFocus aria-label="Name" className={fieldCls} value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && !e.metaKey && !e.ctrlKey && create()}
               placeholder={kind === "course" ? "e.g. Linear Algebra (MIT 18.06)" : kind === "project" ? "e.g. Build my portfolio" : "e.g. Arabic"} dir="auto" />
           </div>
@@ -327,7 +336,7 @@ export function ImportExportDialog() {
       {job && (
         <div className="flex flex-col gap-2.5 rounded-[10px] bg-surface-2 p-3.5">
           <div className="flex items-center gap-2.5"><FileArchive size={18} className="shrink-0 text-muted" />
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5"><span className="truncate font-semibold">{job.name}</span><span className="truncate text-[12px] text-muted">Into {targetSpace?.icon} {targetSpace?.name} · folders preserved</span></div>
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5"><span className="truncate font-semibold">{job.name}</span><span className="flex min-w-0 items-center gap-1 truncate text-[12px] text-muted">Into {targetSpace && <SpaceIcon space={targetSpace} size={15} />} {targetSpace?.name} · folders preserved</span></div>
             <span className="shrink-0 font-mono text-[12px] font-medium">{job.p.done.toLocaleString("en-US")} / {job.p.total.toLocaleString("en-US")}</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-[3px] bg-[var(--border)]"><div className="h-full bg-accent transition-[width] duration-150" style={{ width: `${pct(job.p)}%` }} /></div>
@@ -347,7 +356,7 @@ export function ImportExportDialog() {
         {adv && (
           <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-3 pl-5 text-[12.5px]">
             <span className="text-muted">Into space</span>
-            <select disabled={!!job} className="h-8 rounded-[6px] border border-line bg-bg px-2 focus:border-accent focus:outline-none" value={target} onChange={(e) => setTarget(e.target.value)}>{v.spaces.map((s) => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}</select>
+            <select disabled={!!job} className="h-8 rounded-[6px] border border-line bg-bg px-2 focus:border-accent focus:outline-none" value={target} onChange={(e) => setTarget(e.target.value)}>{v.spaces.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
             <span className="text-muted">Duplicates</span>
             <div role="radiogroup" aria-label="Duplicates" className="grid grid-cols-3 gap-0.5 rounded-[8px] border border-line bg-bg p-[3px]">
               {([["skip", "Skip"], ["rename", "Rename"], ["overwrite", "Overwrite"]] as const).map(([k, l]) => (

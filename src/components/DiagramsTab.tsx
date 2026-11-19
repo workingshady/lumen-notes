@@ -1,10 +1,11 @@
 import { Code2, Columns2, Download, FileText, LayoutDashboard, Loader2, Square, Undo2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Note } from "../../shared/types";
 import { openDiagramExport } from "../lib/diagram-export";
-import { canvasesWith, diagramFiles, diagramFocus, diagramHash, diagramName, fenced, fileFor, mermaidBlocks, saveDiagramToCanvas, type DiagramBlock } from "../lib/diagrams";
+import { canvasesWith, diagramFiles, diagramFocus, diagramHash, diagramName, fileFor, mermaidBlocks, saveDiagramToCanvas, type DiagramBlock } from "../lib/diagrams";
 import { openNote, setUI, toast, useVault } from "../lib/store";
-import { Preview } from "./Preview";
+import { DiagramView } from "./diagram-view";
+import { Glyph } from "./Glyph";
 import { Button, cx } from "./ui";
 
 const COLS_KEY = "lumen.diagramCols";
@@ -35,6 +36,7 @@ export function DiagramsTab({ note, wide }: { note: Note; wide: boolean }) {
     <div className={cx("h-full overflow-y-auto", wide ? "px-8 py-6" : "px-4 py-4")}>
       <div className="mx-auto flex max-w-[1200px] flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2 text-[13px]">
+          <Glyph name="diagram" size={16} />
           <span className="font-semibold">{blocks.length} diagram{blocks.length === 1 ? "" : "s"}</span>
           <span className="text-muted">in “{note.title}”</span>
           <span className="flex-1" />
@@ -60,10 +62,6 @@ function DiagramItem({ note, b, found, tall }: { note: Note; b: DiagramBlock; fo
   const v = useVault();
   const name = found?.file.title ?? diagramName(note.title, b);
   const where = found ? canvasesWith(v.notes, found.file) : [];
-  const body = useMemo(() => fenced(b.src), [b.src]);
-  const box = useRef<HTMLDivElement>(null);
-  // Name the card so its own toolbar export uses the diagram name.
-  useEffect(() => { box.current?.querySelectorAll<HTMLElement>(".mermaid-card").forEach((c) => { c.dataset.name = name; }); });
   const jump = () => { diagramFocus.note = { noteId: note.id, line: b.line, hash: diagramHash(b.src) }; setUI({ mode: "read" }); };
   const toCanvas = async () => {
     const r = await saveDiagramToCanvas({ ...note }, b, v.notes, v.folders);
@@ -85,8 +83,8 @@ function DiagramItem({ note, b, found, tall }: { note: Note; b: DiagramBlock; fo
         {found && <button className={btn} title={`Open ${found.file.title}`} onClick={() => openNote(found.file.id, "read")}><FileText size={13} />File</button>}
         <button className={btn} title="Copy Mermaid source" onClick={() => void navigator.clipboard.writeText(b.src).then(() => toast("Source copied"))}><Code2 size={13} /></button>
       </div>
-      <div ref={box} className="diagram-node" style={{ height: tall ? "min(70vh, 640px)" : 380 }}>
-        <Preview note={{ id: `${note.id}#dg${b.line}`, body, spaceId: note.spaceId }} className="!m-0 !max-w-none" />
+      <div style={{ height: tall ? "min(70vh, 640px)" : 380 }}>
+        <DiagramView src={b.src} />
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { API_BASE, unfurl, type Unfurl } from "../lib/api";
 import { icon } from "./ws-icons";
+import { hydrateTimestamps, mediaCtl, remoteCtl } from "./video-players"; // video notes (D8): player registry + [12:34] chips
 
 /*
  * Embeds & link previews (design: Lumen 08 · R2-2A/2B/2C). Same renderer in notes and public posts; nothing autoplays.
@@ -32,7 +33,8 @@ export function videoThumbHtml(provider: "youtube" | "vimeo", id: string, href: 
 }
 export const videoFileHtml = (src: string, name = fileName(src)) => `<div class="embed vfile" data-src="${esc(src)}" data-name="${esc(name)}"><video src="${esc(src)}" controls preload="metadata" playsinline></video></div>`;
 export const audioFileHtml = (src: string, name = fileName(src)) => `<div class="embed afile" data-src="${esc(src)}" data-name="${esc(name)}"><audio src="${esc(src)}" controls preload="metadata"></audio></div>`;
-export const pdfHtml = (src: string, name = fileName(src)) => `<div class="embed pdfcard" data-src="${esc(src)}" data-name="${esc(name)}"><div class="pdf-head">${icon("file-text", 15, 'style="color:var(--danger)"')}<b class="pdf-name">${esc(name)}</b><span class="pdf-meta"></span><span class="sp"></span><span class="pdf-page"></span></div><div class="pdf-body"><a class="pdf-fallback" href="${esc(src)}" target="_blank" rel="noopener">Open ${esc(name)}</a></div></div>`;
+/** `att` = attachment id when the PDF is an `att:` attachment (lets "Open as PDF note" point the note at the file). */
+export const pdfHtml = (src: string, name = fileName(src), att = "") => `<div class="embed pdfcard" data-src="${esc(src)}" data-name="${esc(name)}"${att ? ` data-att-id="${esc(att)}"` : ""}><div class="pdf-head">${icon("file-text", 15, 'style="color:var(--danger)"')}<b class="pdf-name">${esc(name)}</b><span class="pdf-meta"></span><span class="sp"></span><span class="pdf-page"></span></div><div class="pdf-body"><a class="pdf-fallback" href="${esc(src)}" target="_blank" rel="noopener">Open ${esc(name)}</a></div></div>`;
 export function linkCardHtml(href: string) {
   let host = href;
   try { host = new URL(href).hostname.replace(/^www\./, ""); } catch { /* keep */ }
@@ -45,6 +47,7 @@ export function linkCardHtml(href: string) {
 
 // ------------------------------------------------------------------ hydration
 export function hydrateEmbeds(root: HTMLElement, ctx: EmbedCtx = {}) {
+  hydrateTimestamps(root);
   root.querySelectorAll<HTMLElement>("figure.vthumb:not([data-h])").forEach((el) => videoThumb(el));
   root.querySelectorAll<HTMLElement>(".vfile:not([data-h])").forEach((el) => videoFile(el));
   root.querySelectorAll<HTMLElement>(".afile:not([data-h])").forEach((el) => audioFile(el));
@@ -81,17 +84,9 @@ function videoThumb(fig: HTMLElement) {
     if (m.author) fig.querySelector(".vt-sub")!.textContent = `${site} · ${m.author}`;
     if (m.duration) { const d = fig.querySelector<HTMLElement>(".vt-dur")!; d.textContent = fmt(m.duration); d.hidden = false; }
   });
-  fig.querySelector(".vt-frame")!.addEventListener("click", () => {
-    const src = provider === "youtube"
-      ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0${Number(start) ? `&start=${start}` : ""}`
-      : `https://player.vimeo.com/video/${id}?autoplay=1&dnt=1`;
-    const f = document.createElement("iframe");
-    f.src = src; f.title = fig.querySelector(".vt-title")?.textContent || "Video";
-    f.allow = "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen";
-    f.allowFullscreen = true;
-    fig.querySelector(".embed")!.replaceChildren(f);
-    fig.classList.add("playing");
-  });
+  // play → no-cookie player with the JS API on (video-players.ts: seek / speed / timestamps)
+  const ctl = remoteCtl(fig, provider as "youtube" | "vimeo", id, Number(start) || 0);
+  fig.querySelector(".vt-frame")!.addEventListener("click", () => ctl.load());
 }
 
 function bar(media: HTMLMediaElement, el: HTMLElement) {
@@ -139,6 +134,7 @@ function videoFile(el: HTMLElement) {
   stage.addEventListener("click", () => void (v.paused ? v.play() : v.pause()));
   el.querySelector(".mb-full")!.addEventListener("click", () => { const anyV = v as HTMLVideoElement & { webkitEnterFullscreen?: () => void }; if (v.requestFullscreen) void v.requestFullscreen(); else anyV.webkitEnterFullscreen?.(); });
   bar(v, el);
+  mediaCtl(el, v);
 }
 
 function audioFile(el: HTMLElement) {
@@ -153,6 +149,7 @@ function audioFile(el: HTMLElement) {
   ["timeupdate", "loadedmetadata", "durationchange"].forEach((e) => a.addEventListener(e, upd));
   bar(a, el);
   upd();
+  mediaCtl(el, a);
 }
 
 // ------------------------------------------------------------------ PDF viewer (pdf.js, loaded on demand)
@@ -175,6 +172,11 @@ async function pdfCard(el: HTMLElement, ctx: EmbedCtx) {
   const head = el.querySelector<HTMLElement>(".pdf-head")!;
   const body = el.querySelector<HTMLElement>(".pdf-body")!;
   head.insertAdjacentHTML("beforeend", `<span class="pdf-sep"></span><button type="button" class="pdf-zo" aria-label="Zoom out">${icon("zoom-out", 15)}</button><button type="button" class="pdf-zi" aria-label="Zoom in">${icon("zoom-in", 15)}</button><button type="button" class="pdf-full">${icon("maximize-2", 13)}<span>Open full screen</span></button>`);
+  // In the app (not on public pages): open this file in the PDF reader as a `type: pdf` note (lib/pdf-note.ts).
+  if (ctx.quote) {
+    head.insertAdjacentHTML("beforeend", `<button type="button" class="pdf-full pdf-open-note" title="Open in the PDF reader with highlights">${icon("bookmark", 13)}<span>Open as PDF note</span></button>`);
+    head.querySelector(".pdf-open-note")!.addEventListener("click", () => { const file = el.dataset.attId ? `att:${el.dataset.attId}` : src; void import("../lib/pdf-note").then((m) => m.openPdfFromCard(file, name)); });
+  }
   const pageEl = head.querySelector<HTMLElement>(".pdf-page")!;
   const metaEl = head.querySelector<HTMLElement>(".pdf-meta")!;
   head.querySelector(".pdf-full")!.addEventListener("click", () => {

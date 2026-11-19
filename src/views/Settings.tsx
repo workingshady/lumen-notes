@@ -1,10 +1,12 @@
+import { AvatarGlyph } from "../components/SpaceIcon";
+import { AVATAR_CHOICES, avatarGlyph } from "../lib/space-icon";
 import { useLiveQuery } from "dexie-react-hooks";
 import { setUiDir, useUiDir, type UiDir } from "../components/ws-dir";
 import { AppLockSetting } from "./Welcome";
 import {
   ArrowLeft, Check, ChevronRight, CircleCheck, Clock, Code, Copy, Database, Eye, File, FileAudio, FileText, FileVideo, Globe, GraduationCap, HardDrive, Image, Info,
   Layers, LayoutDashboard, Link2, Link2Off, Loader2, LogOut, Palette, PenTool, Pencil, Presentation, RefreshCw, Rss, Share, Sparkles, Trash2, type LucideIcon,
-  Waypoints, BookOpenText,
+  Waypoints, BookOpenText, CalendarCheck,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Note, Space } from "../../shared/types";
@@ -26,13 +28,15 @@ import { DiagramsSection } from "./settings-diagrams";
 import { AccountSwitcher } from "../components/AccountSwitcher";
 import { ReadingSection } from "./settings-reading";
 import { ReviewSettings } from "./settings-review";
+import { StudyPlanSettings } from "./settings-plan";
 
-type SecId = "appearance" | "branding" | "reading" | "diagrams" | "sync" | "sharing" | "blog" | "storage" | "ai" | "developer" | "about";
+type SecId = "appearance" | "branding" | "reading" | "plan" | "diagrams" | "sync" | "sharing" | "blog" | "storage" | "ai" | "developer" | "about";
 // Round-3 settings nav (Lumen 09 / 11): Appearance · Branding · Sync · Sharing · Blog · Storage · AI · Developer · About.
 const SECTIONS: { id: SecId; label: string; icon: LucideIcon }[] = [
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "branding", label: "Branding", icon: PenTool },
   { id: "reading", label: "Reading", icon: BookOpenText },
+  { id: "plan", label: "Study plan", icon: CalendarCheck },
   { id: "diagrams", label: "Diagrams", icon: Waypoints },
   { id: "sync", label: "Sync", icon: RefreshCw },
   { id: "sharing", label: "Sharing", icon: Share },
@@ -142,7 +146,7 @@ export function SettingsView() {
       <div className={cx("safe-t flex-1 overflow-y-auto pb-6 md:hidden", !phoneRoot && "hidden")}>
         <div className="px-5 pb-3 pt-4 text-[26px] font-[650] tracking-[-.02em]">Settings</div>
         <button onClick={() => go("branding")} className="mx-4 flex w-[calc(100%-32px)] items-center gap-3 rounded-[14px] bg-surface p-3.5 text-left">
-          <span className="flex size-11 items-center justify-center rounded-full bg-surface-2 text-[22px]">{s.avatar}</span>
+          <span className="flex size-11 items-center justify-center rounded-full bg-surface-2"><AvatarGlyph value={s.avatar} size={19} /></span>
           <div className="flex flex-1 flex-col gap-0.5"><span className="font-semibold">{s.blogName}</span>
             <span className="flex items-center gap-1.5 text-[12.5px] text-muted"><span className={cx("size-1.5 rounded-full", tok ? "bg-ok" : "bg-muted")} />{tok ? (st.last ? `Synced ${relTime(st.last)}` : "Sync on") : "Sync off · this device only"}</span>
           </div>
@@ -171,6 +175,7 @@ export function SettingsView() {
           {sec === "appearance" && <Appearance />}
           {sec === "branding" && <Branding />}
           {sec === "reading" && <><ReadingSection /><ReviewSettings /></>}
+          {sec === "plan" && <StudyPlanSettings />}
           {sec === "diagrams" && <DiagramsSection />}
           {sec === "sync" && <><SyncSection /><div className="mt-6"><AppLockSetting /></div></>}
           {sec === "sharing" && <SharingSection />}
@@ -384,8 +389,10 @@ function Branding() {
   return (
     <div className="flex max-w-[560px] flex-col gap-[22px]">
       <Head title="Branding" hint="Shown on your public blog, shared pages and the Home screen. Synced with your notes." />
-      <div className="grid grid-cols-[72px_1fr] gap-2.5">
-        <F label="Avatar"><input className={inputCls + " text-center text-[20px]"} value={s.avatar} onChange={(e) => set({ avatar: e.target.value.slice(0, 4) })} /></F>
+      <div className="grid grid-cols-[auto_1fr] gap-2.5">
+        <F label="Avatar"><span role="radiogroup" aria-label="Avatar" className="flex h-10 items-center gap-1.5">{AVATAR_CHOICES.map((a) => { const on = `glyph:${avatarGlyph(s.avatar)}` === a; return (
+          <button key={a} type="button" role="radio" aria-checked={on} aria-label={a.slice(6)} onClick={() => set({ avatar: a })} className="flex size-9 items-center justify-center rounded-full bg-surface-2"
+            style={on ? { boxShadow: "0 0 0 2px var(--bg), 0 0 0 4px var(--accent)" } : undefined}><AvatarGlyph value={a} size={15} /></button>); })}</span></F>
         <F label="Your name"><input className={inputCls} value={s.author} onChange={(e) => set({ author: e.target.value })} /></F>
       </div>
       <F label="Blog name"><input className={inputCls} value={s.blogName} onChange={(e) => set({ blogName: e.target.value })} /></F>

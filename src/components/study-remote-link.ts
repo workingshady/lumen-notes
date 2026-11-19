@@ -15,6 +15,11 @@ export interface DeckState {
   dirs?: Record<string, string>;
   notes: string;
   next: string;
+  /** Presenter device shown on the remote ("laptop", "tablet", "desktop"). */
+  device?: string;
+  /** The next slide (Markdown + directives) for the remote's "Next" preview; omitted when very long. */
+  nextMd?: string;
+  nextDirs?: Record<string, string>;
   t0: number;
   pausedAt: number | null;
 }

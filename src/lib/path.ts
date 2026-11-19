@@ -105,7 +105,8 @@ export function serializePath(doc: PathDoc): string {
 }
 
 // ------------------------------------------------------------------ build: merge courses into concepts
-export interface CourseRef { key: string; title: string; note: Note | null; color: string; spaceName: string; spaceIcon: string; spaceId: string | null }
+export type CourseKind = "video" | "book" | "lecture" | "notebook" | "paper" | "podcast" | "article";
+export interface CourseRef { key: string; title: string; note: Note | null; color: string; spaceName: string; spaceIcon: string; spaceId: string | null; /** Course medium (glyph k-*): space prop `format`, else guessed from provider/url. */ kind?: CourseKind }
 export interface Coverage { course: CourseRef; topic: Topic; module: string }
 export type ConceptStatus = "todo" | "learning" | "done" | "locked";
 export interface BuiltConcept {
@@ -135,17 +136,34 @@ function resolveConcept(concepts: BuiltConcept[], byKey: Map<string, BuiltConcep
   const k = norm(name);
   return byKey.get(k) ?? concepts.find((c) => c.def.aliases.some((a) => norm(a) === k));
 }
-export const COURSE_COLORS = ["#A371F7", "#39C5CF", "#E8893A", "#57AB5A", "#E5534B", "#E3B341", "#7AA2F7", "#D37FB4"];
+/** Course colours: the 6 canvas presets (design: purple, cyan, green, orange, yellow, red). A course space's own colour wins. */
+export const COURSE_COLORS = ["#A371F7", "#39C5CF", "#57AB5A", "#E8893A", "#E3B341", "#E5534B"];
+const PRESET: Record<string, string> = { "1": "#E5534B", "2": "#E8893A", "3": "#E3B341", "4": "#57AB5A", "5": "#39C5CF", "6": "#A371F7" };
+const KINDS: CourseKind[] = ["video", "book", "lecture", "notebook", "paper", "podcast", "article"];
+/** Course medium: explicit `format` prop, else a guess from the provider / url text. */
+export function courseKind(props: Record<string, string> | undefined, name = ""): CourseKind {
+  const f = (props?.format ?? "").toLowerCase().trim();
+  if ((KINDS as string[]).includes(f)) return f as CourseKind;
+  const t = `${props?.provider ?? ""} ${props?.url ?? ""} ${name}`.toLowerCase();
+  if (/podcast|spotify|episode/.test(t)) return "podcast";
+  if (/arxiv|paper|journal/.test(t)) return "paper";
+  if (/fast\.ai|notebook|kaggle|colab|jupyter/.test(t)) return "notebook";
+  if (/book|o'?reilly|manning|chapter|\bch\b|géron|geron|homl|d2l/.test(t)) return "book";
+  if (/medium|blog|substack|article|distill/.test(t)) return "article";
+  if (/stanford|mit|lecture|cs\d{3}|\d\.s\d|university|berkeley|cmu/.test(t)) return "lecture";
+  return "video";
+}
 const today = () => new Date().toISOString().slice(0, 10);
 
 /** Resolve course references: a roadmap note title, or a space name (uses its roadmap). */
-export function resolveCourses(names: string[], notes: Note[], spaces: { id: string; name: string; icon: string; roadmapId: string | null }[]): CourseRef[] {
+export function resolveCourses(names: string[], notes: Note[], spaces: { id: string; name: string; icon: string; roadmapId: string | null; color?: string | null; props?: Record<string, string> }[]): CourseRef[] {
   return names.map((name, i) => {
     const low = name.toLowerCase();
     const sp = spaces.find((s) => s.name.toLowerCase() === low);
     const note = (sp?.roadmapId ? notes.find((n) => n.id === sp.roadmapId && !n.deleted) : undefined) ?? notes.find((n) => !n.deleted && n.type === "roadmap" && n.title.toLowerCase() === low) ?? null;
     const space = spaces.find((s) => s.id === note?.spaceId) ?? sp;
-    return { key: name, title: name, note, color: COURSE_COLORS[i % COURSE_COLORS.length], spaceName: space?.name ?? name, spaceIcon: space?.icon ?? "🎓", spaceId: space?.id ?? null };
+    const color = (space?.color && (PRESET[space.color] ?? (/^#/.test(space.color) ? space.color : null))) || COURSE_COLORS[i % COURSE_COLORS.length];
+    return { key: name, title: name, note, color, spaceName: space?.name ?? name, spaceIcon: space?.icon ?? "", spaceId: space?.id ?? null, kind: courseKind(space?.props, space?.name ?? name) };
   });
 }
 
@@ -464,4 +482,98 @@ export function overlapSuggestions(p: BuiltPath, dismissed: string[] = []): [Bui
     if (shared / Math.min(sa.length, sb.length) >= 1 || shared >= 2) out.push(a.coverage.length >= b.coverage.length ? [a, b] : [b, a]);
   }
   return out.slice(0, 20);
+}
+
+/** Why two concepts look like one (overlaps panel). */
+export function overlapReason(a: BuiltConcept, b: BuiltConcept): string {
+  const na = new Set([...a.def.notes, ...a.coverage.map((x) => x.topic.note).filter((x): x is string => !!x)].map((x) => x.toLowerCase()));
+  const shared = [...b.def.notes, ...b.coverage.map((x) => x.topic.note).filter((x): x is string => !!x)].filter((x) => na.has(x.toLowerCase())).length;
+  if (shared > 1) return `${shared} shared lessons`;
+  if (shared === 1) return "same notes cited";
+  const sa = stems(a.def.name).join(" "), sb = stems(b.def.name).join(" ");
+  return sa === sb ? "same name" : "similar names";
+}
+
+// ------------------------------------------------------------------ view helpers (filters, focus chain, graph layout)
+/** One state per concept, as the design shows it: todo · learning · learned · mastered · locked. */
+export type ConceptState = "todo" | "learning" | "learned" | "mastered" | "locked";
+export const conceptState = (c: BuiltConcept): ConceptState => (c.mastered ? "mastered" : c.status === "done" ? "learned" : c.status);
+/** Distinct courses teaching a concept, in path order. */
+export const conceptCourses = (c: BuiltConcept) => [...new Map(c.coverage.map((x) => [x.course.key, x.course])).values()];
+
+/** Filters shared by every tab (Stages, Graph, Matrix, Timeline, Revise). Empty sets = no restriction. */
+export interface PathFilter { courses: string[]; states: ConceptState[]; stages: string[]; overlapping: boolean; revise: boolean; unplaced: boolean }
+export type GroupBy = "stage" | "course" | "status";
+export const NO_FILTER: PathFilter = { courses: [], states: [], stages: [], overlapping: false, revise: false, unplaced: false };
+export const filterCount = (f: PathFilter) => f.courses.length + f.states.length + f.stages.length + Number(f.overlapping) + Number(f.revise) + Number(f.unplaced);
+export function matchesFilter(c: BuiltConcept, f: PathFilter): boolean {
+  if (f.courses.length && !c.coverage.some((x) => f.courses.includes(x.course.key))) return false;
+  if (f.states.length && !f.states.includes(conceptState(c))) return false;
+  if (f.stages.length && !f.stages.includes(c.stage)) return false;
+  if (f.overlapping && conceptCourses(c).length < 2) return false;
+  if (f.revise && !c.reviewDue) return false;
+  if (f.unplaced && c.placed) return false;
+  return true;
+}
+
+/** Everything a concept depends on (transitively) plus everything that depends on it: the "focus chain". */
+export function focusChain(p: BuiltPath, key: string | null): Set<string> {
+  const out = new Set<string>();
+  if (!key || !p.byKey.has(key)) return out;
+  const walk = (k: string, dir: "needs" | "unlocks") => { for (const n of p.byKey.get(k)?.[dir] ?? []) if (!out.has(n)) { out.add(n); walk(n, dir); } };
+  out.add(key); walk(key, "needs"); walk(key, "unlocks");
+  return out;
+}
+
+/** Next interval after "Got it" (the ladder step above the current one). */
+export const nextInterval = (c: BuiltConcept) => REVIEW_LADDER[Math.min(REVIEW_LADDER.length - 1, REVIEW_LADDER.indexOf(c.def.interval) + 1)];
+
+/** Short course label for narrow headers (matrix): drops parentheses and filler words, then trims to `max`. */
+export function abbrevCourse(name: string, max = 16): string {
+  let s = name.replace(/\s*\(.*?\)\s*/g, " ").replace(/Specialization/i, "Spec").replace(/Introduction to/i, "Intro").replace(/^(Coursera|Udemy|edX|YouTube)\s*[·:-]?\s*/i, "").replace(/\s+/g, " ").trim();
+  if (s.includes(" · ")) s = s.split(" · ").slice(-1)[0];
+  return s.length > max ? s.slice(0, max - 1).trimEnd() + "…" : s;
+}
+
+export interface GraphNodeLayout { key: string; x: number; y: number; stage: number }
+export interface GraphColLayout { stage: number; name: string; x: number; width: number; count: number; collapsed: boolean }
+/**
+ * Graph layout, left → right: one column group per stage ("Step N"), inside a stage concepts that need another concept of the
+ * same stage move one sub-column right. A collapsed stage becomes one summary node. Unplaced concepts are left out unless
+ * nothing is placed yet. Pure (no DOM) so it can be tested.
+ */
+export function graphLayout(p: BuiltPath, keep: (c: BuiltConcept) => boolean, collapsed: Set<string>, o = { colW: 214, nodeW: 176, rowH: 68, top: 72, left: 24, sumW: 150 }) {
+  const anyPlaced = p.concepts.some((c) => c.placed);
+  const stages = anyPlaced ? p.stages.filter((s) => s.name !== UNPLACED) : p.stages;
+  const nodes: GraphNodeLayout[] = [];
+  const cols: GraphColLayout[] = [];
+  const summary = new Map<string, string>(); // concept key → summary node id (collapsed stages)
+  let x = o.left;
+  stages.forEach((s, si) => {
+    const list = s.concepts.filter(keep);
+    if (collapsed.has(s.name)) {
+      cols.push({ stage: si, name: s.name, x, width: o.sumW, count: list.length, collapsed: true });
+      for (const c of list) summary.set(c.key, `stage:${s.name}`);
+      x += o.sumW + (o.colW - o.nodeW);
+      return;
+    }
+    const inStage = new Set(list.map((c) => c.key));
+    const depth = new Map<string, number>();
+    const d = (c: BuiltConcept, seen: Set<string>): number => {
+      if (depth.has(c.key)) return depth.get(c.key)!;
+      if (seen.has(c.key)) return 0;
+      seen.add(c.key);
+      const local = c.needs.filter((n) => inStage.has(n));
+      const v = local.length ? 1 + Math.max(...local.map((n) => d(p.byKey.get(n)!, seen))) : 0;
+      depth.set(c.key, v);
+      return v;
+    };
+    list.forEach((c) => d(c, new Set()));
+    const sub = Math.max(0, ...depth.values()) + 1;
+    const rows = new Array(sub).fill(0);
+    for (const c of list) { const k = depth.get(c.key) ?? 0; nodes.push({ key: c.key, x: x + k * o.colW, y: o.top + rows[k]++ * o.rowH, stage: si }); }
+    cols.push({ stage: si, name: s.name, x, width: Math.max(1, sub) * o.colW - (o.colW - o.nodeW), count: list.length, collapsed: false });
+    x += Math.max(1, sub) * o.colW;
+  });
+  return { nodes, cols, summary, width: x };
 }

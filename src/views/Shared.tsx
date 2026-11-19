@@ -1,3 +1,8 @@
+import { API_BASE } from "../lib/api";
+import { setOgMeta } from "../lib/og";
+import { AvatarGlyph, SpaceIcon } from "../components/SpaceIcon";
+import { Glyph } from "../components/Glyph";
+import { spaceColor } from "../lib/space-icon";
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Download, Eye, FileText, GraduationCap, Hand, Layers, Loader2, Lock, Minus, Moon, Play, Plus, Scan, Sun, Target } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Note, NoteType, Status } from "../../shared/types";
@@ -79,7 +84,7 @@ function useTheme() {
 const ThemeBtn = ({ dark, toggle, className }: { dark: boolean; toggle: () => void; className?: string }) => (
   <button aria-label={dark ? "Light theme" : "Dark theme"} onClick={toggle} className={cx("flex size-[34px] shrink-0 items-center justify-center rounded-[8px] border border-line hover:bg-surface", className)}>{dark ? <Sun size={15} /> : <Moon size={15} />}</button>
 );
-const BrandName = ({ blog }: { blog: Brand }) => <span className="truncate text-[16px] font-bold" style={{ fontFamily: SERIF }}>{blog.avatar} {blog.name}</span>;
+const BrandName = ({ blog }: { blog: Brand }) => <span className="truncate text-[16px] font-bold" style={{ fontFamily: SERIF }}><AvatarGlyph value={blog.avatar} size={14} style={{ verticalAlign: "-1px" }} /> {blog.name}</span>;
 
 /** Read-only viewer for unlisted share links: /s/<token> and /s/<token>/<noteId>. Never touches local data. */
 export function Shared({ path }: { path: string }) {
@@ -87,7 +92,8 @@ export function Shared({ path }: { path: string }) {
   const [data, setData] = useState<SpaceData | NoteData | null>(null);
   const [err, setErr] = useState("");
   const theme = useTheme();
-  useEffect(() => { publicApi<SpaceData | NoteData>(`/share/${token}`).then((d) => { setData(d); document.title = d.kind === "note" ? d.note.title : d.space.name; }).catch((e) => setErr(e.message)); }, [token]);
+  useEffect(() => { publicApi<SpaceData | NoteData>(`/share/${token}`).then((d) => { setData(d); document.title = d.kind === "note" ? d.note.title : d.space.name;
+    setOgMeta({ kicker: d.blog.name, title: document.title, meta: "", description: d.kind === "note" ? "" : d.space.description ?? "" }, `${API_BASE || location.origin}/api/og/s/${encodeURIComponent(token)}.png`); }).catch((e) => setErr(e.message)); }, [token]);
 
   if (err) return <Unavailable />;
   if (!data) return <Loading />;
@@ -95,7 +101,7 @@ export function Shared({ path }: { path: string }) {
 
   const bar = data.kind === "space" && noteId ? (
     <a href={`/s/${token}`} onClick={(e) => { e.preventDefault(); go(`/s/${token}`); }} className="flex min-w-0 flex-1 items-center gap-1.5 text-muted hover:text-ink">
-      <ArrowLeft size={16} className="shrink-0" />Back to overview<span className="hidden truncate opacity-60 md:inline">· {data.space.icon} {data.space.name}</span>
+      <ArrowLeft size={16} className="shrink-0" />Back to overview<span className="hidden truncate opacity-60 md:inline">· <SpaceIcon space={data.space} size={15} style={{ verticalAlign: "-3px" }} /> {data.space.name}</span>
     </a>
   ) : <span className="flex min-w-0 flex-1"><BrandName blog={data.blog} /></span>;
 
@@ -112,7 +118,7 @@ export function Shared({ path }: { path: string }) {
         </div>
       </div>
       <footer className="safe-b mt-12 flex items-center gap-2.5 border-t border-line px-4 py-[13px] text-[12.5px] text-muted md:px-10">
-        <span className="flex size-[26px] items-center justify-center rounded-full bg-surface-2">{data.blog.avatar}</span>
+        <span className="flex size-[26px] items-center justify-center rounded-full bg-surface-2"><AvatarGlyph value={data.blog.avatar} size={15} /></span>
         <span className="flex-1">Shared from <b className="font-semibold text-ink">{data.blog.name}</b> · read-only</span>
       </footer>
     </div>
@@ -170,14 +176,14 @@ function SpaceViewer({ token, data }: { token: string; data: SpaceData }) {
   const dueDate = due ? new Date(due) : null;
   const dueOk = dueDate && !isNaN(+dueDate);
   const daysLeft = dueOk ? Math.ceil((+dueDate! - Date.now()) / 864e5) : null;
-  const c = sp.color || "var(--accent)";
+  const c = spaceColor(sp, "var(--accent)");
   const notes = useMemo(() => [...data.notes].sort((a, b) => b.updatedAt - a.updatedAt), [data.notes]);
   const open = (id: string) => go(`/s/${token}/${id}`);
   return (
     <div className="flex flex-col gap-5 pt-5 md:gap-[26px] md:pt-10">
       <header className="flex flex-col gap-4 md:flex-row md:items-start md:gap-6">
         <div className="flex flex-1 items-start gap-4">
-          <span className="flex size-[52px] shrink-0 items-center justify-center rounded-[14px] border text-[26px] md:size-16 md:text-[32px]" style={{ background: `color-mix(in srgb, ${c} 18%, transparent)`, borderColor: `color-mix(in srgb, ${c} 50%, transparent)` }}>{sp.icon}</span>
+          <span className="flex size-[52px] shrink-0 items-center justify-center rounded-[14px] border md:size-16" style={{ background: `color-mix(in srgb, ${c} 18%, transparent)`, borderColor: `color-mix(in srgb, ${c} 50%, transparent)` }}><SpaceIcon space={sp} size={15} color={c} /></span>
           <div className="flex min-w-0 flex-col gap-1.5">
             <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-muted">{sp.kind}</span>
             <h1 dir="auto" className="text-[28px] font-bold leading-[1.1] tracking-[-.02em] md:text-[38px]">{sp.name}</h1>
@@ -402,7 +408,7 @@ function slideInfo(md: string) {
   const img = /!\[([^\]]*)\]\(([^)]*)\)/.exec(first);
   const head = /^#{1,3}\s+(.+)$/m.exec(md)?.[1]
     ?? (img ? img[1] || img[2].replace(/^att:/, "") : /^https?:\/\//.test(first) ? (/youtu\.?be|vimeo/.test(first) ? "Video" : first.replace(/^https?:\/\/(www\.)?/, "")) : first.replace(/^[-*>\s]+/, ""));
-  const media = /youtu\.?be|vimeo|\.(mp4|webm|mov|mp3|m4a)\b|```mermaid/i.test(md) ? "▶ Media" : /!\[/.test(md) ? "🖼 Image" : "";
+  const media = /youtu\.?be|vimeo|\.(mp4|webm|mov|mp3|m4a)\b|```mermaid/i.test(md) ? "Media" : /!\[/.test(md) ? "Image" : "";
   return { head: head.slice(0, 80), media };
 }
 function SlidesPage({ note }: { note: PubNote }) {
@@ -576,7 +582,7 @@ function BoardPage({ blog, note, theme, refsPath }: { blog: Brand; note: PubNote
     <div className="flex h-dvh flex-col bg-bg text-[14px] leading-[normal] text-ink">
       <div className={cx("safe-t hidden h-[60px] shrink-0 items-center gap-3.5 border-b border-line px-10 md:flex", !isCanvas && "bg-surface")}>
         <BrandName blog={blog} /><span className="text-muted">/</span>
-        <span dir="auto" className="flex-1 truncate font-semibold">{isCanvas ? "🧩" : "🖍️"} {note.title}</span>
+        <span dir="auto" className="flex-1 truncate font-semibold"><Glyph name={isCanvas ? "canvas" : "whiteboard"} size={15} style={{ verticalAlign: "-3px" }} /> {note.title}</span>
         {isCanvas ? <button onClick={() => downloadBoard(note)} className="flex h-[38px] items-center gap-2 rounded-[10px] bg-accent px-3.5 font-semibold text-accent-fg"><Download size={15} />{label}</button>
           : <button onClick={png} disabled={busy} title="Download as PNG image" className="flex h-[38px] items-center gap-2 rounded-[10px] border border-line px-3.5 disabled:opacity-60">{busy ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}PNG</button>}
         <ThemeBtn {...theme} />
@@ -584,7 +590,7 @@ function BoardPage({ blog, note, theme, refsPath }: { blog: Brand; note: PubNote
       <div className={cx("safe-t flex items-center gap-2 border-b border-line px-5 pb-3.5 pt-2.5 md:hidden", !isCanvas && "bg-surface")}>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="text-[12px] text-muted">{blog.name} · {isCanvas ? "canvas" : "whiteboard · view only"}</span>
-          <span dir="auto" className="truncate text-[18px] font-[650]">{isCanvas ? "🧩" : "🖍️"} {note.title}</span>
+          <span dir="auto" className="truncate text-[18px] font-[650]"><Glyph name={isCanvas ? "canvas" : "whiteboard"} size={15} style={{ verticalAlign: "-1px" }} /> {note.title}</span>
         </div>
       </div>
       <div className="relative flex-1 overflow-hidden"><BoardBody note={note} onApi={setEx} ex={ex} refsPath={refsPath} /></div>

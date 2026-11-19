@@ -1,5 +1,7 @@
 // Unlock + first-run (design handoff: ScreenUnlock, "Lumen 01 Welcome and Home" screens 2A–2F,
 // "Lumen 12 Android Loading Sync" R3-5A–C for the Capacitor app's first launch).
+import { AvatarGlyph } from "../components/SpaceIcon";
+import { AVATAR_CHOICES, avatarGlyph } from "../lib/space-icon";
 import { Capacitor } from "@capacitor/core";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowLeft, Camera, ChevronRight, CircleCheck, CloudOff, Eye, EyeOff, Fingerprint, ImagePlus, Lock, Moon, RefreshCw, Smartphone, Sun } from "lucide-react";
@@ -75,13 +77,13 @@ function WebWelcome({ onDone }: { onDone: () => void }) {
 
 // ------------------------------------------------------------------ shared bits
 
-export function Avatar({ size, ring, font, className, style }: { size: number; ring?: boolean; font?: number; className?: string; style?: React.CSSProperties }) {
+export function Avatar({ size, ring, font, glyph, className, style }: { size: number; ring?: boolean; font?: number; /** glyph size (default ≈ 38.5% of the circle, design 44 → 17) */ glyph?: number; className?: string; style?: React.CSSProperties }) {
   const s = useSettings();
   const img = useAvatarImage();
   return (
     <span className={cx("flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-2", className)}
       style={{ width: size, height: size, fontSize: font ?? Math.round(size / 2), boxShadow: ring ? "0 0 0 2px var(--bg), 0 0 0 4px var(--accent)" : undefined, ...style }}>
-      {img ? <img src={img} alt="" className="size-full object-cover" /> : s.avatar}
+      {img ? <img src={img} alt="" className="size-full object-cover" /> : <AvatarGlyph value={s.avatar} size={glyph ?? Math.round(size * 0.385)} />}
     </span>
   );
 }
@@ -302,9 +304,9 @@ function DeviceOffer({ phone, onDone }: { phone: boolean; onDone: () => void }) 
 // ------------------------------------------------------------------ first run (web, Lumen 01 2D–2F)
 
 const SWATCHES: (number | null)[] = [null, 25, 140, 200, 265, 320];
-const AVATARS = ["🦉", "🕯️", "📚", "🌙", "🧠", "✍️"];
-/** The selected avatar first, then the next ones in the list (the design shows a short row, not a grid). */
-const avatarRow = (cur: string, n: number) => { const i = AVATARS.indexOf(cur); return Array.from({ length: n - 1 }, (_, k) => AVATARS[(Math.max(i, -1) + 1 + k) % AVATARS.length]).filter((a) => a !== cur); };
+const AVATARS: string[] = [...AVATAR_CHOICES];
+/** The selected avatar first, then the next ones in the list (the design shows a short row, not a grid). Legacy emoji count as their glyph. */
+const avatarRow = (cur: string, n: number) => { const c = cur ? `glyph:${avatarGlyph(cur)}` : ""; const i = AVATARS.indexOf(c); return Array.from({ length: n - 1 }, (_, k) => AVATARS[(Math.max(i, -1) + 1 + k) % AVATARS.length]).filter((a) => a !== c); };
 
 function FirstRun({ step, setStep, onDone }: { step: number; setStep: (n: number) => void; onDone: () => void }) {
   const s = useSettings();
@@ -396,7 +398,7 @@ function FirstRun({ step, setStep, onDone }: { step: number; setStep: (n: number
                   <input className={cx(input, "min-w-0 flex-1")} style={{ outline: "none", caretColor: "var(--accent)" }} placeholder="Your name" aria-label="Author" value={s.author} onChange={(x) => setSettings({ author: x.target.value })} />
                   <button aria-label="Current avatar" className="rounded-full"><Avatar size={44} ring /></button>
                   {avatarRow(img ? "" : s.avatar, 2).slice(0, 1).map((a) => (
-                    <button key={a} aria-label={`Avatar ${a}`} onClick={() => { setSettings({ avatar: a }); if (img) void setAvatarImage(""); }} className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[20px]">{a}</button>
+                    <button key={a} aria-label={`Avatar ${a.replace("glyph:", "")}`} onClick={() => { setSettings({ avatar: a }); if (img) void setAvatarImage(""); }} className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2"><AvatarGlyph value={a} size={17} /></button>
                   ))}
                   <button aria-label="Upload a photo" title="Upload a photo" onClick={() => pickAvatar()} className="flex size-[46px] shrink-0 items-center justify-center rounded-full border border-dashed border-line text-muted hover:text-ink"><ImagePlus size={18} /></button>
                 </div>
@@ -405,7 +407,7 @@ function FirstRun({ step, setStep, onDone }: { step: number; setStep: (n: number
             <div className="mx-5 mt-6 flex flex-col gap-[6px] rounded-[14px] bg-[#FAF8F3] p-4 text-[#1F1D1A]">
               <div className="font-mono text-[11px] font-medium text-[#6A655C]">PREVIEW · /blog</div>
               <div className="text-[22px] font-bold tracking-[-0.01em]" style={{ fontFamily: "'Source Serif 4', serif" }}>{s.blogName || "Untitled blog"}</div>
-              <div className="text-[13px] text-[#6A655C]">{s.tagline}{s.author ? <> · {img ? <img src={img} alt="" className="inline size-[14px] rounded-full align-[-2px] object-cover" /> : s.avatar} {s.author}</> : ""}</div>
+              <div className="text-[13px] text-[#6A655C]">{s.tagline}{s.author ? <> · {img ? <img src={img} alt="" className="inline size-[14px] rounded-full align-[-2px] object-cover" /> : <AvatarGlyph value={s.avatar} size={15} style={{ verticalAlign: "-3px" }} />} {s.author}</> : ""}</div>
             </div>
           </>
         )}
@@ -493,7 +495,7 @@ function NativeFirstRun({ onDone }: { onDone: () => void }) {
               <div className="flex gap-[10px]">
                 <button aria-label="Current avatar" className="rounded-full"><Avatar size={52} ring /></button>
                 {avatarRow(img ? "" : s.avatar, 3).slice(0, 2).map((a) => (
-                  <button key={a} aria-label={`Avatar ${a}`} onClick={() => { setSettings({ avatar: a }); if (img) void setAvatarImage(""); }} className="flex size-[52px] items-center justify-center rounded-full bg-surface-2 text-[24px]">{a}</button>
+                  <button key={a} aria-label={`Avatar ${a.replace("glyph:", "")}`} onClick={() => { setSettings({ avatar: a }); if (img) void setAvatarImage(""); }} className="flex size-[52px] items-center justify-center rounded-full bg-surface-2"><AvatarGlyph value={a} size={20} /></button>
                 ))}
                 <button aria-label="Take or choose a photo" onClick={() => pickAvatar(true)} className="flex size-[54px] items-center justify-center rounded-full border border-dashed border-line text-muted"><Camera size={20} /></button>
               </div>

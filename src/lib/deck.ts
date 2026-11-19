@@ -210,16 +210,38 @@ const firstSentence = (p: string) => (/^(.{20,220}?[.!?])(\s|$)/.exec(p)?.[1] ??
 /** Turn a document into a deck (plain slide Markdown using the layouts above), Pandoc/Quarto-style:
  *  title slide from the H1; headings above the slide level become section slides; each slide picks a layout from
  *  its content; long prose moves to speaker notes; long lists and tables continue on "(cont.)" slides. */
-export function docToDeck(body: string, title: string): string {
-  const { data, body: b } = splitFrontMatter(body);
-  const all = blocks(b.replace(/\r\n/g, "\n").split("\n")).filter((x) => !(x.kind === "para" && /^\[{1,2}toc\]{1,2}$/i.test(x.lines.join("").trim())));
-  const h1 = all.findIndex((x) => x.kind === "heading" && x.level === 1);
-  const deckTitle = h1 >= 0 ? all[h1].text! : title;
-  if (h1 >= 0) all.splice(h1, 1);
+/** Where doc → deck starts a new slide: automatic (Pandoc's slide level), at every `# H1`, every `## H2`, or at `---` rules. */
+export type SplitAt = "auto" | "h1" | "h2" | "hr";
+const isRule = (x: Block) => x.kind === "para" && x.lines.length === 1 && /^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(x.lines[0]);
+function slideLevel(all: Block[]) {
   // Slide level: the highest heading level directly followed by content (Pandoc's rule).
   let level = 7;
   all.forEach((x, i) => { if (x.kind === "heading" && all[i + 1] && all[i + 1].kind !== "heading") level = Math.min(level, x.level!); });
   if (level === 7) level = Math.min(7, ...all.filter((x) => x.kind === "heading").map((x) => x.level!));
+  return level;
+}
+/** The split the automatic rule picks for this note (shown as the selected option in the doc → deck preview). */
+export function autoSplit(body: string): Exclude<SplitAt, "auto"> {
+  const all = blocks(splitFrontMatter(body).body.replace(/\r\n/g, "\n").split("\n"));
+  const h1 = all.findIndex((x) => x.kind === "heading" && x.level === 1);
+  const rest = all.filter((_, i) => i !== h1);
+  const level = slideLevel(rest.filter((x) => !isRule(x)));
+  if (level >= 7 && rest.some(isRule)) return "hr";
+  return level <= 1 ? "h1" : "h2";
+}
+
+export function docToDeck(body: string, title: string, split: SplitAt = "auto"): string {
+  flip = false; // image left/right alternation restarts per deck (same note → same deck)
+  const { data, body: b } = splitFrontMatter(body);
+  let all = blocks(b.replace(/\r\n/g, "\n").split("\n")).filter((x) => !(x.kind === "para" && /^\[{1,2}toc\]{1,2}$/i.test(x.lines.join("").trim())));
+  const h1 = all.findIndex((x) => x.kind === "heading" && x.level === 1);
+  const deckTitle = h1 >= 0 ? all[h1].text! : title;
+  if (h1 >= 0) all.splice(h1, 1);
+  if (split === "hr") return hrDeck(all, deckTitle, data);
+  all = all.filter((x) => !isRule(x)); // a rule kept inside a slide would split the deck
+  let level = slideLevel(all);
+  if (split === "h1") level = 1;
+  else if (split === "h2") level = 2;
   const slides: string[] = [];
   // Cover: H1 + the first short paragraph before any heading.
   const firstHead = all.findIndex((x) => x.kind === "heading");
@@ -316,6 +338,65 @@ function contentSlides(title: string, content: Block[]): string[] {
   if (only && (only.kind === "code" || only.kind === "table")) return [out("full", md(flat))];
   return [`${head}\n\n${trimProse(flat, notes)}${notes.length ? `\n\nNote: ${notes.join("\n\n")}` : ""}`];
 }
+/** `---` split: one slide group per rule-separated part; the part's first heading is its title. */
+function hrDeck(all: Block[], deckTitle: string, data: Record<string, string>): string {
+  const parts: Block[][] = [[]];
+  for (const x of all) { if (isRule(x)) parts.push([]); else parts[parts.length - 1].push(x); }
+  const first = parts[0];
+  const lead = first.length === 1 && first[0].kind === "para" && words(first[0].lines.join(" ")) <= 40 ? first[0] : null;
+  const kicker = data.subtitle ?? (lead ? lead.lines.join(" ") : "");
+  const slides = [`<!-- layout: title -->\n# ${deckTitle}${kicker ? `\n\n${kicker}` : ""}`];
+  parts.forEach((part, k) => {
+    if ((k === 0 && lead) || !part.length) return;
+    const hi = part.findIndex((x) => x.kind === "heading");
+    slides.push(...contentSlides(hi >= 0 ? part[hi].text! : deckTitle, part.filter((_, i) => i !== hi)));
+  });
+  return slides.join("\n\n---\n\n") + "\n";
+}
+
+// ------------------------------------------------------------------ editing a deck (arrange mode, layout picker)
+/** Set (value) or remove (null) directive keys on one slide, rewriting its leading `<!-- … -->` line(s) as one.
+ *  Setting `layout` also drops `_layout` (and the other way round). */
+export function setSlideDirectives(body: string, index: number, patch: Record<string, string | null>): string {
+  const chunk = slideChunks(body)[index];
+  if (!chunk) return body;
+  const lines = body.replace(/\r\n/g, "\n").split("\n");
+  let i = chunk.start;
+  while (i < lines.length && !lines[i].trim()) i++;
+  const first = i;
+  const dirs: [string, string][] = [];
+  let end = first;
+  for (; i < lines.length; i++) {
+    const l = lines[i].trim();
+    if (!l) continue;
+    const m = /^<!--([\s\S]*?)-->$/.exec(l);
+    if (!m || !m[1].includes(":")) break;
+    for (const part of m[1].split(";")) { const kv = /^\s*(_?[\w-]+)\s*:\s*(.*?)\s*$/.exec(part); if (kv) dirs.push([kv[1].toLowerCase(), kv[2]]); }
+    end = i + 1;
+  }
+  const map = new Map(dirs);
+  for (const [k, v] of Object.entries(patch)) {
+    if (v === null || v === "") map.delete(k);
+    if (/^_?layout$/.test(k)) map.delete(k.startsWith("_") ? k.slice(1) : "_" + k); // one layout per slide; a `_class` keeps a carried `class`
+    if (v !== null && v !== "") map.set(k, v);
+  }
+  const out = [...map].map(([k, v]) => `${k}: ${v}`).join("; ");
+  lines.splice(first, end - first, ...(out ? [`<!-- ${out} -->`] : []));
+  return lines.join("\n");
+}
+
+/** Move slide `from` to index `to` (deckSlides order). Front-matter is kept; separators become `\n\n---\n\n`. */
+export function moveSlide(body: string, from: number, to: number): string {
+  const chunks = slideChunks(body);
+  if (from === to || !chunks[from] || to < 0 || to >= chunks.length) return body;
+  const lines = body.replace(/\r\n/g, "\n").split("\n");
+  const head = lines.slice(0, chunks[0].start).join("\n");
+  const parts = chunks.map((c) => c.md.replace(/^\n+/, "").replace(/\s+$/, ""));
+  const [x] = parts.splice(from, 1);
+  parts.splice(to, 0, x);
+  return (head.trim() ? head.replace(/\n*$/, "\n") : "") + parts.join("\n\n---\n\n") + "\n";
+}
+
 /** Keep slides short: a paragraph over ~40 words keeps its first sentence; the full text goes to the notes. */
 function trimProse(bs: Block[], notes: string[]): string {
   return bs.map((x) => {

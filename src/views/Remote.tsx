@@ -1,6 +1,8 @@
-import { ChevronLeft, ChevronRight, EyeOff, Pause, Play, RotateCcw, Smartphone, X } from "lucide-react";
+import { EyeOff, Smartphone } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ImageZoom, SlideStage } from "../components/Slides";
+import { SlideFrame } from "../components/SlideThumb";
+import { useWidth } from "../components/slides-deck";
 import { clock, elapsedOf, prettyCode, wsUrl, type DeckCmd, type DeckState } from "../components/study-remote-link";
 import { API_BASE } from "../lib/api";
 
@@ -43,6 +45,8 @@ function PhoneRemote({ code }: { code: string }) {
   const [, tick] = useState(0);
   const ws = useRef<WebSocket | null>(null);
   const touch = useRef<{ x: number; t: number } | null>(null);
+  const box = useRef<HTMLDivElement>(null);
+  const bw = useWidth(box);
 
   useEffect(() => {
     let closed = false, retry = 0;
@@ -90,18 +94,18 @@ function PhoneRemote({ code }: { code: string }) {
 
   const status = conn === "missing" ? "No presentation with this code" : conn === "offline" ? "Offline · retrying" : conn === "connecting" ? "Connecting…" : conn === "presenter-away" ? "Presenter disconnected" : "";
   const live = conn === "live" && st;
+  const btn = "text-[12px] text-muted hover:text-ink disabled:opacity-40";
   return (
-    <div className="flex h-full flex-col bg-[#0A0C0F] text-[14px] text-ink">
+    // R4-17D: status row (dot · Remote · device · timer), current slide, Next, speaker notes, ← / → (→ is the big one)
+    <div className="flex h-full flex-col bg-bg text-[13px] text-ink">
       <div className="safe-t h-8 shrink-0" />
-      <div className="flex h-14 shrink-0 items-center gap-2 px-2 text-muted">
-        <button aria-label="Leave remote" onClick={() => nav("/")} className="flex size-11 items-center justify-center text-ink"><X size={20} /></button>
-        <span className="min-w-0 flex-1 truncate" dir="auto">{st?.title ?? "Phone remote"}</span>
-        <span className="flex h-11 items-center gap-1.5 px-3 font-mono text-[12px]" title="Pairing code">
-          <span className="size-1.5 rounded-full" style={{ background: live ? "var(--success)" : conn === "missing" ? "var(--danger)" : "var(--warning)" }} />{prettyCode(code)}
-        </span>
+      <div className="flex shrink-0 items-center gap-2.5 px-5 py-3">
+        <span className="size-2 shrink-0 rounded-full" style={{ background: live ? "var(--success)" : conn === "missing" ? "var(--danger)" : "var(--warning)" }} />
+        <span className="min-w-0 flex-1 truncate font-semibold" dir="auto" title={`Pairing code ${prettyCode(code)}`}>{status || `Remote · ${st?.device ?? "laptop"}`}</span>
+        <button disabled={!live} onClick={() => send("timer")} onDoubleClick={() => send("timer-reset")} title={st?.pausedAt ? "Resume timer (double-click resets)" : "Pause timer (double-click resets)"}
+          className={`font-mono text-[15px] font-medium tabular-nums ${st?.pausedAt ? "text-muted" : ""}`}>{st ? clock(elapsedOf(st)) : "00:00"}</button>
       </div>
-
-      <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 px-3"
+      <div className="flex shrink-0 flex-col gap-2.5 px-4"
         onTouchStart={(e) => (touch.current = { x: e.touches[0].clientX, t: Date.now() })}
         onTouchEnd={(e) => {
           const t = touch.current; touch.current = null;
@@ -109,42 +113,44 @@ function PhoneRemote({ code }: { code: string }) {
           const dx = e.changedTouches[0].clientX - t.x;
           if (Math.abs(dx) > 50) send(dx < 0 ? "next" : "prev");
         }}>
-        {st ? (
-          <div className="relative aspect-video w-full"
-            onClick={(e) => {
-              if ((e.target as HTMLElement).closest("img,a,video,iframe")) return;
-              // Tap edges: left third = back, the rest = forward.
-              const r = e.currentTarget.getBoundingClientRect();
-              send(e.clientX - r.left < r.width / 3 ? "prev" : "next");
-            }}>
-            <SlideStage key={st.i + st.md} note={{ id: st.noteId, spaceId: st.spaceId }} md={st.md} dirs={st.dirs} blank={st.blank} onZoom={(src, alt) => setZoom({ src, alt })} />
-            {st.blank && <span className="absolute inset-0 flex items-center justify-center gap-2 text-[13px] text-muted"><EyeOff size={15} />Screen blanked</span>}
-          </div>
-        ) : (
-          <div className="flex aspect-video w-full items-center justify-center rounded-[8px] border border-line bg-bg px-6 text-center text-muted">{status || "Waiting for the presenter…"}</div>
+        <div ref={box}>
+          {st && bw > 0 ? (
+            <SlideFrame width={bw} className="relative">
+              <div className="absolute inset-0"
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).closest("img,a,video,iframe")) return;
+                  // Tap edges: left third = back, the rest = forward.
+                  const r = e.currentTarget.getBoundingClientRect();
+                  send(e.clientX - r.left < r.width / 3 ? "prev" : "next");
+                }}>
+                <SlideStage key={st.i + st.md} note={{ id: st.noteId, spaceId: st.spaceId }} md={st.md} dirs={st.dirs} blank={st.blank} frameless bare onZoom={(src, alt) => setZoom({ src, alt })} />
+                {st.blank && <span className="absolute inset-0 flex items-center justify-center gap-2 text-[13px] text-muted"><EyeOff size={15} />Screen blanked</span>}
+              </div>
+            </SlideFrame>
+          ) : (
+            <div className="flex aspect-video w-full items-center justify-center rounded-[12px] border border-line bg-bg px-6 text-center text-muted">{status || "Waiting for the presenter…"}</div>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="flex-1 text-[12px] text-muted">{st ? (st.i < st.n - 1 ? "Next" : "Last slide") : "Next"}</span>
+          {st && <span className="text-[12px] tabular-nums text-muted">{st.i + 1} / {st.n}</span>}
+          <button disabled={!live} onClick={() => send("blank")} aria-pressed={!!st?.blank} className={btn} style={st?.blank ? { color: "var(--accent)" } : undefined}>{st?.blank ? "Unblank" : "Blank"}</button>
+          <button onClick={() => nav("/")} className={btn}>Leave</button>
+        </div>
+        {st && st.i < st.n - 1 && (
+          st.nextMd !== undefined
+            ? <SlideFrame width={180}><SlideStage key={"n" + st.i} note={{ id: st.noteId, spaceId: st.spaceId }} md={st.nextMd} dirs={st.nextDirs} frameless bare /></SlideFrame>
+            : <SlideFrame width={180}><div className="flex h-full items-center px-3 text-[12px] font-semibold" dir="auto">{st.next}</div></SlideFrame>
         )}
-        {st?.notes ? <div className="max-h-[22vh] overflow-y-auto whitespace-pre-wrap rounded-[10px] border border-line bg-surface p-3 text-[14px] leading-[22px]" dir="auto">{st.notes}</div> : null}
-        {st && <div className="text-[12px] text-muted">{st.next ? `Next: ${st.next}` : "Last slide"}</div>}
       </div>
-
-      <div className="safe-b flex shrink-0 flex-col gap-3 px-5 pb-5 pt-3">
-        <div className="h-[3px] rounded-[2px] bg-surface-2"><div className="h-full rounded-[2px] bg-accent transition-all" style={{ width: st ? `${((st.i + 1) / st.n) * 100}%` : "0%" }} /></div>
-        <div className="flex justify-between text-[13px] text-muted"><span>{status || "Swipe or tap edges"}</span><span className="tabular-nums">{st ? `${st.i + 1} / ${st.n}` : ""}</span></div>
-        <div className="flex gap-2.5">
-          <div className="flex h-11 flex-1 items-center gap-1 rounded-[12px] border border-line pl-3.5 pr-1">
-            <span className={`flex-1 font-mono text-[17px] font-medium tabular-nums ${st?.pausedAt ? "text-muted" : ""}`}>{st ? clock(elapsedOf(st)) : "00:00"}</span>
-            <button aria-label={st?.pausedAt ? "Resume timer" : "Pause timer"} disabled={!live} onClick={() => send("timer")} className="flex size-9 items-center justify-center rounded-[9px] hover:bg-surface-2 disabled:opacity-40">{st?.pausedAt ? <Play size={15} /> : <Pause size={15} />}</button>
-            <button aria-label="Reset timer" disabled={!live} onClick={() => send("timer-reset")} className="flex size-9 items-center justify-center rounded-[9px] hover:bg-surface-2 disabled:opacity-40"><RotateCcw size={15} /></button>
-          </div>
-          <button disabled={!live} onClick={() => send("blank")} aria-pressed={!!st?.blank} className="flex h-11 items-center gap-2 rounded-[12px] border px-4 disabled:opacity-40" style={st?.blank ? { borderColor: "var(--accent)", background: "color-mix(in srgb, var(--accent) 10%, transparent)" } : { borderColor: "var(--border)" }}>
-            <EyeOff size={16} />{st?.blank ? "Unblank" : "Blank"}
-          </button>
-        </div>
-        <div className="flex gap-2.5">
-          <button aria-label="Previous slide" disabled={!live || st!.i === 0} onClick={() => send("prev")} className="flex h-[52px] flex-1 items-center justify-center rounded-[12px] border border-line active:bg-surface-2 disabled:opacity-40"><ChevronLeft size={20} /></button>
-          <button aria-label="Next slide" disabled={!live || st!.i >= st!.n - 1} onClick={() => send("next")} className="flex h-[52px] flex-1 items-center justify-center rounded-[12px] border border-line active:bg-surface-2 disabled:opacity-40"><ChevronRight size={20} /></button>
-        </div>
+      <div className="mx-4 mt-3.5 min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap rounded-[12px] bg-surface p-3.5 text-[15px] leading-[23px]" dir="auto">
+        {st?.notes || <span className="text-muted">{st ? "No speaker notes on this slide." : "Speaker notes appear here."}</span>}
       </div>
+      <div className="grid shrink-0 grid-cols-[1fr_2fr] gap-2.5 p-4">
+        <button aria-label="Previous slide" disabled={!live || st!.i === 0} onClick={() => send("prev")} className="flex h-[72px] items-center justify-center rounded-[14px] border border-line text-[22px] active:bg-surface-2 disabled:opacity-40">←</button>
+        <button aria-label="Next slide" disabled={!live || st!.i >= st!.n - 1} onClick={() => send("next")} className="flex h-[72px] items-center justify-center rounded-[14px] bg-accent text-[22px] font-bold text-accent-fg active:brightness-110 disabled:opacity-40">→</button>
+      </div>
+      <div className="safe-b h-6 shrink-0" />
       {zoom && <ImageZoom src={zoom.src} alt={zoom.alt} onClose={() => setZoom(null)} />}
     </div>
   );

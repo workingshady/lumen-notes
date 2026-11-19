@@ -10,7 +10,9 @@ import { snapshot, updateNote } from "../lib/actions";
 import { aiRun, getToken } from "../lib/api";
 import { db } from "../lib/db";
 import { inlineTags, outline, setFrontMatter, splitFrontMatter } from "../lib/parse";
-import { openNote, setUI, toast, useUI, useVault, type Panel } from "../lib/store";
+import { noteDerived, openNote, setUI, toast, useUI, useVault, type Panel } from "../lib/store";
+import { aliasesOf, findMentions, ignoredOf, linkMentions, mayMention, normalizeTerm, PROSE_TYPES, relocate, type Mention } from "../lib/mentions";
+import { normalize } from "../lib/search";
 import { getSelectionText, insertText, scrollEditorToLine } from "./Editor";
 import { AskVault } from "./AskVault";
 import { Preview } from "./Preview";
@@ -83,8 +85,6 @@ function Backlinks({ note }: { note: Note }) {
   const v = useVault();
   const back = (v.backlinks.get(note.id) ?? []).map((id) => v.byId.get(id)!).filter(Boolean);
   const out = (v.outlinks.get(note.id) ?? []).map((id) => v.byId.get(id)!).filter(Boolean);
-  // Unlinked mentions: notes that mention this title in plain text but don't link it.
-  const mentions = note.title.length > 3 ? v.notes.filter((n) => n.id !== note.id && !back.includes(n) && n.body.toLowerCase().includes(note.title.toLowerCase())).slice(0, 20) : [];
   const List = ({ title, items, icon }: { title: string; items: Note[]; icon: ReactNode }) => (
     <div className="mb-3">
       <div className={SECTION}>{title} · {items.length}</div>
@@ -99,7 +99,119 @@ function Backlinks({ note }: { note: Note }) {
       )) : <div className="px-2.5 text-[12.5px] text-muted">None</div>}
     </div>
   );
-  return (<><List title="Backlinks" items={back} icon={<CornerUpLeft size={14} />} /><List title="Links out" items={out} icon={<ArrowUpRight size={14} />} /><List title="Unlinked mentions" items={mentions} icon={<FileText size={14} />} /></>);
+  return (<><List title="Linked mentions" items={back} icon={<CornerUpLeft size={14} />} /><UnlinkedMentions note={note} /><List title="Links out" items={out} icon={<ArrowUpRight size={14} />} /></>);
+}
+
+// ------------------------------------------------------------------ unlinked mentions (design 04 §D6; logic in lib/mentions.ts)
+type MentionGroup = { src: Note; ms: Mention[] };
+const NON_MD = ["canvas", "whiteboard", "diagram"];
+function UnlinkedMentions({ note }: { note: Note }) {
+  const v = useVault();
+  const [confirm, setConfirm] = useState(false);
+  const [showIgnored, setShowIgnored] = useState(false);
+  const fm = useMemo(() => (NON_MD.includes(note.type) ? {} : splitFrontMatter(note.body).data), [note.body, note.type]);
+  const terms = useMemo(() => (note.title && note.title !== "Untitled" ? [note.title, ...aliasesOf(fm.aliases, note.props.aliases)] : []), [note.title, fm.aliases, note.props.aliases]);
+  const ignoreRaw = fm["mentions-ignore"] ?? note.props["mentions-ignore"];
+  const ignored = useMemo(() => new Set(ignoredOf(ignoreRaw).map((t) => t.toLowerCase())), [ignoreRaw]);
+  // Pre-filter on a cached normalized body (re-normalized only when that note changes), then mask + match the few candidates.
+  const groups = useMemo<MentionGroup[]>(() => {
+    const nt = terms.map(normalizeTerm).filter((t) => t.length >= 3);
+    if (!nt.length) return [];
+    const out: MentionGroup[] = [];
+    for (const n of v.notes) {
+      if (n.id === note.id || !PROSE_TYPES.has(n.type)) continue;
+      if (!mayMention(noteDerived("mentionNorm", n, (x) => normalize(x.body)), nt)) continue;
+      const ms = findMentions(n.body, terms);
+      if (ms.length) out.push({ src: n, ms });
+    }
+    return out.sort((a, b) => b.ms.length - a.ms.length || b.src.updatedAt - a.src.updatedAt);
+  }, [v.notes, note.id, terms]);
+  const shown = groups.filter((g) => !ignored.has(g.src.title.toLowerCase()));
+  const hidden = groups.filter((g) => ignored.has(g.src.title.toLowerCase()));
+  const total = shown.reduce((a, g) => a + g.ms.length, 0);
+
+  /** Rewrite mentions in each source note (re-read from the DB, re-located if it changed), with one Undo for the batch. */
+  async function link(items: MentionGroup[]) {
+    const undo: { id: string; before: string; after: string }[] = [];
+    let count = 0;
+    for (const { src, ms } of items) {
+      const cur = await db.notes.get(src.id);
+      if (!cur) continue;
+      const all = findMentions(src.body, terms);
+      const fresh = cur.body === src.body ? ms : ms.map((m) => relocate(cur.body, terms, m, all.filter((x) => x.text === m.text).findIndex((x) => x.start === m.start))).filter((m): m is Mention => !!m);
+      const body = linkMentions(cur.body, fresh, note.title);
+      if (body === cur.body) continue;
+      count += fresh.length;
+      undo.push({ id: cur.id, before: cur.body, after: body });
+      await updateNote(cur.id, { body });
+    }
+    if (!count) return void toast("Nothing to link: the text changed", undefined, { icon: "info" });
+    toast(`Linked ${count} mention${count === 1 ? "" : "s"} in ${undo.length} note${undo.length === 1 ? "" : "s"}`, {
+      label: "Undo",
+      run: async () => {
+        for (const u of undo) { const cur = await db.notes.get(u.id); if (cur && cur.body === u.after) await updateNote(u.id, { body: u.before }); }
+        toast("Links removed", undefined, { icon: "check" });
+      },
+    }, { icon: "link" });
+  }
+  /** The ignore list lives on this note: front-matter `mentions-ignore: [Source title, …]` (record props for non-Markdown notes). */
+  async function setIgnored(title: string, on: boolean) {
+    const list = ignoredOf(ignoreRaw).filter((t) => t.toLowerCase() !== title.toLowerCase());
+    if (on) list.push(title.replace(/[,[\]]/g, " ").trim());
+    if (NON_MD.includes(note.type)) {
+      const props = { ...note.props };
+      if (list.length) props["mentions-ignore"] = `[${list.join(", ")}]`; else delete props["mentions-ignore"];
+      return void updateNote(note.id, { props });
+    }
+    const cur = (await db.notes.get(note.id))?.body ?? note.body;
+    await updateNote(note.id, { body: setFrontMatter(cur, { "mentions-ignore": list.length ? list : null }) });
+  }
+
+  const Group = ({ g, muted }: { g: MentionGroup; muted?: boolean }) => (
+    <div className={cx("mb-1.5 rounded-[8px] px-1 py-1", muted && "opacity-60")}>
+      <div className="flex items-center gap-1.5 px-1.5">
+        <FileText size={13} className="shrink-0 text-muted" />
+        <button dir="auto" onClick={() => openNote(g.src.id)} className="min-w-0 flex-1 truncate text-left text-[13px] font-medium hover:underline">{g.src.title}</button>
+        <button onClick={() => void setIgnored(g.src.title, !muted)} title={muted ? "Show this note's mentions again" : "Hide this note's mentions"} className="h-7 shrink-0 rounded-[6px] px-1.5 text-[11.5px] text-muted hover:bg-surface-2 hover:text-ink">{muted ? "Unignore" : "Ignore"}</button>
+      </div>
+      {!muted && g.ms.map((m, i) => (
+        <div key={i} className="flex items-start gap-2 rounded-[6px] py-1 pl-[26px] pr-1 hover:bg-surface-2">
+          <span dir="auto" className="min-w-0 flex-1 break-words text-[12.5px] leading-[18px] text-muted">
+            {m.before}<mark className="rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_22%,transparent)] px-0.5 text-ink">{m.match}</mark>{m.after}
+          </span>
+          <button onClick={() => void link([{ src: g.src, ms: [m] }])} title={`Link to “${note.title}”`} className="flex h-7 shrink-0 items-center gap-1 rounded-[6px] border border-line px-2 text-[11.5px] text-ink hover:border-accent"><Link size={11} />Link</button>
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="mb-3" data-mentions>
+      <div className="flex items-center gap-2 pr-1">
+        <div className={cx(SECTION, "flex-1")}>Unlinked mentions · {total}</div>
+        {total > 0 && !confirm && <button onClick={() => setConfirm(true)} className="h-7 rounded-[6px] px-2 text-[12px] text-link hover:bg-surface-2">Link all ({total})</button>}
+      </div>
+      {confirm && (
+        <div className="mx-1 mb-2 flex flex-col gap-2 rounded-[10px] border border-line bg-surface-2 p-2.5 text-[12.5px]">
+          <span>Link {total} mention{total === 1 ? "" : "s"} in {shown.length} note{shown.length === 1 ? "" : "s"} to “<span dir="auto">{note.title}</span>”? You can undo it.</span>
+          <div className="flex gap-2">
+            <Button variant="primary" onClick={() => { setConfirm(false); void link(shown); }}>Link all</Button>
+            <Button onClick={() => setConfirm(false)}>Cancel</Button>
+          </div>
+        </div>
+      )}
+      {!terms.length ? <div className="px-2.5 text-[12.5px] text-muted">Give this note a title to find mentions.</div>
+        : shown.length ? shown.map((g) => <Group key={g.src.id} g={g} />) : <div className="px-2.5 text-[12.5px] text-muted">None</div>}
+      {hidden.length > 0 && (
+        <div className="mt-1 px-1">
+          <button onClick={() => setShowIgnored((s) => !s)} className="flex h-7 items-center gap-1 px-1.5 text-[12px] text-muted hover:text-ink">
+            {showIgnored ? <ChevronDown size={12} /> : <ChevronRight size={12} />}{hidden.length} ignored note{hidden.length === 1 ? "" : "s"}
+          </button>
+          {showIgnored && hidden.map((g) => <Group key={g.src.id} g={g} muted />)}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ------------------------------------------------------------------ properties (typed front-matter values)

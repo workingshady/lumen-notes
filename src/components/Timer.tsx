@@ -12,6 +12,11 @@ type S = { running: boolean; endsAt: number; left: number; phase: "focus" | "bre
 let s: S = { running: false, endsAt: 0, left: LEN.focus, phase: "focus", noteId: null, startedAt: 0, round: 1 };
 const subs = new Set<() => void>();
 const set = (p: Partial<S>) => { s = { ...s, ...p }; subs.forEach((f) => f()); };
+/** Start (or resume) the global study timer for a note, from outside the timer UI (e.g. Today › Start). */
+export function startStudyTimer(noteId: string | null = null) {
+  if (s.running) return;
+  set({ running: true, endsAt: Date.now() + s.left, noteId, startedAt: Date.now() });
+}
 const useTimer = () => useSyncExternalStore((f) => (subs.add(f), () => subs.delete(f)), () => s);
 
 

@@ -1,3 +1,6 @@
+import { API_BASE } from "../lib/api";
+import { setOgMeta } from "../lib/og";
+import { AvatarGlyph } from "../components/SpaceIcon";
 import { ArrowLeft, List, Moon, Rss, Sun } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { publicApi } from "./settings-public-demo";
@@ -51,7 +54,7 @@ export function Blog({ path }: { path: string }) {
   return (
     <div className="min-h-full bg-bg text-[14px] text-ink">
       <header className="safe-t sticky top-0 z-10 flex h-14 items-center gap-6 border-b border-line bg-bg pl-5 pr-2 md:h-16 md:px-14">
-        <Link to="/blog" className="flex-1 truncate text-[17px] font-bold md:text-[18px]"><span style={{ fontFamily: SERIF }}>{brand ? `${brand.avatar} ${brand.name}` : ""}</span></Link>
+        <Link to="/blog" className="flex-1 truncate text-[17px] font-bold md:text-[18px]"><span style={{ fontFamily: SERIF }}>{brand ? <><AvatarGlyph value={brand.avatar} size={15} style={{ verticalAlign: "-2px" }} /> {brand.name}</> : ""}</span></Link>
         <Link to="/blog" className={cx("hidden md:inline", slug ? "text-muted hover:text-ink" : "font-semibold")}>Posts</Link>
         <a href="/blog#tags" onClick={(e) => { e.preventDefault(); if (slug) nav("/blog"); setTimeout(() => document.getElementById("tags")?.scrollIntoView({ behavior: "smooth" }), 50); }} className="hidden text-muted hover:text-ink md:inline">Tags</a>
         {meta.rss && <a href="/rss.xml" className="hidden items-center gap-1.5 text-muted hover:text-ink md:flex"><Rss size={14} />RSS</a>}
@@ -114,7 +117,8 @@ function PostPage({ slug, onBrand, tocOpen, setTocOpen }: { slug: string; onBran
   const bodyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     setData(null);
-    publicApi<{ blog: Brand; post: Post; prev: Post | null; next: Post | null }>(`/public/posts/${encodeURIComponent(slug)}`).then((d) => { setData(d); onBrand(d.blog); document.title = `${d.post.title} · ${d.blog.name}`; scrollTo(0, 0); }).catch((e) => setErr(e.message));
+    publicApi<{ blog: Brand; post: Post; prev: Post | null; next: Post | null }>(`/public/posts/${encodeURIComponent(slug)}`).then((d) => { setData(d); onBrand(d.blog); document.title = `${d.post.title} · ${d.blog.name}`; scrollTo(0, 0);
+      setOgMeta({ kicker: d.blog.name, title: d.post.title, meta: "", description: d.post.excerpt ?? "" }, `${API_BASE || location.origin}/api/og/post/${encodeURIComponent(d.post.slug || d.post.id)}.png`); }).catch((e) => setErr(e.message));
   }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
   const html = useMemo(() => (data?.post.body ? render(withoutTitle(data.post.body, data.post.title)) : ""), [data]);
   const toc = useMemo(() => (data?.post.body ? outline(data.post.body).filter((h) => h.level >= 2 && h.level <= 3) : []), [data]);
@@ -160,7 +164,7 @@ function PostPage({ slug, onBrand, tocOpen, setTocOpen }: { slug: string; onBran
         <h1 dir="auto" className="text-[30px] font-bold leading-9 tracking-[-.01em] md:text-[44px] md:leading-[50px] md:tracking-[-.02em]">{p.title}</h1>
         {data.blog.author && (
           <div className="hidden items-center gap-2.5 font-sans text-[13.5px] md:flex">
-            <span className="flex size-8 items-center justify-center rounded-full bg-surface-2">{data.blog.avatar}</span><span>{data.blog.author}</span>
+            <span className="flex size-8 items-center justify-center rounded-full bg-surface-2"><AvatarGlyph value={data.blog.avatar} size={15} /></span><span>{data.blog.author}</span>
           </div>
         )}
         <div id="post-body" ref={bodyRef} className="prose !max-w-none" style={{ "--read-font": SERIF, "--read-size": "17px", lineHeight: "30px" } as React.CSSProperties}

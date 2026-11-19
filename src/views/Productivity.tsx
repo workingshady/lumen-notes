@@ -1,3 +1,6 @@
+import { Glyph } from "../components/Glyph";
+import { SpaceIcon } from "../components/SpaceIcon";
+import { EmptyState } from "../components/EmptyState";
 import { ArrowDown, ArrowUp, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Columns3, FileText, GripVertical, Layers, ListChecks, NotebookPen, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NOTE_TYPES, STATUSES, type Note, type NoteType } from "../../shared/types";
@@ -9,7 +12,7 @@ import { matcher, parseQuery } from "../lib/search";
 import { go, openNote, scoped, setUI, useUI, useVault, type View } from "../lib/store";
 import { openNoteAtLine } from "../components/study-nav";
 import { ReviewSession, useDueCards } from "../components/Review";
-import { Button, cx, Empty, relTime, STATUS_COLOR, StatusDot } from "../components/ui";
+import { Button, cx, relTime, STATUS_COLOR, StatusDot } from "../components/ui";
 import { dragNote } from "../components/Sidebar";
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -130,12 +133,12 @@ function SpacePicker() {
   return (
     <>
       <button onClick={(e) => setOpen(open ? null : e.currentTarget)} className="flex h-[30px] items-center gap-1.5 rounded-[8px] border border-line px-2.5 text-[13px] text-muted hover:text-ink">
-        {sp ? `${sp.icon} ${sp.name}` : "🌐 All spaces"}<ChevronDown size={12} />
+        {sp ? <><SpaceIcon space={sp} size={15} />{sp.name}</> : <><Glyph name="globe" size={15} color="#57AB5A" />All spaces</>}<ChevronDown size={12} />
       </button>
       {open && (
         <Pop anchor={open} onClose={() => setOpen(null)} align="right" width={220}>
-          <MenuItem on={!sp} onClick={() => { setUI({ spaceId: "all", folderId: null }); setOpen(null); }}>🌐 All spaces</MenuItem>
-          {v.spaces.filter((s) => !s.archived).map((s) => <MenuItem key={s.id} on={sp?.id === s.id} onClick={() => { setUI({ spaceId: s.id, folderId: null }); setOpen(null); }}><span className="truncate">{s.icon} {s.name}</span></MenuItem>)}
+          <MenuItem on={!sp} onClick={() => { setUI({ spaceId: "all", folderId: null }); setOpen(null); }}><span className="flex items-center gap-1.5"><Glyph name="globe" size={15} color="#57AB5A" />All spaces</span></MenuItem>
+          {v.spaces.filter((s) => !s.archived).map((s) => <MenuItem key={s.id} on={sp?.id === s.id} onClick={() => { setUI({ spaceId: s.id, folderId: null }); setOpen(null); }}><span className="flex min-w-0 items-center gap-1.5"><SpaceIcon space={s} size={15} /><span className="truncate">{s.name}</span></span></MenuItem>)}
         </Pop>
       )}
     </>
@@ -205,7 +208,7 @@ export function TasksView() {
           <Plus size={15} className="shrink-0" />
           <span className="relative min-w-0 flex-1">
             <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} aria-label="Add a task" className="w-full bg-transparent text-ink focus:outline-none" />
-            {!draft && <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center truncate">Add a task… <span className="mx-1 font-mono text-[12px]">📅 fri</span> sets a date</span>}
+            {!draft && <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center truncate">Add a task… <span className="mx-1 inline-flex items-center gap-1 font-mono text-[12px]"><Glyph name="date" size={12} />fri</span> sets a date</span>}
           </span>
           <span className="hidden shrink-0 text-[12px] sm:inline">goes to today's daily note</span>
         </label>
@@ -223,7 +226,7 @@ export function TasksView() {
                     <Box done={t.done} onClick={() => toggle(t)} />
                     <span className={cx("min-w-0 flex-1", t.done && "text-muted line-through")} dir="auto">{t.text}</span>
                     <button onClick={() => openNoteAtLine(t.note.id, t.line, t.note.body)} title="Open the note at this line" className="hidden max-w-[260px] items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-[6px] bg-surface px-2 py-0.5 text-[12px] text-muted hover:text-link sm:flex">
-                      <FileText size={12} className="shrink-0" /><span className="truncate">{v.spaceMap.get(t.note.spaceId)?.icon} {t.note.title}</span>
+                      <FileText size={12} className="shrink-0" /><span className="truncate">{t.note.title}</span>
                     </button>
                     <button data-due onClick={(e) => setDating({ key: k, el: e.currentTarget })} title="Set a date (D)" className={cx("w-20 shrink-0 text-right text-[12px] hover:text-ink", !t.done && t.due && t.due < t0 ? "text-bad" : !t.done && t.due === t0 ? "text-warn" : "text-muted")}>{t.due ? dueLabel(t.due, t0) : ""}</button>
                   </div>
@@ -231,7 +234,7 @@ export function TasksView() {
               })}
             </section>
           ) : null)}
-          {!all.length && <Empty icon={<ListChecks size={30} />} title="No tasks yet" hint="Write - [ ] something in any note. It shows up here, across all your notes. Add 📅 2026-12-01 for a due date." />}
+          {!all.length && <EmptyState glyph="task" text="No tasks yet. Write - [ ] in any note, or add one above." action={{ label: "Add a task", onClick: () => document.querySelector<HTMLInputElement>('input[aria-label="Add a task"]')?.focus() }} />}
         </div>
       </div>
       {dating && datingTask && <DuePicker anchor={dating.el} value={datingTask.due} onClose={() => setDating(null)} onPick={(d) => { void setDue(datingTask, d); setDating(null); }} />}
@@ -273,7 +276,7 @@ export function KanbanView() {
         <Lens value="kanban" />
         <span className="flex-1" />
         <button onClick={() => setTypeFilter((t) => (t === "lesson" ? "any" : "lesson"))} title="Toggle the type filter" className="hidden text-[13px] text-muted hover:text-ink md:inline">
-          {space ? `${space.icon} ${space.name}` : "🌐 All spaces"}{lessonsOnly ? " · type: lesson" : " · all types"}
+          <span className="flex items-center gap-1.5">{space ? <><SpaceIcon space={space} size={15} />{space.name}</> : <><Glyph name="globe" size={15} color="#57AB5A" />All spaces</>}{lessonsOnly ? " · type: lesson" : " · all types"}</span>
         </button>
       </div>
       <div className="grid min-h-0 flex-1 auto-cols-[minmax(240px,1fr)] grid-flow-col gap-3.5 overflow-x-auto px-3 pb-6 md:grid-flow-row md:grid-cols-4 md:px-8">
@@ -690,7 +693,7 @@ export function ReviewView() {
   const [decks, setDecks] = useState<number | null>(null);
   useEffect(() => { if (due && decks === null) setDecks(new Set(due.map((d) => d.note.id)).size); }, [due, decks]);
   if (decks === null) return null;
-  const title = `${space ? `${space.icon} ${space.name}` : "All spaces"} · ${decks} ${decks === 1 ? "deck" : "decks"}`;
+  const title = `${space ? space.name : "All spaces"} · ${decks} ${decks === 1 ? "deck" : "decks"}`;
   // Full-screen: one card, nothing else (no sidebar or tab bar).
   return <div className="fixed inset-0 z-40 bg-bg"><ReviewSession notes={notes} title={title} onExit={() => go("home")} /></div>;
 }
@@ -709,7 +712,7 @@ export function TrashView() {
             <Button size="sm" onClick={() => restoreNote(n.id)}><RotateCcw size={13} /> Restore</Button>
             <Button size="sm" variant="danger" onClick={() => confirm(`Delete “${n.title}” forever? Its history goes too.`) && purgeNote(n.id)}><Trash2 size={13} /></Button>
           </div>
-        )) : <Empty icon={<Trash2 size={30} />} title="Trash is empty" />}
+        )) : <EmptyState glyph="archive" text="Trash is empty. Deleted notes wait here." action={{ label: "Back to notes", onClick: () => go("notes") }} />}
       </div>
     </div>
   );

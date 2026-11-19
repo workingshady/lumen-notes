@@ -17,6 +17,8 @@
 //       limit: 50
 //       columnSize: { file.name: 260 }
 //       date: due                  # Lumen: calendar view date property (default file.ctime)
+//       groupMulti: each           # Lumen: a note whose group property has several values shows in each group
+//                                  # (each, default) or only under its first value (first)
 //
 // Properties: file.name (title), file.ctime / file.mtime (created / updated), file.tags, file.folder, plus Lumen's
 // record fields type, status, space, folder, and any front-matter key (bare or as note.<key>).
@@ -194,8 +196,11 @@ export interface BaseViewDef {
   type: ViewType; name: string;
   filters?: FilterNode; order?: string[]; sort?: SortRule[]; groupBy?: SortRule; limit?: number;
   columnSize?: Record<string, number>; date?: string;
+  /** Lumen: notes with several values of the group property show in each group (default) or the first only. */
+  groupMulti?: GroupMulti;
   [k: string]: unknown;
 }
+export type GroupMulti = "each" | "first";
 export interface BaseConfig { filters?: FilterNode; views: BaseViewDef[]; [k: string]: unknown }
 
 const FENCE = /^([ \t]*)(`{3,}|~{3,})[ \t]*base[ \t]*\r?\n([\s\S]*?)\r?\n[ \t]*\2[ \t]*$/m;
@@ -246,6 +251,7 @@ export function parseBase(body: string): { cfg: BaseConfig; error: string | null
       order: Array.isArray(v.order) ? v.order.map(asStr).filter((x): x is string => !!x) : undefined,
       sort, groupBy: asSort(v.groupBy), limit: Number(v.limit) > 0 ? Number(v.limit) : undefined,
       columnSize: cs as Record<string, number> | undefined, date: asStr(v.date),
+      groupMulti: asStr(v.groupMulti) === "first" ? "first" : asStr(v.groupMulti) === "each" ? "each" : undefined,
     };
   });
   return { cfg: { ...o, filters: (o.filters ?? undefined) as FilterNode | undefined, views: views.length ? views : [{ type: "table", name: "Table" }] }, error, found: !!loc };
@@ -396,7 +402,10 @@ export function condToExpr(c: Cond): string {
 
 const low = (x: unknown) => String(x).toLowerCase();
 function testCond(c: Cond, n: Note, ctx: Ctx, props: Record<string, string>): boolean {
-  const v = c.op === "inFolder" ? ctx.folderPath(n.folderId) : getValue(n, c.prop, ctx, props);
+  return evalCond(c, c.op === "inFolder" ? ctx.folderPath(n.folderId) : getValue(n, c.prop, ctx, props));
+}
+/** Evaluate one condition against an already-read value (`v` = the folder path for inFolder). */
+function evalCond(c: Cond, v: Val): boolean {
   const r = (() => {
     switch (c.op) {
       case "isEmpty": return v === null || v === "" || (Array.isArray(v) && !v.length);
@@ -446,6 +455,20 @@ export function testFilter(f: FilterNode | undefined | null, n: Note, ctx: Ctx, 
   if (f.and) return f.and.every((x) => testFilter(x, n, ctx, props));
   if (f.or) return f.or.length ? f.or.some((x) => testFilter(x, n, ctx, props)) : true;
   if (f.not) return !f.not.some((x) => testFilter(x, n, ctx, props));
+  return true;
+}
+/** Evaluate a filter tree against any record (dashboard sources): `get(prop)` returns the value of a property. */
+export function testFilterWith(f: FilterNode | undefined | null, get: (prop: string) => Val): boolean {
+  if (!f) return true;
+  if (typeof f === "string") {
+    const c = parseCond(f);
+    if (!c) return true;
+    return evalCond(c, get(c.op === "hasTag" ? "tags" : c.op === "inFolder" ? "folder" : c.prop));
+  }
+  if (Array.isArray(f)) return f.every((x) => testFilterWith(x as FilterNode, get));
+  if (f.and) return f.and.every((x) => testFilterWith(x, get));
+  if (f.or) return f.or.length ? f.or.some((x) => testFilterWith(x, get)) : true;
+  if (f.not) return !f.not.some((x) => testFilterWith(x, get));
   return true;
 }
 /** Expressions in a filter tree that Lumen can't evaluate (shown as a hint). */
@@ -517,15 +540,22 @@ export function runView(notes: Note[], cfg: BaseConfig, view: BaseViewDef, ctx: 
   return { rows, total };
 }
 
-/** Group rows by a property. Multi-value properties (tags, lists) put a note in each of its groups. */
-export function groupRows(rows: Row[], by: SortRule, ctx: Ctx, opts: { allStatuses?: boolean } = {}): Group[] {
+/** The group keys a row falls in for a property (several for tags / list properties; NONE when empty). */
+export function groupKeysOf(r: Row, by: SortRule, ctx: Ctx, multi: GroupMulti = "each"): string[] {
+  const k = canon(by.property);
+  const v = getValue(r.n, by.property, ctx, r.props);
+  const keys = Array.isArray(v) ? (v.length ? [...new Set(v.map(String))] : [NONE]) : v === null || v === "" ? [NONE] : [k === "created" || k === "updated" ? ymd(new Date(v as number)) : String(v)];
+  return multi === "first" ? keys.slice(0, 1) : keys;
+}
+
+/** Group rows by a property. Multi-value properties (tags, lists, courses) put a note in each of its groups
+ *  (`multi: "first"` keeps only the first value). */
+export function groupRows(rows: Row[], by: SortRule, ctx: Ctx, opts: { allStatuses?: boolean; multi?: GroupMulti } = {}): Group[] {
   const m = new Map<string, Group>();
   const k = canon(by.property);
   if (opts.allStatuses && k === "status") for (const s of STATUSES) m.set(s, { key: s, label: s, rows: [] });
   for (const r of rows) {
-    const v = getValue(r.n, by.property, ctx, r.props);
-    const keys = Array.isArray(v) ? (v.length ? v : [NONE]) : v === null || v === "" ? [NONE] : [k === "created" || k === "updated" ? ymd(new Date(v as number)) : String(v)];
-    for (const key of keys) {
+    for (const key of groupKeysOf(r, by, ctx, opts.multi)) {
       if (!m.has(key)) m.set(key, { key, label: key === NONE ? `No ${label(k).toLowerCase()}` : key, rows: [] });
       m.get(key)!.rows.push(r);
     }
@@ -533,6 +563,30 @@ export function groupRows(rows: Row[], by: SortRule, ctx: Ctx, opts: { allStatus
   const gs = [...m.values()];
   gs.sort((a, b) => (a.key === NONE ? 1 : b.key === NONE ? -1 : (by.direction === "DESC" ? -1 : 1) * cmpProp(k, a.key, b.key)));
   return gs;
+}
+
+/** For each note shown in several groups: the group keys it appears in, in display order. The first one is the
+ *  "home" copy; later copies are marked as duplicates on boards and get an "also in N groups" marker in tables. */
+export function copiesOf(groups: Group[]): Map<string, string[]> {
+  const m = new Map<string, string[]>();
+  for (const g of groups) for (const r of g.rows) m.set(r.n.id, [...(m.get(r.n.id) ?? []), g.key]);
+  for (const [id, ks] of m) if (ks.length < 2) m.delete(id);
+  return m;
+}
+
+/** New values after dragging one copy of a multi-value note from group `from` to group `to` (only that value changes). */
+export function swapValue(cur: string[], from: string, to: string): string[] {
+  return [...new Set([...cur.filter((x) => x !== from), ...(to === NONE ? [] : [to])])];
+}
+/** Toast text for a drag between groups: "Moved from #cv to #nlp, still in #llm". `cur` = values before the move. */
+export function moveMessage(prop: string, from: string, to: string, cur: string[] = []): string {
+  const k = canon(prop);
+  const f = (x: string) => (x === NONE ? `no ${label(k).toLowerCase()}` : k === "tags" ? `#${x}` : x);
+  const next = swapValue(cur, from, to);
+  const still = next.filter((x) => x !== to);
+  const head = to === NONE || cur.includes(to) ? `Removed from ${f(from)}` : `Moved from ${f(from)} to ${f(to)}`;
+  const keep = cur.includes(to) ? next : still;
+  return keep.length ? `${head}, still in ${keep.map(f).join(", ")}` : head;
 }
 
 /** All property names seen on the notes (front-matter keys), for the column / filter pickers. */

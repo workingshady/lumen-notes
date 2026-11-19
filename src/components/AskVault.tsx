@@ -66,7 +66,7 @@ function SourceCard({ s, cited, done, hot, v, onOpen }: { s: Retrieved; cited: b
       <span className={cx("mt-px flex size-5 shrink-0 items-center justify-center rounded-[6px] text-[11px] font-bold", cited || !done ? "bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-accent" : "bg-surface-2 text-muted")}>{s.n}</span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <button onClick={() => onOpen(s.noteId)} dir="auto" className="line-clamp-2 text-left font-semibold leading-[18px] text-link hover:underline" title={s.title}>[[{s.title}]]</button>
-        {(s.heading || space) && <span dir="auto" className="truncate text-[11.5px] text-muted">{[space ? `${space.icon ?? ""} ${space.name}`.trim() : "", s.heading].filter(Boolean).join(" › ")}</span>}
+        {(s.heading || space) && <span dir="auto" className="truncate text-[11.5px] text-muted">{[space ? space.name : "", s.heading].filter(Boolean).join(" › ")}</span>}
         <span dir="auto" className="line-clamp-3 text-[12.5px] leading-[18px] text-muted">{snip}</span>
       </div>
       <button onClick={() => onOpen(s.noteId)} className="h-7 shrink-0 self-start rounded-[7px] border border-line px-2 text-[12px] text-muted hover:bg-surface-2 hover:text-ink">Open</button>
@@ -79,7 +79,7 @@ function ScopePicker({ scope, setScope, note, v, spaceId }: { scope: Scope; setS
   const space = v.spaceMap.get(spaceId);
   const opts: { kind: ScopeKind; label: string; hint: string; off?: boolean }[] = [
     { kind: "vault", label: "Vault", hint: "Every note" },
-    { kind: "space", label: space ? `${space.icon ?? ""} ${space.name}`.trim() : "Space", hint: "Current space", off: !space },
+    { kind: "space", label: space ? space.name : "Space", hint: "Current space", off: !space },
     { kind: "note", label: "Note + links", hint: note ? `${note.title} and the notes it links / that link to it` : "Open a note first", off: !note },
     { kind: "path", label: "Path", hint: "A learning path's courses", off: !paths.length },
   ];

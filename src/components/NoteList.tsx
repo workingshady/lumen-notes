@@ -1,6 +1,7 @@
 import { NewVisualChooser } from "./NewVisualChooser";
 import { NewPathDialog } from "./NewPathDialog";
-import { ArrowDownWideNarrow, Globe, LayoutTemplate, Table2, Link2, Pin, Plus, SquarePen, Star, X } from "lucide-react";
+import { ArrowDownWideNarrow, FileText, Globe, LayoutTemplate, Table2, Link2, Pin, Plus, SquarePen, Star, X } from "lucide-react";
+import { PdfLibrary } from "./pdf-library";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { Note, Space } from "../../shared/types";
 import { createNote } from "../lib/actions";
@@ -11,11 +12,15 @@ import { TEMPLATES } from "../lib/templates";
 import { dragNote } from "./Sidebar";
 import { Button, cx, Empty, Sheet, STATUS_COLOR } from "./ui";
 import { PRESETS } from "../lib/canvas";
+import { Glyph } from "./Glyph";
+import { SpaceIcon } from "./SpaceIcon";
 import { PhoneChips, PhoneListHeader, SwipeRow, type PhoneFilter } from "./ws-phone";
 import { num, tr, useRtl } from "./ws-dir";
+import { filterByQuery, glyphOf, NoteListQueryBar, smartListFor, useSmartFolders } from "./SmartFolders";
 
 type Sort = "updated" | "created" | "title";
-const TYPE_ICON: Record<Note["type"], string> = { note: "", lesson: "📘", journal: "📓", flashcards: "🧠", slides: "📽️", post: "✍️", canvas: "🧩", whiteboard: "🖍️", roadmap: "🗺️", moc: "🧭", path: "🛤️", diagram: "📈", base: "🗃️" };
+/** Note type → glyph (Lumen 13 › B1 note types; the glyph name equals the type). Flashcards carry the violet "practice" colour. */
+export const TYPE_ICON = (t: Note["type"], size = 16) => <Glyph name={t} size={size} color={t === "flashcards" ? "var(--learn)" : "currentColor"} />;
 const useWide = () => { const [w, setW] = useState(() => innerWidth >= 900); useEffect(() => { const f = () => setW(innerWidth >= 900); addEventListener("resize", f); return () => removeEventListener("resize", f); }, []); return w; };
 
 /** Body without front-matter and the title H1 (the title is shown above the excerpt). */
@@ -38,7 +43,9 @@ export function listTime(t: number) {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(d.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}) });
 }
 
-const preview = (n: Note) => (n.type === "canvas" ? "Canvas board" : n.type === "whiteboard" ? "Whiteboard" : noteDerived("listPreview", n, (x) => excerpt(listBody(x.body.slice(0, 8000)), 160)) || "Empty");
+/** Task/roadmap syntax that reads as noise (and as emoji) in a one-line preview: `📅 2026-12-01`, `🛫 …`, `[x]`, `→ [[…]]` arrows stay as text. */
+const dropSyntax = (s: string) => s.replace(/\s*[\u{1F4C5}\u{1F6EB}\u{23F3}]️?\s*\d{4}-\d{2}-\d{2}/gu, "").replace(/^\s*[-*+]\s+\[[ xX/>?-]\]\s+/gm, "").replace(/\(needs:[^)]*\)/g, "");
+const preview = (n: Note) => (n.type === "canvas" ? "Canvas board" : n.type === "whiteboard" ? "Whiteboard" : noteDerived("listPreview", n, (x) => excerpt(dropSyntax(listBody(x.body.slice(0, 8000))), 160)) || "Empty");
 
 /** Big folders/tags (thousands of notes): render the list in pages; the next page mounts when its sentinel scrolls into view. */
 const PAGE = 150;
@@ -66,18 +73,25 @@ export function NoteList() {
   const [tpl, setTpl] = useState(false);
   const [filter, setFilter] = useState<PhoneFilter>(null);
   const [over, setOver] = useState(false);
+  const [pdfs, setPdfs] = useState(false); // PDF library of this space (components/pdf-library.tsx)
+  // Smart folders (filter "smart:<id>") + the desktop list search box (search operators, lib/smart.ts).
+  const smart = useSmartFolders();
+  const [lq, setLq] = useState("");
+  useEffect(() => setLq(""), [ui.filter, ui.folderId, ui.tag, ui.spaceId]);
+  const smartSel = smartListFor(v, ui, smart);
   const notes = useMemo(() => {
-    let list = scoped(v, ui);
+    let list = smartListFor(v, ui, smart)?.notes ?? scoped(v, ui);
+    if (wide && lq.trim()) list = filterByQuery(v, list, lq);
     if (!wide && filter === "pinned") list = list.filter((n) => n.pinned);
     if (!wide && filter === "review") list = list.filter((n) => n.status === "review");
     const cmp = sort === "title" ? (a: Note, b: Note) => a.title.localeCompare(b.title, undefined, { numeric: true }) : sort === "created" ? (a: Note, b: Note) => b.createdAt - a.createdAt : (a: Note, b: Note) => b.updatedAt - a.updatedAt;
     return list.sort(cmp); // design: pinned notes keep their place in time order and show a pin
-  }, [v, ui, sort, filter, wide]);
+  }, [v, ui, sort, filter, wide, smart, lq]);
   const folder = ui.folderId ? v.folderMap.get(ui.folderId) : null;
   const space = v.spaceMap.get(ui.spaceId);
-  const title = ui.filter === "visual" ? "Canvases & whiteboards" : ui.filter === "paths" ? "Learning paths" : ui.filter === "published" ? "Blog posts" : ui.tag ? `#${ui.tag}` : folder ? folder.name : ui.spaceId === "all" ? tr("All notes", rtl) : space?.name ?? tr("Notes", rtl);
+  const title = smartSel ? smartSel.sf?.name ?? "Smart folder" : ui.filter === "visual" ? "Canvases & whiteboards" : ui.filter === "paths" ? "Learning paths" : ui.filter === "published" ? "Blog posts" : ui.tag ? `#${ui.tag}` : folder ? folder.name : ui.spaceId === "all" ? tr("All notes", rtl) : space?.name ?? tr("Notes", rtl);
   const spaceId = ui.spaceId === "all" ? "inbox" : ui.spaceId;
-  const { shown, more } = usePaged(notes, `${ui.spaceId}|${ui.folderId}|${ui.tag}|${ui.filter}|${sort}|${filter}`);
+  const { shown, more } = usePaged(notes, `${ui.spaceId}|${ui.folderId}|${ui.tag}|${ui.filter}|${sort}|${filter}|${lq}`);
 
   const nextSort: Record<Sort, Sort> = { updated: "created", created: "title", title: "updated" };
   const cycleSort = () => { const s = nextSort[sort]; setSort(s); toast(`Sorted by ${s === "updated" ? "last edited" : s === "created" ? "date created" : "title"}`, undefined, { icon: "check" }); try { localStorage.setItem("lumen.sort", s); } catch { /* ignore */ } };
@@ -87,6 +101,9 @@ export function NoteList() {
   // Drop .md / .zip files onto the list to import them here (empty state: "or drop .md files here").
   const onDrop = async (e: React.DragEvent) => {
     setOver(false);
+    // Dropped PDFs become PDF notes (reader with highlights).
+    const pdfFiles = [...e.dataTransfer.files].filter((f) => /\.pdf$/i.test(f.name));
+    if (pdfFiles.length) { e.preventDefault(); const { addPdfFile } = await import("../lib/pdf-note"); let last: Note | null = null; for (const f of pdfFiles) last = await addPdfFile(f, spaceId, ui.folderId); if (last) openNote(last.id, "read"); return; }
     const fl = [...e.dataTransfer.files].filter((f) => /\.(md|markdown|txt|zip|canvas|excalidraw)$/i.test(f.name));
     if (!fl.length) return;
     e.preventDefault();
@@ -94,8 +111,8 @@ export function NoteList() {
     toast(`Imported ${r.notes} note${r.notes === 1 ? "" : "s"}`, undefined, { icon: "check" });
   };
   const empty = !notes.length && (
-    filter || ui.tag || ui.filter ? (
-      <Empty title={`No ${filter === "pinned" ? "pinned notes" : filter === "review" ? "notes to review" : "notes"} here`} hint={filter ? "Clear the filter to see every note in this folder." : "Nothing matches this filter yet."} action={<Button onClick={() => { setFilter(null); setUI({ tag: null, filter: null }); }}><X size={14} />Clear filter</Button>} />
+    filter || ui.tag || ui.filter || lq.trim() ? (
+      <Empty title={`No ${filter === "pinned" ? "pinned notes" : filter === "review" ? "notes to review" : "notes"} here`} hint={filter ? "Clear the filter to see every note in this folder." : "Nothing matches this filter yet."} action={<Button onClick={() => { setFilter(null); setLq(""); setUI({ tag: null, filter: null }); }}><X size={14} />Clear filter</Button>} />
     ) : (
       <Empty title={`“${folder?.name ?? space?.name ?? "Inbox"}” is empty`} hint="Start with a lesson — it comes with objectives, a summary and a questions section." action={<Button variant="primary" onClick={() => newNote("lesson")}><Plus size={14} />New lesson</Button>} foot="or drop .md files here" />
     )
@@ -106,7 +123,8 @@ export function NoteList() {
       <div className="flex h-full min-h-0 flex-col" onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={onDrop}>
         <PhoneListHeader />
         <PhoneChips filter={filter} setFilter={setFilter} onSort={cycleSort} sortLabel={sort} />
-        <div className={cx("flex min-h-0 flex-1 flex-col overflow-y-auto", over && "bg-accent/5")}>
+        {pdfs && <PdfLibrary spaceId={spaceId} folderId={ui.folderId} onClose={() => setPdfs(false)} />}
+        <div className={cx("flex min-h-0 flex-1 flex-col overflow-y-auto", over && "bg-accent/5", pdfs && "hidden")}>
           {shown.map((n) => (
             <SwipeRow key={n.id} n={n}>
               <button onClick={() => openNote(n.id)} className="flex w-full flex-col gap-1.5 px-4 py-3.5 text-start active:bg-surface">
@@ -125,6 +143,7 @@ export function NoteList() {
           {more}
           {empty}
           <button onClick={() => setTpl(true)} className="mx-auto my-3 flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[13px] text-muted active:bg-surface"><LayoutTemplate size={14} />New from template · base</button>
+          <button onClick={() => setPdfs(true)} className="mx-auto -mt-2 mb-3 flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[13px] text-muted active:bg-surface"><FileText size={14} />PDFs</button>
         </div>
         <TemplatePicker open={tpl} onClose={() => setTpl(false)} spaceId={spaceId} folderId={ui.folderId} />
       </div>
@@ -134,7 +153,7 @@ export function NoteList() {
   return (
     <div className="flex h-full min-h-0 flex-col" onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); setOver(true); } }} onDragLeave={() => setOver(false)} onDrop={onDrop}>
       <div className="safe-t flex h-12 shrink-0 items-center gap-2 border-b border-line pe-3 ps-4">
-        {folder ? <span className="size-2 shrink-0 rounded-[3px]" style={{ background: folder.color ? PRESETS[folder.color] ?? folder.color : "var(--muted)" }} /> : ui.filter ? null : space ? <span className="text-[14px]">{space.icon}</span> : null}
+        {smartSel?.sf ? <span className="text-muted" style={smartSel.sf.color ? { color: PRESETS[smartSel.sf.color] ?? smartSel.sf.color } : undefined}>{glyphOf(smartSel.sf, 14)}</span> : folder ? <span className="size-2 shrink-0 rounded-[3px]" style={{ background: folder.color ? PRESETS[folder.color] ?? folder.color : "var(--muted)" }} /> : ui.filter ? null : space ? <SpaceIcon space={space} size={15} /> : null}
         <span dir="auto" className="truncate text-[14px] font-semibold">{title}</span>
         <span className="text-muted">{num(notes.length, rtl)}</span>
         {(ui.tag || folder || ui.filter) && <button aria-label="Clear filter" className="text-muted hover:text-ink" onClick={() => setUI({ tag: null, folderId: null, filter: null })}><X size={13} /></button>}
@@ -142,9 +161,12 @@ export function NoteList() {
         {ui.filter === "published" && <a href="/blog" target="_blank" rel="noreferrer" className="text-[12px] text-link">View blog ↗</a>}
         <button title={`Sort: ${sort}`} aria-label="Sort" className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={cycleSort}><ArrowDownWideNarrow size={15} /></button>
         <button title="New base (database view of notes) or another template" aria-label="New base" className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={() => setTpl(true)}><Table2 size={15} /></button>
+        <button title="PDFs in this space" aria-label="PDFs" aria-pressed={pdfs} className={cx("flex size-7 items-center justify-center rounded-[6px] hover:bg-surface-2 hover:text-ink", pdfs ? "bg-surface-2 text-ink" : "text-muted")} onClick={() => setPdfs(!pdfs)}><FileText size={15} /></button>
         <button title={ui.filter === "visual" ? "New canvas or whiteboard" : ui.filter === "paths" ? "New learning path" : "New note (right-click: from template)"} aria-label="New note" className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={() => (ui.filter === "visual" ? setChooser(true) : ui.filter === "paths" ? setPathDlg(true) : newNote())} onContextMenu={(e) => { e.preventDefault(); setTpl(true); }}><SquarePen size={15} /></button>
       </div>
-      <div className={cx("flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-1.5", over && "bg-accent/5 ring-1 ring-inset ring-accent/40")}>
+      <NoteListQueryBar query={lq} setQuery={setLq} count={notes.length} />
+      {pdfs && <PdfLibrary spaceId={spaceId} folderId={ui.folderId} onClose={() => setPdfs(false)} />}
+      <div className={cx("flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-1.5", over && "bg-accent/5 ring-1 ring-inset ring-accent/40", pdfs && "hidden")}>
         {shown.map((n) => <NoteRow key={n.id} n={n} active={n.id === ui.noteId} space={ui.spaceId === "all" ? v.spaceMap.get(n.spaceId) : undefined} />)}
         {more}
         {empty}
@@ -176,23 +198,23 @@ export const NoteRow = memo(function NoteRow({ n, active, space }: { n: Note; ac
       <div dir="auto" className="line-clamp-2 h-9 w-full text-[12.5px] leading-[18px] text-muted">{preview(n)}</div>
       <div className="flex w-full items-center gap-1">
         {n.tags.slice(0, 2).map((t) => <span key={t} className="rounded-[6px] bg-surface-2 px-1.5 text-[11px] leading-[18px] text-muted">#{t}</span>)}
-        {space && <span className="truncate text-[11px] text-muted">{space.icon} {space.name}</span>}
+        {space && <span className="flex min-w-0 items-center gap-1 truncate text-[11px] text-muted"><SpaceIcon space={space} size={12} />{space.name}</span>}
         <span className="flex-1" />
         <span className="text-[11px] text-muted">{listTime(n.updatedAt)}</span>
       </div>
     </button>
   );
 }, (a, b) => a.n.id === b.n.id && a.n.updatedAt === b.n.updatedAt && a.n.title === b.n.title && a.active === b.active
-  && a.space?.id === b.space?.id && a.space?.name === b.space?.name && a.space?.icon === b.space?.icon);
+  && a.space?.id === b.space?.id && a.space?.name === b.space?.name && a.space?.icon === b.space?.icon && a.space?.color === b.space?.color);
 
 export function TemplatePicker({ open, onClose, spaceId, folderId }: { open: boolean; onClose: () => void; spaceId: string; folderId: string | null }) {
   return (
     <Sheet open={open} onClose={onClose} title="New from template">
       <div className="grid grid-cols-2 gap-2">
-        {[...TEMPLATES.filter((t) => t.type === "base"), ...TEMPLATES.filter((t) => t.type !== "base")].map((t) => (
-          <button key={t.id} onClick={async () => { onClose(); openNote((await createNote({ template: t.id, spaceId, folderId })).id, t.type === "slides" || t.type === "canvas" || t.type === "whiteboard" ? undefined : t.type === "base" ? "read" : "edit"); }}
+        {[...TEMPLATES.filter((t) => t.type === "base" || t.type === "dashboard"), ...TEMPLATES.filter((t) => t.type !== "base" && t.type !== "dashboard")].map((t) => (
+          <button key={t.id} onClick={async () => { onClose(); openNote((await createNote({ template: t.id, spaceId, folderId })).id, t.type === "slides" || t.type === "canvas" || t.type === "whiteboard" ? undefined : t.type === "base" || t.type === "dashboard" ? "read" : "edit"); }}
             className="rounded-[10px] border border-line p-3 text-start hover:border-accent">
-            <div className="text-[13.5px] font-semibold">{TYPE_ICON[t.type]} {t.name}</div>
+            <div className="flex items-center gap-2 text-[13.5px] font-semibold"><span className="text-muted">{TYPE_ICON(t.type)}</span>{t.name}</div>
             <div className="text-[12px] text-muted">{t.hint}</div>
           </button>
         ))}

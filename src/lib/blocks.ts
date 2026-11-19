@@ -316,3 +316,33 @@ export function takePendingBlock(title?: string): string | null {
   pendingBlock.id = "";
   return id;
 }
+
+// ------------------------------------------------------------------ glyphs + current "Turn into" target (R4 block menu / autocomplete)
+/** The Lumen glyph for a block (block-ref autocomplete rows, design R4-16G). */
+export function blockGlyph(blk: Block, firstLine = ""): string {
+  switch (blk.kind) {
+    case "heading": { const n = HEADING.exec(firstLine)?.[1].length ?? 2; return n === 1 ? "h1" : n === 2 ? "h2" : "h3"; }
+    case "list": return blk.list === "task" ? "task" : blk.list === "ordered" ? "numbered" : "list";
+    case "quote": return "quote";
+    case "callout": return "c-" + ((/\[!([\w-]+)\]/.exec(firstLine)?.[1] ?? "note").toLowerCase());
+    case "code": return "code";
+    case "math": return "math-block";
+    case "container": return /^:::+\s*(columns|grid)/.test(firstLine) ? "columns-2" : /^:::+\s*tabs/.test(firstLine) ? "tabs" : /^:::+\s*(expand|toggle|details)/.test(firstLine) ? "expand" : "box";
+    case "table": return "table";
+    case "hr": return "divider";
+    default: return "text";
+  }
+}
+/** What the block is now, as a Turn-into target (highlighted in the block menu grid). */
+export function turnTargetOf(blk: Block, firstLine = ""): TurnTarget | null {
+  switch (blk.kind) {
+    case "paragraph": return "paragraph";
+    case "heading": { const n = HEADING.exec(firstLine)?.[1].length ?? 2; return n === 1 ? "h1" : n === 2 ? "h2" : "h3"; }
+    case "list": return blk.list === "task" ? "todo" : blk.list === "ordered" ? "numbered" : "bullet";
+    case "quote": return "quote";
+    case "code": return "code";
+    case "callout": return `callout:${(/\[!([\w-]+)\]/.exec(firstLine)?.[1] ?? "note").toLowerCase()}`;
+    case "container": return /^:::+\s*(expand|toggle|details)/.test(firstLine) ? "toggle" : null;
+    default: return null;
+  }
+}

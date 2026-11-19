@@ -132,7 +132,7 @@ export async function canvasSvg(c: JsonCanvas, notes: Note[], p: DiagramExportPr
     } else if (n.type === "file") {
       const title = n.file.replace(/\.md$/i, "").split("/").pop()!;
       const note = byTitle.get(title.toLowerCase());
-      parts.push(`<line x1="${n.x}" y1="${n.y + 30}" x2="${n.x + n.width}" y2="${n.y + 30}" stroke="${P.border}"/>${lines(["📄 Note"], n.x + 12, n.y + 20, 11.5, 16, P.muted)}`);
+      parts.push(`<line x1="${n.x}" y1="${n.y + 30}" x2="${n.x + n.width}" y2="${n.y + 30}" stroke="${P.border}"/>${lines(["Note"], n.x + 12, n.y + 20, 11.5, 16, P.muted)}`);
       // as many title lines as fit under the header (at least one, ellipsised)
       const tl = wrap(title, inner, 14.5, 650, Math.max(1, Math.min(2, Math.floor((n.height - 54 - 8) / 19) + 1)));
       parts.push(lines(tl, n.x + 14, n.y + 54, 14.5, 19, P.text, 650));
@@ -143,7 +143,7 @@ export async function canvasSvg(c: JsonCanvas, notes: Note[], p: DiagramExportPr
       texts.push(title, el.join(" "));
     } else if (n.type === "link") {
       const tl = wrap(n.url.replace(/^https?:\/\/(www\.)?/, ""), inner, 13, 500, 3);
-      parts.push(lines(["🔗 Link"], n.x + 12, n.y + 22, 11.5, 16, P.muted), lines(tl, n.x + 14, n.y + 44, 13, 18, P.accent, 500));
+      parts.push(lines(["Link"], n.x + 12, n.y + 22, 11.5, 16, P.muted), lines(tl, n.x + 14, n.y + 44, 13, 18, P.accent, 500));
       texts.push(tl.join(" "));
     }
   }

@@ -1,47 +1,61 @@
 // Project hub logic: docs (PRD, RFC, ADR, requirements, action plans, meetings, drafts), task cards, requirements
-// traceability and generated Mermaid. Everything is read from / written to plain Markdown in the project's notes.
+// traceability, timeline (Gantt) rows, health and generated Mermaid. Everything is read from / written to plain
+// Markdown in the project's notes.
 //
-// Doc:   front-matter `doc: prd|rfc|adr|requirements|plan|meeting|draft|spec`, `docstatus: draft|review|approved|superseded|rejected`, `owner: …`
+// Doc:   front-matter `doc: prd|rfc|adr|requirements|plan|meeting|draft|spec`, `docstatus: draft|review|approved|superseded|rejected`,
+//        `owner: …`, optional `supersededby: ADR-3` / `reason: …` / `approved: YYYY-MM-DD` (shown in the status header)
 // Task:  - [>] backlog · [ ] todo · [/] doing · [?] review · [x] done · [-] cancelled
-//        inline: !p1 !p2 !p3 (priority) · ~3d ~4h (estimate) · 📅 2026-12-01 (due) · 🛫 2026-11-20 (start) · #epic/auth · @amir · REQ-12 · [[Doc]]
+//        inline: !p1 !p2 !p3 (priority) · ~3d ~4h ~1w (estimate) · #epic/auth · @amir · REQ-12 · [[Doc]]
+//        due:   (calendar emoji) 2026-12-01  |  due:2026-12-01  |  @due(2026-12-01)
+//        start: (plane / hourglass emoji) 2026-11-20  |  start:2026-11-20  |  @start(2026-11-20)
 // Req:   - REQ-12 (must|should|could|wont) Text …   (in any doc; MoSCoW priority)
 import type { Note } from "../../shared/types";
+import type { GlyphName } from "./glyphs";
 import { setFrontMatter, splitFrontMatter } from "./parse";
 
 export type DocKind = "prd" | "rfc" | "adr" | "requirements" | "plan" | "meeting" | "draft" | "spec";
 export type DocStatus = "draft" | "review" | "approved" | "superseded" | "rejected";
-export const DOC_KINDS: { kind: DocKind; label: string; short: string; icon: string; hint: string }[] = [
-  { kind: "prd", label: "PRD", short: "PRD", icon: "🎯", hint: "Product requirements: problem, users, goals, scope, metrics" },
-  { kind: "rfc", label: "RFC", short: "RFC", icon: "🧩", hint: "Technical proposal: design, alternatives, rollout" },
-  { kind: "adr", label: "Decision (ADR)", short: "ADR", icon: "⚖️", hint: "One decision: context, options, decision, consequences" },
-  { kind: "requirements", label: "Requirements", short: "REQ", icon: "📋", hint: "Numbered requirements (REQ-1…) with MoSCoW priority" },
-  { kind: "plan", label: "Action plan", short: "Plan", icon: "🗺️", hint: "Steps as task cards with owners and dates" },
-  { kind: "meeting", label: "Meeting notes", short: "Meet", icon: "🗓️", hint: "Agenda, notes, decisions, action items" },
-  { kind: "spec", label: "Spec / design doc", short: "Spec", icon: "📐", hint: "API, data model, diagrams" },
-  { kind: "draft", label: "Draft", short: "Draft", icon: "✏️", hint: "Anything not ready yet" },
+export const DOC_KINDS: { kind: DocKind; label: string; short: string; glyph: GlyphName; hint: string }[] = [
+  { kind: "prd", label: "PRD", short: "PRD", glyph: "note", hint: "Product requirements: problem, users, goals, scope, metrics" },
+  { kind: "rfc", label: "RFC", short: "RFC", glyph: "note", hint: "Technical proposal: design, alternatives, rollout" },
+  { kind: "adr", label: "ADR", short: "ADR", glyph: "d-approved", hint: "One decision: context, options, decision, consequences" },
+  { kind: "requirements", label: "Requirements", short: "REQ", glyph: "requirement", hint: "Numbered requirements (REQ-1…) with MoSCoW priority" },
+  { kind: "plan", label: "Action plan", short: "Plan", glyph: "task", hint: "Steps as task cards with owners and dates" },
+  { kind: "meeting", label: "Meeting notes", short: "Meet", glyph: "journal", hint: "Agenda, notes, decisions, action items" },
+  { kind: "spec", label: "Spec", short: "Spec", glyph: "diagram", hint: "API, data model, diagrams" },
+  { kind: "draft", label: "Draft", short: "Draft", glyph: "d-draft", hint: "Anything not ready yet" },
 ];
 export const DOC_STATUSES: DocStatus[] = ["draft", "review", "approved", "superseded", "rejected"];
 export const DOC_STATUS_COLOR: Record<DocStatus, string> = { draft: "var(--muted)", review: "var(--warning)", approved: "var(--success)", superseded: "var(--muted)", rejected: "var(--danger)" };
+export const DOC_STATUS_LABEL: Record<DocStatus, string> = { draft: "Draft", review: "In review", approved: "Approved", superseded: "Superseded", rejected: "Rejected" };
+export const DOC_STATUS_GLYPH: Record<DocStatus, GlyphName> = { draft: "d-draft", review: "d-review", approved: "d-approved", superseded: "d-superseded", rejected: "d-rejected" };
 
-export interface ProjectDoc { note: Note; kind: DocKind; status: DocStatus; owner: string }
+export interface ProjectDoc { note: Note; kind: DocKind; status: DocStatus; owner: string; supersededBy: string; reason: string; approved: string }
 export function docOf(n: Note): ProjectDoc | null {
   if (n.type === "canvas" || n.type === "whiteboard") return null;
   const fm = splitFrontMatter(n.body).data;
   const kind = fm.doc as DocKind;
   if (!kind || !DOC_KINDS.some((d) => d.kind === kind)) return null;
-  return { note: n, kind, status: (DOC_STATUSES as string[]).includes(fm.docstatus) ? (fm.docstatus as DocStatus) : "draft", owner: fm.owner ?? "" };
+  return {
+    note: n, kind, status: (DOC_STATUSES as string[]).includes(fm.docstatus) ? (fm.docstatus as DocStatus) : "draft", owner: fm.owner ?? "",
+    supersededBy: fm.supersededby ?? fm.superseded_by ?? "", reason: fm.reason ?? "", approved: fm.approved ?? fm.decided ?? "",
+  };
 }
-export const setDocStatus = (body: string, s: DocStatus) => setFrontMatter(body, { docstatus: s });
+/** Set a doc's status; approving stamps `approved: YYYY-MM-DD` so the header can say "Approved 10 Nov". */
+export const setDocStatus = (body: string, s: DocStatus, today = new Date().toISOString().slice(0, 10)) =>
+  setFrontMatter(body, s === "approved" ? { docstatus: s, approved: today } : { docstatus: s });
 
 // ------------------------------------------------------------------ task cards
 export type CardStatus = "backlog" | "todo" | "doing" | "review" | "done" | "cancelled";
-export const CARD_COLUMNS: { s: CardStatus; label: string; mark: string; color: string }[] = [
-  { s: "backlog", label: "Backlog", mark: ">", color: "var(--muted)" },
-  { s: "todo", label: "To do", mark: " ", color: "var(--text)" },
-  { s: "doing", label: "In progress", mark: "/", color: "var(--info)" },
-  { s: "review", label: "Review", mark: "?", color: "var(--warning)" },
-  { s: "done", label: "Done", mark: "x", color: "var(--success)" },
+export const CARD_COLUMNS: { s: CardStatus; label: string; mark: string; color: string; glyph: GlyphName }[] = [
+  { s: "backlog", label: "Backlog", mark: ">", color: "var(--muted)", glyph: "t-backlog" },
+  { s: "todo", label: "Todo", mark: " ", color: "var(--text)", glyph: "t-todo" },
+  { s: "doing", label: "Doing", mark: "/", color: "var(--info)", glyph: "t-doing" },
+  { s: "review", label: "Review", mark: "?", color: "var(--warning)", glyph: "t-review" },
+  { s: "done", label: "Done", mark: "x", color: "var(--success)", glyph: "t-done" },
+  { s: "cancelled", label: "Cancelled", mark: "-", color: "var(--muted)", glyph: "t-cancelled" },
 ];
+export const CARD_META = Object.fromEntries(CARD_COLUMNS.map((c) => [c.s, c])) as Record<CardStatus, (typeof CARD_COLUMNS)[number]>;
 const MARK_STATUS: Record<string, CardStatus> = { ">": "backlog", " ": "todo", "/": "doing", "?": "review", x: "done", X: "done", "-": "cancelled" };
 const STATUS_MARK: Record<CardStatus, string> = { backlog: ">", todo: " ", doing: "/", review: "?", done: "x", cancelled: "-" };
 export interface TaskCard {
@@ -50,6 +64,24 @@ export interface TaskCard {
   epic: string | null; owner: string | null; reqs: string[]; links: string[];
 }
 const TASK_RE = /^(\s*[-*+]\s+)\[([ xX/?>-])\]\s+(.*)$/;
+const DUE_RE = /(?:\u{1F4C5}\s*|(?<![\w/])due:\s*|@due\()(\d{4}-\d{2}-\d{2})\)?/u;
+const START_RE = /(?:\u{1F6EB}\s*|\u{23F3}\s*|(?<![\w/])start:\s*|@start\()(\d{4}-\d{2}-\d{2})\)?/u;
+const STRIP_RE = /(?:^|\s)!p[123]\b|(?:^|\s)~\d+(?:\.\d+)?[hdw]\b|(?:\u{1F4C5}|\u{1F6EB}|\u{23F3})\s*\d{4}-\d{2}-\d{2}|(?<![\w/])(?:due|start):\s*\d{4}-\d{2}-\d{2}|@(?:due|start)\(\d{4}-\d{2}-\d{2}\)|#epic\/[\p{L}\p{N}_-]+|(?:^|\s)@(?!due\(|start\()[\p{L}\p{N}_.-]+|\bREQ-\d+\b/gu;
+
+/** Parse one task line's text (after the checkbox) into its fields. */
+export function parseTaskText(t: string) {
+  const pr = /(?:^|\s)!p([123])\b/.exec(t);
+  const est = /(?:^|\s)~(\d+(?:\.\d+)?)([hdw])\b/.exec(t);
+  const due = DUE_RE.exec(t);
+  const start = START_RE.exec(t);
+  const epic = /#epic\/([\p{L}\p{N}_-]+)/u.exec(t);
+  const owner = /(?:^|\s)@(?!due\(|start\()([\p{L}\p{N}_.-]+)/u.exec(t);
+  const reqs = [...t.matchAll(/\bREQ-(\d+)\b/g)].map((x) => `REQ-${x[1]}`);
+  const links = [...t.matchAll(/\[\[([^\]|]+)/g)].map((x) => x[1].trim());
+  const text = t.replace(STRIP_RE, " ").replace(/\s+/g, " ").trim();
+  const estDays = est ? Number(est[1]) * (est[2] === "h" ? 1 / 8 : est[2] === "w" ? 5 : 1) : 0;
+  return { text, priority: pr ? (Number(pr[1]) as 1 | 2 | 3) : null, estimate: est ? `${est[1]}${est[2]}` : null, estDays, due: due?.[1] ?? null, start: start?.[1] ?? null, epic: epic?.[1] ?? null, owner: owner?.[1] ?? null, reqs, links };
+}
 export function projectTasks(notes: Note[]): TaskCard[] {
   const out: TaskCard[] = [];
   for (const n of notes) {
@@ -60,18 +92,7 @@ export function projectTasks(notes: Note[]): TaskCard[] {
       if (fence) return;
       const m = TASK_RE.exec(l);
       if (!m) return;
-      const t = m[3];
-      const pr = /(?:^|\s)!p([123])\b/.exec(t);
-      const est = /(?:^|\s)~(\d+(?:\.\d+)?)([hdw])\b/.exec(t);
-      const due = /📅\s*(\d{4}-\d{2}-\d{2})/.exec(t);
-      const start = /🛫\s*(\d{4}-\d{2}-\d{2})/.exec(t);
-      const epic = /#epic\/([\p{L}\p{N}_-]+)/u.exec(t);
-      const owner = /(?:^|\s)@([\p{L}\p{N}_.-]+)/u.exec(t);
-      const reqs = [...t.matchAll(/\bREQ-(\d+)\b/g)].map((x) => `REQ-${x[1]}`);
-      const links = [...t.matchAll(/\[\[([^\]|]+)/g)].map((x) => x[1].trim());
-      const text = t.replace(/(?:^|\s)!p[123]\b|(?:^|\s)~\d+(?:\.\d+)?[hdw]\b|📅\s*\d{4}-\d{2}-\d{2}|🛫\s*\d{4}-\d{2}-\d{2}|#epic\/[\p{L}\p{N}_-]+|(?:^|\s)@[\p{L}\p{N}_.-]+|\bREQ-\d+\b/gu, " ").replace(/\s+/g, " ").trim();
-      const estDays = est ? Number(est[1]) * (est[2] === "h" ? 1 / 8 : est[2] === "w" ? 5 : 1) : 0;
-      out.push({ key: `${n.id}:${line}`, note: n, line, raw: l, text, status: MARK_STATUS[m[2]], priority: pr ? (Number(pr[1]) as 1 | 2 | 3) : null, estimate: est ? `${est[1]}${est[2]}` : null, estDays, due: due?.[1] ?? null, start: start?.[1] ?? null, epic: epic?.[1] ?? null, owner: owner?.[1] ?? null, reqs, links });
+      out.push({ key: `${n.id}:${line}`, note: n, line, raw: l, status: MARK_STATUS[m[2]], ...parseTaskText(m[3]) });
     });
   }
   return out;
@@ -81,9 +102,20 @@ export function setCardStatus(body: string, line: number, s: CardStatus) {
   lines[line] = lines[line].replace(/\[([ xX/?>-])\]/, `[${STATUS_MARK[s]}]`);
   return lines.join("\n");
 }
+/** A new task line for a column: `- [/] text` (the text may already carry markers like !p1 ~2d #epic/x). */
+export const taskLine = (text: string, s: CardStatus = "todo") => `- [${STATUS_MARK[s]}] ${text.trim()}`;
+/** Two-letter avatar for an @owner ("sara" → "SA", "amir.h" → "AH"). */
+export const initials = (owner: string) => {
+  const parts = owner.split(/[._-]+/).filter(Boolean);
+  return (parts.length > 1 ? parts[0][0] + parts[1][0] : owner.slice(0, 2)).toUpperCase();
+};
 
 // ------------------------------------------------------------------ requirements + traceability
 export type Moscow = "must" | "should" | "could" | "wont";
+export const MOSCOW: { k: Moscow; label: string; color: string }[] = [
+  { k: "must", label: "Must", color: "var(--danger)" }, { k: "should", label: "Should", color: "var(--warning)" },
+  { k: "could", label: "Could", color: "var(--info)" }, { k: "wont", label: "Won't", color: "var(--muted)" },
+];
 export interface Requirement { id: string; priority: Moscow | null; text: string; doc: Note; line: number; tasks: TaskCard[]; state: "met" | "progress" | "planned" | "none" }
 const REQ_RE = /^\s*[-*+]\s+(?:\[[ xX/?>-]\]\s+)?(REQ-\d+)\s*(?:\((must|should|could|won'?t)\))?\s*[:—-]?\s*(.+)$/i;
 export function requirements(notes: Note[], tasks: TaskCard[]): Requirement[] {
@@ -96,7 +128,8 @@ export function requirements(notes: Note[], tasks: TaskCard[]): Requirement[] {
       const id = m[1].toUpperCase();
       if (out.some((r) => r.id === id)) return;
       const linked = tasks.filter((t) => t.reqs.includes(id) && !(t.note.id === n.id && t.line === line));
-      const state: Requirement["state"] = !linked.length ? "none" : linked.every((t) => t.status === "done" || t.status === "cancelled") ? "met" : linked.some((t) => t.status === "doing" || t.status === "review" || t.status === "done") ? "progress" : "planned";
+      const live = linked.filter((t) => t.status !== "cancelled");
+      const state: Requirement["state"] = !live.length ? "none" : live.every((t) => t.status === "done") ? "met" : live.some((t) => t.status === "doing" || t.status === "review" || t.status === "done") ? "progress" : "planned";
       out.push({ id, priority: m[2] ? (m[2].toLowerCase().replace("'", "") as Moscow) : null, text: m[3].trim(), doc: n, line, tasks: linked, state });
     });
   }
@@ -104,9 +137,38 @@ export function requirements(notes: Note[], tasks: TaskCard[]): Requirement[] {
 }
 export const nextReqId = (reqs: Requirement[]) => `REQ-${Math.max(0, ...reqs.map((r) => Number(r.id.slice(4)))) + 1}`;
 
+// ------------------------------------------------------------------ timeline (Gantt rows)
+const dayMs = 86400000;
+const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
+const at = (d: string) => Date.parse(d + "T00:00:00Z");
+/** Start/end of a dated card: start = start date, else due − estimate (min 1 day) + 1; end = due. */
+export function cardSpan(c: TaskCard): { start: string; end: string } | null {
+  if (!c.due) return null;
+  const days = Math.max(1, Math.round(c.estDays || 1));
+  const start = c.start && c.start <= c.due ? c.start : iso(at(c.due) - (days - 1) * dayMs);
+  return { start, end: c.due };
+}
+/** Late = due passed and not done, or start passed while still in backlog/todo. */
+export const isLate = (c: TaskCard, today: string) => c.status !== "done" && c.status !== "cancelled" && ((!!c.due && c.due < today) || (!!c.start && c.start < today && (c.status === "todo" || c.status === "backlog")));
+export interface GanttRow { kind: "epic" | "task"; label: string; start: string; end: string; card?: TaskCard; late?: boolean; count?: number }
+/** Rows grouped by epic: one epic bar spanning its dated cards, then the cards (sorted by start). */
+export function ganttRows(cards: TaskCard[], today: string): GanttRow[] {
+  const dated = cards.filter((c) => c.due && c.status !== "cancelled");
+  const byEpic = new Map<string, TaskCard[]>();
+  for (const c of dated) byEpic.set(c.epic ?? "general", [...(byEpic.get(c.epic ?? "general") ?? []), c]);
+  const rows: GanttRow[] = [];
+  const epics = [...byEpic].map(([e, cs]) => ({ e, cs: cs.map((c) => ({ c, s: cardSpan(c)! })).sort((a, b) => a.s.start.localeCompare(b.s.start)) }))
+    .sort((a, b) => a.cs[0].s.start.localeCompare(b.cs[0].s.start));
+  for (const { e, cs } of epics) {
+    rows.push({ kind: "epic", label: `Epic: ${e}`, start: cs[0].s.start, end: cs.map((x) => x.s.end).sort().at(-1)!, count: cs.length, late: false });
+    for (const { c, s } of cs) rows.push({ kind: "task", label: c.text, start: s.start, end: s.end, card: c, late: isLate(c, today) });
+  }
+  return rows;
+}
+
 // ------------------------------------------------------------------ generated Mermaid
 const mq = (s: string) => s.replace(/["`]/g, "'").replace(/[:;#]/g, " ").slice(0, 60);
-/** Gantt from cards with dates: start (🛫 or due − estimate) → due. Grouped by epic. */
+/** Gantt from cards with dates: start (start date or due − estimate) → due. Grouped by epic. */
 export function ganttMermaid(cards: TaskCard[], title: string): string | null {
   const dated = cards.filter((c) => c.due && c.status !== "cancelled");
   if (!dated.length) return null;
@@ -120,10 +182,8 @@ export function ganttMermaid(cards: TaskCard[], title: string): string | null {
     lines.push(`  section ${mq(epic)}`);
     for (const c of cs.sort((a, b) => (a.due ?? "").localeCompare(b.due ?? ""))) {
       const tag = c.status === "done" ? "done, " : c.status === "doing" || c.status === "review" ? "active, " : c.priority === 1 ? "crit, " : "";
-      const days = Math.max(1, Math.round(c.estDays || 1));
-      const start = c.start ?? (() => { const d = new Date(c.due + "T12:00"); d.setDate(d.getDate() - days + 1); return d.toISOString().slice(0, 10); })();
-      const end = (() => { const e = new Date(c.due + "T12:00"); e.setDate(e.getDate() + 1); return e.toISOString().slice(0, 10); })(); // gantt end is exclusive
-      lines.push(`    ${mq(c.text) || "Task"} :${tag}t${i++}, ${start}, ${end}`);
+      const s = cardSpan(c)!;
+      lines.push(`    ${mq(c.text) || "Task"} :${tag}t${i++}, ${s.start}, ${iso(at(s.end) + dayMs)}`); // gantt end is exclusive
     }
   }
   return lines.join("\n");
@@ -146,19 +206,45 @@ export function epicMermaid(cards: TaskCard[], title: string): string | null {
   for (const c of cards) if (c.status !== "cancelled") epics.set(c.epic ?? "General", [...(epics.get(c.epic ?? "General") ?? []), c]);
   if (!epics.size) return null;
   const L = ["mindmap", `  root((${mq(title).slice(0, 30)}))`];
-  for (const [e, cs] of epics) { const done = cs.filter((c) => c.status === "done").length; L.push(`    ${mq(e)} ${done}/${cs.length}`); cs.slice(0, 8).forEach((c) => L.push(`      ${c.status === "done" ? "✓ " : ""}${mq(c.text).slice(0, 40)}`)); }
+  for (const [e, cs] of epics) { const done = cs.filter((c) => c.status === "done").length; L.push(`    ${mq(e)} ${done}/${cs.length}`); cs.slice(0, 8).forEach((c) => L.push(`      ${c.status === "done" ? "(done) " : ""}${mq(c.text).slice(0, 40)}`)); }
   return L.join("\n");
 }
 
-/** Health: on track / at risk / late, from deadline, time used and work done. */
-export function projectHealth(cards: TaskCard[], deadline: string | null, createdAt: number) {
+// ------------------------------------------------------------------ health
+export type HealthTone = "ok" | "warn" | "bad" | "muted";
+export interface Health { label: string; tone: HealthTone; pct: number; overdue: number; timePct?: number; reasons: string[] }
+/**
+ * Health: On track / At risk / Behind, with the reasons the Overview explains ("Why at risk").
+ * Signals: work done vs time used (deadline), must-have requirements without tasks, overdue cards, epics that started late.
+ */
+export function projectHealth(cards: TaskCard[], deadline: string | null, createdAt: number, reqs: Requirement[] = [], now = Date.now()): Health {
+  const today = iso(now);
   const live = cards.filter((c) => c.status !== "cancelled");
   const done = live.filter((c) => c.status === "done").length;
   const pct = live.length ? done / live.length : 0;
-  const overdue = live.filter((c) => c.due && c.status !== "done" && c.due < new Date().toISOString().slice(0, 10)).length;
-  if (!deadline) return { label: overdue ? "Has overdue tasks" : "No deadline", tone: overdue ? "warn" : "muted", pct, overdue } as const;
-  const total = Date.parse(deadline) - createdAt, used = Date.now() - createdAt;
-  const timePct = total > 0 ? Math.min(1, Math.max(0, used / total)) : 1;
-  const tone = Date.now() > Date.parse(deadline) && pct < 1 ? "bad" : pct + 0.1 >= timePct && !overdue ? "ok" : pct + 0.25 >= timePct ? "warn" : "bad";
-  return { label: tone === "ok" ? "On track" : tone === "warn" ? "At risk" : "Behind", tone, pct, overdue, timePct } as const;
+  const overdue = live.filter((c) => c.due && c.status !== "done" && c.due < today).length;
+  const reasons: string[] = [];
+  const mustNone = reqs.filter((r) => r.priority === "must" && r.state === "none").map((r) => r.id);
+  if (mustNone.length) reasons.push(`${mustNone.length} must-have requirement${mustNone.length === 1 ? " has" : "s have"} no tasks (${mustNone.join(", ")}).`);
+  if (overdue) reasons.push(`${overdue} task${overdue === 1 ? " is" : "s are"} past due.`);
+  // epics with a card whose start date passed while it still waits in backlog/todo
+  const epics = new Map<string, TaskCard[]>();
+  for (const c of live) if (c.epic) epics.set(c.epic, [...(epics.get(c.epic) ?? []), c]);
+  for (const [e, cs] of epics) {
+    const late = cs.filter((c) => c.start && c.start < today && (c.status === "todo" || c.status === "backlog")).map((c) => Math.round((at(today) - at(c.start!)) / dayMs));
+    if (late.length) { const d = Math.max(...late); reasons.push(`The ${e} epic started ${d} day${d === 1 ? "" : "s"} late.`); }
+  }
+  let tone: HealthTone, timePct: number | undefined;
+  if (!deadline) tone = reasons.length ? "warn" : "muted";
+  else {
+    const total = at(deadline) - createdAt, used = now - createdAt;
+    timePct = total > 0 ? Math.min(1, Math.max(0, used / total)) : 1;
+    const gap = `${Math.round(timePct * 100)}% of the time is used, ${Math.round(pct * 100)}% of the work is done.`;
+    if (now > at(deadline) + dayMs && pct < 1) { tone = "bad"; reasons.unshift("The deadline has passed."); }
+    else if (pct + 0.25 < timePct) { tone = "bad"; reasons.unshift(gap); }
+    else if (pct + 0.1 < timePct) { tone = "warn"; reasons.unshift(gap); }
+    else tone = mustNone.length || overdue || reasons.length ? "warn" : "ok";
+  }
+  const label = tone === "ok" ? "On track" : tone === "warn" ? "At risk" : tone === "bad" ? "Behind" : "No deadline";
+  return { label, tone, pct, overdue, timePct, reasons };
 }

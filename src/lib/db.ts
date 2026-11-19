@@ -93,7 +93,7 @@ export function newNote(p: Partial<Note> = {}): Note {
 export function newSpace(p: Partial<Space> = {}): Space {
   const t = now();
   return {
-    id: uid(), name: "New space", kind: "area", icon: "📁", color: null, description: "", props: {}, roadmapId: null,
+    id: uid(), name: "New space", kind: "area", icon: "glyph:folder", color: null, description: "", props: {}, roadmapId: null,
     sort: t, archived: 0, createdAt: t, updatedAt: t, deleted: 0, dirty: 1, ...p,
   };
 }
@@ -104,6 +104,6 @@ export function newFolder(p: Partial<Folder> & { spaceId: string }): Folder {
 /** Make sure the default Inbox space exists (first run). */
 export async function ensureDefaults() {
   if (!(await db.spaces.get(DEFAULT_SPACE))) {
-    await db.spaces.put(newSpace({ id: DEFAULT_SPACE, name: "Inbox", kind: "area", icon: "📥", description: "Default space", sort: 0, dirty: 0, updatedAt: 0 }));
+    await db.spaces.put(newSpace({ id: DEFAULT_SPACE, name: "Inbox", kind: "area", icon: "glyph:inbox", description: "Default space", sort: 0, dirty: 0, updatedAt: 0 }));
   }
 }

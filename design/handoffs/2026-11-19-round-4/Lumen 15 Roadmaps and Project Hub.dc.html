@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 15 Roadmaps &amp; project hub</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 4</span></div><div style="font-size:14px;color:#9A9890">Course roadmaps edited by dragging, and the project space as a working hub. Skill-tree links follow <a href="Lumen 14b Graph and Connections.dc.html">14b</a>.</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · A2</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Course roadmap · desktop</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Drop on the top or bottom third of a row to insert; on the middle third to make it a prerequisite. A drop that would create a loop is refused and explained.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:48px">
+      <sc-for list="{{ rd }}" as="f" hint-placeholder-count="7">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+          <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};--sh:{{ f.t.sh }};width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg)">
+            <dc-import name="RoadmapDesk" view="{{ f.v }}" drag="{{ f.d }}" sheet="{{ f.s }}" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+          </div>
+          <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · A2</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Roadmap · phone, menus, unlock moment</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">No dragging on phone: every row has ⋯ with the same actions. Marking a topic done plays a quiet unlock.</p></div>
+    <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">R4-15H</span> Outline · ⋯ menu open</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--da:#EF6B6B;--in:#7AA2F7;width:412px;height:915px;border-radius:28px;background:var(--bg);color:var(--tx);position:relative;overflow:hidden;display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;font-size:13px;font-weight:500">21:41</div>
+          <div style="padding:8px 16px;display:flex;align-items:center;gap:12px"><dc-import name="LumenGlyph" glyph="eye" size="{{ 22 }}" color="#39C5CF" tile="#39C5CF" hint-size="38px,38px"></dc-import><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-weight:650;font-size:16px">CS231n</span><span style="font-size:12px;color:var(--mu)">9 of 24 · target 20 Dec</span></div></div>
+          <div style="padding:4px 16px 10px"><div style="display:grid;grid-template-columns:repeat(3,1fr);padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="height:36px;border-radius:7px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:600">Outline</span><span style="height:36px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Skill tree</span><span style="height:36px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Timeline</span></div></div>
+          <div style="margin:0 16px;border-radius:14px;background:var(--sf);border:1px solid var(--bd)">
+            <div style="height:52px;padding:0 12px;display:flex;align-items:center;gap:10px"><dc-import name="LumenGlyph" glyph="expand" size="{{ 16 }}" color="var(--mu)" hint-size="16px,16px"></dc-import><span style="flex:1;font-weight:600">Module 2 · Neural networks</span><span style="font-size:12px;color:var(--mu)">2/5</span></div>
+            <sc-for list="{{ ptopics }}" as="t" hint-placeholder-count="5"><div style="min-height:52px;padding:0 4px 0 14px;display:flex;align-items:center;gap:10px;border-top:1px solid var(--bd);background:{{ t.bg }};opacity:{{ t.op }}"><dc-import name="LumenGlyph" glyph="{{ t.g }}" size="{{ 16 }}" color="{{ t.gc }}" hint-size="16px,16px"></dc-import><div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-weight:500">{{ t.n }}</span><span style="font-size:12px;color:var(--mu)">{{ t.s }}</span></div><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--mu);font-size:18px">⋯</span></div></sc-for>
+          </div>
+          <div style="position:absolute;inset:0;background:rgba(5,6,8,.55)"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--sf);border-radius:14px 14px 0 0;padding:10px 16px 0;display:flex;flex-direction:column">
+            <div style="display:flex;justify-content:center;padding-bottom:8px"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+            <span style="font-weight:650;font-size:16px;padding:4px 0 8px">Backpropagation</span>
+            <sc-for list="{{ pmenu }}" as="m" hint-placeholder-count="8"><div style="height:50px;display:flex;align-items:center;gap:12px;border-top:1px solid var(--bd);color:{{ m.c }}"><dc-import name="LumenGlyph" glyph="{{ m.g }}" size="{{ 18 }}" hint-size="18px,18px"></dc-import><span style="flex:1">{{ m.l }}</span><span style="color:var(--mu);font-size:12.5px">{{ m.r }}</span></div></sc-for>
+            <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+          </div>
+        </div></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">R4-15I</span> Unlock moment · 3 frames, 600 ms total</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ok:#6BCB8B;--in:#7AA2F7;display:flex;flex-direction:column;gap:16px;width:420px">
+          <sc-for list="{{ unlock }}" as="u" hint-placeholder-count="3"><div style="display:flex;gap:16px;align-items:center"><div style="width:240px;height:110px;border-radius:12px;background:var(--bg);position:relative;overflow:hidden">
+            <div style="position:absolute;left:14px;top:14px;width:120px;height:34px;border-radius:9px;background:color-mix(in srgb,var(--ok) 14%,var(--sf));border:1px solid color-mix(in srgb,var(--ok) 50%,transparent);display:flex;align-items:center;gap:6px;padding:0 8px;box-sizing:border-box;font-size:12px;color:var(--tx)"><dc-import name="LumenGlyph" glyph="s-done" size="{{ 14 }}" color="var(--ok)" hint-size="14px,14px"></dc-import>Backprop</div>
+            <svg width="240" height="110" style="position:absolute;left:0;top:0"><path d="M134 31C160 31 160 76 120 76" style="fill:none;stroke:var(--ok);stroke-width:1.8;stroke-dasharray:{{ u.dash }}"></path></svg>
+            <div style="position:absolute;left:90px;top:60px;width:140px;height:34px;border-radius:9px;background:var(--sf);border:{{ u.bd }};box-shadow:{{ u.glow }};display:flex;align-items:center;gap:6px;padding:0 8px;box-sizing:border-box;font-size:12px;color:var(--tx);opacity:{{ u.op }};transform:translateY({{ u.ty }})"><dc-import name="LumenGlyph" glyph="{{ u.g }}" size="{{ 14 }}" color="{{ u.gc }}" hint-size="14px,14px"></dc-import>Weight init</div>
+          </div><span style="font-size:13px;color:#CFCBC3;line-height:19px"><b style="color:#F25C9A">{{ u.t }}</b> — {{ u.d }}</span></div></sc-for>
+          <span style="font-size:12.5px;color:#9A9890;line-height:19px">No confetti, no sound. Reduced motion: the lock just swaps to an open circle.</span>
+        </div></div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · A3</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Project hub · every tab</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Tasks come from checkbox lines in any note; dragging a card writes the marker back. Links are plain links — nothing is connected.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:48px">
+      <sc-for list="{{ hub }}" as="f" hint-placeholder-count="7">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+          <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};--sh:{{ f.t.sh }};width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg)">
+            <dc-import name="HubDesk" tab="{{ f.tab }}" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+      <sc-for list="{{ hubPhone }}" as="f" hint-placeholder-count="7">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+          <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);display:flex;flex-direction:column">
+            <div style="height:32px;padding:0 22px;display:flex;align-items:center;font:500 13px Inter;color:#E8E6E1">21:41</div>
+            <div style="flex:1;position:relative"><dc-import name="HubDesk" tab="{{ f.tab }}" phone="{{ true }}" hint-size="412px,800px" style="position:absolute;inset:0"></dc-import></div>
+            <dc-import name="LumenTabBar" active="none" hint-size="412px,88px"></dc-import>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:1440px;color:var(--tx)">
+      <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:20px;display:flex;flex-direction:column;gap:14px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Task card anatomy</span>
+        <div style="display:flex;gap:24px;align-items:flex-start">
+          <div style="width:260px;border-radius:10px;background:var(--sf2);padding:12px;display:flex;flex-direction:column;gap:8px"><span style="font-weight:500">Sync conflict screen</span><div style="display:flex;gap:4px;flex-wrap:wrap;font-size:11px"><span style="padding:0 5px;border-radius:5px;line-height:18px;background:color-mix(in srgb,var(--da) 14%,transparent);color:var(--da)">p1</span><span style="padding:0 5px;border-radius:5px;line-height:18px;background:var(--bg);color:var(--mu)">3d</span><span style="padding:0 5px;border-radius:5px;line-height:18px;background:var(--bg);color:var(--da)">Wed</span><span style="padding:0 5px;border-radius:5px;line-height:18px;background:color-mix(in srgb,var(--in) 14%,transparent);color:var(--in);font-family:'JetBrains Mono',monospace">REQ-5</span></div><div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mu)"><span style="width:18px;height:18px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:9px;color:var(--tx)">SK</span>#epic/sync · from RFC</div></div>
+          <div style="flex:1;font:400 12.5px/22px 'JetBrains Mono',monospace;color:var(--mu)"><span style="color:var(--tx)">- [/] Sync conflict screen !p1 ~3d 📅 2026-11-19 ⏳ 2026-11-14 #epic/sync @sara REQ-5</span><br>[&gt;] backlog · [ ] todo · [/] doing · [?] review · [x] done · [-] cancelled</div>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap"><sc-for list="{{ markers }}" as="m" hint-placeholder-count="6"><span style="display:flex;align-items:center;gap:6px"><dc-import name="LumenGlyph" glyph="{{ m.g }}" size="{{ 16 }}" color="{{ m.c }}" hint-size="16px,16px"></dc-import><code style="font:12px 'JetBrains Mono',monospace;color:var(--mu)">{{ m.k }}</code>{{ m.l }}</span></sc-for></div>
+      </div>
+      <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:20px;display:flex;flex-direction:column;gap:12px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Doc status header · 5 states</span>
+        <sc-for list="{{ dstates }}" as="d" hint-placeholder-count="5"><div style="height:40px;border-radius:10px;border:1px solid var(--bd);background:var(--sf);padding:0 12px;display:flex;align-items:center;gap:10px"><span style="height:24px;padding:0 9px;border-radius:999px;background:{{ d.bg }};color:{{ d.c }};display:flex;align-items:center;gap:6px;font-weight:600;font-size:12px"><dc-import name="LumenGlyph" glyph="{{ d.g }}" size="{{ 13 }}" hint-size="13px,13px"></dc-import>{{ d.l }}</span><span style="color:var(--mu)">{{ d.k }}</span><span style="flex:1"></span><span style="color:var(--mu);font-size:12px">{{ d.o }}</span></div></sc-for>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', inn:'#7AA2F7', le:'#B48EF0', sh:'none' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', inn:'#2F5BD3', le:'#7A4BD1', sh:'0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .08)' };
+    const rd = [
+      ['R4-15A','Outline · insert line while dragging · Lamplight','outline','insert',false,L,'Amber line with a dot marks the insert point. The dragged row tilts slightly and keeps its status glyph. The Notes tray on the right lists notes not yet on the roadmap.'],
+      ['R4-15B','Outline · drop on middle → becomes prerequisite · Paper','outline','prereq',false,P,'The target row gets an amber outline and a “becomes prerequisite” tag. Release writes (needs: Batch normalization) into the Markdown line.'],
+      ['R4-15C','Outline · refused drop (loop)','outline','refused',false,L,'Red outline on the target, one-line reason naming the chain. Release does nothing.'],
+      ['R4-15D','Empty roadmap · builder','builder','none',false,L,'New course spaces open here. Module name is already in edit mode; the tray is open with every note in the space and “Add all as topics”.'],
+      ['R4-15E','Skill tree · focus on Backpropagation, link menu','tree','none',false,L,'Curved links coloured by status (14b). Ancestors and descendants stay bright, others dim. Module 4 is collapsed to a summary card. Clicking a link → Remove prerequisite.'],
+      ['R4-15F','Timeline · drag to reschedule · Paper','timeline','none',false,P,'Dragging a bar shows a ghost at the old date and a tooltip with the new date. Amber line = today.'],
+      ['R4-15G','Topic sheet · Organize + inline delete confirm','outline','none',true,L,'One sheet for status, due, prerequisites and the linked note. Organize holds the rarely-used actions. Delete confirms inline in the sheet — no second dialog.']
+    ].map(([id,l,v,d,s,t,n]) => ({ id, l, v, d, s, t, n }));
+    const G = { done:['s-done','var(--ok)'], learning:['s-learning','var(--in)'], todo:['s-todo','var(--mu)'], locked:['s-locked','var(--mu)'] };
+    const ptopics = [['Linear classifiers','done','Done 3 Nov'],['Softmax loss','done','Done 6 Nov'],['Backpropagation','learning','Due 24 Nov',1],['Activation functions','todo','Due 26 Nov'],['Weight initialization','locked','Needs Backpropagation']].map(([n,s,sub,sel]) => ({ n, g:G[s][0], gc:G[s][1], s:sub, bg:sel?'var(--sf2)':'transparent', op:s==='locked'?.55:1 }));
+    const pmenu = [['s-done','Mark done','',0],['date','Due date','24 Nov',0],['roadmap','Prerequisites','1',0],['lesson','Open lesson note','',0],['expand','Move up / down','',0],['folder','Move to module…','',0],['d-draft','Rename','',0],['c-danger','Delete topic','',1]].map(([g,l,r,d]) => ({ g, l, r, c: d?'var(--da)':'var(--tx)' }));
+    const unlock = [['0 ms','topic marked done; link draws in green from the done card.','4 200','1.5px solid var(--bd)','none',.55,'0','s-locked','var(--mu)'],['+240 ms','link complete; lock fades out, open circle fades in.','none','1.5px solid var(--in)','0 0 0 4px color-mix(in srgb,var(--in) 18%,transparent)',1,'-2px','s-todo','var(--in)'],['+600 ms','card settles; the ring fades. Toast: “Weight init is now open.”','none','1px solid var(--bd)','none',1,'0','s-todo','var(--tx)']]
+      .map(([t,d,dash,bd,glow,op,ty,g,gc]) => ({ t, d, dash, bd, glow, op, ty, g, gc }));
+    const hub = [['R4-15J','Overview · Lamplight','overview',L],['R4-15K','Docs · status header · Paper','docs',P],['R4-15L','Board · card dragged to Review','board',L],['R4-15M','Requirements · MoSCoW + traceability · Paper','req',P],['R4-15N','Timeline · Gantt from cards','timeline',L],['R4-15O','Diagrams · requirements→tasks, epic map','diagrams',L],['R4-15P','Assistant · weekly status · Paper','assistant',P]].map(([id,l,tab,t]) => ({ id, l, tab, t }));
+    const hubPhone = [['R4-15Q','Overview','overview'],['R4-15R','Board · one column','board'],['R4-15S','Requirements','req'],['R4-15T','Docs','docs'],['R4-15U','Timeline','timeline']].map(([id,l,tab]) => ({ id, l, tab }));
+    const markers = [['t-backlog','[>]','Backlog','var(--mu)'],['t-todo','[ ]','Todo','var(--tx)'],['t-doing','[/]','Doing','var(--in)'],['t-review','[?]','Review','var(--wa)'],['t-done','[x]','Done','var(--ok)'],['t-cancelled','[-]','Cancelled','var(--mu)']].map(([g,k,l,c]) => ({ g, k, l, c }));
+    const dstates = [['d-draft','Draft','var(--mu)','PRD','Amir · 1 d ago'],['d-review','In review','var(--wa)','RFC','Sara reviewing'],['d-approved','Approved','var(--ok)','ADR-3','Approved 10 Nov'],['d-superseded','Superseded','var(--mu)','ADR-1','→ ADR-3'],['d-rejected','Rejected','var(--da)','RFC-2','Too complex for v1']].map(([g,l,c,k,o]) => ({ g, l, c, k, o, bg:`color-mix(in srgb, ${c} 14%, transparent)` }));
+    return { rd, ptopics, pmenu, unlock, hub, hubPhone, markers, dstates };
+  }
+}
+</script>
+</body>
+</html>

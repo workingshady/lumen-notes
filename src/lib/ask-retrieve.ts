@@ -139,7 +139,7 @@ export function scopeNotes(s: Scope, v: Vault): Set<string> | null {
 
 export function scopeLabel(s: Scope, v: Vault): string {
   if (s.kind === "vault" || (s.kind === "space" && (!s.spaceId || s.spaceId === "all"))) return "Whole vault";
-  if (s.kind === "space") { const sp = v.spaceMap.get(s.spaceId!); return sp ? `${sp.icon ?? ""} ${sp.name}`.trim() : "This space"; }
+  if (s.kind === "space") { const sp = v.spaceMap.get(s.spaceId!); return sp ? sp.name : "This space"; }
   if (s.kind === "note") return `${v.byId.get(s.noteId ?? "")?.title ?? "This note"} + links`;
   return v.byId.get(s.pathId ?? "")?.title ?? "Learning path";
 }

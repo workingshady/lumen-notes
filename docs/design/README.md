@@ -10,4 +10,6 @@ Send them to Claude Design **in this order, in the same project**. Each follow-u
 | 4 | [CLAUDE_DESIGN_UPDATE_03.md](CLAUDE_DESIGN_UPDATE_03.md) | Learning paths (multi-course concept roadmaps: stages, matrix, graph, timeline, revision, resources) + project hub (PRDs, RFCs, requirements, task cards, visuals, AI assistant) |
 | — | [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) | Reference tokens (colors per theme, type, spacing, motion). Attach if Claude Design asks for exact values |
 
-Next round: add `CLAUDE_DESIGN_UPDATE_04.md` and a row here.
+| 5 | [CLAUDE_DESIGN_UPDATE_04.md](CLAUDE_DESIGN_UPDATE_04.md) | Everything built after the round 1–3 handoff, each with what it does, how it works and what to design: learning paths (collapsible header, tabs, stages, skill tree, matrix, concept sheet), roadmap drag-and-drop, project hub, diagrams + export, chooser, slash/insert gallery/blocks/paste, Read-mode layout blocks and tables, slides, Focus, Bases, Ask vault, FSRS, navigation, accounts, settings, big vaults. Plus an icon system replacing every emoji, assets (thumbnails, chart style, empty states, share images) and new features (PDF reader + highlights, cloze + image occlusion, Today plan, dashboards, multi-group bases, unlinked mentions, smart folders, video timestamps). Note: update 03 was never designed; 04 covers it |
+
+Next round: add `CLAUDE_DESIGN_UPDATE_05.md` and a row here.

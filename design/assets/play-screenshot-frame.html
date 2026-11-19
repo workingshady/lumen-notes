@@ -1,0 +1,15 @@
+<!doctype html>
+<!-- Google Play store screenshot frame, 1080×2160 (design round 4, Lumen 21 › "Store screenshot frame", shown there at 220×440).
+     Params: ?title=One%20path,|28%20courses.  (| = line break)  &shot=<image url of a 412×915 app screenshot>
+     Export: node <kj>/play-assets.mjs (renders the example below to play-screenshot-frame.png). -->
+<html><head><meta charset="utf-8"><title>Lumen store screenshot</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>html,body{margin:0;width:1080px;height:2160px;overflow:hidden;-webkit-font-smoothing:antialiased}
+.f{width:1080px;height:2160px;box-sizing:border-box;background:#0F1115;padding:108px 79px 0;display:flex;flex-direction:column;gap:69px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1}
+h1{margin:0;font-size:98px;font-weight:650;line-height:118px;letter-spacing:-.02em}
+.p{flex:1;border-radius:79px 79px 0 0;border:25px solid #2A303B;border-bottom:none;background:repeating-linear-gradient(135deg,#161A21 0 49px,#1D222B 49px 98px);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.p img{width:100%;height:100%;object-fit:cover;object-position:top}.p span{font:500 49px 'JetBrains Mono',monospace;color:#9AA0AA;background:#0F1115;padding:15px 30px;border-radius:20px}</style></head>
+<body><div class="f"><h1 id="t">One path,<br>28 courses.</h1><div class="p" id="p"><span>app screenshot</span></div></div>
+<script>const q=new URLSearchParams(location.search);if(q.get('title')){const t=document.getElementById('t');t.textContent='';q.get('title').split('|').forEach((l,i)=>{if(i)t.appendChild(document.createElement('br'));t.appendChild(document.createTextNode(l))})}
+if(q.get('shot')){const p=document.getElementById('p');p.innerHTML='';const i=new Image();i.src=q.get('shot');p.appendChild(i)}</script>
+</body></html>

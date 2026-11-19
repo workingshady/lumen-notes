@@ -1,5 +1,9 @@
-import { autocompletion, type CompletionContext } from "@codemirror/autocomplete";
-import { slashIconOption, slashSource } from "../lib/slash";
+import { autocompletion, type Completion, type CompletionContext } from "@codemirror/autocomplete";
+import { dismissSlash, slashKeys, slashMenu, SlashMenu, type SlashState } from "./SlashMenu";
+import { InsertGallery, setGalleryEditor } from "./InsertGallery";
+import { Glyph } from "./Glyph";
+import { glyphSvg } from "../lib/glyph-svg";
+import { liveLook } from "./editor-live";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
@@ -7,7 +11,7 @@ import { tags as t } from "@lezer/highlight";
 import { Decoration, EditorView, MatchDecorator, ViewPlugin, keymap, type DecorationSet, type ViewUpdate } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/state";
 import CodeMirror from "@uiw/react-codemirror";
-import { Bold, Braces, CheckSquare, Code, Diamond, Heading, ImagePlus, Italic, Link2, List, ListTodo, Loader2, Mic, MoreHorizontal, PanelTop, Quote, Sigma, SquarePlay, Square, Table, Workflow } from "lucide-react";
+import { Bold, Braces, CheckSquare, Code, Diamond, Heading, ImagePlus, Italic, Link2, List, ListTodo, Loader2, Mic, MoreHorizontal, Quote, Sigma, Square, Table, Workflow } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Note } from "../../shared/types";
 import { updateNote } from "../lib/actions";
@@ -19,14 +23,20 @@ import { cx } from "./ui";
 import { isTooBig, TooBigDialog } from "./StorageTooBig";
 import { setSaving } from "./ws-sync";
 import { blockEditing, blockRefSource, type BlockMenuRequest } from "./editor-blocks";
+import { clozeEditing } from "./editor-cloze";
 import { BlockMenu } from "./BlockMenu";
 import { PasteMenu, pasteWatch, type PasteInfo } from "./PasteMenu";
 import { parseBlocks, pendingBlock } from "../lib/blocks";
+import { videoNotes } from "./editor-video";
+import { VideoNoteBar } from "./video-dock";
 
 let showTooBig: ((f: File) => void) | null = null;
 
 // The one active editor, so panels (AI, templates, toolbar) can insert text.
 let active: EditorView | null = null;
+/** The active editor view (Insert gallery, block menu). */
+export const getActiveEditor = () => active;
+setGalleryEditor(() => active);
 export function insertText(text: string, mode: "cursor" | "end" = "cursor") {
   if (!active) return false;
   const st = active.state;
@@ -161,7 +171,7 @@ interface PasteState { url: string; from: number; to: number; x: number; y: numb
 const EMBEDDABLE = /youtu\.?be|vimeo\.com|\.(mp4|webm|mov|m4v|mp3|wav|ogg|m4a|aac|flac|pdf)(\?|#|$)/i;
 const choiceKey = (url: string) => { try { return "lumen.pasteChoice." + new URL(url).hostname; } catch { return "lumen.pasteChoice.x"; } };
 
-export function Editor({ note, focus, live }: { note: Note; focus?: boolean; live?: boolean }) {
+export function Editor({ note, focus, live, page }: { note: Note; focus?: boolean; live?: boolean; page?: boolean }) {
   const vault = useVault();
   const [text, setText] = useState(note.body);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -179,6 +189,7 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
   // Block handle menu + paste options (editor-blocks.ts, PasteMenu.tsx)
   const [blockMenu, setBlockMenu] = useState<BlockMenuRequest | null>(null);
   const [pasteMenu, setPasteMenu] = useState<PasteInfo | null>(null);
+  const [slash, setSlash] = useState<SlashState | null>(null);
   const [pasteBusy, setPasteBusy] = useState<"keep" | "clean" | "quote" | "card" | "summary" | "cards" | null>(null);
   const pasteBusyRef = useRef(pasteBusy);
   pasteBusyRef.current = pasteBusy;
@@ -199,8 +210,8 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
       if (timer.current) { clearTimeout(timer.current); void updateNote(id, { body: latest.current }); timer.current = undefined; setSaving(false); }
     };
   }, [note.id]);
-  // the paste chip lasts 6 s or until you type
-  useEffect(() => { if (!paste) return; const tm = setTimeout(() => setPaste(null), 6000); return () => clearTimeout(tm); }, [paste]);
+  // the paste chip lasts 12 s or until you type ("Esc · fades in 12 s")
+  useEffect(() => { if (!paste) return; const tm = setTimeout(() => setPaste(null), 12000); return () => clearTimeout(tm); }, [paste]);
   // the paste-options menu lasts 12 s (not while the AI works)
   useEffect(() => { if (!pasteMenu || pasteBusy) return; const tm = setTimeout(() => setPasteMenu(null), 12000); return () => clearTimeout(tm); }, [pasteMenu, pasteBusy]);
   // Arrived through a [[Note#^id]] link while editing: put the caret on that block (the preview scrolls on its own).
@@ -213,6 +224,14 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
       if (!v || blk.a + 1 > v.state.doc.lines) return;
       const l = v.state.doc.line(blk.a + 1);
       v.dispatch({ selection: { anchor: l.from }, effects: EditorView.scrollIntoView(l.from, { y: "center" }) });
+      // arrival wash on the block's lines (R4-16G), fades over 1.2 s
+      requestAnimationFrame(() => {
+        for (let n = blk.a; n <= blk.b && n < v.state.doc.lines; n++) {
+          const node = v.domAtPos(v.state.doc.line(n + 1).from).node;
+          const el = (node.nodeType === 1 ? (node as HTMLElement) : node.parentElement)?.closest(".cm-line");
+          if (el) { el.classList.add("blk-arrive"); setTimeout(() => el.classList.remove("blk-arrive"), 1600); }
+        }
+      });
     }, 60);
     return () => clearTimeout(tm);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -275,22 +294,31 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
       linkMarks,
       lineMarks,
       ...(focus ? [focusPara] : []),
+      // R4 page surface: centred serif column, heading marks hidden off the caret line, blank lines between blocks shortened
+      ...((page || live) && !focus ? [liveLook()] : []),
+      // "/" menu (components/SlashMenu.tsx): popover on desktop, bottom sheet on phone
+      slashMenu({ change: (s) => setSlash(s), key: (k) => slashKeys.current?.current(k) ?? false }),
       // ⋮⋮ block handle / drag / block menu / Alt+↑↓ / Mod+Shift+D (handles hidden in focus mode and .mermaid files)
       blockEditing({ menu: (r) => setBlockMenu(r), handles: !focus && note.type !== "diagram" }),
+      clozeEditing(), // cloze underline + card chips, ```occlusion editor (editor-cloze.ts)
+      videoNotes(), // [12:34] timestamps: Alt+T insert, Mod+click seek, pause while typing (editor-video.ts)
       pasteWatch(
         (p, v) => {
+          // under the pasted block, aligned with the text column (R4-16H)
           const c = v.coordsAtPos(p.to);
+          const l = v.coordsAtPos(v.state.doc.lineAt(p.from).from);
           const box = wrapRef.current?.getBoundingClientRect();
-          setPasteMenu({ ...p, x: (c?.left ?? 0) - (box?.left ?? 0) - 40, y: (c?.bottom ?? 0) - (box?.top ?? 0) + 8 });
+          setPasteMenu({ ...p, x: (l?.left ?? c?.left ?? 0) - (box?.left ?? 0), y: (c?.bottom ?? 0) - (box?.top ?? 0) + 10 });
         },
         (ch) => setPasteMenu((m) => (!m ? m : pasteBusyRef.current ? { ...m, from: ch.mapPos(m.from), to: ch.mapPos(m.to, 1) } : null)),
       ),
       EditorView.perLineTextDirection.of(true), // Arabic lines RTL, English lines LTR, in the same note
       EditorView.contentAttributes.of({ spellcheck: String(getSettings().spellcheck), dir: "auto", autocorrect: "on", autocapitalize: "sentences" }),
-      // "/" menu (Confluence / Notion style) + [[wiki]] and #tag completion; options get theme-aware icons / layout thumbnails
+      // [[wiki]], [[Note#^block]] and #tag completion (block rows: glyph · text · ^id / "add id", R4-16G)
       autocompletion({
-        override: [slashSource((a) => (a === "file" ? editorBridge.image?.() : editorBridge.voice?.())), blockRefSource(() => notesRef.current, () => titleRef.current, (id, body) => void updateNote(id, { body })), wikiComplete, tagComplete],
-        icons: false, addToOptions: [slashIconOption], maxRenderedOptions: 80, tooltipClass: () => "lm-complete",
+        override: [blockRefSource(() => notesRef.current, () => titleRef.current, (id, body) => void updateNote(id, { body })), wikiComplete, tagComplete],
+        icons: false, addToOptions: [blockRefIcon, blockRefId], maxRenderedOptions: 80,
+        tooltipClass: (st) => "lm-complete" + (BLKREF.test(st.sliceDoc(Math.max(0, st.selection.main.head - 160), st.selection.main.head)) ? " lm-blkref" : ""),
       }),
       keymap.of([
         { key: "Mod-b", run: (v) => (ACTIONS.bold(v), true) },
@@ -352,7 +380,7 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
       }),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [titles, vault.tags, focus, note.type]);
+  }, [titles, vault.tags, focus, note.type, page, live]);
 
   const run = (k: keyof typeof ACTIONS) => { if (active) ACTIONS[k](active); setMore(false); };
 
@@ -404,14 +432,15 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
     { k: "mermaid", icon: <Workflow size={16} />, label: "Mermaid" },
   ] as const;
   const showBar = !focus && (live || !wide);
-  const pasteOpts: { k: PasteChoice; icon: React.ReactNode; label: string }[] = [
-    { k: "card", icon: <PanelTop size={14} />, label: "Preview card" },
-    ...(paste?.embed ? [{ k: "embed" as const, icon: <SquarePlay size={14} />, label: "Embed" }] : []),
-    { k: "plain", icon: <Link2 size={14} />, label: "Plain link" },
+  const pasteOpts: { k: PasteChoice; glyph: string; label: string }[] = [
+    { k: "card", glyph: "link-card", label: "Preview card" },
+    ...(paste?.embed ? [{ k: "embed" as const, glyph: "embed", label: "Embed" }] : []),
+    { k: "plain", glyph: "wikilink", label: "Plain link" },
   ];
 
   return (
-    <div ref={wrapRef} className={cx("relative flex h-full min-h-0 flex-col", focus && "focus-mode", live && !focus && "ed-live")}>
+    <div ref={wrapRef} className={cx("relative flex h-full min-h-0 flex-col", focus && "focus-mode", live && !focus && "ed-live", page && !focus && "ed-page", slash && !wide && "slash-sheet-open")}>
+      {!focus && <VideoNoteBar body={text} />}
       <div className={cx("ed-pad min-h-0 flex-1 overflow-hidden", focus ? "px-6" : live ? "px-5" : "px-4 md:px-8")}>
         <CodeMirror
           value={text}
@@ -421,19 +450,19 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
           theme="none"
           height="100%"
           className="h-full"
-          basicSetup={{ lineNumbers: !focus && !live && wide, foldGutter: false, highlightActiveLine: !focus && !live, highlightActiveLineGutter: !focus && !live, autocompletion: false, searchKeymap: true, syntaxHighlighting: false }}
+          basicSetup={{ lineNumbers: !focus && !live && !page && wide, foldGutter: false, highlightActiveLine: !focus && !live && !page, highlightActiveLineGutter: !focus && !live && !page, autocompletion: false, searchKeymap: true, syntaxHighlighting: false }}
           placeholder="Start writing… Markdown, $math$, ```mermaid, [[links]], #tags"
         />
       </div>
-      {/* paste-a-URL chip: floating on desktop, a pill row above the toolbar on phone */}
+      {/* paste-a-URL chip (R4-16I): floating on desktop, a pill row above the toolbar on phone */}
       {paste && wide && (
-        <div className="absolute z-30 flex items-center gap-0.5 rounded-[10px] border border-line bg-surface-2 p-1 text-[13px] shadow-[0_12px_32px_rgba(0,0,0,.45)] fade-in" style={{ left: Math.max(8, paste.x), top: paste.y }} onMouseDown={(e) => e.preventDefault()}>
+        <div className="paste-menu absolute z-30 flex items-center gap-0.5 rounded-[10px] border border-line bg-surface-2 p-1 text-[13px] fade-in" style={{ left: Math.max(8, paste.x), top: paste.y, boxShadow: "0 14px 34px rgba(0,0,0,.45)" }} onMouseDown={(e) => e.preventDefault()}>
           {pasteOpts.map((o) => (
-            <button key={o.k} onClick={() => applyPaste(o.k)} className={cx("flex h-[30px] items-center gap-1.5 rounded-[7px] px-2.5", paste.sel === o.k && "font-semibold")} style={paste.sel === o.k ? { background: "color-mix(in srgb,var(--accent) 16%,transparent)", boxShadow: "inset 0 0 0 1px var(--accent)" } : undefined}>
-              <span style={{ color: paste.sel === o.k ? "var(--accent)" : "var(--muted)", display: "flex" }}>{o.icon}</span>{o.label}
+            <button key={o.k} title={o.k === paste.sel ? "↵ to choose" : undefined} onClick={() => applyPaste(o.k)} className="flex h-[30px] items-center gap-1.5 whitespace-nowrap rounded-[7px] px-2.5" style={paste.sel === o.k ? { background: "color-mix(in srgb,var(--accent) 14%,transparent)", boxShadow: "inset 0 0 0 1px var(--accent)", fontWeight: 600 } : { fontWeight: 450 }}>
+              <Glyph name={o.glyph} size={14} color="var(--muted)" />{o.label}
             </button>
           ))}
-          <span className="px-2 text-[11.5px] text-muted">↵ choose · Esc keep link</span>
+          <span className="mx-1 h-[18px] w-px bg-line" /><span className="whitespace-nowrap pe-1.5 text-[11.5px] text-muted">Esc · fades in 12 s</span>
         </div>
       )}
       {pasteMenu && viewRef.current && (wide || !showBar) && (
@@ -443,10 +472,12 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
         <PasteMenu info={pasteMenu} view={viewRef.current} phone busy={pasteBusy} setBusy={setPasteBusy} onClose={() => setPasteMenu(null)} />
       )}
       <BlockMenu req={blockMenu} title={note.title} onClose={() => setBlockMenu(null)} />
+      {slash && <SlashMenu state={slash} phone={!wide} box={wrapRef.current} onAction={(a) => { dismissSlash(slash.view); if (a === "file") editorBridge.image?.(); else void toggleVoice(); }} />}
+      <InsertGallery />
       {showBar && paste && (
         <div className="flex gap-2 border-t border-line bg-surface-2 px-3 py-2" onMouseDown={(e) => e.preventDefault()}>
           {pasteOpts.map((o) => (
-            <button key={o.k} onClick={() => applyPaste(o.k)} className={cx("flex h-10 items-center rounded-full px-3.5 text-[13.5px]", paste.sel === o.k ? "font-semibold" : "border border-line")} style={paste.sel === o.k ? { background: "color-mix(in srgb,var(--accent) 16%,transparent)", boxShadow: "inset 0 0 0 1px var(--accent)" } : undefined}>{o.label}</button>
+            <button key={o.k} onClick={() => applyPaste(o.k)} className={cx("flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13.5px]", paste.sel === o.k ? "font-semibold" : "border border-line")} style={paste.sel === o.k ? { background: "color-mix(in srgb,var(--accent) 14%,transparent)", boxShadow: "inset 0 0 0 1px var(--accent)" } : undefined}><Glyph name={o.glyph} size={14} color="var(--muted)" />{o.label}</button>
           ))}
         </div>
       )}
@@ -494,6 +525,31 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
     </div>
   );
 }
+
+/** Glyph column of [[Note#^ block completions (editor-blocks.ts sets `lmGlyph`). */
+const BLKREF = /\[\[[^\]\n]*#\^[\w-]*$/;
+const blockRefIcon = {
+  render: (c: Completion) => {
+    const g = (c as Completion & { lmGlyph?: string }).lmGlyph;
+    if (!g) return null;
+    const el = document.createElement("span");
+    el.className = "lm-blk-ic";
+    el.innerHTML = glyphSvg(g, 15);
+    return el;
+  },
+  position: 20,
+};
+const blockRefId = {
+  render: (c: Completion) => {
+    const id = (c as Completion & { lmId?: string }).lmId;
+    if (!id) return null;
+    const el = document.createElement("span");
+    el.className = "lm-blk-id" + (id.startsWith("^") ? " has" : "");
+    el.textContent = id;
+    return el;
+  },
+  position: 80,
+};
 
 /** Lets the note header's ⋯ menu (desktop, no toolbar) trigger image insert / voice note on the active editor. */
 export const editorBridge: { voice: (() => void) | null; image: (() => void) | null } = { voice: null, image: null };

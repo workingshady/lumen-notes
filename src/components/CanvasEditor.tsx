@@ -20,6 +20,8 @@ import { openNote, setUI, toast, useVault } from "../lib/store";
 import { canvasToSkeleton, type Skeleton } from "../lib/whiteboard";
 import { plainExcerpt } from "./nav-text";
 import { Preview } from "./Preview";
+import { HL_MIME, hlDropNode, PdfFileCard, PdfHighlightCard } from "./pdf-canvas";
+import { parseHlCard } from "../lib/pdf-format";
 import { cx, relTime, STATUS_COLOR } from "./ui";
 import {
   CodeEditor, CodePanel, ErrorBanner, errorLine, ExamplesMenu, itemAt, jsonItemSpans, OutputStrip, PanelBar, PhoneActions, RunButton, runKey, ValidChip, ValidFooter,
@@ -151,6 +153,15 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
       <DiagramBody id={id} n={n as DiagramNode} name={diagram.name} src={diagram.src} selected={!!selected} onEdit={() => setEdit(true)} />
     </>
   );
+  // PDF highlight card: `> quote` + `[[Paper#^hl-id|…]]` (components/pdf-canvas.tsx)
+  const hl = !edit ? parseHlCard(n.text) : null;
+  if (hl) return (
+    <>
+      <NodeResizer isVisible={!!selected} minWidth={180} minHeight={90} {...RESIZER} />
+      <Handles />
+      <div className="h-full w-full" onDoubleClick={() => setEdit(true)}><PdfHighlightCard n={n} card={hl} selected={!!selected} /></div>
+    </>
+  );
   const s = shell(n, !!selected);
   const { title, body } = splitTitle(n.text);
   const rich = /\$|\*\*|`|\[\[|^\s*([-*>]|\d+\.)\s/m.test(body);
@@ -217,6 +228,13 @@ const FileNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
       <NodeResizer isVisible={!!selected} minWidth={240} minHeight={180} {...RESIZER} />
       <Handles />
       <DiagramFileCard n={n} note={note} selected={!!selected} />
+    </>
+  );
+  if (note?.type === "pdf") return (
+    <>
+      <NodeResizer isVisible={!!selected} minWidth={200} minHeight={110} {...RESIZER} />
+      <Handles />
+      <PdfFileCard n={n} note={note} selected={!!selected} />
     </>
   );
   const folder = note ? (note.folderId ? v.folderMap.get(note.folderId)?.name : v.spaceMap.get(note.spaceId)?.name) : n.file.split("/").slice(-2, -1)[0];
@@ -581,6 +599,9 @@ function Inner({ note }: { note: Note }) {
     <div className="flex h-full min-h-0 flex-col md:flex-row">
       <style>{CANVAS_CSS}</style>
       <div className={cx("lumen-canvas relative min-h-0 flex-1", connecting && "connecting")}
+        // A highlight dragged from the PDF reader's panel → highlight card where it's dropped.
+        onDragOver={(e) => { if (e.dataTransfer.types.includes(HL_MIME)) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; } }}
+        onDrop={(e) => { const d = hlDropNode(e.dataTransfer); if (!d) return; e.preventDefault(); const p = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY }); const { id: _id, x: _x, y: _y, ...rest } = d; addNode(rest, { x: Math.round(p.x / 20) * 20, y: Math.round(p.y / 20) * 20 }); }}
         onDoubleClick={(e) => {
           // Double-click on empty space = new text card there.
           if (!(e.target as HTMLElement).classList.contains("react-flow__pane")) return;

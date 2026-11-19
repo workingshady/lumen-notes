@@ -16,7 +16,9 @@ import { useDueCards } from "../components/Review";
 import { StudyTimer } from "../components/Timer";
 import { cx, relTime, STATUS_COLOR } from "../components/ui";
 import { CustomizeHome } from "./home-customize";
+import { TodayCard } from "../components/today-card";
 import { Avatar } from "./Welcome";
+import { SpaceIcon } from "../components/SpaceIcon";
 
 const CAPTURE_ID = "lumen-capture";
 // Quick capture from anywhere: Ctrl/⌘ + Shift + N jumps to Home and focuses the capture field (design 3A note 1).
@@ -120,7 +122,7 @@ export function Home() {
   const pathOf = (n: Note) => {
     const sp = v.spaceMap.get(n.spaceId);
     const f = n.folderId ? v.folderMap.get(n.folderId)?.name : "";
-    return f || (sp ? `${sp.icon} ${sp.name}` : "");
+    return f || (sp ? sp.name : "");
   };
   const tasksSub = openTasks.slice(0, 2).map((t) => t.text).join(", ");
   const items = due + openTasks.length + revisit.length;
@@ -214,7 +216,7 @@ export function Home() {
         <div className="hidden flex-col gap-1 border-t border-line pt-3 xl:flex">
           {courses.map(({ sp, p }) => (
             <button key={sp.id} onClick={() => go("space", { spaceId: sp.id })} className="flex items-center gap-2.5 rounded-[6px] py-0.5 text-[12px] text-muted hover:text-ink">
-              <span className="max-w-[45%] truncate">{sp.icon} {sp.name}</span>
+              <span className="flex max-w-[45%] items-center gap-1.5 truncate"><SpaceIcon space={sp} size={15} /><span className="truncate">{sp.name}</span></span>
               <span className="h-1 flex-1 overflow-hidden rounded-[2px] bg-surface-2"><span className="block h-full bg-ink opacity-70" style={{ width: `${p.pct}%` }} /></span>
               <span className="tabular-nums">{Math.round(p.pct)}%</span>
             </button>
@@ -317,6 +319,7 @@ export function Home() {
   const visible = layout.order.filter((id) => !layout.hidden.includes(id));
   const phoneVisible = (layout.custom ? layout.order : PHONE_DEFAULT).filter((id) => !layout.hidden.includes(id));
   const wideCard: Record<SectionId, React.ReactNode> = {
+    today: <TodayCard />,
     due: <>{dueDesktop}{dueTablet}</>,
     progress: progressCard,
     activity: activityCard,
@@ -332,7 +335,7 @@ export function Home() {
     else rows.push([id]);
   }
   const phoneCard = (id: SectionId) =>
-    id === "due" ? duePhone : id === "continue" ? continuePhone : id === "activity" ? activityPhone(true)
+    id === "today" ? <TodayCard /> : id === "due" ? duePhone : id === "continue" ? continuePhone : id === "activity" ? activityPhone(true)
       : id === "progress" ? (layout.hidden.includes("activity") ? activityPhone(false) : null) : id === "pinned" ? pinnedCard : null;
 
   return (
@@ -342,7 +345,7 @@ export function Home() {
         <div className="group flex items-center justify-between gap-3 sm:items-end">
           <div className="flex min-w-0 flex-1 flex-col gap-[3px] sm:gap-1.5">
             <div className="truncate text-[22px] font-[650] tracking-[-0.02em] sm:text-[24px] xl:text-[26px]">{greeting}</div>
-            <div className="hidden text-[13px] text-muted sm:block">{dateLong}{curSpace && <span className="hidden xl:inline"> · {curSpace.icon} {curSpace.name}</span>}</div>
+            <div className="hidden text-[13px] text-muted sm:block">{dateLong}{curSpace && <span className="hidden xl:inline"> · <SpaceIcon space={curSpace} size={15} style={{ verticalAlign: "-3px" }} /> {curSpace.name}</span>}</div>
             <div className="flex items-center gap-1.5 text-[13px] text-muted sm:hidden">{dateShort} · <span className="size-1.5 rounded-full" style={{ background: syncInfo.c, boxShadow: "ring" in syncInfo ? syncInfo.ring : undefined }} />{syncInfo.t}</div>
           </div>
           <div className="relative hidden items-center gap-2 sm:flex">

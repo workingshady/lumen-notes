@@ -14,13 +14,30 @@ export type DragKind = keyof typeof DT;
 /** What is being dragged right now (dataTransfer data can't be read during dragover, only on drop). */
 let current: { kind: DragKind; id: string } | null = null;
 export const dragging = () => current;
-export function startDrag(e: DragEvent, kind: DragKind, id: string, label?: string) {
+export function startDrag(e: DragEvent, kind: DragKind, id: string, label?: string, ghost?: Element | null) {
   e.stopPropagation();
   current = { kind, id };
   e.dataTransfer.effectAllowed = "move";
   e.dataTransfer.setData(DT[kind], id);
   e.dataTransfer.setData("text/plain", label ?? id);
+  if (ghost) dragGhost(e, ghost);
   document.documentElement.classList.add("pdnd-active");
+}
+
+/**
+ * Drag ghost (design 21 "Drag ghost"): `content` cloned onto a lifted chip (surface-2, accent border, deep shadow,
+ * tilted −1.5°) used as the drag image. The chip is off-screen and only lives for the browser to snapshot it.
+ */
+export function dragGhost(e: DragEvent, content: Element) {
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "position:fixed;top:-300px;left:-600px;padding:14px 18px 30px;pointer-events:none";
+  const g = document.createElement("div");
+  g.className = "pdnd-ghost";
+  g.appendChild(content.cloneNode(true));
+  wrap.appendChild(g);
+  document.body.appendChild(wrap);
+  try { e.dataTransfer.setDragImage(wrap, 30, 32); } catch { /* not supported */ }
+  setTimeout(() => wrap.remove(), 0);
 }
 export function endDrag() { current = null; document.documentElement.classList.remove("pdnd-active"); }
 /** Kind of the drag in progress, from our state or (for drags from another view instance) the dataTransfer types. */

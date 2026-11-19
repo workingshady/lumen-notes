@@ -6,9 +6,9 @@
 import { isolateHistory } from "@codemirror/commands";
 import { type Completion, type CompletionContext, type CompletionResult } from "@codemirror/autocomplete";
 import { EditorState, Prec, RangeSetBuilder, StateEffect, StateField, type Extension, type Text } from "@codemirror/state";
-import { Decoration, Direction, EditorView, MatchDecorator, ViewPlugin, keymap, type DecorationSet, type ViewUpdate } from "@codemirror/view";
+import { Decoration, Direction, EditorView, MatchDecorator, ViewPlugin, WidgetType, keymap, type DecorationSet, type ViewUpdate } from "@codemirror/view";
 import {
-  blockIndexAt, blockPreview, deleteBlocks, duplicateBlocks, idInsertion, moveBlocks, newBlockId, parseBlocks, turnBlocks,
+  blockGlyph, blockIndexAt, blockPreview, deleteBlocks, duplicateBlocks, idInsertion, moveBlocks, newBlockId, parseBlocks, turnBlocks,
   type Block, type LineEdit, type TurnTarget,
 } from "../lib/blocks";
 
@@ -126,39 +126,61 @@ export function ensureId(view: EditorView, idx: number): string | null {
 export const clearBlockSelection = (view: EditorView) => { if (view.state.field(selField, false)?.length) view.dispatch({ effects: setSel.of([]) }); };
 
 // ------------------------------------------------------------------ handle + drag & drop + drop indicator
-export interface BlockMenuRequest { view: EditorView; idx: number[]; rect: DOMRect }
+// Design R4-16D/E/F: ⋮⋮ handle 22×24 beside the hovered block (muted at rest, solid when grabbed or its menu is open),
+// the hovered block washes in --surface, a dragged block lifts (copy follows the pointer) while the source fades to 35%,
+// a 2 px accent line shows where it lands; selected blocks get a 12% accent wash + ring and a check in the margin.
+export interface BlockMenuRequest { view: EditorView; idx: number[]; rect: DOMRect; page?: "turn"; closed?: () => void }
 export interface BlockHooks { menu: (r: BlockMenuRequest) => void; handles: boolean }
+const hooksOf = new WeakMap<EditorView, BlockHooks>();
 
 /** First strong letter is Arabic / Hebrew (lines use unicode-bidi: plaintext, so the computed direction stays ltr). */
 const rtlText = (s: string) => {
-  const m = /[A-Za-zÀ-ɏͰ-ϿЀ-ӿ]|[֐-ࣿיִ-﷿ﹰ-﻿]/.exec(s.replace(/\[![\w-]+\]|```\w*|:::\s*\w+/g, ""));
-  return !!m && /[֐-ࣿיִ-﷿ﹰ-﻿]/.test(m[0]);
+  const m = /[A-Za-zÀ-ɏͰ-ϿЀ-ӿ]|[֐-ࣿיִ-﷿ﹰ-﻿]/.exec(s.replace(/\[![\w-]+\]|```\w*|:::\s*\w+/g, ""));
+  return !!m && /[֐-ࣿיִ-﷿ﹰ-﻿]/.test(m[0]);
 };
 const coarse = () => typeof matchMedia === "function" && matchMedia("(hover: none)").matches;
-const GRIP = `<svg width="12" height="16" viewBox="0 0 12 16" aria-hidden="true"><g fill="currentColor"><circle cx="3.5" cy="3" r="1.4"/><circle cx="8.5" cy="3" r="1.4"/><circle cx="3.5" cy="8" r="1.4"/><circle cx="8.5" cy="8" r="1.4"/><circle cx="3.5" cy="13" r="1.4"/><circle cx="8.5" cy="13" r="1.4"/></g></svg>`;
+const GRIP = "⋮⋮";
+
+interface Geo { x: number; y: number; bl: number; bt: number; bw: number; bh: number; rtl: boolean }
+function openMenu(view: EditorView, idx: number[], rect: DOMRect, page?: "turn", closed?: () => void) {
+  hooksOf.get(view)?.menu({ view, idx, rect, page, closed });
+}
 
 function handlePlugin(hooks: BlockHooks) {
   return ViewPlugin.fromClass(class {
     handle: HTMLButtonElement;
     drop: HTMLDivElement;
+    hl: HTMLDivElement;
+    lift: HTMLDivElement;
+    sels: HTMLDivElement[] = [];
     cur = -1;
+    menuOpen = false;
     hideT: ReturnType<typeof setTimeout> | undefined;
-    drag: { id: number; x: number; y: number; idx: number; moving: boolean; moved: number[]; t: number; long: boolean; lpT?: ReturnType<typeof setTimeout>; raf?: number; cy: number } | null = null;
+    drag: { id: number; x: number; y: number; idx: number; moving: boolean; moved: number[]; t: number; long: boolean; lpT?: ReturnType<typeof setTimeout>; raf?: number; cy: number; off: number } | null = null;
     tight = false;
-    lastX = 0;
+    rtlRoom = false;
+    geo: Geo | null = null;
     constructor(readonly view: EditorView) {
+      hooksOf.set(view, hooks);
       const h = (this.handle = document.createElement("button"));
       h.type = "button";
       h.className = "cm-blk-handle";
       h.tabIndex = -1;
       h.title = "Drag to move · click for block menu · Shift-click to select several";
       h.setAttribute("aria-label", "Block menu");
-      h.innerHTML = GRIP;
+      h.textContent = GRIP;
       h.style.display = "none";
       this.drop = document.createElement("div");
       this.drop.className = "cm-blk-drop";
       this.drop.style.display = "none";
-      view.scrollDOM.append(h, this.drop);
+      this.hl = document.createElement("div");
+      this.hl.className = "cm-blk-hl";
+      this.hl.style.display = "none";
+      this.lift = document.createElement("div");
+      this.lift.className = "cm-blk-lift";
+      this.lift.style.display = "none";
+      view.scrollDOM.prepend(this.hl);
+      view.scrollDOM.append(h, this.drop, this.lift);
       view.scrollDOM.addEventListener("pointermove", this.onHover);
       view.scrollDOM.addEventListener("pointerleave", this.onLeave);
       h.addEventListener("pointerdown", this.onDown);
@@ -166,13 +188,13 @@ function handlePlugin(hooks: BlockHooks) {
       h.addEventListener("pointerup", this.onUp);
       h.addEventListener("pointercancel", this.onCancel);
       h.addEventListener("contextmenu", (e) => e.preventDefault());
-      if (coarse()) this.follow();
+      if (coarse()) this.follow(); else this.place();
     }
     update(u: ViewUpdate) {
       if (this.drag?.moving) return;
       if (coarse() && (u.selectionSet || u.focusChanged || u.docChanged)) { this.follow(); return; }
       if (u.docChanged) { const { blocks } = blocksOf(u.state); if (this.cur >= blocks.length) this.cur = -1; }
-      if (u.docChanged || u.geometryChanged || u.viewportChanged) this.place();
+      if (u.docChanged || u.geometryChanged || u.viewportChanged || u.transactions.some((t) => t.effects.some((e) => e.is(setSel)))) this.place();
     }
     /** Phone: the handle sits beside the block with the caret. */
     follow() {
@@ -181,7 +203,7 @@ function handlePlugin(hooks: BlockHooks) {
       this.place();
     }
     onHover = (e: PointerEvent) => {
-      if (e.pointerType !== "mouse" || this.drag) return;
+      if (e.pointerType !== "mouse" || this.drag || this.menuOpen) return;
       if (e.target === this.handle || this.handle.contains(e.target as Node)) { clearTimeout(this.hideT); return; }
       const v = this.view;
       const lb = v.lineBlockAtHeight(e.clientY - v.documentTop);
@@ -190,43 +212,81 @@ function handlePlugin(hooks: BlockHooks) {
       clearTimeout(this.hideT);
       if (i !== this.cur) { this.cur = i; this.place(); }
     };
-    onLeave = () => { if (!this.drag && !coarse()) this.hideSoon(); };
-    hideSoon() { clearTimeout(this.hideT); this.hideT = setTimeout(() => { this.cur = -1; this.handle.style.display = "none"; }, 250); }
+    onLeave = () => { if (!this.drag && !coarse() && !this.menuOpen) this.hideSoon(); };
+    hideSoon() { clearTimeout(this.hideT); this.hideT = setTimeout(() => { this.cur = -1; this.place(); }, 250); }
+    /** Rect of a block in scroller coordinates: text box + where the handle / check go. */
+    measure(i: number, page: boolean): Geo | null {
+      const v = this.view;
+      const { blocks } = blocksOf(v.state);
+      const blk = blocks[i];
+      if (!blk) return null;
+      const doc = v.state.doc;
+      const line = doc.line(blk.a + 1), last = doc.line(Math.min(doc.lines, blk.b + 1));
+      const sr = v.scrollDOM.getBoundingClientRect();
+      const cr = v.contentDOM.getBoundingClientRect();
+      const cs = getComputedStyle(v.contentDOM);
+      const padL = parseFloat(cs.paddingLeft) || 0, padR = parseFloat(cs.paddingRight) || 0;
+      const lbA = v.lineBlockAt(line.from), lbB = v.lineBlockAt(last.from);
+      const top = lbA.top + v.documentTop;
+      let bottom = lbB.bottom + v.documentTop;
+      // the "N blocks selected" bar sits in the last block's line box: keep it outside the wash
+      const bar = v.dom.querySelector(".cm-blk-selbar")?.getBoundingClientRect();
+      if (bar && bar.top > top && bar.top < bottom) bottom = bar.top;
+      const inView = line.from >= v.viewport.from && line.from <= v.viewport.to;
+      const c = inView ? v.coordsAtPos(line.from, 1) ?? v.coordsAtPos(line.from) : null;
+      const lh = c ? Math.min(c.bottom - c.top, 44) : Math.min(lbA.height, v.defaultLineHeight);
+      const lt = c ? c.top : top;
+      const gut = v.dom.querySelector(".cm-gutters")?.getBoundingClientRect();
+      const limit = gut && gut.width ? gut.right : sr.left;
+      const textL = cr.left + padL, textR = cr.right - padR;
+      const rtl = rtlText(line.text) || v.textDirectionAt(line.from) === Direction.RTL;
+      const roomR = sr.right - 14 - textR;
+      const x = rtl && roomR >= 26 ? textR + (page ? 18 : 4) : Math.max(limit, textL - (page ? 40 : 24));
+      const pad = page ? 10 : 6;
+      return { x: x - sr.left + v.scrollDOM.scrollLeft, y: lt + lh / 2 - 12 - sr.top + v.scrollDOM.scrollTop, bl: textL - pad - sr.left + v.scrollDOM.scrollLeft, bt: top - 3 - sr.top + v.scrollDOM.scrollTop, bw: textR - textL + pad * 2, bh: bottom - top + 6, rtl };
+    }
     place() {
       const v = this.view;
-      if (!hooks.handles || this.cur < 0) { this.handle.style.display = "none"; return; }
+      const page = !!v.dom.closest(".ed-page, .ed-live");
       v.requestMeasure({
         key: this,
         read: () => {
-          const { blocks } = blocksOf(v.state);
-          const blk = blocks[this.cur];
-          if (!blk) return null;
-          const line = v.state.doc.line(blk.a + 1);
-          if (line.from < v.viewport.from || line.from > v.viewport.to) return null;
-          const sr = v.scrollDOM.getBoundingClientRect();
-          const cr = v.contentDOM.getBoundingClientRect();
-          const cs = getComputedStyle(v.contentDOM);
-          const padL = parseFloat(cs.paddingLeft) || 0, padR = parseFloat(cs.paddingRight) || 0;
-          const c = v.coordsAtPos(line.from, 1) ?? v.coordsAtPos(line.from);
-          const lb = v.lineBlockAt(line.from);
-          const top = c ? c.top : lb.top + v.documentTop;
-          const h = c ? Math.min(c.bottom - c.top, 44) : Math.min(lb.height, v.defaultLineHeight);
+          const sr = v.scrollDOM.getBoundingClientRect(), cr = v.contentDOM.getBoundingClientRect();
           const gut = v.dom.querySelector(".cm-gutters")?.getBoundingClientRect();
           const limit = gut && gut.width ? gut.right : sr.left;
-          const textL = cr.left + padL, textR = cr.right - padR;
-          const natural = textL - (this.tight ? 20 : 0) - limit;
-          const rtl = rtlText(line.text) || v.textDirectionAt(line.from) === Direction.RTL;
-          const roomR = sr.right - 14 - textR;
-          const x = rtl && roomR >= 26 ? textR + 4 : Math.max(limit, textL - 24);
-          return { x: x - sr.left + v.scrollDOM.scrollLeft, y: top + h / 2 - 12 - sr.top + v.scrollDOM.scrollTop, needTight: natural < 24, sel: selectedIdx(v.state).includes(this.cur) };
+          const natural = cr.left + (parseFloat(getComputedStyle(v.contentDOM).paddingLeft) || 0) - (this.tight ? 20 : 0) - limit;
+          const sel = selectedIdx(v.state);
+          return {
+            g: hooks.handles && this.cur >= 0 ? this.measure(this.cur, page) : null,
+            sel: hooks.handles ? sel.map((i) => this.measure(i, page)).filter((x): x is Geo => !!x) : [],
+            on: sel.includes(this.cur), needTight: natural < (page ? 40 : 24), page,
+            // Arabic / Hebrew blocks keep their handle on the right (R4-16P3): make room there when the pane has none
+            rtlRoom: hooks.handles && sr.right - 14 - (cr.right - (parseFloat(getComputedStyle(v.contentDOM).paddingRight) || 0)) < 26 + (this.rtlRoom ? 40 : 0)
+              && v.visibleRanges.some(({ from, to }) => { for (let p = from; p <= to;) { const l = v.state.doc.lineAt(p); if (rtlText(l.text)) return true; p = l.to + 1; } return false; }),
+          };
         },
         write: (m) => {
-          if (!m) { this.handle.style.display = "none"; return; }
-          if (m.needTight !== this.tight) { this.tight = m.needTight; v.dom.classList.toggle("cm-blk-tight", this.tight); requestAnimationFrame(() => this.place()); }
+          if (m.needTight !== this.tight) { this.tight = m.needTight; v.scrollDOM.classList.toggle("cm-blk-tight", this.tight); requestAnimationFrame(() => this.place()); }
+          if (m.rtlRoom !== this.rtlRoom) { this.rtlRoom = m.rtlRoom; v.scrollDOM.classList.toggle("cm-blk-rtlroom", this.rtlRoom); requestAnimationFrame(() => this.place()); }
+          this.geo = m.g;
+          // selection washes + margin checks
+          while (this.sels.length < m.sel.length) { const d = document.createElement("div"); d.className = "cm-blk-selbox"; d.innerHTML = `<span class="cm-blk-check"></span>`; v.scrollDOM.prepend(d); this.sels.push(d); }
+          this.sels.forEach((d, k) => {
+            const g = m.sel[k];
+            if (!g) { d.style.display = "none"; return; }
+            Object.assign(d.style, { display: "", transform: `translate(${Math.round(g.bl)}px, ${Math.round(g.bt)}px)`, width: `${Math.round(g.bw)}px`, height: `${Math.round(g.bh)}px` });
+            d.classList.toggle("rtl", g.rtl);
+            d.classList.toggle("nocheck", !m.page || this.tight);
+          });
+          const g = m.g;
+          if (!g) { this.handle.style.display = "none"; this.hl.style.display = "none"; return; }
           this.handle.style.display = "";
-          this.lastX = m.x;
-          this.handle.style.transform = `translate(${Math.round(m.x)}px, ${Math.round(m.y)}px)`;
-          this.handle.classList.toggle("on", m.sel);
+          this.handle.style.transform = `translate(${Math.round(g.x)}px, ${Math.round(g.y)}px)`;
+          this.handle.classList.toggle("on", m.on);
+          this.handle.classList.toggle("open", this.menuOpen);
+          // hover wash (not on a selected block: that one already has its own)
+          if (m.on || coarse()) this.hl.style.display = "none";
+          else Object.assign(this.hl.style, { display: "", transform: `translate(${Math.round(g.bl)}px, ${Math.round(g.bt)}px)`, width: `${Math.round(g.bw)}px`, height: `${Math.round(g.bh)}px` });
         },
       });
     }
@@ -236,7 +296,7 @@ function handlePlugin(hooks: BlockHooks) {
       e.preventDefault();
       clearTimeout(this.hideT);
       this.handle.setPointerCapture(e.pointerId);
-      this.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, idx: this.cur, moving: false, moved: [], t: -1, long: false, cy: e.clientY };
+      this.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, idx: this.cur, moving: false, moved: [], t: -1, long: false, cy: e.clientY, off: 0 };
       if (e.pointerType !== "mouse") {
         const d = this.drag;
         d.lpT = setTimeout(() => { if (this.drag === d && !d.moving) { d.long = true; this.toggle(d.idx); navigator.vibrate?.(15); } }, 480);
@@ -252,11 +312,31 @@ function handlePlugin(hooks: BlockHooks) {
         d.moving = true;
         d.moved = targets(this.view, d.idx);
         selectBlocks(this.view, d.moved);
-        this.view.dom.classList.add("cm-blk-dragging");
+        this.view.scrollDOM.classList.add("cm-blk-dragging");
+        this.startLift(d);
         this.autoScroll();
       }
       this.track();
     };
+    /** The lifted copy of the dragged block(s) that follows the pointer. */
+    startLift(d: { y: number; moved: number[]; off: number }) {
+      const v = this.view;
+      const { blocks } = blocksOf(v.state);
+      const g = this.geo;
+      this.lift.replaceChildren();
+      for (const i of d.moved) for (let l = blocks[i].a; l <= blocks[i].b; l++) {
+        const pos = v.state.doc.line(l + 1).from;
+        if (pos < v.viewport.from || pos > v.viewport.to) continue;
+        const el = (v.domAtPos(pos).node as Node);
+        const lineEl = (el.nodeType === 1 ? (el as HTMLElement) : el.parentElement)?.closest(".cm-line");
+        if (lineEl) { const c = lineEl.cloneNode(true) as HTMLElement; c.classList.remove("cm-blk-sel", "cm-activeLine"); this.lift.append(c); }
+      }
+      if (!g) return;
+      const sr = v.scrollDOM.getBoundingClientRect();
+      d.off = d.y - (g.bt + sr.top - v.scrollDOM.scrollTop);
+      Object.assign(this.lift.style, { display: "", width: `${Math.round(g.bw)}px`, left: "0px", top: "0px" });
+      this.lift.dataset.x = String(g.bl);
+    }
     track() {
       const d = this.drag!;
       const v = this.view;
@@ -267,10 +347,14 @@ function handlePlugin(hooks: BlockHooks) {
       for (let i = 0; i < blocks.length; i++) if ((top(i) + bot(i)) / 2 > d.cy) { t = i; break; }
       d.t = t;
       const y = !blocks.length ? 0 : t === 0 ? top(0) - 3 : t === blocks.length ? bot(blocks.length - 1) + 3 : (bot(t - 1) + top(t)) / 2;
-      const sr = v.scrollDOM.getBoundingClientRect(), cr = v.contentDOM.getBoundingClientRect();
+      const sr = v.scrollDOM.getBoundingClientRect();
+      const g = this.geo;
       const noop = d.moved.every((x, k) => x === d.moved[0] + k) && t >= d.moved[0] && t <= d.moved[d.moved.length - 1] + 1;
-      Object.assign(this.drop.style, { display: noop ? "none" : "", transform: `translate(${Math.round(cr.left - sr.left + v.scrollDOM.scrollLeft)}px, ${Math.round(y - sr.top + v.scrollDOM.scrollTop - 1)}px)`, width: `${Math.round(cr.width)}px` });
-      this.handle.style.transform = `translate(${Math.round(this.lastX)}px, ${Math.round(d.cy - sr.top + v.scrollDOM.scrollTop - 12)}px)`;
+      const bl = g ? g.bl : 0, bw = g ? g.bw : v.contentDOM.getBoundingClientRect().width;
+      Object.assign(this.drop.style, { display: noop ? "none" : "", transform: `translate(${Math.round(bl)}px, ${Math.round(y - sr.top + v.scrollDOM.scrollTop - 1)}px)`, width: `${Math.round(bw)}px` });
+      const ly = d.cy - d.off - sr.top + v.scrollDOM.scrollTop;
+      this.lift.style.transform = `translate(${Math.round(Number(this.lift.dataset.x ?? 0))}px, ${Math.round(ly)}px)`;
+      if (g) this.handle.style.transform = `translate(${Math.round(g.x)}px, ${Math.round(ly + 3 + (g.y - g.bt - 3))}px)`;
     }
     autoScroll() {
       const step = () => {
@@ -293,7 +377,11 @@ function handlePlugin(hooks: BlockHooks) {
         this.view.focus();
       } else if (!d.long) {
         if (e.shiftKey || e.ctrlKey || e.metaKey) this.toggle(d.idx);
-        else hooks.menu({ view: this.view, idx: targets(this.view, d.idx), rect: this.handle.getBoundingClientRect() });
+        else {
+          this.menuOpen = true;
+          this.handle.classList.add("open");
+          hooks.menu({ view: this.view, idx: targets(this.view, d.idx), rect: this.handle.getBoundingClientRect(), closed: () => { this.menuOpen = false; this.handle.classList.remove("open"); this.place(); } });
+        }
       }
       if (coarse()) this.follow(); else this.place();
     };
@@ -303,7 +391,9 @@ function handlePlugin(hooks: BlockHooks) {
       if (d) { clearTimeout(d.lpT); if (d.raf) cancelAnimationFrame(d.raf); try { this.handle.releasePointerCapture(d.id); } catch { /* ignore */ } }
       this.drag = null;
       this.drop.style.display = "none";
-      this.view.dom.classList.remove("cm-blk-dragging");
+      this.lift.style.display = "none";
+      this.lift.replaceChildren();
+      this.view.scrollDOM.classList.remove("cm-blk-dragging");
     }
     toggle(i: number) {
       const cur = selectedIdx(this.view.state);
@@ -317,10 +407,38 @@ function handlePlugin(hooks: BlockHooks) {
       this.view.scrollDOM.removeEventListener("pointerleave", this.onLeave);
       this.handle.remove();
       this.drop.remove();
-      this.view.dom.classList.remove("cm-blk-tight");
+      this.hl.remove();
+      this.lift.remove();
+      this.sels.forEach((d) => d.remove());
+      this.view.scrollDOM.classList.remove("cm-blk-tight", "cm-blk-rtlroom");
     }
   });
 }
+
+// ------------------------------------------------------------------ "3 blocks selected · Delete · Move · Turn into" (R4-16F)
+class SelBar extends WidgetType {
+  constructor(readonly n: number) { super(); }
+  eq(o: SelBar) { return o.n === this.n; }
+  toDOM(view: EditorView) {
+    const el = document.createElement("div");
+    el.className = "cm-blk-selbar";
+    el.setAttribute("contenteditable", "false");
+    const act = (label: string, run: (b: HTMLElement) => void) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.onmousedown = (e) => e.preventDefault(); b.onclick = () => run(b); return b; };
+    el.append(`${this.n} blocks selected`, " · ", act("Delete", () => { remove(view); view.focus(); }), " · ",
+      act("Move", (b) => openMenu(view, targets(view), b.getBoundingClientRect())), " · ",
+      act("Turn into", (b) => openMenu(view, targets(view), b.getBoundingClientRect(), "turn")));
+    return el;
+  }
+  ignoreEvent() { return true; }
+}
+const selBar = EditorView.decorations.compute([selField, "doc"], (state) => {
+  const idx = selectedIdx(state);
+  if (idx.length < 2) return Decoration.none;
+  const { blocks } = blocksOf(state);
+  const last = blocks[idx[idx.length - 1]];
+  const at = state.doc.line(last.b + 1).to;
+  return Decoration.set([Decoration.widget({ widget: new SelBar(idx.length), block: true, side: 1 }).range(at)]);
+});
 
 // ------------------------------------------------------------------ `^id` dimmed in the source
 const idDeco = new MatchDecorator({ regexp: /(?<=^|\s)\^[A-Za-z0-9-]+\s*$/g, decoration: Decoration.mark({ class: "cm-blkid" }) });
@@ -330,9 +448,10 @@ export function blockEditing(hooks: BlockHooks): Extension {
   return [
     selField,
     selDeco,
+    selBar,
     idMarks,
     handlePlugin(hooks),
-    EditorView.theme({ ".cm-scroller": { position: "relative" } }),
+    EditorView.theme({ ".cm-scroller": { position: "relative", isolation: "isolate" } }),
     Prec.highest(EditorView.domEventHandlers({
       keydown: (e, v) => {
         // Mod+Shift+D duplicates the block (and must not reach the global dev-panel shortcut).
@@ -368,16 +487,22 @@ export function blockRefSource(notes: () => RefNote[], currentTitle: () => strin
     const note = self ? null : notes().find((n) => n.title.toLowerCase() === title.toLowerCase());
     if (!self && !note) return null;
     const lines = self ? ctx.state.doc.toString().split("\n") : note!.body.split("\n");
-    const blocks = parseBlocks(lines).filter((b) => b.kind !== "hr");
-    const options: Completion[] = [];
+    const blocks = parseBlocks(lines).filter((b) => b.kind !== "hr" && !(b.kind === "heading" && /^#\s/.test(lines[b.a])));
+    const options: (Completion & { lmGlyph: string; lmId: string })[] = [];
+    const name = self ? currentTitle() : note!.title;
+    // "Blocks in <b>Note</b>" header (design R4-16G); the "adds an id" footnote is the tooltip's ::after (layout.css)
+    const section = { name: `Blocks in ${name}`, header: () => { const h = document.createElement("completion-section"); h.className = "lm-blk-head"; h.append("Blocks in "); const b = document.createElement("b"); b.textContent = name; h.append(b); return h; } };
     for (const blk of blocks) {
       const text = lines.slice(blk.a, blk.b + 1).join("\n");
       const label = blockPreview(text, blk.kind);
       if (q && !(blk.id ?? "").toLowerCase().startsWith(q) && !label.toLowerCase().includes(q)) continue;
       options.push({
         label,
-        detail: blk.id ? `^${blk.id}` : blk.kind,
-        type: "text",
+        lmId: blk.id ? `^${blk.id}` : "add id",
+        lmGlyph: blockGlyph(blk, lines[blk.a] ?? ""),
+        section,
+        boost: -options.length,
+        type: blk.id ? "blk-id" : "blk-noid",
         apply: (view, _c, from, to) => {
           const id = blk.id ?? newBlockId();
           const close = view.state.sliceDoc(to, to + 2) === "]]" ? "" : "]]";

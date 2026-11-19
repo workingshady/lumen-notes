@@ -6,11 +6,13 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Note } from "../../shared/types";
 import { matcher, parseQuery } from "../lib/search";
 import { go, openNote, useUI, useVault } from "../lib/store";
+import { sharedTagEdges, tagNodeEdges, type TagMode } from "../lib/graph-tags";
 import { plainExcerpt } from "../components/nav-text";
 import { cx, STATUS_COLOR } from "../components/ui";
 
 type GNode = SimulationNodeDatum & { id: string; label: string; kind: "note" | "tag"; note?: Note; deg: number; color: string };
-type GLink = SimulationLinkDatum<GNode> & { tag?: boolean };
+/** `tag`: note -> tag-node edge; `shared`: dashed edge between two notes that share a tag (design 04 D6). */
+type GLink = SimulationLinkDatum<GNode> & { tag?: boolean; shared?: boolean };
 type ColorBy = "folder" | "type" | "status";
 
 /** Folder colours in design order (01 cyan, 02 orange, 03 purple, 04 green, 05 yellow, …). */
@@ -22,6 +24,10 @@ const css = (v: string) => getComputedStyle(document.documentElement).getPropert
 /** Canvas can't paint `var(--x)`: resolve it first. */
 const paint = (c: string) => { const m = /^var\((--[\w-]+)\)$/.exec(c); return m ? css(m[1]) || "#888" : c; };
 const PANEL_KEY = "lumen.graphPanel";
+const TAGS_KEY = "lumen.graphTags";
+const TAG_C = "#C9A0DC";
+/** Shared-tag edges per tag (ring beyond a small clique) and how many tag neighbours a local graph pulls in. */
+const SHARED_PER_TAG = 24, LOCAL_TAG_NEIGHBOURS = 30;
 /** Above this many nodes the layout runs progressively with cheaper forces (no collide, approximate charge). */
 const BIG_GRAPH = 1500;
 const ls = { get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* ignore */ } } };
@@ -60,7 +66,8 @@ export function GraphView({ localTo }: { localTo?: string }) {
   const [requested] = useState(() => { try { return sessionStorage.getItem("lumen.graphLocal"); } catch { return null; } });
   useEffect(() => { try { sessionStorage.removeItem("lumen.graphLocal"); } catch { /* ignore */ } }, []);
   const [q, setQ] = useState("");
-  const [showTags, setShowTags] = useState(false);
+  const [tagMode, setTagModeRaw] = useState<TagMode>(() => { const t = ls.get(TAGS_KEY); return t === "nodes" || t === "shared" ? t : "off"; });
+  const setTagMode = (t: TagMode) => { setTagModeRaw(t); ls.set(TAGS_KEY, t); };
   const [orphans, setOrphans] = useState(true);
   const [journal, setJournal] = useState(true);
   const [colorBy, setColorBy] = useState<ColorBy>("folder");
@@ -101,6 +108,15 @@ export function GraphView({ localTo }: { localTo?: string }) {
         for (const id of frontier) for (const o of [...(v.outlinks.get(id) ?? []), ...(v.backlinks.get(id) ?? [])]) if (!keep.has(o)) { keep.add(o); next.push(o); }
         frontier = next;
       }
+      // With tag links on, the local graph also pulls in notes that share a tag with the centre (capped).
+      const c = v.byId.get(center);
+      if (tagMode !== "off" && c?.tags.length) {
+        let extra = 0;
+        for (const n of v.notes) {
+          if (extra >= LOCAL_TAG_NEIGHBOURS) break;
+          if (!keep.has(n.id) && n.tags.some((t) => c.tags.includes(t))) { keep.add(n.id); extra++; }
+        }
+      }
       notes = v.notes.filter((n) => keep.has(n.id) && (journal || n.type !== "journal" || n.id === center));
     }
     // Legend over the visible notes (before isolating, so every chip stays tappable).
@@ -119,24 +135,34 @@ export function GraphView({ localTo }: { localTo?: string }) {
     const nodes: GNode[] = notes.map((n) => ({ id: n.id, label: n.title, kind: "note", note: n, deg: 0, color: colorOfKey(keyOf(n)) }));
     const links: GLink[] = [];
     for (const n of notes) for (const o of v.outlinks.get(n.id) ?? []) if (ids.has(o)) links.push({ source: n.id, target: o });
-    if (showTags) {
-      const tags = new Set(notes.flatMap((n) => n.tags));
-      for (const t of tags) nodes.push({ id: `#${t}`, label: `#${t}`, kind: "tag", deg: 0, color: "var(--muted)" });
-      for (const n of notes) for (const t of n.tags) links.push({ source: n.id, target: `#${t}`, tag: true });
-    }
+    // Degree = real links only (node size, labels, "N links"); tag edges only keep a note from counting as an orphan.
     const deg = new Map<string, number>();
     for (const l of links) { deg.set(l.source as string, (deg.get(l.source as string) ?? 0) + 1); deg.set(l.target as string, (deg.get(l.target as string) ?? 0) + 1); }
     nodes.forEach((n) => (n.deg = deg.get(n.id) ?? 0));
-    const final = orphans ? nodes : nodes.filter((n) => n.deg > 0 || n.id === center);
+    let tagEdges = 0;
+    if (tagMode === "nodes") {
+      const t = tagNodeEdges(notes);
+      for (const x of t.tags) nodes.push({ id: x.id, label: `#${x.tag}`, kind: "tag", deg: x.count, color: TAG_C });
+      for (const e of t.edges) links.push({ source: e.source, target: e.target, tag: true });
+      tagEdges = t.edges.length;
+    } else if (tagMode === "shared") {
+      const s = sharedTagEdges(notes, { perTag: SHARED_PER_TAG, linked: links.map((l) => [l.source as string, l.target as string] as [string, string]) });
+      for (const e of s) links.push({ source: e.source, target: e.target, shared: true });
+      tagEdges = s.length;
+    }
+    const touched = new Set<string>();
+    for (const l of links) { touched.add(l.source as string); touched.add(l.target as string); }
+    const final = orphans ? nodes : nodes.filter((n) => touched.has(n.id) || n.id === center);
     const finalIds = new Set(final.map((n) => n.id));
-    return { nodes: final, links: links.filter((l) => finalIds.has(l.source as string) && finalIds.has(l.target as string)), legend, notes: notes.length };
-  }, [v, q, showTags, orphans, journal, colorBy, local, depth, center, ui.spaceId, allSpaces, iso]);
+    return { nodes: final, links: links.filter((l) => finalIds.has(l.source as string) && finalIds.has(l.target as string)), legend, notes: notes.length, tagEdges };
+  }, [v, q, tagMode, orphans, journal, colorBy, local, depth, center, ui.spaceId, allSpaces, iso]);
 
   const sel = selId ? graph.nodes.find((n) => n.id === selId) ?? null : null;
   const selNote = sel?.note;
   const folderOf = (n: Note) => (n.folderId ? v.folderMap.get(n.folderId)?.name : v.spaceMap.get(n.spaceId)?.name) ?? "";
   const showLocal = (id: string) => { setFocusId(id); setLocal(true); setSelId(id); };
-  const linkCount = graph.links.filter((l) => !l.tag).length;
+  const linkCount = graph.links.filter((l) => !l.tag && !l.shared).length;
+  const selTag = sel?.kind === "tag" ? sel.label.slice(1) : null;
   const space = v.spaceMap.get(ui.spaceId);
   const leave = () => (ui.history.length ? go("notes", { noteId: ui.history[ui.history.length - 1] }) : go("home"));
 
@@ -154,6 +180,17 @@ export function GraphView({ localTo }: { localTo?: string }) {
       </div>
       <span dir="auto" className="text-[17px] font-[650] md:text-[15px]">{selNote.title}</span>
       <span dir="auto" className="line-clamp-2 text-[13.5px] leading-5 text-muted md:text-[12.5px] md:leading-[19px]">{plainExcerpt(selNote.body, 90) || "Empty note"}</span>
+    </>
+  );
+
+  const tagCard = selTag && sel && (
+    <>
+      <div className="flex items-center gap-1.5 text-[12px] text-muted"><span className="size-2 shrink-0 rotate-45 rounded-[1px]" style={{ background: TAG_C }} />Tag · {sel.deg} notes</div>
+      <span dir="auto" className="text-[17px] font-[650] md:text-[15px]">#{selTag}</span>
+      <div className="mt-0.5 flex items-center gap-2 pb-1">
+        <button onClick={() => go("notes", { tag: selTag, spaceId: "all", folderId: null, filter: null, noteId: null })} className="flex h-11 flex-1 items-center justify-center rounded-[8px] border border-line bg-bg px-3 font-medium hover:border-accent md:h-[30px] md:flex-none">Show notes</button>
+        <button onClick={() => { setQ(`tag:#${selTag}`); setSelId(null); }} className="flex h-11 flex-1 items-center justify-center rounded-[8px] border border-line px-3 hover:bg-surface md:h-[30px] md:flex-none">Filter graph</button>
+      </div>
     </>
   );
 
@@ -175,9 +212,16 @@ export function GraphView({ localTo }: { localTo?: string }) {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter… tag:#math" className="min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-muted" />
       </label>
       <div className="flex flex-col gap-2.5">
-        <Toggle label="Tags as nodes" on={showTags} onChange={setShowTags} />
         <Toggle label="Orphans" on={orphans} onChange={setOrphans} />
         <Toggle label="Journal notes" on={journal} onChange={setJournal} />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[12px] text-muted">Tag links</span>
+        <div role="radiogroup" aria-label="Tag links" className="grid grid-cols-3 gap-0.5 rounded-[8px] border border-line bg-bg p-[3px]">
+          {([["off", "Off"], ["nodes", "Tags"], ["shared", "Shared"]] as [TagMode, string][]).map(([m, l]) => (
+            <button key={m} role="radio" aria-checked={tagMode === m} title={m === "nodes" ? "Tags as small diamond nodes linked to their notes" : m === "shared" ? "Dashed edges between notes that share a tag" : "No tag links"} onClick={() => setTagMode(m)} className={cx("h-6 rounded-[6px]", tagMode === m ? "bg-surface-2 font-semibold text-ink" : "text-muted hover:text-ink")}>{l}</button>
+          ))}
+        </div>
       </div>
       <div className="flex flex-col gap-1.5">
         <span className="text-[12px] text-muted">Colour by</span>
@@ -190,6 +234,11 @@ export function GraphView({ localTo }: { localTo?: string }) {
       <div className="flex flex-col gap-2">
         <div className="flex justify-between text-[12px]"><span className="text-muted">Local graph depth</span><span className="tabular-nums">{depth}</span></div>
         <DepthSlider value={depth} onChange={(d) => { setDepth(d); if (!local && (selId ?? center)) showLocal((selId ?? center)!); }} />
+      </div>
+      <div className="flex flex-col gap-[7px] border-t border-line pt-3" aria-label="Edge legend">
+        <span className="flex items-center gap-2 leading-4"><svg width="22" height="8" aria-hidden className="shrink-0 text-muted"><line x1="1" y1="4" x2="21" y2="4" stroke="currentColor" strokeWidth="1.5" /></svg><span className="flex-1">Link</span><span className="text-[12px] text-muted">{linkCount}</span></span>
+        {tagMode !== "off" && <span className="flex items-center gap-2 leading-4"><svg width="22" height="8" aria-hidden className="shrink-0"><line x1="1" y1="4" x2="21" y2="4" stroke={TAG_C} strokeWidth="1.5" strokeDasharray="3 3" /></svg><span className="flex-1">{tagMode === "nodes" ? "Note to tag" : "Shared tag"}</span><span className="text-[12px] text-muted">{graph.tagEdges}</span></span>}
+        {tagMode === "nodes" && <span className="flex items-center gap-2 leading-4"><span className="flex w-[22px] shrink-0 justify-center"><span className="size-2 rotate-45 rounded-[1px]" style={{ background: TAG_C }} /></span><span className="flex-1">Tag</span></span>}
       </div>
       <div className="flex flex-col gap-[7px] border-t border-line pt-3">
         {graph.legend.map((l) => (
@@ -226,14 +275,14 @@ export function GraphView({ localTo }: { localTo?: string }) {
             {ui.spaceId !== "all" && !local && width >= 1100 && (
               <div className="relative">
                 <button onClick={() => setSpaceMenu((m) => !m)} className="flex h-7 items-center gap-1.5 rounded-[8px] border border-line bg-surface px-2.5 text-muted hover:text-ink">
-                  <span className="text-ink">{allSpaces ? "All spaces" : `${space?.icon ?? ""} This space`}</span><ChevronDown size={12} />
+                  <span className="text-ink">{allSpaces ? "All spaces" : "This space"}</span><ChevronDown size={12} />
                 </button>
                 {spaceMenu && (
                   <>
                     <div className="fixed inset-0 z-20" onClick={() => setSpaceMenu(false)} />
                     <div className="absolute left-0 top-9 z-30 flex w-48 flex-col gap-px rounded-[12px] border border-line bg-surface-2 p-1.5 shadow-[0_16px_40px_rgba(0,0,0,.45)] fade-in">
                       {[["This space", false], ["All spaces", true]].map(([l, a]) => (
-                        <button key={l as string} onClick={() => { setAllSpaces(a as boolean); setSpaceMenu(false); }} className={cx("flex h-8 items-center rounded-[8px] px-2.5 text-left hover:bg-bg", allSpaces === a && "font-semibold")}>{a ? l : `${space?.icon ?? ""} ${space?.name ?? l}`}</button>
+                        <button key={l as string} onClick={() => { setAllSpaces(a as boolean); setSpaceMenu(false); }} className={cx("flex h-8 items-center rounded-[8px] px-2.5 text-left hover:bg-bg", allSpaces === a && "font-semibold")}>{a ? l : `${space?.name ?? l}`}</button>
                       ))}
                     </div>
                   </>
@@ -241,7 +290,7 @@ export function GraphView({ localTo }: { localTo?: string }) {
               </div>
             )}
             {local && <button onClick={() => { setLocal(false); setFocusId(null); }} className="flex h-7 items-center gap-1.5 rounded-[8px] border border-line bg-surface px-2.5 text-muted hover:text-ink"><Locate size={12} /> Local · {depth}<X size={12} /></button>}
-            <span className="text-[12px] text-muted">{graph.notes} notes · {linkCount} links</span>
+            <span className="text-[12px] text-muted">{graph.notes} notes · {linkCount} links{tagMode !== "off" ? ` · ${graph.tagEdges} tag edges` : ""}</span>
           </div>
         )}
 
@@ -265,6 +314,16 @@ export function GraphView({ localTo }: { localTo?: string }) {
                 <button aria-label="Local graph" onClick={() => showLocal(selNote!.id)} className="flex size-12 items-center justify-center rounded-[12px] border border-line"><Locate size={18} /></button>
               </div>
               <div className="flex h-6 items-center justify-center"><span className="h-1 w-[108px] rounded-full bg-muted opacity-45" /></div>
+            </div>
+          </>
+        )}
+
+        {tagCard && (
+          <>
+            <div className="absolute z-10 hidden w-[268px] flex-col gap-2 rounded-[14px] border border-line bg-surface-2 p-3.5 shadow-[0_16px_40px_rgba(0,0,0,.45)] md:flex fade-in" style={cardStyle}>{tagCard}</div>
+            <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col gap-2.5 rounded-t-[14px] border-t border-line bg-surface px-5 pb-4 pt-2.5 safe-b md:hidden sheet-in">
+              <div className="flex justify-center"><button aria-label="Close preview" onClick={() => setSelId(null)} className="h-1 w-9 rounded-full bg-line" /></div>
+              {tagCard}
             </div>
           </>
         )}
@@ -344,7 +403,7 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
       build: (pr) => graphSvg(
         // Labels: only the most connected nodes (top 30 %, at least 3 links) so a dense graph stays readable.
         nodes.map((n) => { const d = Math.max(5, 6 + Math.min(n.deg, 12) * 2.1); return { x: n.x ?? 0, y: n.y ?? 0, r: d / 2, color: paint(n.color), label: n.label, showLabel: !!focus || n.deg >= labelMin }; }),
-        links.map((l) => ({ a: end(l.source), b: end(l.target), tag: l.tag })).filter((l): l is { a: GNode; b: GNode; tag: boolean | undefined } => !!l.a && !!l.b).map((l) => ({ a: { x: l.a.x ?? 0, y: l.a.y ?? 0 }, b: { x: l.b.x ?? 0, y: l.b.y ?? 0 }, tag: l.tag })),
+        links.map((l) => ({ a: end(l.source), b: end(l.target), tag: l.tag || l.shared })).filter((l): l is { a: GNode; b: GNode; tag: boolean | undefined } => !!l.a && !!l.b).map((l) => ({ a: { x: l.a.x ?? 0, y: l.a.y ?? 0 }, b: { x: l.b.x ?? 0, y: l.b.y ?? 0 }, tag: l.tag })),
         pr,
       ),
     });
@@ -364,17 +423,24 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
     const ctx = cv.getContext("2d")!;
     const s = st.current;
     const dpr = devicePixelRatio || 1;
-    const resize = () => { cv.width = cv.clientWidth * dpr; cv.height = cv.clientHeight * dpr; if (!s.x) { s.x = cv.clientWidth / 2; s.y = cv.clientHeight / 2; } };
+    // Setting width/height clears the canvas even when the size is unchanged (the ResizeObserver's first callback
+    // lands after the first draw), so only resize on a real change and force a redraw when it happens.
+    let lastSig = "";
+    const resize = () => {
+      const w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; lastSig = ""; }
+      if (!s.x) { s.x = cv.clientWidth / 2; s.y = cv.clientHeight / 2; }
+    };
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(cv);
     const linkArr = links.map((l) => ({ ...l }));
     // Big vaults (thousands of notes): fewer, cheaper layout steps, run a slice per frame instead of all up front.
     const big = nodes.length > BIG_GRAPH;
-    const charge = forceManyBody<GNode>().strength((d) => (d.deg ? -170 : -50));
+    const charge = forceManyBody<GNode>().strength((d) => (d.kind === "tag" ? -90 : d.deg ? -170 : -50));
     if (big) charge.theta(1.2).distanceMax(700);
     const sim = forceSimulation(nodes)
-      .force("link", forceLink<GNode, GLink>(linkArr).id((d) => d.id).distance((l) => (l.tag ? 50 : 80)))
+      .force("link", forceLink<GNode, GLink>(linkArr).id((d) => d.id).distance((l) => (l.tag ? 50 : l.shared ? 110 : 80)).strength((l) => (l.shared ? 0.04 : l.tag ? 0.3 : 0.7)))
       .force("charge", charge)
       .force("center", forceCenter(0, 0))
       .force("x", forceX<GNode>(0).strength((d) => (d.deg ? 0.05 : 0.14))).force("y", forceY<GNode>(0).strength((d) => (d.deg ? 0.05 : 0.14)));
@@ -400,7 +466,6 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
     }
     const neighbors = (n: GNode | null) => (n ? adj.get(n.id) ?? new Set([n.id]) : null);
     let raf = 0;
-    let lastSig = "";
     let shown = ticked, shownAt = 0; // layout progress last drawn (big graphs redraw ~3×/s while settling)
     const draw = () => {
       raf = requestAnimationFrame(draw);
@@ -431,39 +496,51 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
       const px = 1 / s.k;
       // Edges: muted at 35% (tag edges 20%); around the lit node amber, others fade to 10%.
       // Batched into one path per style: one stroke() for thousands of edges instead of one each.
-      const batch = (pick: (l: GLink, on: boolean) => boolean, style: string, width: number, alpha: number) => {
+      const batch = (pick: (l: GLink, on: boolean) => boolean, style: string, width: number, alpha: number, dash?: number[]) => {
         ctx.strokeStyle = style; ctx.lineWidth = width * px; ctx.globalAlpha = alpha;
+        ctx.setLineDash(dash ? dash.map((d) => d * px) : []);
         ctx.beginPath();
         for (const l of linkArr) {
           const a = l.source as GNode, b = l.target as GNode;
           if (pick(l, !!lit && (a === lit || b === lit))) { ctx.moveTo(a.x!, a.y!); ctx.lineTo(b.x!, b.y!); }
         }
         ctx.stroke();
+        ctx.setLineDash([]);
       };
+      // Link edges solid; tag edges (note -> tag node, or shared tag) dashed in the tag colour (legend: Link vs Tag).
+      const tagEdge = (l: GLink) => !!(l.tag || l.shared);
       if (lit) {
-        batch((_l, on) => !on, edge, 1, 0.1);
-        batch((_l, on) => on, accent, 1.5, 0.9);
+        batch((l, on) => !on && !tagEdge(l), edge, 1, 0.1);
+        batch((l, on) => !on && tagEdge(l), TAG_C, 1, 0.08, [3, 3]);
+        batch((l, on) => on && !tagEdge(l), accent, 1.5, 0.9);
+        batch((l, on) => on && tagEdge(l), TAG_C, 1.2, 0.8, [3, 3]);
       } else {
         // Thousands of overlapping edges at 35% turn into a solid sheet: fade them with graph size.
         const fade = big ? Math.max(0.15, BIG_GRAPH / nodes.length) : 1;
-        batch((l) => !l.tag, edge, 1, 0.35 * fade);
-        batch((l) => !!l.tag, edge, 1, 0.2 * fade);
+        batch((l) => !tagEdge(l), edge, 1, 0.35 * fade);
+        batch((l) => !!l.tag, TAG_C, 1, 0.3 * fade, [3, 3]);
+        batch((l) => !!l.shared, TAG_C, 1, 0.22 * fade, [2, 4]);
       }
       const zoomF = Math.max(0.75, Math.min(1, s.k * 1.1));
       for (const n of nodes) {
-        const d = Math.max(5, 6 + Math.min(n.deg, 12) * 2.1) * zoomF;
+        const isTag = n.kind === "tag";
+        // Tag nodes: smaller diamonds (size grows gently with how many notes carry the tag).
+        const d = (isTag ? Math.min(11, 6 + Math.log2(1 + n.deg)) : Math.max(5, 6 + Math.min(n.deg, 12) * 2.1)) * zoomF;
         const r = d / 2;
         const on = !hl || hl.has(n.id);
         const big = n === lit || n === selNode || n.id === focus;
         ctx.globalAlpha = on ? 1 : 0.18;
         ctx.fillStyle = paint(n.color);
-        ctx.beginPath(); ctx.arc(n.x!, n.y!, r, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        if (isTag) { ctx.moveTo(n.x!, n.y! - r * 1.25); ctx.lineTo(n.x! + r * 1.25, n.y!); ctx.lineTo(n.x!, n.y! + r * 1.25); ctx.lineTo(n.x! - r * 1.25, n.y!); ctx.closePath(); }
+        else ctx.arc(n.x!, n.y!, r, 0, Math.PI * 2);
+        ctx.fill();
         if (big) {
           ctx.globalAlpha = 1;
           ctx.lineWidth = 3 * px; ctx.strokeStyle = bg; ctx.beginPath(); ctx.arc(n.x!, n.y!, r + 1.5 * px, 0, Math.PI * 2); ctx.stroke();
           ctx.lineWidth = 2 * px; ctx.strokeStyle = accent; ctx.beginPath(); ctx.arc(n.x!, n.y!, r + 4 * px, 0, Math.PI * 2); ctx.stroke();
         }
-        const showL = n.label && (n.deg >= 3 || (hl && hl.has(n.id)) || focus || s.k > 2.4);
+        const showL = n.label && ((isTag ? n.deg >= 4 : n.deg >= 3) || (hl && hl.has(n.id)) || focus || s.k > 2.4);
         if (showL) {
           ctx.globalAlpha = on ? 0.95 : 0.2;
           ctx.fillStyle = text;

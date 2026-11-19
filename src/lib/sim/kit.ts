@@ -60,13 +60,13 @@ export interface Vault {
 export const emptyVault = (): Vault => ({ spaces: [], folders: [], notes: [], versions: [], cards: [], sessions: [], attachments: [], blobs: [] });
 
 export const INBOX: Space = {
-  id: "inbox", name: "Inbox", kind: "area", icon: "📥", color: null, description: "Default space", props: {}, roadmapId: null,
+  id: "inbox", name: "Inbox", kind: "area", icon: "glyph:inbox", color: null, description: "Default space", props: {}, roadmapId: null,
   sort: 0, archived: 0, createdAt: 0, updatedAt: 0, deleted: 0, dirty: 0,
 };
 
 export function space(p: Partial<Space> & { id: string; name: string; kind: SpaceKind }): Space {
   const t = Date.now() - 30 * DAY;
-  return { icon: "📁", color: null, description: "", props: {}, roadmapId: null, sort: 1, archived: 0, createdAt: t, updatedAt: t, deleted: 0, dirty: 0, ...p };
+  return { icon: "glyph:folder", color: null, description: "", props: {}, roadmapId: null, sort: 1, archived: 0, createdAt: t, updatedAt: t, deleted: 0, dirty: 0, ...p };
 }
 export function folder(p: Partial<Folder> & { id: string; spaceId: string; name: string }): Folder {
   return { parentId: null, color: null, sort: 1, updatedAt: Date.now() - 30 * DAY, deleted: 0, dirty: 0, ...p };

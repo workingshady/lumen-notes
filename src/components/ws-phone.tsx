@@ -1,9 +1,9 @@
-import { Archive, ArrowDownWideNarrow, Check, ChevronDown, ChevronRight, FolderPlus, Hash, Inbox, Pin, Search, Trash2 } from "lucide-react";
+import { Archive, ArrowDownWideNarrow, Check, ChevronDown, ChevronRight, FolderPlus, Hash, Inbox, Pin, Search, Trash2, X, Globe, Plus } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
-import type { Folder, Note } from "../../shared/types";
+import type { Folder, Note, Space } from "../../shared/types";
 import { createFolder, createSpace, deleteFolder, moveNote, restoreNote, trashNote, updateNote } from "../lib/actions";
 import { patch } from "../lib/db";
-import { natural } from "../lib/parse";
+import { natural, progress, roadmap } from "../lib/parse";
 import { getSettings } from "../lib/settings";
 import { go, openNote, setUI, toast, useUI, useVault } from "../lib/store";
 import { PRESETS } from "../lib/canvas";
@@ -11,6 +11,10 @@ import { useSync } from "../lib/sync";
 import { syncLook } from "./ws-sync";
 import { cx, Sheet } from "./ui";
 import { tr, useRtl } from "./ws-dir";
+import { PhoneSmartRows, smartIdOf, useSmartFolders } from "./SmartFolders";
+import { Glyph } from "./Glyph";
+import { SpaceIcon } from "./SpaceIcon";
+import { spaceColor } from "../lib/space-icon";
 
 /* Phone notes list (design: Lumen 02 · 4C) + folder tree sheet (4D). */
 const colorOf = (c: string | null | undefined) => (c ? PRESETS[c] ?? c : null);
@@ -31,7 +35,7 @@ export function PhoneListHeader() {
     <div className="safe-t shrink-0">
       <div className="flex h-14 items-center gap-2 pe-2 ps-4">
         <button onClick={() => setSpaces(true)} className="flex h-10 min-w-0 items-center gap-2 rounded-[10px] bg-surface pe-2.5 ps-1.5">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-[7px]" style={{ background: `color-mix(in srgb, ${c} 20%, transparent)` }}>{space?.icon ?? "🗂️"}</span>
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-[7px]" style={{ background: `color-mix(in srgb, ${c} 20%, transparent)` }}>{space ? <SpaceIcon space={space} size={15} color={c} /> : <Glyph name="folder" size={15} color={c} />}</span>
           <span className="truncate text-[14px] font-semibold">{space?.name ?? tr("All spaces", rtl)}</span>
           <ChevronDown size={14} className="shrink-0 text-muted" />
         </button>
@@ -50,13 +54,14 @@ export function PhoneChips({ filter, setFilter, onSort, sortLabel }: { filter: P
   const v = useVault();
   const rtl = useRtl();
   const [tree, setTree] = useState(false);
+  const smart = useSmartFolders();
   const folder = ui.folderId ? v.folderMap.get(ui.folderId) : null;
   const chip = (on: boolean) => cx("flex h-9 shrink-0 items-center rounded-full px-3 text-[14px]", on ? "bg-surface-2 font-medium text-ink" : "border border-line text-muted");
   return (
     <div className="flex shrink-0 items-center gap-2 px-4 pb-2.5 pt-1">
       <button onClick={() => setTree(true)} className={cx(chip(true), "min-w-0 gap-2")}>
         {folder ? <span className="size-2 shrink-0 rounded-[3px]" style={{ background: colorOf(folder.color) ?? "var(--muted)" }} /> : null}
-        <span className="truncate">{folder?.name ?? (ui.tag ? `#${ui.tag}` : ui.filter === "paths" ? "Learning paths" : ui.filter === "visual" ? "Canvases & whiteboards" : ui.filter === "published" ? "Blog posts" : tr("All notes", rtl))}</span>
+        <span className="truncate">{folder?.name ?? (ui.tag ? `#${ui.tag}` : smartIdOf(ui) ? smart.find((x) => x.id === smartIdOf(ui))?.name ?? "Smart folder" : ui.filter === "paths" ? "Learning paths" : ui.filter === "visual" ? "Canvases & whiteboards" : ui.filter === "published" ? "Blog posts" : tr("All notes", rtl))}</span>
         <ChevronDown size={14} className="shrink-0 text-muted" />
       </button>
       <button className={chip(filter === "pinned")} onClick={() => setFilter(filter === "pinned" ? null : "pinned")}>{tr("Pinned", rtl)}</button>
@@ -90,7 +95,7 @@ export function SwipeRow({ n, children }: { n: Note; children: ReactNode }) {
     setDx(0);
     const v = await import("../lib/db").then((m) => m.db.spaces.toArray());
     let arch = v.find((s) => s.kind === "archive" && !s.deleted);
-    if (!arch) arch = await createSpace({ name: "Archive", kind: "archive", icon: "🗄️" });
+    if (!arch) arch = await createSpace({ name: "Archive", kind: "archive", icon: "glyph:archive" });
     const from = { spaceId: n.spaceId, folderId: n.folderId };
     await moveNote(n.id, arch.id, null);
     toast(`“${n.title}” archived`, { label: "Undo", run: () => void moveNote(n.id, from.spaceId, from.folderId) }, { icon: "info" });
@@ -133,25 +138,58 @@ export function SwipeRow({ n, children }: { n: Note; children: ReactNode }) {
   );
 }
 
-/** Space switcher as a bottom sheet (phone). */
+/** Space switcher as a bottom sheet (phone, design Lumen 03 · 1D): grouped Courses · Projects · Areas · Resources,
+ *  36 px tinted tiles with the space glyph, a meta line, search, and All spaces / New space at the bottom. */
+const SHEET_KINDS: [Space["kind"], string][] = [["course", "Courses"], ["project", "Projects"], ["area", "Areas"], ["resource", "Resources"], ["archive", "Archive"]];
 export function SpaceSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ui = useUI();
   const v = useVault();
-  const row = (on: boolean) => cx("flex h-12 w-full items-center gap-3 rounded-[10px] px-3 text-start text-[15px]", on ? "bg-surface-2 font-semibold" : "hover:bg-surface-2");
+  const [q, setQ] = useState<string | null>(null);
+  if (!open) return null;
+  const pick = (spaceId: string) => { setUI({ spaceId, folderId: null, filter: null, tag: null }); setQ(null); onClose(); };
+  const meta = (s: Space) => {
+    const n = v.notes.filter((x) => x.spaceId === s.id).length;
+    if (s.kind === "course" && s.roadmapId) return `${progress(roadmap(v.byId.get(s.roadmapId)?.body ?? "")).pct}% · ${n} notes`;
+    const d = s.kind === "project" ? s.props?.deadline : "";
+    if (d && !isNaN(Date.parse(d))) { const days = Math.ceil((Date.parse(d) - Date.now()) / 864e5); return days >= 0 ? `${days} days left` : `${-days} days over`; }
+    return `${n} notes`;
+  };
+  const term = (q ?? "").trim().toLowerCase();
+  const live = v.spaces.filter((s) => !s.archived && (!term || s.name.toLowerCase().includes(term)));
   return (
-    <Sheet open={open} onClose={onClose} title="Spaces">
-      <div className="-mx-2 flex flex-col">
-        <button className={row(ui.spaceId === "all")} onClick={() => { setUI({ spaceId: "all", folderId: null, filter: null, tag: null }); onClose(); }}><span className="w-6 text-center">🗂️</span><span className="flex-1">All spaces</span>{ui.spaceId === "all" && <Check size={18} className="text-accent" />}</button>
-        {v.spaces.filter((s) => !s.archived).map((s) => (
-          <button key={s.id} className={row(ui.spaceId === s.id)} onClick={() => { setUI({ spaceId: s.id, folderId: null, filter: null, tag: null }); onClose(); }}>
-            <span className="w-6 text-center">{s.icon}</span><span className="flex-1 truncate">{s.name}</span>
-            <span className="text-[13px] text-muted">{v.notes.filter((n) => n.spaceId === s.id).length}</span>
-            {ui.spaceId === s.id && <Check size={18} className="text-accent" />}
-          </button>
-        ))}
-        <button className={row(false) + " text-muted"} onClick={() => { onClose(); setUI({ newSpace: true }); }}><span className="w-6 text-center">＋</span>New space…</button>
+    <div className="fade-in fixed inset-0 z-50 flex items-end bg-[rgba(5,6,8,.6)]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div role="dialog" aria-label="Spaces" className="sheet-in flex h-[700px] max-h-[90dvh] w-full flex-col rounded-t-[14px] bg-surface text-[14px] text-ink">
+        <div className="flex justify-center pb-1 pt-2.5"><span className="h-1 w-9 rounded-[2px] bg-line" /></div>
+        <div className="flex items-center gap-2 px-5 pb-3 pt-2">
+          {q === null ? <span className="flex-1 text-[18px] font-[650] leading-[22px]">Spaces</span>
+            : <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a space" aria-label="Find a space" className="h-9 min-w-0 flex-1 rounded-[8px] border border-accent bg-bg px-3 text-[15px] outline-none" />}
+          <button aria-label={q === null ? "Search spaces" : "Close search"} onClick={() => setQ(q === null ? "" : null)} className="-my-2.5 -me-2 flex size-10 items-center justify-center text-muted">{q === null ? <Search size={20} /> : <X size={20} />}</button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {SHEET_KINDS.map(([k, label]) => {
+            const list = live.filter((s) => s.kind === k);
+            if (!list.length) return null;
+            return (
+              <div key={k}>
+                <div className="px-5 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{label}</div>
+                {list.map((s) => { const on = ui.spaceId === s.id; return (
+                  <button key={s.id} onClick={() => pick(s.id)} className={cx("mx-2 flex h-14 w-[calc(100%-16px)] items-center gap-3 rounded-[12px] px-3 text-start", on && "bg-surface-2")}>
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-[9px]" style={{ background: `color-mix(in srgb, ${spaceColor(s)} 20%, transparent)` }}><SpaceIcon space={s} size={16} color="var(--text)" /></span>
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5"><span dir="auto" className={cx("truncate", on ? "font-semibold" : "font-medium")}>{s.name}</span><span className="text-[12px] text-muted">{meta(s)}</span></span>
+                    {on && <Check size={18} className="shrink-0 text-accent" />}
+                  </button>); })}
+              </div>
+            );
+          })}
+          {!live.length && <div className="px-5 py-6 text-muted">No space matches.</div>}
+        </div>
+        <div className="flex gap-2.5 px-4 py-3">
+          <button onClick={() => pick("all")} className={cx("flex h-12 flex-1 items-center justify-center gap-2 rounded-[12px] border", ui.spaceId === "all" ? "border-accent" : "border-line")}><Globe size={16} />All spaces</button>
+          <button onClick={() => { onClose(); setUI({ newSpace: true }); }} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-[12px] border border-line"><Plus size={16} />New space</button>
+        </div>
+        <div className="safe-b" />
       </div>
-    </Sheet>
+    </div>
   );
 }
 
@@ -206,6 +244,7 @@ export function FolderSheet({ open, onClose }: { open: boolean; onClose: () => v
               </div>
             );
           })}
+          <PhoneSmartRows onPick={onClose} />
         </div>
         <div className="flex gap-4 border-t border-line px-5 py-3 text-[13px] text-muted">
           <button className="flex items-center gap-1.5" onClick={() => { go("notes", { spaceId: "inbox", folderId: null, tag: null, filter: null }); onClose(); }}><Inbox size={15} />Inbox {inbox}</button>

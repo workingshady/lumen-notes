@@ -1,4 +1,4 @@
-import { LayoutTemplate, MoveHorizontal, Waypoints, Share2, Link2, ChevronRight, Layers, ArrowLeft, BookOpen, Columns2, Copy, Download, FileCode2, Globe, ImagePlus, Info, ListTree, Map as MapIcon, Maximize2, Mic, MoreHorizontal, EllipsisVertical, Network, PanelRight, PanelLeft, PenLine, Pin, Presentation, Printer, Star, Trash2 } from "lucide-react";
+import { LayoutTemplate, Waypoints, Share2, Link2, ChevronRight, Layers, ArrowLeft, BookOpen, Columns2, Copy, Download, FileCode2, Globe, ImagePlus, Info, ListTree, Map as MapIcon, Maximize2, Mic, MoreHorizontal, EllipsisVertical, Network, PanelRight, PanelLeft, PenLine, Pin, Presentation, Printer, Star, Trash2 } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { canvasToSkeleton } from "../lib/whiteboard";
 import { parseCanvas } from "../lib/canvas";
@@ -7,13 +7,14 @@ import { createNote, duplicateNote, restoreNote, snapshot, trashNote, updateNote
 import { exportNoteHtml, exportNoteMd, printNote } from "../lib/io";
 import { back, openNote, setUI, toast, useUI, useVault, type Mode } from "../lib/store";
 import { canGoBack } from "../lib/nav-history";
-import { PANEL_COLOR, SLASH, slashThumb } from "../lib/slash";
+import { openInsertGallery } from "./InsertGallery";
+import { Glyph } from "./Glyph";
+import { SpaceIcon } from "./SpaceIcon";
 import { canvasFromNote } from "../lib/canvasFromNote";
 import { firstH1, outline, setFrontMatter, splitFrontMatter } from "../lib/parse";
-import { docToDeck } from "../lib/deck";
 import { ShareSheet } from "./ShareSheet";
 import { Skeleton } from "./Skeleton";
-import { Editor, editorBridge, insertText, scrollEditorToLine } from "./Editor";
+import { Editor, editorBridge, scrollEditorToLine } from "./Editor";
 import { Preview } from "./Preview";
 import { ReviewSession } from "./Review";
 import { RightPanel } from "./RightPanel";
@@ -35,13 +36,15 @@ const PathView = lazy(() => import("../views/PathView").then((m) => ({ default: 
 const RoadmapView = lazy(() => import("../views/RoadmapView").then((m) => ({ default: m.RoadmapView })));
 const GraphView = lazy(() => import("../views/GraphView").then((m) => ({ default: m.GraphView })));
 const BaseView = lazy(() => import("../views/BaseView").then((m) => ({ default: m.BaseView })));
+const PdfReader = lazy(() => import("./PdfReader").then((m) => ({ default: m.PdfReader })));
+const DashboardView = lazy(() => import("../views/DashboardView").then((m) => ({ default: m.DashboardView })));
 
 const useWide = () => { const [w, setW] = useState(() => innerWidth >= 900); useEffect(() => { const f = () => setW(innerWidth >= 900); addEventListener("resize", f); return () => removeEventListener("resize", f); }, []); return w; };
 const AR = /[؀-ۿ]/;
 
 /** Page width (front-matter `width:`): fixed follows Aa › Line width; wide ≈ Confluence "wide"; full = the whole pane. */
 export type PageWidth = "fixed" | "wide" | "full";
-const PAGE_W: Record<PageWidth, string> = { fixed: "", wide: "1040px", full: "none" };
+const PAGE_W: Record<PageWidth, string> = { fixed: "", wide: "920px", full: "none" };
 const pageWidthOf = (body: string): PageWidth => { const w = splitFrontMatter(body).data.width; return w === "wide" || w === "full" ? w : "fixed"; };
 const fixedW = () => { const m = getSettings().measure; return m === 0 ? "none" : m === 60 ? "600px" : m === 80 ? "820px" : "680px"; };
 
@@ -57,7 +60,7 @@ export function NoteView({ note }: { note: Note }) {
   const [publish, setPublish] = useState(false);
   const [localGraph, setLocalGraph] = useState(false);
   const [rmEdit, setRmEdit] = useState(false);
-  const [insOpen, setInsOpen] = useState(false);
+
   const titleRef = useRef<HTMLInputElement>(null);
   const wide = useWide();
   const isBoard = note.type === "whiteboard";
@@ -150,27 +153,8 @@ export function NoteView({ note }: { note: Note }) {
         )}
         {markdownNote && (effMode === "edit" || effMode === "split") && (
           <>
-            <button className={item} aria-expanded={insOpen} onClick={(e) => { e.stopPropagation(); setInsOpen((o) => !o); }}><LayoutTemplate size={15} /> Insert layout <ChevronRight size={13} className={cx("ms-auto transition-transform", insOpen && "rotate-90")} /></button>
-            {insOpen && (
-              <div className="mb-1 px-1.5 pb-1">
-                {(["Layout", "Panels & callouts", "Advanced"] as const).map((g) => (
-                  <div key={g} className="mb-2">
-                    <div className="px-1 pb-1 pt-1.5 text-[10.5px] font-semibold uppercase tracking-[.06em] text-muted">{g}</div>
-                    <div className="lm-gallery">
-                      {SLASH.filter((c) => c.group === g && !c.action && (g !== "Panels & callouts" || c.id.startsWith("panel-") || c.id === "callout-tip" || c.id === "callout-fold") && (g !== "Advanced" || ["toc", "status", "date", "query"].includes(c.id))).map((c) => (
-                        <button key={c.id} title={c.hint} onClick={() => { const t = typeof c.text === "function" ? c.text() : c.text; insertText((c.block ? "\n" : "") + t.replace("$0", "")); setInsOpen(false); }}>
-                          <span>{c.icon.startsWith("lay:") ? <span dangerouslySetInnerHTML={{ __html: slashThumb(c.icon) }} />
-                            : c.icon.startsWith("panel:") ? <span className="lm-slash-panel" style={{ "--pc": PANEL_COLOR[c.icon.slice(6)] ?? "var(--info)" } as React.CSSProperties} />
-                            : <span className="text-[15px] font-bold">{c.icon}</span>}</span>
-                          <span>{c.label.replace(/ panel$/, "").replace(/^Callout · /, "")}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                <div className="px-1 text-[11.5px] text-muted">Tip: type <kbd className="rounded border border-line px-1">/</kbd> in a note for every block, <kbd className="rounded border border-line px-1">//</kbd> for today's date.</div>
-              </div>
-            )}
+            {/* Insert gallery (R4-16C): layout thumbnails + preview, same catalog as the "/" menu */}
+            <button className={item} onClick={() => openInsertGallery()}><LayoutTemplate size={15} /> Insert…</button>
             <div className="my-1 h-px bg-line" />
           </>
         )}
@@ -180,7 +164,7 @@ export function NoteView({ note }: { note: Note }) {
         <button className={item} onClick={() => setUI({ panel: "properties" })}><Info size={15} /> Properties</button>
         <button className={item} onClick={() => setLocalGraph(true)}><Network size={15} /> Local graph</button>
         {!isCanvas && <button className={item} onClick={async () => { const c = await canvasFromNote(note, (p) => createNote(p)); if (c) openNote(c.id); }}><MapIcon size={15} /> Make canvas from outline</button>}
-        {markdownNote && note.type !== "slides" && <button className={item} onClick={async () => { const d = await createNote({ type: "slides", title: `${note.title} (deck)`, spaceId: note.spaceId, folderId: note.folderId, body: docToDeck(note.body, note.title) }); openNote(d.id, "edit"); toast("Deck created: edit layouts, then Slides to present"); }}><Presentation size={15} /> Make a slide deck from this note</button>}
+        {markdownNote && note.type !== "slides" && <button className={item} onClick={() => setUI({ mode: "slides" })}><Presentation size={15} /> Make a slide deck from this note</button>}
         {note.type === "canvas" && <button className={item} onClick={async () => { const { canvas } = parseCanvas(note.body); const w = await createNote({ type: "whiteboard", title: `${note.title} (whiteboard)`, spaceId: note.spaceId, folderId: note.folderId, body: JSON.stringify({ type: "excalidraw", version: 2, source: "lumen", elements: [], lumenPending: canvasToSkeleton(canvas) }) }); openNote(w.id); }}><MapIcon size={15} /> Open as whiteboard</button>}
         <div className="my-1 h-px bg-line" />
         {!isBoard && <button className={item} onClick={() => exportNoteMd(note)}><Download size={15} /> Export {isCanvas ? ".canvas" : ".md"}</button>}
@@ -203,7 +187,7 @@ export function NoteView({ note }: { note: Note }) {
     <div className={cx("flex min-w-0 items-center gap-1.5 text-muted", twoRows ? "whitespace-nowrap" : "shrink leading-[14px]")}>
       {/* space → its page (course hub / project hub / space home); folder → that folder's note list */}
       <button title={`Open ${space?.name ?? "Inbox"}`} className={cx("hover:text-ink hover:underline", twoRows ? "truncate" : "line-clamp-2 max-w-[110px] text-start")}
-        onClick={() => (note.spaceId === "inbox" ? setUI({ view: "notes", spaceId: "inbox", folderId: null, filter: null, tag: null, noteId: null }) : setUI({ view: "space", spaceId: note.spaceId, folderId: null, noteId: null }))}>{space?.icon} {space?.name ?? "Inbox"}</button>
+        onClick={() => (note.spaceId === "inbox" ? setUI({ view: "notes", spaceId: "inbox", folderId: null, filter: null, tag: null, noteId: null }) : setUI({ view: "space", spaceId: note.spaceId, folderId: null, noteId: null }))}><span className="inline-flex items-center gap-1.5 align-middle"><SpaceIcon space={space} size={15} />{space?.name ?? "Inbox"}</span></button>
       {crumbs.map((c) => (
         <span key={c.id} className="flex min-w-0 items-center gap-1.5"><ChevronRight size={12} className="shrink-0 rtl:rotate-180" />
           <button title={`Open folder ${c.name}`} onClick={() => setUI({ view: "notes", spaceId: note.spaceId, folderId: c.id, filter: null, tag: null, noteId: null, list: true })}
@@ -223,12 +207,16 @@ export function NoteView({ note }: { note: Note }) {
   const shareBtn = <button onClick={() => setPublish(true)} className={"flex h-7 items-center gap-1.5 rounded-[8px] border px-2.5 " + SHARE.cls}>{SHARE.icon}{SHARE.t}</button>;
   const moreBtn = <div className="relative"><button aria-label="More" className={iconBtn} onClick={() => setMenu((m) => !m)}><MoreHorizontal size={16} /></button>{menuEl}</div>;
   const pw = pageWidthOf(note.body);
-  const nextPw: PageWidth = pw === "fixed" ? "wide" : pw === "wide" ? "full" : "fixed";
+  // Page width switch (R4-16J): Fixed · Wide · Full, saved per note as front-matter `width:` (fixed = no key)
   const widthBtn = (effMode === "read" || effMode === "split") && (
-    <button title={`Page width: ${pw} (click for ${nextPw})`} aria-label={`Page width ${pw}`} className={cx(iconBtn, "w-auto gap-1 px-1.5 text-[11.5px]", pw !== "fixed" && "!text-accent")}
-      onClick={() => void updateNote(note.id, { body: setFrontMatter(note.body, { width: nextPw === "fixed" ? null : nextPw }) })}>
-      <MoveHorizontal size={15} />{pw === "fixed" ? "" : pw === "wide" ? "Wide" : "Full"}
-    </button>
+    <div role="radiogroup" aria-label="Page width" className="flex shrink-0 gap-0.5 rounded-[9px] border border-line bg-surface p-[3px] text-[12px]">
+      {([["fixed", "Fixed", "center"], ["wide", "Wide", "wide"], ["full", "Full", "full"]] as [PageWidth, string, string][]).map(([k, l, g]) => (
+        <button key={k} role="radio" aria-checked={pw === k} title={`Page width: ${l}`} onClick={() => pw !== k && void updateNote(note.id, { body: setFrontMatter(note.body, { width: k === "fixed" ? null : k }) })}
+          className="flex h-6 items-center gap-[5px] rounded-[6px] px-[9px]" style={pw === k ? { background: "var(--surface-2)", color: "var(--text)", fontWeight: 600 } : { color: "var(--muted)", fontWeight: 450 }}>
+          <Glyph name={g} size={13} />{l}
+        </button>
+      ))}
+    </div>
   );
   const panelBtn = <button aria-label="Side panel" title="Outline, links, history" className={iconBtn + (ui.panel ? " !text-accent" : "")} onClick={() => setUI({ panel: ui.panel ? null : "outline" })}><PanelIcon size={16} /></button>;
 
@@ -322,10 +310,14 @@ export function NoteView({ note }: { note: Note }) {
             <Editor key={note.id} note={note} />
           ) : isDiagram ? (
             <DiagramFile note={note} mode={effMode as "edit" | "split" | "read"} wide={wide} />
+          ) : note.type === "pdf" && effMode !== "edit" ? (
+            <Suspense fallback={<Skeleton kind="note" />}><PdfReader key={note.id} note={note} /></Suspense>
           ) : note.type === "base" && effMode !== "edit" ? (
             <Suspense fallback={<Skeleton kind="list" />}><BaseView note={note} /></Suspense>
+          ) : note.type === "dashboard" && effMode !== "edit" ? (
+            <Suspense fallback={<Skeleton kind="list" />}><DashboardView note={note} /></Suspense>
           ) : effMode === "edit" ? (
-            <Editor key={note.id} note={note} live={!wide} />
+            <Editor key={note.id} note={note} live={!wide} page={wide} />
           ) : effMode === "diagrams" ? (
             diagramCount ? <DiagramsTab note={note} wide={wide} /> : <div className="flex h-full items-center justify-center text-muted">No diagrams in this note.</div>
           ) : effMode === "review" ? (
@@ -340,8 +332,8 @@ export function NoteView({ note }: { note: Note }) {
               </div>
             </div>
           ) : (
-            <div className={cx("read-pane h-full overflow-y-auto", wide ? "px-8 py-14" : "px-5 py-5")} onDoubleClick={(e) => { if (!(e.target as HTMLElement).closest("a,button,input,.embed,.vthumb,.mermaid-card")) setUI({ mode: wide ? "split" : "edit" }); }}>
-              <div className={cx("mx-auto flex w-full flex-col", wide ? "gap-5" : "gap-4")} style={wide ? { maxWidth: PAGE_W[pw] || fixedW() } : undefined}>
+            <div data-pw={pw} className={cx("read-pane h-full overflow-y-auto", wide ? (pw === "full" ? "px-[72px] pb-14 pt-9" : "px-8 pb-14 pt-9") : "px-5 py-5")} onDoubleClick={(e) => { if (!(e.target as HTMLElement).closest("a,button,input,.embed,.vthumb,.mermaid-card")) setUI({ mode: wide ? "split" : "edit" }); }}>
+              <div className={cx("mx-auto flex w-full flex-col", wide ? "gap-[18px]" : "gap-3.5")} style={wide ? { maxWidth: PAGE_W[pw] || fixedW() } : undefined}>
                 <MetaRow note={note} kind={wide ? "read" : "phone"} words={words} />
                 {!firstH1(note.body) && <div className={cx("prose reading", wide ? "read-wide max-w-none" : "read-phone")}><h1 dir="auto">{note.title}</h1></div>}
                 {note.body.trim() ? <Preview note={note} className={cx("reading", wide ? "read-wide max-w-none" : "read-phone")} /> : <div className="prose text-muted">Empty note. Double-click or press <b>Edit</b> to write.</div>}
@@ -351,7 +343,7 @@ export function NoteView({ note }: { note: Note }) {
             </div>
           )}
           {/* phone read: floating "Outline · Links N" pill (5B) */}
-          {!wide && markdownNote && effMode === "read" && <OutlinePill note={note} />}
+          {!wide && markdownNote && note.type !== "pdf" && effMode === "read" && <OutlinePill note={note} />}
         </div>
       </div>
       <RightPanel note={note} />

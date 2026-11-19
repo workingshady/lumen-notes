@@ -1,4 +1,5 @@
-import { MessagesSquare, Route, ArrowLeft, CornerDownLeft, FileText, Hash, LayoutDashboard, Search, Sparkles, Waypoints, X, Zap } from "lucide-react";
+import { SpaceIcon } from "./SpaceIcon";
+import { BookmarkPlus, MessagesSquare, Route, ArrowLeft, CornerDownLeft, FileText, Hash, LayoutDashboard, Search, Sparkles, Waypoints, X, Zap } from "lucide-react";
 import { Fragment, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Note } from "../../shared/types";
 import { createNote, dailyNote } from "../lib/actions";
@@ -12,6 +13,7 @@ import { openAsk } from "../lib/ask";
 import { NewPathDialog } from "./NewPathDialog";
 import { NewVisualChooser } from "./NewVisualChooser";
 import { cx } from "./ui";
+import { glyphOf, openSmart, openSmartEditor, SmartEditorHost, useSmartFolders } from "./SmartFolders";
 
 interface Cmd { id: string; label: ReactNode; text: string; hint?: string; icon?: ReactNode; run: () => void | Promise<void> }
 
@@ -57,6 +59,7 @@ export function Palette() {
   const input = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const spaceId = ui.spaceId === "all" ? "inbox" : ui.spaceId;
+  const smart = useSmartFolders();
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
@@ -116,9 +119,10 @@ export function Palette() {
       c("theme", "Toggle light / dark", () => setSettings({ theme: activeTheme().dark ? "paper" : "lamplight" })),
       c("sidebar", "Toggle sidebar", () => setUI((u) => ({ sidebar: !u.sidebar }))),
       mode("edit", "Edit"), mode("split", "Split"), mode("read", "Read"), mode("focus", "Focus"), mode("slides", "Slides"), mode("review", "Review cards"),
+      ...smart.map((sf) => c(`sf-${sf.id}`, `Smart folder: ${sf.name}`, () => openSmart(sf), { icon: glyphOf(sf, 16), hint: sf.query })),
       c("jd", `Johnny-Decimal sorting: ${getSettings().johnnyDecimal ? "on → off" : "off → on"}`, () => setSettings({ johnnyDecimal: !getSettings().johnnyDecimal })),
     ];
-  }, [spaceId, ui.folderId]);
+  }, [spaceId, ui.folderId, smart]);
 
   const isCmd = q.startsWith(">");
   const isTag = q.startsWith("#") && !q.includes(" ");
@@ -145,6 +149,10 @@ export function Palette() {
   const askText = !isCmd && !isTag ? query.text.trim() : "";
   const askCmd = (qq: string) => { try { sessionStorage.setItem("lumen.askAuto", qq); } catch { /* ignore */ } openAsk(qq); };
   const askRow: Cmd[] = askText.split(/\s+/).length >= 2 ? [{ id: "ask-q", text: "ask", label: <>Ask your notes: “{askText}”</>, hint: `${MOD}⇧A`, icon: <MessagesSquare size={16} />, run: () => askCmd(askText) }] : [];
+  // Save the current search (operators + text, plus the space scope when not searching everywhere) as a smart folder.
+  const scopeSp = !allScope ? v.spaceMap.get(ui.spaceId) : null;
+  const smartQuery = [q.replace(/(^|\s)in:all(?=\s|$)/g, " ").trim(), scopeSp ? `space:${/\s/.test(scopeSp.name) ? `"${scopeSp.name.toLowerCase()}"` : scopeSp.name.toLowerCase()}` : ""].filter(Boolean).join(" ");
+  const saveRow: Cmd[] = !isCmd && q.trim() && q.trim() !== "#" ? [{ id: "save-smart", text: "save smart folder", label: <>Save search as smart folder</>, hint: "also as a base", icon: <BookmarkPlus size={16} />, run: () => openSmartEditor({ query: smartQuery }) }] : [];
   const noteCmds: Cmd[] = target && query.text.trim() && !isCmd && !isTag ? [
     { id: "ai-cards", text: "flashcards", label: <>Generate flashcards from “{hl(short, terms)}”</>, hint: `${MOD}⇧G`, icon: <Sparkles size={16} />, run: () => aiCmd(target) },
     { id: "local-graph", text: "graph", label: <><span className="md:hidden">Open local graph</span><span className="hidden md:inline">Open local graph for “{hl(short, terms)}”</span></>, hint: `${MOD}⇧L`, icon: <Waypoints size={16} />, run: () => graphCmd(target) },
@@ -163,16 +171,16 @@ export function Palette() {
     const f = n.folderId ? v.folderMap.get(n.folderId)?.name : null;
     if (f) return f;
     const s = v.spaceMap.get(n.spaceId);
-    return s ? `${s.icon ?? ""} ${s.name}`.trim() : "";
+    return s ? s.name : "";
   };
   const scopeSpace = query.spaces.length ? v.spaces.find((s) => s.name.toLowerCase().includes(query.spaces[0])) : allScope ? null : v.spaceMap.get(ui.spaceId);
-  const scope = scopeSpace ? `in ${scopeSpace.icon ?? ""} ${scopeSpace.name}`.replace(/\s+/g, " ") : "in all spaces";
+  const scope: ReactNode = scopeSpace ? <span className="inline-flex items-center gap-1">in <SpaceIcon space={scopeSpace} size={15} /> {scopeSpace.name}</span> : "in all spaces";
 
   type Row = { key: string; group: string; kind: "note" | "cmd" | "tag"; icon: ReactNode; label: ReactNode; path?: string; sub?: ReactNode; hint?: string; note?: Note; run: () => void | Promise<void> };
   const noteGroup = q.trim() ? `Notes · ${hits.length}` : "Recent";
   const rows: Row[] = [
     ...hits.map((h): Row => ({ key: h.note.id, group: noteGroup, kind: "note", note: h.note, icon: <FileText size={16} />, label: hl(h.note.title, terms), path: pathOf(h.note), sub: hl(snippet(h.note, terms, h.snippet), terms, "font-semibold text-ink"), run: () => openNote(h.note.id) })),
-    ...[...askRow, ...noteCmds, ...cmdHits].map((c): Row => ({ key: c.id, group: q.trim() ? "Commands" : "Suggested", kind: "cmd", icon: c.icon ?? <Zap size={16} />, label: typeof c.label === "string" ? hl(c.label, terms) : c.label, hint: c.hint, run: c.run })),
+    ...[...askRow, ...noteCmds, ...saveRow, ...cmdHits].map((c): Row => ({ key: c.id, group: q.trim() ? "Commands" : "Suggested", kind: "cmd", icon: c.icon ?? <Zap size={16} />, label: typeof c.label === "string" ? hl(c.label, terms) : c.label, hint: c.hint, run: c.run })),
     ...tagHits.map(([t, c]): Row => ({ key: "t" + t, group: "Tags", kind: "tag", icon: <Hash size={16} />, label: hl(t, [tagTerm], "font-bold text-accent"), hint: `${c} notes`, run: () => go("notes", { tag: t, spaceId: "all", folderId: null }) })),
     ...(createTitle ? [{ key: "create", group: "Create", kind: "cmd", icon: <CornerDownLeft size={16} />, label: <>Create note “{createTitle}”</>, run: async () => openNote((await createNote({ title: createTitle, spaceId })).id, "edit") } as Row] : []),
   ];
@@ -195,6 +203,7 @@ export function Palette() {
       <NewVisualChooser open={chooser} onClose={() => setChooser(false)} />
       <NewPathDialog open={pathDlg} onClose={() => setPathDlg(false)} />
       <AskSheet />
+      <SmartEditorHost />
       {ui.palette && (
         <div className="fixed inset-0 z-50 flex items-start justify-center md:bg-[rgba(5,6,8,.6)] md:pt-[110px] fade-in" onMouseDown={(e) => e.target === e.currentTarget && close()}>
           <div className="safe-t flex h-full w-full flex-col overflow-hidden bg-bg text-[14px] md:h-auto md:max-w-[660px] md:rounded-[14px] md:border md:border-line md:bg-surface-2 md:text-[13px] md:shadow-[0_24px_64px_rgba(0,0,0,.5)]">

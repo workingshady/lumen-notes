@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:absolute;inset:0;display:flex;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:13px;overflow:hidden">
+  <dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,100%" style="height:100%"></dc-import>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+    <div style="padding:22px 32px 0;display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <dc-import name="LumenGlyph" glyph="eye" size="{{ 24 }}" color="#39C5CF" tile="#39C5CF" hint-size="42px,42px"></dc-import>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:20px;font-weight:650;letter-spacing:-.02em;white-space:nowrap">CS231n · Convolutional networks for vision</span><span style="color:var(--mu);white-space:nowrap">Stanford · course · 9 of 24 topics done · target 20 Dec</span></div>
+        <span style="width:150px;height:6px;border-radius:3px;background:var(--sf2);overflow:hidden"><span style="display:block;width:38%;height:100%;background:var(--ok)"></span></span><span style="color:var(--mu);width:34px">38%</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--bd)">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3"><span style="padding:0 2px 10px;display:flex;align-items:center;gap:6px;box-shadow:{{ t.sh }};color:{{ t.c }};font-weight:{{ t.w }}"><dc-import name="LumenGlyph" glyph="{{ t.g }}" size="{{ 16 }}" hint-size="16px,16px"></dc-import>{{ t.l }}</span></sc-for>
+        <span style="flex:1"></span>
+        <span style="display:{{ outlineShow }};padding-bottom:10px;color:var(--mu);align-items:center;gap:6px"><dc-import name="LumenGlyph" glyph="expand" size="{{ 16 }}" hint-size="16px,16px"></dc-import>Expand all</span>
+        <span style="padding-bottom:10px;color:var(--mu);display:flex;align-items:center;gap:6px"><dc-import name="LumenGlyph" glyph="file" size="{{ 16 }}" hint-size="16px,16px"></dc-import>Notes tray</span>
+      </div>
+    </div>
+
+    <sc-if value="{{ isOutline }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;display:flex;min-height:0">
+        <div style="flex:1;padding:16px 32px;display:flex;flex-direction:column;gap:10px;position:relative">
+          <sc-for list="{{ modules }}" as="m" hint-placeholder-count="4">
+            <div style="border-radius:12px;border:1px solid var(--bd);background:var(--sf)">
+              <div style="height:46px;padding:0 12px;display:flex;align-items:center;gap:10px">
+                <dc-import name="LumenGlyph" glyph="{{ m.chev }}" size="{{ 16 }}" color="var(--mu)" hint-size="16px,16px"></dc-import>
+                <span style="font-weight:600;flex:1">{{ m.n }}</span>
+                <span style="width:140px;height:5px;border-radius:3px;background:var(--sf2);overflow:hidden"><span style="display:block;height:100%;width:{{ m.p }};background:var(--ok)"></span></span>
+                <span style="width:40px;text-align:right;color:var(--mu);font-size:12px">{{ m.c }}</span>
+              </div>
+              <sc-if value="{{ m.open }}">
+                <div style="border-top:1px solid var(--bd);padding:4px 6px 6px">
+                  <sc-for list="{{ m.topics }}" as="t" hint-placeholder-count="5">
+                    <div style="display:{{ t.lineShow }};height:2px;margin:0 8px 0 30px;background:var(--ac);border-radius:1px;position:relative"><span style="position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:50%;border:2px solid var(--ac);box-sizing:border-box;background:var(--sf)"></span></div>
+                    <div style="height:36px;padding:0 10px;display:flex;align-items:center;gap:10px;border-radius:8px;background:{{ t.bg }};box-shadow:{{ t.ring }};opacity:{{ t.op }}">
+                      <span style="color:var(--mu);opacity:.6;font-size:11px;letter-spacing:-1px">⋮⋮</span>
+                      <dc-import name="LumenGlyph" glyph="{{ t.g }}" size="{{ 16 }}" color="{{ t.gc }}" hint-size="16px,16px"></dc-import>
+                      <span style="flex:1;font-weight:500">{{ t.n }}</span>
+                      <span style="color:var(--mu);font-size:12px">{{ t.needs }}</span>
+                      <span style="display:{{ t.badgeShow }};padding:0 8px;line-height:20px;border-radius:6px;font-size:11.5px;font-weight:600;background:{{ t.badgeBg }};color:{{ t.badgeC }}">{{ t.badge }}</span>
+                      <span style="width:150px;display:flex;align-items:center;gap:6px;color:{{ t.noteC }};font-size:12px;white-space:nowrap"><dc-import name="LumenGlyph" glyph="lesson" size="{{ 14 }}" hint-size="14px,14px"></dc-import>{{ t.note }}</span>
+                      <span style="width:52px;text-align:right;color:var(--mu);font-size:12px">{{ t.due }}</span>
+                    </div>
+                  </sc-for>
+                  <div style="height:32px;padding:0 10px;display:flex;align-items:center;gap:8px;color:var(--mu)"><span style="font-size:15px">+</span>Add topic</div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <div style="height:44px;border-radius:12px;border:1.5px dashed var(--bd);display:flex;align-items:center;justify-content:center;color:var(--mu);gap:6px">+ New module · or drop a topic here</div>
+          <div style="display:{{ ghostShow }};position:absolute;left:{{ ghostX }};top:{{ ghostY }};height:36px;padding:0 12px;border-radius:8px;background:var(--sf2);border:1px solid var(--ac);box-shadow:0 14px 32px rgba(0,0,0,.45);align-items:center;gap:8px;transform:rotate(-1.5deg);font-weight:500"><dc-import name="LumenGlyph" glyph="s-todo" size="{{ 16 }}" color="var(--mu)" hint-size="16px,16px"></dc-import>{{ ghostT }}</div>
+          <div style="display:{{ refusedShow }};position:absolute;left:340px;top:362px;padding:8px 12px;border-radius:8px;background:var(--sf2);border:1px solid color-mix(in srgb,var(--da) 45%,transparent);color:var(--tx);box-shadow:0 12px 28px rgba(0,0,0,.4);align-items:center;gap:8px"><dc-import name="LumenGlyph" glyph="c-danger" size="{{ 16 }}" color="var(--da)" hint-size="16px,16px"></dc-import>Can't drop here: Backpropagation already needs Softmax loss, so this would make a loop.</div>
+        </div>
+        <div style="width:260px;flex-shrink:0;border-left:1px solid var(--bd);background:var(--sf);display:flex;flex-direction:column">
+          <div style="padding:14px 14px 8px;display:flex;flex-direction:column;gap:8px"><span style="font-weight:600">Notes tray</span><span style="color:var(--mu);font-size:12px;line-height:17px">Drag a note in to make it a topic linked to that note.</span><div style="height:32px;border-radius:6px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--mu)"><dc-import name="LumenGlyph" glyph="query" size="{{ 14 }}" hint-size="14px,14px"></dc-import>Filter notes</div></div>
+          <sc-for list="{{ tray }}" as="n" hint-placeholder-count="7"><div style="height:36px;margin:0 8px;padding:0 8px;border-radius:8px;display:flex;align-items:center;gap:8px;opacity:{{ n.op }}"><span style="color:var(--mu);opacity:.6;font-size:11px;letter-spacing:-1px">⋮⋮</span><dc-import name="LumenGlyph" glyph="{{ n.g }}" size="{{ 16 }}" color="var(--mu)" hint-size="16px,16px"></dc-import><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.t }}</span><span style="font-size:11px;color:var(--mu)">{{ n.s }}</span></div></sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isBuilder }}">
+      <div style="flex:1;display:flex;min-height:0">
+        <div style="flex:1;padding:24px 32px;display:flex;flex-direction:column;gap:14px">
+          <div style="border-radius:12px;border:1px solid var(--bd);background:var(--sf)"><div style="height:46px;padding:0 12px;display:flex;align-items:center;gap:10px"><dc-import name="LumenGlyph" glyph="expand" size="{{ 16 }}" color="var(--mu)" hint-size="16px,16px"></dc-import><span style="font-weight:600;padding:2px 6px;border-radius:6px;border:1px solid var(--ac);background:var(--bg)">Module 1<span style="display:inline-block;width:1.5px;height:14px;background:var(--ac);vertical-align:-2px;margin-left:1px"></span></span></div>
+            <div style="margin:0 12px 12px;height:150px;border-radius:10px;border:1.5px dashed var(--bd);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--mu)"><span style="color:var(--tx);font-weight:600;font-size:14px">Drop notes here to make topics</span><span>or type a topic name and press Enter</span><span style="height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;color:var(--tx)">+ Add topic</span></div></div>
+          <div style="height:44px;border-radius:12px;border:1.5px dashed var(--bd);display:flex;align-items:center;justify-content:center;color:var(--mu)">+ New module</div>
+          <span style="color:var(--mu);line-height:19px;max-width:560px">Tip: drag one topic onto the middle of another to make it a prerequisite. Alt+↑/↓ moves the selected row.</span>
+        </div>
+        <div style="width:300px;flex-shrink:0;border-left:1px solid var(--bd);background:var(--sf);display:flex;flex-direction:column">
+          <div style="padding:14px;display:flex;flex-direction:column;gap:8px"><span style="font-weight:600">Notes in this space · 14</span><div style="height:32px;border-radius:6px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--mu)"><dc-import name="LumenGlyph" glyph="query" size="{{ 14 }}" hint-size="14px,14px"></dc-import>Filter notes</div></div>
+          <sc-for list="{{ tray }}" as="n" hint-placeholder-count="7"><div style="height:38px;margin:0 8px;padding:0 8px;border-radius:8px;display:flex;align-items:center;gap:8px"><span style="color:var(--mu);opacity:.6;font-size:11px;letter-spacing:-1px">⋮⋮</span><dc-import name="LumenGlyph" glyph="{{ n.g }}" size="{{ 16 }}" color="var(--mu)" hint-size="16px,16px"></dc-import><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.t }}</span></div></sc-for>
+          <div style="margin:auto 14px 14px;height:34px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600">Add all 14 as topics</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isTree }}">
+      <div style="flex:1;position:relative;overflow:hidden;background-image:radial-gradient(var(--bd) 1px, transparent 1px);background-size:20px 20px">
+        <sc-for list="{{ cols }}" as="c" hint-placeholder-count="4"><div style="position:absolute;left:{{ c.x }};top:14px;width:200px;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)"><dc-import name="LumenGlyph" glyph="expand" size="{{ 14 }}" hint-size="14px,14px"></dc-import>{{ c.n }}<span style="font-weight:500;letter-spacing:0;text-transform:none">{{ c.k }}</span></div></sc-for>
+        <svg width="1200" height="700" style="position:absolute;left:0;top:0;overflow:visible"><sc-for list="{{ tEdges }}" as="e" hint-placeholder-count="12"><path d="{{ e.d }}" style="fill:none;stroke:{{ e.c }};stroke-width:{{ e.w }};opacity:{{ e.o }};stroke-dasharray:{{ e.dash }}"></path></sc-for></svg>
+        <sc-for list="{{ tNodes }}" as="n" hint-placeholder-count="12">
+          <div style="position:absolute;left:{{ n.x }};top:{{ n.y }};width:180px;height:42px;box-sizing:border-box;border-radius:10px;background:{{ n.fill }};border:{{ n.bd }};box-shadow:{{ n.ring }};display:flex;align-items:center;gap:8px;padding:0 10px;opacity:{{ n.op }}"><dc-import name="LumenGlyph" glyph="{{ n.g }}" size="{{ 16 }}" color="{{ n.gc }}" hint-size="16px,16px"></dc-import><span style="flex:1;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.n }}</span></div>
+        </sc-for>
+        <div style="position:absolute;left:830px;top:410px;width:180px;height:62px;border-radius:10px;border:1px dashed var(--bd);background:var(--sf);display:flex;flex-direction:column;justify-content:center;padding:0 12px;gap:3px;box-sizing:border-box"><span style="font-weight:600">Module 4 · Detection</span><span style="color:var(--mu);font-size:12px">5 topics · collapsed</span></div>
+        <span style="position:absolute;left:24px;bottom:20px;height:30px;padding:0 12px;border-radius:999px;background:var(--sf);border:1px dashed var(--ac);display:flex;align-items:center;gap:6px;color:var(--ac);font-weight:600">+ Topic <span style="color:var(--mu);font-weight:400">drag onto canvas or a node</span></span>
+        <div style="position:absolute;right:16px;bottom:16px;width:180px;height:110px;border-radius:10px;background:var(--sf);border:1px solid var(--bd);overflow:hidden"><sc-for list="{{ mini }}" as="m" hint-placeholder-count="12"><span style="position:absolute;left:{{ m.x }};top:{{ m.y }};width:22px;height:6px;border-radius:2px;background:{{ m.c }}"></span></sc-for><span style="position:absolute;left:6px;top:8px;width:120px;height:80px;border:1.5px solid var(--ac);border-radius:4px"></span></div>
+        <div style="position:absolute;right:16px;top:14px;display:flex;gap:14px;color:var(--mu);font-size:12px;background:var(--bg);padding:4px 8px;border-radius:8px"><span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:2px;background:var(--ok)"></span>done</span><span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:2px;background:var(--in)"></span>learning</span><span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:2px;background:var(--mu);opacity:.5"></span>locked</span></div>
+        <div style="position:absolute;left:{{ menuX }};top:{{ menuY }};border-radius:10px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 12px 28px rgba(0,0,0,.4);padding:4px;display:flex;flex-direction:column"><span style="height:30px;padding:0 10px;display:flex;align-items:center;gap:8px;color:var(--da)"><dc-import name="LumenGlyph" glyph="d-rejected" size="{{ 14 }}" hint-size="14px,14px"></dc-import>Remove prerequisite</span></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isTimeline }}">
+      <div style="flex:1;padding:16px 32px;display:flex;flex-direction:column">
+        <div style="display:grid;grid-template-columns:180px 1fr;height:30px;align-items:center;border-bottom:1px solid var(--bd);color:var(--mu);font-size:12px"><span>Module</span><div style="display:grid;grid-template-columns:repeat(8,1fr)"><span>3 Nov</span><span>10 Nov</span><span>17 Nov</span><span>24 Nov</span><span>1 Dec</span><span>8 Dec</span><span>15 Dec</span><span>22 Dec</span></div></div>
+        <div style="flex:1;position:relative">
+          <div style="position:absolute;left:calc(180px + (100% - 180px) * .26);top:0;bottom:0;width:2px;background:var(--ac)"></div>
+          <sc-for list="{{ lanes }}" as="l" hint-placeholder-count="4"><div style="display:grid;grid-template-columns:180px 1fr;height:96px;border-bottom:1px solid var(--bd)"><div style="padding:14px 0;display:flex;flex-direction:column;gap:4px"><span style="font-weight:600">{{ l.n }}</span><span style="color:var(--mu);font-size:12px">{{ l.k }}</span></div><div style="position:relative"><sc-for list="{{ l.items }}" as="i" hint-placeholder-count="3"><div style="position:absolute;left:{{ i.x }};top:{{ i.y }};width:{{ i.w }};height:28px;border-radius:7px;background:{{ i.f }};border:{{ i.b }};display:flex;align-items:center;gap:6px;padding:0 8px;box-sizing:border-box;white-space:nowrap;font-size:12px;font-weight:500;opacity:{{ i.o }};box-shadow:{{ i.sh }}"><dc-import name="LumenGlyph" glyph="{{ i.g }}" size="{{ 14 }}" color="{{ i.gc }}" hint-size="14px,14px"></dc-import>{{ i.n }}</div></sc-for></div></div></sc-for>
+          <div style="position:absolute;left:calc(180px + (100% - 180px) * .55);top:52px;padding:6px 10px;border-radius:8px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 10px 24px rgba(0,0,0,.4);font-size:12px">Due <b style="font-weight:600">Tue 2 Dec</b> · was 25 Nov</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ sheet }}">
+      <div style="position:absolute;top:12px;right:12px;bottom:12px;width:380px;border-radius:14px;background:var(--sf2);border:1px solid var(--bd);box-shadow:var(--sh);display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:16px 18px 12px;display:flex;flex-direction:column;gap:4px;border-bottom:1px solid var(--bd)"><span style="color:var(--mu);font-size:12px">Module 2 · Neural networks</span><span style="font-size:19px;font-weight:650">Backpropagation</span></div>
+        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:16px;flex:1">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:3px;border-radius:10px;background:var(--bg);border:1px solid var(--bd)"><span style="height:28px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Todo</span><span style="height:28px;border-radius:7px;background:var(--sf);display:flex;align-items:center;justify-content:center;gap:6px;font-weight:600"><dc-import name="LumenGlyph" glyph="s-learning" size="{{ 14 }}" color="var(--in)" hint-size="14px,14px"></dc-import>Learning</span><span style="height:28px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Done</span><span style="height:28px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Skipped</span></div>
+          <div style="display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:center"><span style="color:var(--mu)">Due</span><span style="height:30px;padding:0 10px;border-radius:6px;border:1px solid var(--bd);display:flex;align-items:center;gap:8px;background:var(--bg)"><dc-import name="LumenGlyph" glyph="due" size="{{ 14 }}" color="var(--mu)" hint-size="14px,14px"></dc-import>Mon 24 Nov</span><span style="color:var(--mu)">Needs</span><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="height:26px;padding:0 8px;border-radius:6px;background:color-mix(in srgb,var(--ok) 12%,var(--sf));display:flex;align-items:center;gap:6px"><dc-import name="LumenGlyph" glyph="s-done" size="{{ 14 }}" color="var(--ok)" hint-size="14px,14px"></dc-import>Softmax loss</span><span style="height:26px;padding:0 8px;border-radius:6px;border:1px dashed var(--bd);color:var(--mu);display:flex;align-items:center">+ Add</span></div><span style="color:var(--mu)">Note</span><span style="display:flex;align-items:center;gap:6px;color:var(--ln)"><dc-import name="LumenGlyph" glyph="lesson" size="{{ 14 }}" hint-size="14px,14px"></dc-import>Backprop, by hand</span></div>
+          <div style="border-top:1px solid var(--bd);padding-top:12px;display:flex;flex-direction:column;gap:8px"><span style="display:flex;align-items:center;gap:6px;font-weight:600"><dc-import name="LumenGlyph" glyph="expand" size="{{ 14 }}" hint-size="14px,14px"></dc-import>Organize</span>
+            <div style="display:flex;gap:6px"><span style="height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center">Move up</span><span style="height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center">Move down</span><span style="height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px">Move to module…</span></div>
+            <div style="display:flex;gap:6px"><span style="height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center">Rename</span><span style="height:30px;padding:0 10px;border-radius:8px;border:1px solid color-mix(in srgb,var(--da) 40%,transparent);color:var(--da);display:flex;align-items:center">Delete</span></div>
+            <div style="border-radius:10px;background:color-mix(in srgb,var(--da) 10%,transparent);border:1px solid color-mix(in srgb,var(--da) 30%,transparent);padding:10px 12px;display:flex;align-items:center;gap:10px"><span style="flex:1;line-height:18px">Delete this topic? The lesson note stays.</span><span style="color:var(--mu)">Cancel</span><span style="height:28px;padding:0 10px;border-radius:8px;background:var(--da);color:#1A0B0B;display:flex;align-items:center;font-weight:600">Delete</span></div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;view&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;outline&quot;,&quot;builder&quot;,&quot;tree&quot;,&quot;timeline&quot;],&quot;default&quot;:&quot;outline&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;drag&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;insert&quot;,&quot;prereq&quot;,&quot;refused&quot;],&quot;default&quot;:&quot;none&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;sheet&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const view = this.props.view ?? 'outline', drag = this.props.drag ?? 'none';
+    const tabs = [['roadmap','Outline','outline'],['graph','Skill tree','tree'],['v-calendar','Timeline','timeline']].map(([g,l,k]) => { const on = k === view || (k==='outline' && view==='builder'); return { g, l, sh: on?'inset 0 -2px 0 var(--ac)':'none', c: on?'var(--tx)':'var(--mu)', w: on?600:450 }; });
+    const S = { done:['s-done','var(--ok)'], learning:['s-learning','var(--in)'], todo:['s-todo','var(--mu)'], skipped:['s-skipped','var(--mu)'], locked:['s-locked','var(--mu)'] };
+    const T = (n,s,o={}) => ({ n, g:S[s][0], gc:S[s][1], needs:o.needs?'needs '+o.needs:'', note:o.note||'+ Link note', noteC:o.note?'var(--ln)':'var(--mu)', due:o.due||'', op:o.dim?.35:(s==='locked'?.55:1),
+      bg:o.prereq?'color-mix(in srgb,var(--ac) 12%,transparent)':(o.refused?'color-mix(in srgb,var(--da) 8%,transparent)':'transparent'), ring:o.prereq?'inset 0 0 0 1.5px var(--ac)':(o.refused?'inset 0 0 0 1.5px var(--da)':'none'),
+      badgeShow:o.prereq?'inline':'none', badge:'becomes prerequisite', badgeBg:'color-mix(in srgb,var(--ac) 20%,transparent)', badgeC:'var(--ac)', lineShow:o.line?'block':'none' });
+    const modules = [
+      { n:'Module 1 · Image classification', p:'100%', c:'4/4', open:false, topics:[] },
+      { n:'Module 2 · Neural networks', p:'40%', c:'2/5', open:true, topics:[
+        T('Linear classifiers','done',{note:'Linear classifiers',due:'3 Nov'}), T('Softmax loss','done',{note:'Softmax & SVM loss',due:'6 Nov'}),
+        T('Backpropagation','learning',{note:'Backprop, by hand',due:'24 Nov',needs:'Softmax loss',prereq:drag==='prereq',refused:drag==='refused'}),
+        T('Activation functions','todo',{due:'26 Nov',line:drag==='insert',dim:false}), T('Weight initialization','locked',{needs:'Backpropagation',due:'28 Nov'}) ] },
+      { n:'Module 3 · CNNs', p:'0%', c:'0/6', open:true, topics:[ T('Convolution','todo',{note:'Convolution arithmetic',due:'2 Dec'}), T('Pooling','locked',{needs:'Convolution',due:'4 Dec'}), T('ResNet','locked',{needs:'Batch normalization',due:'9 Dec'}) ] },
+      { n:'Module 4 · Detection & segmentation', p:'0%', c:'0/5', open:false, topics:[] }
+    ].map(m => ({ ...m, chev: m.open ? 'expand' : 'wide' }));
+    const tray = [['lesson','Batch normalization','new',1],['lesson','Dropout in practice','new',1],['pdf','CS231n lecture 5 slides','pdf',1],['lesson','Data augmentation','new',1],['note','Optimizers compared','new',1],['whiteboard','Conv shapes sketch','board',1],['lesson','Transfer learning','new',1]].map(([g,t,s,op]) => ({ g, t, s, op }));
+    const ghost = { insert:['Batch normalization','430px','322px'], prereq:['Batch normalization','540px','258px'], refused:['Weight initialization','560px','258px'] }[drag];
+    // tree
+    const N = { lin:[30,60,'Linear classifiers','done'], smx:[30,150,'Softmax loss','done'], opt:[30,240,'Optimization','done'], bp:[270,100,'Backpropagation','learning',1], act:[270,200,'Activation functions','todo'], bn:[270,300,'Batch normalization','todo'], init:[530,60,'Weight initialization','locked'], conv:[530,180,'Convolution','todo'], pool:[530,280,'Pooling','locked'], res:[790,180,'ResNet','locked'], aug:[790,300,'Data augmentation','todo'] };
+    const E = [['lin','bp'],['smx','bp'],['opt','bp'],['bp','init'],['bp','conv'],['act','conv'],['conv','pool'],['conv','res'],['bn','res'],['pool','res'],['opt','bn']];
+    const anc = new Set(['bp','lin','smx','opt']), desc = new Set(['init','conv','pool','res']);
+    const st = k => N[k][3];
+    const tEdges = E.map(([a,b]) => { const x1=N[a][0]+180+(a==='bp'?0:0), y1=N[a][1]+21+50, x2=N[b][0], y2=N[b][1]+21+50; const mx=(x1+x2)/2; const hl = (anc.has(a)&&b==='bp')||(a==='bp'&&desc.has(b))||(desc.has(a)&&desc.has(b));
+      const c = st(a)==='done' ? 'var(--ok)' : st(b)==='locked' ? 'var(--mu)' : 'var(--in)'; return { d:`M${x1} ${y1} C${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`, c, w: hl?2.2:1.5, o: hl?1:(st(b)==='locked'?.35:.5), dash: 'none' }; });
+    const tNodes = Object.entries(N).map(([k,[x,y,n,s,sel]]) => { const hl = anc.has(k)||desc.has(k)||k==='bp'; return { n, x:x+'px', y:(y+50)+'px', g:S[s][0], gc:S[s][1], op: hl?1:.35,
+      fill: s==='done'?'color-mix(in srgb,var(--ok) 14%,var(--sf))':'var(--sf)', bd: sel?'2px solid var(--ac)':(s==='learning'?'1.5px solid var(--in)':'1px solid var(--bd)'), ring: sel?'0 0 0 4px color-mix(in srgb,var(--ac) 18%,transparent)':'none' }; });
+    const cols = [['Module 2','5 topics',30],['Module 2','',270],['Module 3','6 topics',530],['Module 3','',790]].filter(c => c[1]).map(([n,k,x]) => ({ n, k, x:x+'px' }));
+    const mini = Object.values(N).map(([x,y,,s]) => ({ x:(x*0.17+8)+'px', y:(y*0.22+12)+'px', c: s==='done'?'var(--ok)':s==='learning'?'var(--in)':'var(--mu)' }));
+    // timeline
+    const I = (n,s,x,y,w,o={}) => ({ n, g:S[s][0], gc:S[s][1], x, y, w, f: s==='done'?'color-mix(in srgb,var(--ok) 14%,var(--sf))':'var(--sf)', b: o.drag?'1.5px solid var(--ac)':'1px solid var(--bd)', o: o.ghost?.35:1, sh: o.drag?'0 12px 28px rgba(0,0,0,.45)':'none' });
+    const lanes = [
+      { n:'Module 1', k:'4/4 done', items:[I('Linear classifiers','done','0%','14px','22%'),I('kNN','done','10%','52px','18%')] },
+      { n:'Module 2', k:'2/5', items:[I('Softmax loss','done','6%','14px','20%'),I('Backpropagation','learning','26%','52px','22%'),I('Activation functions','todo','38%','14px','18%',{ghost:1}),I('Activation functions','todo','55%','20px','18%',{drag:1})] },
+      { n:'Module 3', k:'0/6', items:[I('Convolution','todo','56%','14px','18%'),I('Pooling','locked','66%','52px','16%'),I('ResNet','locked','80%','14px','18%')] },
+      { n:'Module 4', k:'0/5', items:[I('Detection','locked','84%','52px','16%')] }
+    ];
+    return { tabs, modules, tray, lanes, cols, tEdges, tNodes, mini, menuX:'430px', menuY:'150px',
+      isOutline: view==='outline', isBuilder: view==='builder', isTree: view==='tree', isTimeline: view==='timeline', outlineShow: view==='outline'?'flex':'none', sheet: !!this.props.sheet,
+      ghostShow: ghost?'flex':'none', ghostT: ghost?ghost[0]:'', ghostX: ghost?ghost[1]:'0', ghostY: ghost?ghost[2]:'0', refusedShow: drag==='refused'?'flex':'none' };
+  }
+}
+</script>
+</body>
+</html>

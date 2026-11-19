@@ -423,11 +423,35 @@ function implicitDeck() {
 
 const SNIPPETS = `# Slides lab · snippets\n\nA normal note used by wiki links and \`![[…]]\` transclusion in the decks.\n\n## Definition\n\nA **slide deck** is Markdown with \`---\` between slides.\n\n## Other section\n\nNot included when only "Definition" is transcluded.\n`;
 
+// ------------------------------------------------------------------ round 4 design samples (Lumen 17)
+/** R4-17A/C/D: the design's 12-slide deck, one slide per layout (title, default, section · accent, two-cols, …). */
+function r4Deck() {
+  return deckBody([
+    `<!-- layout: title -->\nStudy group · week 6\n\n# Backprop, from one neuron up\n\nAmir Hakim · Night Shift Notes\n\nNote: Open with the one-neuron picture; ask who has seen the chain rule.`,
+    `<!-- layout: default -->\n## The chain rule\n\n- Forward: $z = wx + b$, $a = \\sigma(z)$\n- Backward: multiply the local gradients\n- Each node only needs its local gradient\n- Cache activations — you'll need them\n- The same rule repeats at every layer\n\nNote: Keep it to one neuron first.`,
+    `<!-- layout: section; _class: accent -->\n## Part 2 · Neural networks\n\nTwo layers, same rule`,
+    `<!-- layout: two-cols -->\n## Sigmoid vs ReLU\n\n::left::\n### Sigmoid\n\n- Smooth, 0 to 1\n- Saturates: gradients vanish\n- Fine for outputs\n\n::right::\n### ReLU\n\n- max(0, z)\n- Cheap and sparse\n- Dead units if η is too big\n\nNote: Ask the group: what if η were ten times bigger? Then show the divergence plot.`,
+    `<!-- layout: image-right -->\n## Loss curve\n\n![Loss curve](att:sl-png)\n\n- Falls fast, then flattens\n- Spikes mean η is too big\n- Plateaus: try a schedule`,
+    `<!-- layout: cards -->\n## Three steps\n\n::1::\n### Forward\n\nCompute and cache every activation.\n\n::2::\n### Backward\n\nMultiply local gradients from the loss back.\n\n::3::\n### Update\n\nw ← w − η · ∂L/∂w`,
+    `<!-- layout: stat -->\n## Accuracy after one epoch\n\n**93.4%**\n\non the held-out set`,
+    `<!-- layout: quote -->\n> Backprop is just the chain rule, organised.\n\n— study group, week 6`,
+    `<!-- layout: full -->\n## Week 6 · study group\n\n![Study group](att:sl-png-photo)`,
+    `<!-- layout: default -->\n## Recap\n\n- Chain rule, one neuron\n- Same rule per layer\n- Cache, multiply, update`,
+    `<!-- layout: center -->\n## Cache every activation\n\nYou will need it going back.`,
+    `<!-- layout: blank -->`,
+  ]);
+}
+/** R4-17B / E / F: a lesson to turn into a deck and to read in Focus (highlighter, read aloud, outline). */
+function r4Lesson() {
+  return `---\ntype: lesson\ntags: [slides-lab, nn]\n---\n# Backprop, by hand\n\nBackpropagation is the chain rule applied from the loss back to every weight. Each node only needs its local gradient and the gradient arriving from above.\n\n## Local gradients\n\nCache every activation on the forward pass — you will need it going back. The local gradient of a node is the derivative of its output with respect to each input.\n\n### One neuron\n\nFor one neuron, z = wx + b and a = σ(z). The gradient for w is the gradient arriving from above times σ'(z) times x.\n\n- Forward: compute z, then a\n- Backward: multiply the local gradients\n- Update: w ← w − η · ∂L/∂w\n\n### Two layers\n\nFor a two-layer network the same rule repeats at each layer. The gradient for the first weights passes through the second layer's local gradient first.\n\n## In code\n\nIn code, it's three lines per layer: the forward pass, the backward pass, and the update.\n\n${F}python\nz = w * x + b\na = sigmoid(z)\ndw = upstream * a * (1 - a) * x\n${F}\n\n## Sigmoid vs ReLU\n\n### Sigmoid\n\nSmooth between 0 and 1, but its gradient vanishes for large inputs.\n\n### ReLU\n\nCheap and sparse; units can die when the learning rate is too big.\n\n## Results\n\n93.4% accuracy after one epoch on the held-out set.\n\n## Takeaway\n\n> Backprop is just the chain rule, organised.\n`;
+}
+const R4_DIAGRAM = "flowchart LR\n  x[Input x] --> f[Forward]\n  f --> L((Loss))\n  L --> b[Backward]\n  b --> u[Update w]\n  u -. next batch .-> f\n";
+
 // ------------------------------------------------------------------ seed
 export async function seedSlides(): Promise<Vault> {
   const c = clock();
   const v = emptyVault();
-  v.spaces.push(space({ id: SP, name: "Slides lab", kind: "resource", icon: "🎞️", color: "#E8893A", description: "Dummy decks for every Slides capability (dev simulator)." }));
+  v.spaces.push(space({ id: SP, name: "Slides lab", kind: "resource", icon: "glyph:slides", color: "#E8893A", description: "Dummy decks for every Slides capability (dev simulator)." }));
   v.folders.push(
     folder({ id: "sl-f-cap", spaceId: SP, name: "Capabilities", sort: 1 }),
     folder({ id: "sl-f-edge", spaceId: SP, name: "Edge cases", sort: 2 }),
@@ -452,10 +476,13 @@ export async function seedSlides(): Promise<Vault> {
     { id: "sl-empty", title: "15 · Empty & odd slides", body: edgeEmpty(), folder: "sl-f-edge" },
     { id: "sl-doc", title: "16 · Doc → deck (auto layout)", body: docNote(), type: "lesson" },
     { id: "sl-implicit", title: "17 · Implicit deck (type note)", body: implicitDeck(), type: "note", folder: "sl-f-edge" },
+    { id: "sl-r4-deck", title: "Backprop for the study group", body: r4Deck() },
+    { id: "sl-r4-doc", title: "Backprop, by hand", body: r4Lesson(), type: "lesson" },
   ];
   decks.forEach((d, k) => v.notes.push(note({ id: d.id, title: d.title, space: SP, folder: d.folder ?? null, type: d.type ?? "slides", body: d.body, updated: c.ago(10 + k * 7), pinned: d.id === "sl-kitchen" ? 1 : 0 })));
   v.notes.push(
     note({ id: "sl-snippets", title: "Slides lab · snippets", space: SP, body: SNIPPETS, updated: c.ago(300) }),
+    note({ id: "sl-r4-diagram", title: "Training loop", space: SP, type: "diagram", body: R4_DIAGRAM, tags: ["diagram"], updated: c.ago(4) }),
     note({
       id: "sl-start", title: "Slides lab · start here", space: SP, pinned: 1, updated: c.ago(1),
       text: "Every note here is a dummy deck for one Slides capability. Open a deck, then **Slides** (or More › Present as slides). The first slide of each deck lists what to check.\n\n"
@@ -478,4 +505,4 @@ export async function seedSlides(): Promise<Vault> {
 }
 
 /** Note ids of every deck (used by browser checks). */
-export const SLIDES_LAB_DECKS = ["sl-kitchen", "sl-basics", "sl-layouts", "sl-classes", "sl-fm", "sl-boxes", "sl-code", "sl-mermaid", "sl-blocks", "sl-media", "sl-mixed", "sl-rtl", "sl-one", "sl-80", "sl-images", "sl-text", "sl-empty", "sl-doc", "sl-implicit"];
+export const SLIDES_LAB_DECKS = ["sl-kitchen", "sl-basics", "sl-layouts", "sl-classes", "sl-fm", "sl-boxes", "sl-code", "sl-mermaid", "sl-blocks", "sl-media", "sl-mixed", "sl-rtl", "sl-one", "sl-80", "sl-images", "sl-text", "sl-empty", "sl-doc", "sl-implicit", "sl-r4-deck", "sl-r4-doc"];

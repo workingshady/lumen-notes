@@ -11,8 +11,8 @@ export async function seedEmpty(): Promise<Vault> {
 export async function seedStarter(): Promise<Vault> {
   const c = clock();
   const v = emptyVault();
-  v.spaces.push(space({ id: "st-s-course", name: "Intro to Statistics", kind: "course", icon: "📊", color: "#39C5CF", props: { provider: "Khan Academy", target: c.iso(30) }, roadmapId: "st-roadmap" }));
-  v.spaces.push(space({ id: "st-s-proj", name: "Side project", kind: "project", icon: "🚀", color: "#E8893A", props: { goal: "ship v1", deadline: c.iso(14) } }));
+  v.spaces.push(space({ id: "st-s-course", name: "Intro to Statistics", kind: "course", icon: "glyph:math", color: "#39C5CF", props: { provider: "Khan Academy", target: c.iso(30) }, roadmapId: "st-roadmap" }));
+  v.spaces.push(space({ id: "st-s-proj", name: "Side project", kind: "project", icon: "glyph:project", color: "#E8893A", props: { goal: "ship v1", deadline: c.iso(14) } }));
   v.folders.push(folder({ id: "st-f-1", spaceId: "st-s-course", name: "Unit 1", color: "#57AB5A" }));
   const n = (p: Parameters<typeof note>[0]) => v.notes.push(note(p));
   n({ id: "st-note", title: "Welcome note", text: "A plain note with a [[Mean and median]] link and a #starter tag.\n\n- [ ] Try the editor 📅 " + c.iso(0) + "\n", updated: c.ago(5) });
@@ -35,7 +35,7 @@ export async function seedStarter(): Promise<Vault> {
 export async function seedShowcase(): Promise<Vault> {
   const c = clock();
   const v = emptyVault();
-  v.spaces.push(space({ id: "sc-s", name: "Showcase", kind: "course", icon: "✨", color: "#A371F7", description: "Every note type and Markdown feature.", roadmapId: "sc-roadmap", props: { provider: "Dev simulator", url: "https://example.com", target: c.iso(45) } }));
+  v.spaces.push(space({ id: "sc-s", name: "Showcase", kind: "course", icon: "glyph:shape-spark", color: "#A371F7", description: "Every note type and Markdown feature.", roadmapId: "sc-roadmap", props: { provider: "Dev simulator", url: "https://example.com", target: c.iso(45) } }));
   v.folders.push(folder({ id: "sc-f-types", spaceId: "sc-s", name: "Note types", color: "#39C5CF" }), folder({ id: "sc-f-md", spaceId: "sc-s", name: "Markdown", color: "#E8893A" }));
   const n = (p: Parameters<typeof note>[0]) => { const x = note({ space: "sc-s", folder: "sc-f-types", ...p }); v.notes.push(x); return x; };
 
@@ -73,15 +73,15 @@ export async function seedSpaces(): Promise<Vault> {
   const c = clock();
   const v = emptyVault();
   v.spaces.push(
-    space({ id: "sp-proj", name: "Thesis: sparse attention", kind: "project", icon: "🚀", color: "#E8893A", sort: 1, roadmapId: "sp-proj-ms", description: "Project with a goal, deadline and milestones.", props: { goal: "submit the thesis", deadline: c.iso(60) } }),
-    space({ id: "sp-proj-late", name: "Overdue project", kind: "project", icon: "⏰", color: "#E5534B", sort: 2, description: "Deadline already passed.", props: { goal: "renew passport", deadline: c.iso(-4) } }),
-    space({ id: "sp-area", name: "Health", kind: "area", icon: "💪", color: "#57AB5A", sort: 3, description: "Ongoing responsibility." }),
-    space({ id: "sp-course", name: "Deep Learning Specialization", kind: "course", icon: "🧠", color: "#A371F7", sort: 4, roadmapId: "sp-course-rm", description: "Course with roadmap: locked, learning, done, skipped topics; overdue and due modules.", props: { provider: "Coursera · DeepLearning.AI", url: "https://www.coursera.org/specializations/deep-learning", target: c.iso(40) } }),
-    space({ id: "sp-course-empty", name: "Empty course", kind: "course", icon: "📘", sort: 5, description: "Course without a roadmap or notes." }),
-    space({ id: "sp-res", name: "Math reference", kind: "resource", icon: "📚", color: "#E3B341", sort: 6 }),
-    space({ id: "sp-arch", name: "Spanish A1 (archived)", kind: "archive", icon: "🗄️", sort: 7, archived: 1, description: "Archived space." }),
-    space({ id: "sp-arch-proj", name: "Old project (archived)", kind: "project", icon: "📦", sort: 8, archived: 1 }),
-    space({ id: "sp-jd", name: "10-19 Life admin", kind: "area", icon: "🗂️", color: "#39C5CF", sort: 9, description: "Johnny-Decimal structure." }),
+    space({ id: "sp-proj", name: "Thesis: sparse attention", kind: "project", icon: "glyph:project", color: "#E8893A", sort: 1, roadmapId: "sp-proj-ms", description: "Project with a goal, deadline and milestones.", props: { goal: "submit the thesis", deadline: c.iso(60) } }),
+    space({ id: "sp-proj-late", name: "Overdue project", kind: "project", icon: "glyph:clock", color: "#E5534B", sort: 2, description: "Deadline already passed.", props: { goal: "renew passport", deadline: c.iso(-4) } }),
+    space({ id: "sp-area", name: "Health", kind: "area", icon: "glyph:health", color: "#57AB5A", sort: 3, description: "Ongoing responsibility." }),
+    space({ id: "sp-course", name: "Deep Learning Specialization", kind: "course", icon: "glyph:neural", color: "#A371F7", sort: 4, roadmapId: "sp-course-rm", description: "Course with roadmap: locked, learning, done, skipped topics; overdue and due modules.", props: { provider: "Coursera · DeepLearning.AI", url: "https://www.coursera.org/specializations/deep-learning", target: c.iso(40) } }),
+    space({ id: "sp-course-empty", name: "Empty course", kind: "course", icon: "glyph:course", sort: 5, description: "Course without a roadmap or notes." }),
+    space({ id: "sp-res", name: "Math reference", kind: "resource", icon: "glyph:book", color: "#E3B341", sort: 6 }),
+    space({ id: "sp-arch", name: "Spanish A1 (archived)", kind: "archive", icon: "glyph:archive", sort: 7, archived: 1, description: "Archived space." }),
+    space({ id: "sp-arch-proj", name: "Old project (archived)", kind: "project", icon: "glyph:archive", sort: 8, archived: 1 }),
+    space({ id: "sp-jd", name: "10-19 Life admin", kind: "area", icon: "glyph:folder", color: "#39C5CF", sort: 9, description: "Johnny-Decimal structure." }),
   );
   const colors = ["#39C5CF", "#E8893A", "#A371F7", "#57AB5A", "#E3B341", "#E5534B", null];
   // Nested folders 4 levels deep (course).
@@ -133,7 +133,7 @@ export async function seedStudy(): Promise<Vault> {
   const c = clock();
   const v = emptyVault();
   const r = rng(42);
-  v.spaces.push(space({ id: "sd-s", name: "Medical school · Year 2", kind: "course", icon: "🩺", color: "#E5534B", props: { provider: "University", target: c.iso(120) } }), space({ id: "sd-s-lang", name: "Japanese N4", kind: "course", icon: "🗾", color: "#39C5CF" }));
+  v.spaces.push(space({ id: "sd-s", name: "Medical school · Year 2", kind: "course", icon: "glyph:health", color: "#E5534B", props: { provider: "University", target: c.iso(120) } }), space({ id: "sd-s-lang", name: "Japanese N4", kind: "course", icon: "glyph:language", color: "#39C5CF" }));
   const topics = ["Anatomy", "Physiology", "Pharmacology", "Pathology", "Biochemistry", "Microbiology"];
   topics.forEach((t, i) => v.folders.push(folder({ id: `sd-f-${i}`, spaceId: "sd-s", name: `${String(i + 1).padStart(2, "0")} ${t}`, color: ["#39C5CF", "#E8893A", "#A371F7", "#57AB5A", "#E3B341", "#E5534B"][i], sort: i })));
   // 24 decks × 25 cards = 600 cards + 1 Japanese deck of 120.

@@ -1,11 +1,12 @@
 // Paste menu (Confluence-style "paste options"): after pasting a long text (> ~200 chars) or a URL inside a line,
 // a small non-blocking chip offers Keep (default) · Clean up formatting · As quote · As link card (URLs) ·
-// Summarize with AI · Make flashcards with AI. Esc or any typing dismisses it; every choice is one undo step.
+// Summarize · Make flashcards (AI, plain labels). Esc or any typing dismisses it; every choice is one undo step.
 // (A bare URL pasted on its own line keeps the Preview card / Embed / Plain link chip in Editor.tsx.)
 import { isolateHistory } from "@codemirror/commands";
 import { EditorView, type ViewUpdate } from "@codemirror/view";
 import type { ChangeDesc, Extension } from "@codemirror/state";
-import { Check, Layers, Loader2, Link2, Quote, Sparkles, Wand2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { Glyph } from "./Glyph";
 import { useState } from "react";
 import { aiRun, getToken } from "../lib/api";
 import { DEMO } from "../lib/db";
@@ -81,39 +82,49 @@ export function PasteMenu({ info, view, phone, onClose, busy, setBusy }: {
       toast(kind === "summary" ? "Summary added under the paste" : "Flashcards added (they show in Review)");
     } catch (e) { toast((e as Error).message); } finally { setBusy(null); onClose(); view.focus(); }
   }
+  const firstUrl = info.url ? info.text.trim() : (/https?:\/\/[^\s<>)\]]+/.exec(info.text)?.[0] ?? "");
   const run = (c: Choice) => {
     setSel(c);
     if (c === "keep") onClose();
     else if (c === "clean") { replace(cleanPaste(info.text), "input.paste.clean"); onClose(); }
     else if (c === "quote") { replace(asQuote(info.text), "input.paste.quote"); onClose(); }
     else if (c === "card") {
-      if (!still()) return onClose();
-      const u = info.text.trim();
-      const line = view.state.doc.lineAt(info.from);
-      const before = view.state.sliceDoc(line.from, info.from).trim() ? "\n\n" : "";
-      const after = view.state.sliceDoc(info.to, view.state.doc.lineAt(info.to).to).trim() ? "\n\n" : "";
-      replace(`${before}<${u}>${after}`, "input.paste.card");
+      if (!still() || !firstUrl) return onClose();
+      if (info.url) {
+        const line = view.state.doc.lineAt(info.from);
+        const before = view.state.sliceDoc(line.from, info.from).trim() ? "\n\n" : "";
+        const after = view.state.sliceDoc(info.to, view.state.doc.lineAt(info.to).to).trim() ? "\n\n" : "";
+        replace(`${before}<${firstUrl}>${after}`, "input.paste.card");
+      } else {
+        // long text with a link in it: keep the text, add the link's preview card under it
+        const at = view.state.doc.lineAt(info.to).to;
+        const ins = `\n\n<${firstUrl}>` + (at < view.state.doc.length ? "\n" : "");
+        view.dispatch({ changes: { from: at, insert: ins }, selection: { anchor: at + ins.length }, userEvent: "input.paste.card", annotations: isolateHistory.of("full"), scrollIntoView: true });
+      }
       onClose();
     } else void ai(c);
     if (c !== "summary" && c !== "cards") view.focus();
   };
-  const opts: { k: Choice; label: string; icon: React.ReactNode; ai?: boolean }[] = [
-    { k: "keep", label: "Keep", icon: <Check size={14} /> },
-    ...(info.url ? [{ k: "card" as const, label: "As link card", icon: <Link2 size={14} /> }] : [
-      { k: "clean" as const, label: "Clean up formatting", icon: <Wand2 size={14} /> },
-      { k: "quote" as const, label: "As quote", icon: <Quote size={14} /> },
+  // Design R4-16H: Keep · Clean up formatting · As quote · As link card · Summarize · Make flashcards (plain labels)
+  const opts: { k: Choice; label: string; glyph: string; ai?: boolean; off?: string }[] = [
+    { k: "keep", label: "Keep", glyph: "text" },
+    ...(info.url ? [] : [
+      { k: "clean" as const, label: "Clean up formatting", glyph: "c-abstract" },
+      { k: "quote" as const, label: "As quote", glyph: "quote" },
     ]),
+    { k: "card" as const, label: "As link card", glyph: "link-card", off: firstUrl ? undefined : "No link in the pasted text" },
     ...(info.text.length > LONG_PASTE ? [
-      { k: "summary" as const, label: "Summarize with AI", icon: <Sparkles size={14} />, ai: true },
-      { k: "cards" as const, label: "Make flashcards with AI", icon: <Layers size={14} />, ai: true },
+      { k: "summary" as const, label: "Summarize", glyph: "c-abstract", ai: true },
+      { k: "cards" as const, label: "Make flashcards", glyph: "flashcards", ai: true },
     ] : []),
   ];
-  const on = (k: Choice) => sel === k ? { background: "color-mix(in srgb,var(--accent) 16%,transparent)", boxShadow: "inset 0 0 0 1px var(--accent)" } : undefined;
+  const on = (k: Choice) => sel === k ? { background: "color-mix(in srgb,var(--accent) 14%,transparent)", boxShadow: "inset 0 0 0 1px var(--accent)", fontWeight: 600 } : { fontWeight: 450 };
+  const title = (o: (typeof opts)[number]) => o.off ?? (o.ai && !signedIn ? "Needs sync unlocked (Settings → Sync)" : undefined);
   if (phone) return (
     <div className="paste-menu flex gap-2 overflow-x-auto border-t border-line bg-surface-2 px-3 py-2" role="toolbar" aria-label="Paste options" onMouseDown={(e) => e.preventDefault()}>
       {opts.map((o) => (
-        <button key={o.k} disabled={!!busy} onClick={() => run(o.k)} className={cx("flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13.5px]", sel === o.k ? "font-semibold" : "border border-line", o.ai && !signedIn && "opacity-60")} style={on(o.k)}>
-          {busy === o.k ? <Loader2 size={14} className="animate-spin" /> : o.icon}{o.label}
+        <button key={o.k} disabled={!!busy || !!o.off} title={title(o)} onClick={() => run(o.k)} className={cx("flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13.5px]", sel !== o.k && "border border-line", (o.off || (o.ai && !signedIn)) && "opacity-50")} style={on(o.k)}>
+          {busy === o.k ? <Loader2 size={14} className="animate-spin" /> : <Glyph name={o.glyph} size={14} color="var(--muted)" />}{o.label}
         </button>
       ))}
     </div>
@@ -121,19 +132,19 @@ export function PasteMenu({ info, view, phone, onClose, busy, setBusy }: {
   return (
     <div
       ref={(el) => {
-        // keep the chip inside the editor pane (flip to the left edge of the paste when it would overflow)
+        // keep the chip inside the editor pane (flip above the paste when it would overflow)
         if (!el?.parentElement) return;
         const room = el.parentElement.clientWidth - el.offsetWidth - 8;
         el.style.left = `${Math.max(8, Math.min(info.x, room))}px`;
         if (info.y + el.offsetHeight > el.parentElement.clientHeight - 8) el.style.top = `${Math.max(8, info.y - el.offsetHeight - 36)}px`;
       }}
-      className="paste-menu absolute z-30 flex max-w-[calc(100%-16px)] flex-wrap items-center gap-0.5 rounded-[10px] border border-line bg-surface-2 p-1 text-[13px] shadow-[0_12px_32px_rgba(0,0,0,.45)] fade-in" role="toolbar" aria-label="Paste options" style={{ left: Math.max(8, info.x), top: info.y }} onMouseDown={(e) => e.preventDefault()}>
+      className="paste-menu absolute z-30 flex max-w-[calc(100%-16px)] flex-wrap items-center gap-0.5 rounded-[10px] border border-line bg-surface-2 p-1 text-[13px] fade-in" role="toolbar" aria-label="Paste options" style={{ left: Math.max(8, info.x), top: info.y, boxShadow: "0 14px 34px rgba(0,0,0,.45)" }} onMouseDown={(e) => e.preventDefault()}>
       {opts.map((o) => (
-        <button key={o.k} disabled={!!busy} onClick={() => run(o.k)} title={o.ai && !signedIn ? "Needs sync unlocked (Settings → Sync)" : undefined} className={cx("flex h-[30px] items-center gap-1.5 rounded-[7px] px-2.5", sel === o.k && "font-semibold", o.ai && !signedIn && "opacity-60")} style={on(o.k)}>
-          <span style={{ color: sel === o.k || o.ai ? "var(--accent)" : "var(--muted)", display: "flex" }}>{busy === o.k ? <Loader2 size={14} className="animate-spin" /> : o.icon}</span>{o.label}
+        <button key={o.k} disabled={!!busy || !!o.off} onClick={() => run(o.k)} title={title(o)} className={cx("flex h-[30px] items-center gap-1.5 whitespace-nowrap rounded-[7px] px-2.5", (o.off || (o.ai && !signedIn)) && "opacity-50")} style={on(o.k)}>
+          {busy === o.k ? <Loader2 size={14} className="animate-spin text-muted" /> : <Glyph name={o.glyph} size={14} color="var(--muted)" />}{o.label}
         </button>
       ))}
-      <span className="px-2 text-[11.5px] text-muted">{busy ? "Working…" : "Esc keep"}</span>
+      <span className="mx-1 h-[18px] w-px bg-line" /><span className="whitespace-nowrap pe-1.5 text-[11.5px] text-muted">{busy ? "Working…" : "Esc · fades in 12 s"}</span>
     </div>
   );
 }

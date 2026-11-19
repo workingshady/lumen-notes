@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Card, Note } from "../../shared/types";
 import { db, save } from "../lib/db";
 import { flashcards, type Flashcard } from "../lib/parse";
+import { clozeEnabled, clozeSides } from "../lib/cloze";
+import { OcclusionImage } from "./OcclusionEditor";
 import { inSteps, paramsFor, previewIntervals, schedule, type Grade } from "../lib/fsrs";
 import { getSettings } from "../lib/settings";
 import { newCard } from "../lib/srs";
@@ -13,6 +15,31 @@ import { cardLine, openNoteAtLine } from "./study-nav";
 import { cx, Empty } from "./ui";
 
 interface Item { note: Note; fc: Flashcard; card: Card }
+
+const hintLine = <div className="text-center text-[12.5px] text-muted"><span className="hidden md:inline"><span className="mr-1.5 rounded-[4px] border border-line px-2 py-0.5 font-mono text-[11px] font-medium">Space</span>to show answer</span><span className="md:hidden">Tap to show answer</span></div>;
+
+/** Cloze and image-occlusion card faces (lib/cloze.ts, lib/occlusion.ts). */
+function SpecialCard({ fc, note, flipped, md }: { fc: Flashcard; note: Note; flipped: boolean; md: (body: string) => Pick<Note, "id" | "body" | "spaceId"> }) {
+  const sides = useMemo(() => (fc.cloze ? clozeSides(fc.cloze.block, fc.cloze.n, clozeEnabled(note.body)) : null), [fc.cloze, note.body]);
+  if (fc.kind === "occlusion" && fc.occlusion) {
+    const label = fc.occlusion.data.boxes.filter((b) => fc.occlusion!.target.includes(b.id) && b.label).map((b) => b.label).join(" · ");
+    return (
+      <div key={flipped ? "back" : "front"} className="flex flex-1 flex-col items-center justify-center gap-3 fade-in">
+        <OcclusionImage data={fc.occlusion.data} target={fc.occlusion.target} revealed={flipped} />
+        {flipped ? (label ? <div className="text-center text-[20px] font-semibold md:text-[24px]" dir="auto">{label}</div> : null) : hintLine}
+      </div>
+    );
+  }
+  if (!sides) return null;
+  return (
+    <div key={flipped ? "back" : "front"} className="flex flex-1 flex-col fade-in">
+      <div className="flex flex-1 items-center justify-center px-2 md:px-5">
+        <Preview note={md(flipped ? sides.back : sides.front)} className="review-cloze !m-0 w-full !max-w-none text-center !text-[19px] !leading-[30px] md:!text-[23px] md:!leading-[36px]" />
+      </div>
+      {!flipped && hintLine}
+    </div>
+  );
+}
 
 /** Collect due cards for some notes (one note in Review mode, or all notes in the Review view). Suspended cards never count. */
 export function useDueCards(notes: Note[], includeNew = true) {
@@ -146,7 +173,7 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
 
   function edit() {
     if (!cur) return;
-    const line = cardLine(cur.note.body, cur.fc.q);
+    const line = cur.fc.line ?? cardLine(cur.note.body, cur.fc.q);
     if (line >= 0) openNoteAtLine(cur.note.id, line, cur.note.body);
     else openNote(cur.note.id, "edit");
   }
@@ -265,7 +292,9 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
               ? <button onClick={() => openNote(cur.note.id)} className="hidden shrink-0 items-center gap-1 hover:text-ink md:flex"><ArrowUpRight size={12} />Open note</button>
               : cur.card.reps === 0 && <span className="shrink-0">New</span>}
           </div>
-          {flipped ? (
+          {cur.fc.kind ? (
+            <SpecialCard fc={cur.fc} note={cur.note} flipped={flipped} md={md} />
+          ) : flipped ? (
             <div key="back" className="flex flex-1 flex-col gap-4 fade-in md:gap-[18px]">
               <Preview note={md(cur.fc.q)} className="!m-0 w-full !max-w-none pt-5 text-center [&>*]:!m-0 !text-[17px] !leading-[26px] text-muted md:pt-2.5 md:!text-[20px] md:!leading-[30px]" />
               <div className="mx-6 h-px shrink-0 bg-line md:mx-10" />

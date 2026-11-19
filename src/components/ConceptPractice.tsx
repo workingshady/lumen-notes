@@ -2,8 +2,11 @@
 // (coverage topics' lesson notes + the concept's linked notes), an in-place quiz, "tested out" on ≥ 80 %,
 // and "Save as flashcards" (appends `- Q :: A` lines to the concept note so they enter Review / FSRS).
 // Offline / signed out / AI failure: falls back to a quiz built from the flashcards already in that material.
-import { BookOpen, Check, Layers, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
-import { useMemo, useState } from "react";
+//
+// usePractice() holds the logic; <PracticeQuiz> is the design's sheet quiz (Lumen 14 · R4-14D / 14L);
+// <ConceptPractice> is the compact card used by Today.
+import { BookOpen, Check, Layers, Loader2, RotateCcw, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Note } from "../../shared/types";
 import { findOrCreateByTitle, updateNote } from "../lib/actions";
 import { api, getToken } from "../lib/api";
@@ -11,6 +14,7 @@ import { db } from "../lib/db";
 import { flashcards, splitFrontMatter } from "../lib/parse";
 import { linkNote, setManualDone, type BuiltConcept, type BuiltPath } from "../lib/path";
 import { openNote, toast, useVault } from "../lib/store";
+import { Glyph } from "./Glyph";
 import { Preview } from "./Preview";
 import { Button, cx } from "./ui";
 
@@ -25,7 +29,7 @@ export interface PracticeQuestion {
 }
 interface AnswerState { picked?: number; text?: string; revealed?: boolean; score?: number; feedback?: string; grading?: boolean }
 
-const PASS = 0.8;
+export const PASS = 0.8;
 const MAX_CHARS = 18_000;
 
 /** Course material for a concept: its linked notes first, then every course lesson note on it (deduped, capped). */
@@ -73,7 +77,7 @@ export function parseQuiz(raw: string): PracticeQuestion[] {
 
 /** Offline quiz from the `Q :: A` cards already in the material (MCQ with other answers as distractors). */
 export function localQuiz(notes: Note[]): PracticeQuestion[] {
-  const cards = notes.flatMap((n) => flashcards(n.body).map((c) => ({ ...c, source: n.title })));
+  const cards = notes.flatMap((n) => flashcards(n.body).filter((c) => c.kind !== "occlusion").map((c) => ({ ...c, source: n.title })));
   if (cards.length < 3) return [];
   const pick = [...cards].sort(() => Math.random() - 0.5).slice(0, 5);
   return pick.map((c, i) => {
@@ -96,11 +100,11 @@ function stripJsonError(e: unknown) {
 }
 
 /**
- * Practice questions for one learning-path concept.
- * `note` = the path note (its body holds the concept). `onTestOut` defaults to marking the concept learned
- * through `setManualDone` (which also starts its revision ladder).
+ * Practice state + actions for one concept. `note` = the path note (its body holds the concept). `onTestOut` defaults to
+ * marking the concept learned through `setManualDone` (which also starts its revision ladder). With `autoLearn`, finishing
+ * with ≥ 80 % marks the concept learned right away (design: "80%+ marks it learned").
  */
-export function ConceptPractice({ concept, path, note, onTestOut, className }: { concept: BuiltConcept; path: BuiltPath; note: Note; onTestOut?: () => void; className?: string }) {
+export function usePractice({ concept, note, onTestOut, autoLearn }: { concept: BuiltConcept; note: Note; onTestOut?: () => void; autoLearn?: boolean }) {
   const v = useVault();
   const material = useMemo(() => gatherMaterial(concept, v.byTitle), [concept, v.byTitle]);
   const [phase, setPhase] = useState<"idle" | "loading" | "quiz" | "done">("idle");
@@ -115,7 +119,10 @@ export function ConceptPractice({ concept, path, note, onTestOut, className }: {
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
   const aiReady = signedIn && online;
   const learned = concept.status === "done";
-  void path; // part of the public props (callers pass the built path); the concept already carries its coverage
+  // a different concept: back to idle
+  const key = concept.key;
+  const prevKey = useRef(key);
+  useEffect(() => { if (prevKey.current !== key) { prevKey.current = key; setPhase("idle"); setQs([]); setAns([]); setMsg(null); } }, [key]);
 
   function begin(list: PracticeQuestion[], fromCards: boolean) {
     setQs(list); setAns(list.map(() => ({}))); setI(0); setSaved(false); setTestedOut(false); setLocal(fromCards); setPhase("quiz");
@@ -168,8 +175,8 @@ export function ConceptPractice({ concept, path, note, onTestOut, className }: {
     toast(`${concept.def.name}: marked learned (tested out)`);
   }
 
-  async function saveCards() {
-    const lines = toCardLines(qs);
+  async function saveCards(only?: PracticeQuestion[]) {
+    const lines = toCardLines(only ?? qs);
     let target = material.notes.find((n) => concept.def.notes.some((t) => t.toLowerCase() === n.title.toLowerCase())) ?? null;
     if (!target) {
       // No concept note yet: create one named after the concept (or reuse a note with that title) and link it in the path.
@@ -189,17 +196,137 @@ export function ConceptPractice({ concept, path, note, onTestOut, className }: {
     toast(`${fresh.length} ${fresh.length === 1 ? "card" : "cards"} added to “${cur.title}”`, { label: "Open", run: () => openNote(cur.id) });
   }
 
-  const md = (body: string) => ({ id: note.id, body, spaceId: note.spaceId });
-  const sourceNote = (t?: string) => (t && t !== "general" ? v.byTitle.get(t.trim().toLowerCase()) : undefined);
+  const next = () => (i + 1 < qs.length ? setI(i + 1) : setPhase("done"));
+  // ≥ 80 % learns (sheet quiz)
+  useEffect(() => { if (autoLearn && phase === "done" && passed && !learned && !testedOut) void testOut(); }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ------------------------------------------------------------------ idle / loading
+  return { v, concept, material, phase, setPhase, qs, ans, i, setI, msg, local, saved, testedOut, signedIn, aiReady, learned, start, set, aiGrade, score, pct, passed, testOut, saveCards, next };
+}
+export type Practice = ReturnType<typeof usePractice>;
+
+const md = (note: Note, body: string) => ({ id: note.id, body, spaceId: note.spaceId });
+const SERIF = { fontFamily: "'Source Serif 4', Georgia, serif" };
+
+/** Design quiz (concept sheet / phone sheet): progress bars, serif question, lettered choices, feedback box, Next question. */
+export function PracticeQuiz({ p, note, onClose, phone }: { p: Practice; note: Note; onClose: () => void; phone?: boolean }) {
+  const { qs, ans, i, phase } = p;
+  if (phase === "loading" || phase === "idle") {
+    return (
+      <div className="flex flex-1 flex-col gap-3.5 px-[18px] py-4">
+        <div className="flex items-center gap-2"><span className="font-semibold text-learn">Practice</span><span className="text-muted">· {p.material.notes.length ? `from ${p.material.notes.length} ${p.material.notes.length === 1 ? "note" : "notes"}` : "general knowledge"}</span><span className="flex-1" /><button aria-label="Stop practice" onClick={onClose} className="text-muted hover:text-ink"><X size={16} /></button></div>
+        {phase === "loading" ? <span className="flex items-center gap-2 text-[13px] text-muted"><Loader2 size={14} className="animate-spin" />Writing 5 questions…</span>
+          : <><span className="text-[13px] text-muted">{p.msg ?? "Five questions: multiple choice and short answers."}</span><Button variant="primary" className="self-start" onClick={() => void p.start()}>Start</Button></>}
+      </div>
+    );
+  }
+  if (phase === "done") {
+    return (
+      <div className="flex flex-1 flex-col gap-3.5 px-[18px] py-4">
+        <div className="flex items-center gap-2"><span className="font-semibold text-learn">Practice</span><span className="text-muted">· score</span><span className="flex-1" /><button aria-label="Close practice" onClick={onClose} className="text-muted hover:text-ink"><X size={16} /></button></div>
+        <div className="flex items-baseline gap-3"><span className={cx("text-[34px] font-[650] tabular-nums", p.passed ? "text-ok" : "text-ink")}>{Math.round(p.pct * 100)}%</span><span className="text-[13px] text-muted">{p.score % 1 ? p.score.toFixed(1) : p.score} of {qs.length} · {p.passed ? (p.learned || p.testedOut ? "learned" : "passed") : `${PASS * 100}% to pass`}</span></div>
+        <ol className="flex flex-col gap-1.5 text-[13px]">
+          {qs.map((q, k) => (
+            <li key={k} className="flex items-start gap-2">
+              <span className={cx("mt-[6px] h-1 w-[18px] shrink-0 rounded-[2px]", (ans[k].score ?? 0) >= 1 ? "bg-ok" : (ans[k].score ?? 0) > 0 ? "bg-warn" : "bg-bad")} />
+              <button className="min-w-0 flex-1 text-left hover:text-link" dir="auto" onClick={() => { p.setI(k); p.setPhase("quiz"); }}>{oneLine(q.q).replace(/[*_`$]/g, "")}</button>
+            </li>
+          ))}
+        </ol>
+        {p.testedOut && <span className="flex items-center gap-1.5 text-[13px] text-ok"><Check size={14} />Marked learned</span>}
+        <div className="mt-auto flex gap-2">
+          <button onClick={() => void p.saveCards()} disabled={p.saved} className="flex h-9 items-center rounded-[10px] border border-line px-3 text-muted hover:text-ink disabled:opacity-60">{p.saved ? "Saved as flashcards" : "Save as flashcards"}</button>
+          <span className="flex-1" />
+          <button onClick={() => void p.start()} className="flex h-9 items-center gap-1.5 rounded-[10px] bg-accent px-4 font-semibold text-accent-fg"><RotateCcw size={14} />New questions</button>
+        </div>
+        {p.local && <span className="text-[12px] text-muted">Built from your own cards (AI unavailable).</span>}
+      </div>
+    );
+  }
+  const q = qs[i], a = ans[i];
+  const answered = a.score !== undefined;
+  const src = q.source && q.source !== "general" ? p.v.byTitle.get(q.source.trim().toLowerCase()) : undefined;
+  const srcTitle = src?.title ?? (q.source && q.source !== "general" ? q.source : null);
+  const course = srcTitle ? p.concept.coverage.find((x) => (x.topic.note ?? "").toLowerCase() === srcTitle.toLowerCase())?.course.spaceName : undefined;
+  const tone = a.score === undefined ? null : a.score >= 1 ? "ok" : a.score > 0 ? "warn" : "bad";
+  const toneVar = tone === "ok" ? "var(--success)" : tone === "warn" ? "var(--warning)" : "var(--danger)";
+  const head = tone === "ok" ? "Right." : tone === "warn" ? "Close." : "Not quite.";
+  return (
+    <div className={cx("flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto", phone ? "px-0 py-0" : "px-[18px] py-4")} aria-label="Practice question">
+      <div className="flex items-center gap-2">
+        <span className="font-semibold text-learn">Practice</span>
+        <span className="text-muted">{phone ? `${i + 1} of ${qs.length}` : `· question ${i + 1} of ${qs.length} · from ${p.material.notes.length || "no"} ${p.material.notes.length === 1 ? "note" : "notes"}`}</span>
+        <span className="flex-1" />
+        {!phone && <span className="flex gap-1">{qs.map((_, k) => <span key={k} className="h-1 w-[18px] rounded-[2px]" style={{ background: k === i && ans[k].score === undefined ? "var(--learn)" : ans[k].score === undefined ? "var(--surface-2)" : ans[k].score! >= 1 ? "var(--success)" : ans[k].score! > 0 ? "var(--warning)" : "var(--danger)" }} />)}</span>}
+        <button aria-label="Stop practice" onClick={onClose} className="text-muted hover:text-ink"><X size={phone ? 20 : 16} /></button>
+      </div>
+      <div style={SERIF} className="text-[19px] leading-[28px]" dir="auto"><Preview note={md(note, q.q)} className="practice-q !m-0 !max-w-none" /></div>
+      {q.type === "mcq" ? (
+        <div className="flex flex-col gap-3.5" role="radiogroup">
+          {q.choices!.map((c, k) => {
+            const right = k === q.answer, picked = a.picked === k;
+            const good = answered && right, bad = answered && picked && !right;
+            return (
+              <button key={k} role="radio" aria-checked={picked} disabled={answered} onClick={() => p.set(i, { picked: k, revealed: true, score: right ? 1 : 0 })}
+                className={cx("flex min-h-[44px] items-center gap-2.5 rounded-[10px] px-3 py-2 text-left", !answered && "hover:border-ink/40")}
+                style={{ border: good ? "1.5px solid var(--success)" : bad ? "1.5px solid var(--danger)" : "1px solid var(--border)", background: good ? "color-mix(in srgb,var(--success) 8%,var(--bg))" : bad ? "color-mix(in srgb,var(--danger) 8%,var(--bg))" : "var(--bg)", opacity: answered && !good && !bad ? 1 : 1 }}>
+                <span className="flex size-[22px] shrink-0 items-center justify-center rounded-[6px] bg-surface-2 text-[11.5px] font-[650]">{"ABCDEF"[k] ?? k + 1}</span>
+                <span className="min-w-0 flex-1 leading-[18px]" dir="auto"><Preview note={md(note, c)} className="practice-choice-md !m-0 !max-w-none" /></span>
+                <Glyph name={good ? "s-done" : bad ? "x" : "s-todo"} size={16} color={good ? "var(--success)" : bad ? "var(--danger)" : "transparent"} />
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          <textarea dir="auto" rows={4} value={a.text ?? ""} disabled={a.revealed} onChange={(e) => p.set(i, { text: e.target.value })} autoFocus
+            placeholder={q.type === "explain" ? "Explain it in your own words…" : "Your answer…"}
+            className="min-h-[120px] w-full resize-y rounded-[12px] border-[1.5px] border-line bg-bg p-3 leading-[22px] outline-none focus:border-accent" />
+          {!a.revealed && <div className="flex gap-2"><Button size="sm" variant="primary" onClick={() => { p.set(i, { revealed: true }); if (p.aiReady && !p.local && a.text?.trim()) void p.aiGrade(i); }}>Check</Button><Button size="sm" variant="ghost" onClick={() => p.set(i, { revealed: true, text: a.text ?? "", score: 0 })}>I don't know</Button></div>}
+          {a.revealed && (
+            <div className="rounded-[10px] border border-line bg-bg px-3 py-2.5 text-[12.5px] leading-[19px]">
+              <div className="text-[11.5px] font-medium text-muted">{q.type === "explain" ? "Key points" : "Expected answer"}</div>
+              <Preview note={md(note, String(q.answer))} className="practice-md !m-0 !max-w-none !text-[13px]" />
+              {a.grading && <span className="mt-1 flex items-center gap-1.5 text-muted"><Loader2 size={12} className="animate-spin" />Grading…</span>}
+              {!a.grading && a.score === undefined && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[12px] text-muted">How did you do?</span>
+                  {([[1, "Got it"], [0.5, "Partly"], [0, "Missed"]] as const).map(([s, l]) => <button key={l} onClick={() => p.set(i, { score: s })} className="h-7 rounded-[8px] border border-line px-2.5 text-[12px] hover:bg-surface-2">{l}</button>)}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      {tone && (
+        <div className="rounded-[10px] px-3 py-2.5 text-[12.5px] leading-[19px]" dir="auto" style={{ background: `color-mix(in srgb, ${toneVar} 9%, transparent)`, border: `1px solid color-mix(in srgb, ${toneVar} 28%, transparent)` }}>
+          <b className="font-semibold" style={{ color: toneVar }}>{head}</b> {a.feedback ?? q.why ?? (q.type === "mcq" && tone !== "ok" ? `The answer is ${"ABCDEF"[q.answer as number]}.` : "")}{tone === "warn" ? " Counts as half." : ""}
+          {srcTitle && <> <button onClick={() => src && openNote(src.id)} className="text-link hover:underline">From “{srcTitle}”{course ? ` · ${course}` : ""}</button></>}
+        </div>
+      )}
+      <div className={cx("mt-auto flex gap-2", phone && "flex-col-reverse pb-3")}>
+        <button onClick={() => void p.saveCards()} disabled={p.saved} className={cx("flex items-center justify-center rounded-[10px] text-muted hover:text-ink disabled:opacity-60", phone ? "h-11" : "h-9 border border-line px-3")}>{p.saved ? "Saved as flashcards" : "Save as flashcards"}</button>
+        {!phone && <span className="flex-1" />}
+        {i > 0 && !phone && <button onClick={() => p.setI(i - 1)} className="flex h-9 items-center px-3 text-muted hover:text-ink">Back</button>}
+        <button onClick={p.next} disabled={!answered} className={cx("flex items-center justify-center rounded-[10px] bg-accent px-4 font-semibold text-accent-fg disabled:opacity-50", phone ? "h-[52px] rounded-[12px]" : "h-9")}>{i + 1 < qs.length ? "Next question" : "See score"}</button>
+      </div>
+      {!phone && <span className="text-[12px] text-muted">Score {PASS * 100}% or more to mark it learned.</span>}
+    </div>
+  );
+}
+
+/** Compact practice card (Today plan): same logic, inline quiz. */
+export function ConceptPractice({ concept, path, note, onTestOut, className }: { concept: BuiltConcept; path: BuiltPath; note: Note; onTestOut?: () => void; className?: string }) {
+  const p = usePractice({ concept, note, onTestOut });
+  void path; // part of the public props (callers pass the built path); the concept already carries its coverage
+  const { phase, qs, ans, i, material, learned, aiReady, signedIn, msg } = p;
+
   if (phase === "idle" || phase === "loading") {
     return (
       <section className={cx("practice rounded-[12px] border border-line bg-surface-2/40 p-3", className)}>
         <div className="flex items-center gap-2">
-          <Sparkles size={14} className="shrink-0 text-learn" />
+          <Glyph name="flashcards" size={14} color="var(--learn)" />
           <span className="min-w-0 flex-1 text-[13px]"><b>Practice</b><span className="text-muted"> · 5 questions from {material.notes.length ? `${material.notes.length} ${material.notes.length === 1 ? "note" : "notes"}` : "the concept name"}</span></span>
-          <Button size="sm" variant="primary" onClick={() => void start()} disabled={phase === "loading"}>
+          <Button size="sm" variant="primary" onClick={() => void p.start()} disabled={phase === "loading"}>
             {phase === "loading" ? <><Loader2 size={13} className="animate-spin" /> Writing…</> : learned ? "Practice" : "Test out"}
           </Button>
         </div>
@@ -213,83 +340,80 @@ export function ConceptPractice({ concept, path, note, onTestOut, className }: {
     );
   }
 
-  // ------------------------------------------------------------------ results
   if (phase === "done") {
     return (
-      <section className={cx("practice rounded-[12px] border p-3", passed ? "border-ok/40 bg-ok/[.06]" : "border-line bg-surface-2/40", className)}>
+      <section className={cx("practice rounded-[12px] border p-3", p.passed ? "border-ok/40 bg-ok/[.06]" : "border-line bg-surface-2/40", className)}>
         <div className="flex items-center gap-2">
-          <span className={cx("text-[20px] font-[650] tabular-nums", passed ? "text-ok" : "text-ink")}>{Math.round(pct * 100)}%</span>
-          <span className="min-w-0 flex-1 text-[12.5px] text-muted">{score % 1 ? score.toFixed(1) : score} / {qs.length} · {passed ? "passed" : `${PASS * 100}% to pass`}</span>
-          <button onClick={() => setPhase("idle")} aria-label="Close practice" className="flex size-7 items-center justify-center rounded-[8px] text-muted hover:bg-surface-2 hover:text-ink"><X size={14} /></button>
+          <span className={cx("text-[20px] font-[650] tabular-nums", p.passed ? "text-ok" : "text-ink")}>{Math.round(p.pct * 100)}%</span>
+          <span className="min-w-0 flex-1 text-[12.5px] text-muted">{p.score % 1 ? p.score.toFixed(1) : p.score} / {qs.length} · {p.passed ? "passed" : `${PASS * 100}% to pass`}</span>
+          <button onClick={() => p.setPhase("idle")} aria-label="Close practice" className="flex size-7 items-center justify-center rounded-[8px] text-muted hover:bg-surface-2 hover:text-ink"><X size={14} /></button>
         </div>
         <ol className="mt-2 flex flex-col gap-1 text-[12.5px]">
           {qs.map((q, k) => (
             <li key={k} className="flex items-start gap-2">
               <span className={cx("mt-[3px] size-2 shrink-0 rounded-full", (ans[k].score ?? 0) >= 1 ? "bg-ok" : (ans[k].score ?? 0) > 0 ? "bg-warn" : "bg-bad")} />
-              <button className="min-w-0 flex-1 truncate text-left hover:text-ink" dir="auto" onClick={() => { setI(k); setPhase("quiz"); }}>{oneLine(q.q).replace(/[*_`$]/g, "")}</button>
+              <button className="min-w-0 flex-1 truncate text-left hover:text-ink" dir="auto" onClick={() => { p.setI(k); p.setPhase("quiz"); }}>{oneLine(q.q).replace(/[*_`$]/g, "")}</button>
             </li>
           ))}
         </ol>
         <div className="mt-3 flex flex-wrap gap-2">
-          {passed && !learned && !testedOut && <Button size="sm" variant="primary" onClick={() => void testOut()}><Check size={13} /> Mark learned (tested out)</Button>}
-          {testedOut && <span className="flex h-7 items-center gap-1 text-[12px] text-ok"><Check size={13} /> Marked learned</span>}
-          <Button size="sm" onClick={() => void saveCards()} disabled={saved}><Layers size={13} /> {saved ? "Saved as flashcards" : "Save as flashcards"}</Button>
-          <Button size="sm" variant="ghost" onClick={() => void start()}><RotateCcw size={13} /> New questions</Button>
+          {p.passed && !learned && !p.testedOut && <Button size="sm" variant="primary" onClick={() => void p.testOut()}><Check size={13} /> Mark learned (tested out)</Button>}
+          {p.testedOut && <span className="flex h-7 items-center gap-1 text-[12px] text-ok"><Check size={13} /> Marked learned</span>}
+          <Button size="sm" onClick={() => void p.saveCards()} disabled={p.saved}><Layers size={13} /> {p.saved ? "Saved as flashcards" : "Save as flashcards"}</Button>
+          <Button size="sm" variant="ghost" onClick={() => void p.start()}><RotateCcw size={13} /> New questions</Button>
         </div>
-        {local && <p className="mt-2 text-[11.5px] text-muted">Built from your own cards (AI unavailable).</p>}
+        {p.local && <p className="mt-2 text-[11.5px] text-muted">Built from your own cards (AI unavailable).</p>}
       </section>
     );
   }
 
-  // ------------------------------------------------------------------ quiz
   const q = qs[i], a = ans[i];
   const answered = a.score !== undefined;
-  const src = sourceNote(q.source);
-  const next = () => (i + 1 < qs.length ? setI(i + 1) : setPhase("done"));
+  const src = q.source && q.source !== "general" ? p.v.byTitle.get(q.source.trim().toLowerCase()) : undefined;
   return (
     <section className={cx("practice rounded-[12px] border border-line bg-surface-2/40 p-3", className)} aria-label="Practice question">
       <div className="flex items-center gap-2 text-[11.5px] text-muted">
         <span className="flex flex-1 gap-1">{qs.map((_, k) => <span key={k} className={cx("h-1.5 flex-1 rounded-full", k === i ? "bg-learn" : ans[k].score === undefined ? "bg-surface-2" : ans[k].score! >= 1 ? "bg-ok" : ans[k].score! > 0 ? "bg-warn" : "bg-bad")} />)}</span>
         <span className="tabular-nums">{i + 1} / {qs.length}</span>
         <span className="uppercase tracking-wide">{q.type === "mcq" ? "Choice" : q.type === "short" ? "Short answer" : "Explain"}</span>
-        <button onClick={() => setPhase("idle")} aria-label="Stop practice" className="flex size-6 items-center justify-center rounded-[6px] hover:bg-surface-2 hover:text-ink"><X size={13} /></button>
+        <button onClick={() => p.setPhase("idle")} aria-label="Stop practice" className="flex size-6 items-center justify-center rounded-[6px] hover:bg-surface-2 hover:text-ink"><X size={13} /></button>
       </div>
-      <Preview note={md(q.q)} className="practice-md !m-0 mt-2 !max-w-none !text-[14px] font-medium" />
+      <Preview note={md(note, q.q)} className="practice-md !m-0 mt-2 !max-w-none !text-[14px] font-medium" />
       {q.type === "mcq" ? (
         <div className="mt-2 flex flex-col gap-1.5" role="radiogroup">
           {q.choices!.map((c, k) => {
             const right = k === q.answer, picked = a.picked === k;
             return (
               <button key={k} role="radio" aria-checked={picked} disabled={answered}
-                onClick={() => set(i, { picked: k, revealed: true, score: right ? 1 : 0 })}
+                onClick={() => p.set(i, { picked: k, revealed: true, score: right ? 1 : 0 })}
                 className={cx("practice-choice flex items-start gap-2 rounded-[9px] border px-2.5 py-1.5 text-left text-[13px]",
                   !answered && "border-line hover:bg-surface-2",
                   answered && right && "border-ok/50 bg-ok/10",
                   answered && picked && !right && "border-bad/50 bg-bad/10",
                   answered && !right && !picked && "border-line opacity-60")}>
                 <span className="mt-px font-mono text-[11px] text-muted">{"ABCD"[k] ?? k + 1}</span>
-                <Preview note={md(c)} className="practice-md !m-0 min-w-0 flex-1 !max-w-none !text-[13px]" />
+                <Preview note={md(note, c)} className="practice-md !m-0 min-w-0 flex-1 !max-w-none !text-[13px]" />
               </button>
             );
           })}
         </div>
       ) : (
         <div className="mt-2 flex flex-col gap-2">
-          <textarea dir="auto" rows={q.type === "explain" ? 4 : 2} value={a.text ?? ""} disabled={a.revealed} onChange={(e) => set(i, { text: e.target.value })}
+          <textarea dir="auto" rows={q.type === "explain" ? 4 : 2} value={a.text ?? ""} disabled={a.revealed} onChange={(e) => p.set(i, { text: e.target.value })}
             placeholder={q.type === "explain" ? "Explain it in your own words…" : "Your answer…"}
             className="w-full resize-y rounded-[9px] border border-line bg-surface px-2.5 py-2 text-[13px] outline-none focus:border-accent" />
-          {!a.revealed && <div className="flex gap-2"><Button size="sm" variant="primary" onClick={() => set(i, { revealed: true })}>Check</Button><Button size="sm" variant="ghost" onClick={() => set(i, { revealed: true, text: a.text ?? "" })}>I don't know</Button></div>}
+          {!a.revealed && <div className="flex gap-2"><Button size="sm" variant="primary" onClick={() => p.set(i, { revealed: true })}>Check</Button><Button size="sm" variant="ghost" onClick={() => p.set(i, { revealed: true, text: a.text ?? "" })}>I don't know</Button></div>}
           {a.revealed && (
             <div className="rounded-[9px] border border-line bg-surface p-2.5">
               <div className="text-[11px] font-medium uppercase tracking-wide text-muted">{q.type === "explain" ? "Key points" : "Expected answer"}</div>
-              <Preview note={md(String(q.answer))} className="practice-md !m-0 !max-w-none !text-[13px]" />
-              {a.feedback && <p className="mt-1.5 text-[12px] text-muted" dir="auto"><Sparkles size={11} className="mr-1 inline text-learn" />{a.feedback}</p>}
+              <Preview note={md(note, String(q.answer))} className="practice-md !m-0 !max-w-none !text-[13px]" />
+              {a.feedback && <p className="mt-1.5 text-[12px] text-muted" dir="auto">{a.feedback}</p>}
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <span className="text-[12px] text-muted">How did you do?</span>
                 {([[1, "Got it"], [0.5, "Partly"], [0, "Missed"]] as const).map(([s, l]) => (
-                  <button key={l} onClick={() => set(i, { score: s })} className={cx("h-7 rounded-[8px] border px-2.5 text-[12px]", a.score === s ? (s === 1 ? "border-ok/60 bg-ok/15 text-ok" : s ? "border-warn/60 bg-warn/15 text-warn" : "border-bad/60 bg-bad/15 text-bad") : "border-line hover:bg-surface-2")}>{l}</button>
+                  <button key={l} onClick={() => p.set(i, { score: s })} className={cx("h-7 rounded-[8px] border px-2.5 text-[12px]", a.score === s ? (s === 1 ? "border-ok/60 bg-ok/15 text-ok" : s ? "border-warn/60 bg-warn/15 text-warn" : "border-bad/60 bg-bad/15 text-bad") : "border-line hover:bg-surface-2")}>{l}</button>
                 ))}
-                {aiReady && !local && !!a.text?.trim() && <Button size="sm" variant="ghost" onClick={() => void aiGrade(i)} disabled={a.grading}>{a.grading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} AI grade</Button>}
+                {aiReady && !p.local && !!a.text?.trim() && <Button size="sm" variant="ghost" onClick={() => void p.aiGrade(i)} disabled={a.grading}>{a.grading ? <Loader2 size={12} className="animate-spin" /> : null} Grade it</Button>}
               </div>
             </div>
           )}
@@ -304,8 +428,8 @@ export function ConceptPractice({ concept, path, note, onTestOut, className }: {
         </div>
       )}
       <div className="mt-2.5 flex justify-end gap-2">
-        {i > 0 && <Button size="sm" variant="ghost" onClick={() => setI(i - 1)}>Back</Button>}
-        <Button size="sm" variant={answered ? "primary" : "secondary"} onClick={next} disabled={!answered}>{i + 1 < qs.length ? "Next" : "See score"}</Button>
+        {i > 0 && <Button size="sm" variant="ghost" onClick={() => p.setI(i - 1)}>Back</Button>}
+        <Button size="sm" variant={answered ? "primary" : "secondary"} onClick={p.next} disabled={!answered}>{i + 1 < qs.length ? "Next" : "See score"}</Button>
       </div>
     </section>
   );

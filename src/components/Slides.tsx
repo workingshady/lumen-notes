@@ -1,8 +1,9 @@
-import { ChevronLeft, ChevronRight, LayoutGrid, Move, PanelRight, Plus, Save, Smartphone, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutGrid, Move, PanelRight, Save, Smartphone, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Note } from "../../shared/types";
 import { createNote, updateNote } from "../lib/actions";
-import { deckSlides, docToDeck, flatSlide, planSlide, slideChunks, splitNotes, type Dirs } from "../lib/deck";
+import { deckSlides, docToDeck, flatSlide, planSlide, slideChunks, splitNotes, type Dirs, type SplitAt } from "../lib/deck";
+import { DeckWorkspace, DocToDeckDialog, OverviewGrid, type DeckTab } from "./slides-deck";
 import { parseBlockInfo } from "../lib/markdown";
 import { openNote, toast } from "../lib/store";
 import { Preview } from "./Preview";
@@ -48,7 +49,7 @@ function slideInfo(md: string) {
   } else if (rest.length === 1 && isMediaUrl(rest[0])) layout = "video";
   else if (heads.length && !fences && rest.some((l) => LIST.test(l)) && rest.every((l) => LIST.test(l) || /^\s/.test(l) || !/^[!|>]/.test(l))) layout = "bullets";
   else if (heads.length && rest.length <= 2 && !fences && !rest.some((l) => LIST.test(l) || /^[!|>]/.test(l) || MEDIA.test(l))) layout = "title";
-  const media = layout === "image" ? "🖼 Image" : layout === "video" ? "▶ Media" : /!\[/.test(md) ? "🖼 Image" : lines.some(isMediaUrl) ? "▶ Media" : "";
+  const media: "" | "Image" | "Media" = layout === "image" ? "Image" : layout === "video" ? "Media" : /!\[/.test(md) ? "Image" : lines.some(isMediaUrl) ? "Media" : "";
   const alt = IMG.exec(rest.find((l) => IMG.test(l)) ?? "")?.[1];
   const label = title || ((layout === "image" || layout === "video") && alt) || (lines[0] ?? "").replace(/^!\[[^\]]*\]\([^)]*\).*/, "Image").replace(/^```(\w*).*/, "$1 diagram").replace(/^<?https?:\/\/\S+.*/, "Media");
   return { layout, caption, title: label, media };
@@ -120,7 +121,10 @@ const CSS = `
 .s-side img,.s-bg img{width:100%;height:100%;object-fit:cover;border-radius:0;max-height:none;display:block}
 .s-side .embed,.s-bg .embed{height:100%;margin:0;border-radius:0}
 .s-bg{position:absolute;inset:0;z-index:-1}
-.lslide.invert{color:#fff;--text:#fff;--muted:rgba(255,255,255,.75)}
+/* invert = the opposite theme (a light slide in Lamplight, a dark one in Paper); over a background image: white text */
+.lslide.invert{--bg:#FAF8F3;--surface:#FFFFFF;--surface-2:#F2EFE7;--border:#E4DFD3;--text:#1F1D1A;--muted:#6A655C;--accent:#B45F0E;--accent-fg:#FFFFFF;background:var(--bg);color:var(--text)}
+:root[data-dark="0"] .lslide.invert{--bg:#0F1115;--surface:#161A21;--surface-2:#1D222B;--border:#2A303B;--text:#E8E6E1;--muted:#9AA0AA;--accent:#F2A93B;--accent-fg:#1A1206}
+.lslide.invert:has(>.s-bg){background:transparent;color:#fff;--text:#fff;--muted:rgba(255,255,255,.75)}
 .lslide.invert .s-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.65))}
 .lslide.accent{background:var(--accent);color:var(--accent-fg);--text:var(--accent-fg);--muted:var(--accent-fg)}
 .L-title{justify-content:center}
@@ -156,7 +160,11 @@ const CSS = `
 .lslide .md-box.center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .lslide.arranging .md-box{outline:2px dashed var(--accent);outline-offset:2px;cursor:move;overflow:visible;user-select:none}
 .lslide.arranging .md-box:hover{outline-style:solid}
-.lslide .box-h{position:absolute;right:-9px;bottom:-9px;width:18px;height:18px;border-radius:5px;background:var(--accent);cursor:nwse-resize;z-index:3}
+.lslide .box-h{position:absolute;width:18px;height:18px;border-radius:4px;background:var(--bg);border:3px solid var(--accent);box-sizing:border-box;z-index:3}
+.lslide .box-h.h-nw{left:-10px;top:-10px;cursor:nwse-resize}.lslide .box-h.h-ne{right:-10px;top:-10px;cursor:nesw-resize}
+.lslide .box-h.h-sw{left:-10px;bottom:-10px;cursor:nesw-resize}.lslide .box-h.h-se{right:-10px;bottom:-10px;cursor:nwse-resize}
+.lslide .guide{position:absolute;z-index:4;pointer-events:none;display:none;background:var(--accent)}
+.lslide .guide.gx{top:0;bottom:0;width:2px;margin-left:-1px}.lslide .guide.gy{left:0;right:0;height:2px;margin-top:-1px}
 .lslide .box-tag{position:absolute;left:-2px;top:-26px;font:600 13px/20px Inter,sans-serif;color:var(--accent-fg);background:var(--accent);border-radius:5px;padding:0 6px;white-space:nowrap}
 `;
 
@@ -173,9 +181,9 @@ export interface BoxPos { x: number; y: number; w: number; h?: number }
 /** One slide rendered at 1280 × 720 and scaled to fit its box. Images are tap-to-zoom.
  *  With a layout directive it renders header/regions/side image/background (lib/deck.ts planSlide); without one it
  *  keeps the automatic styling (title / bullets / image / video / diagram / text). `arrange` makes boxes draggable. */
-export function SlideStage({ note, md, dirs, blank, counter, frameless, onZoom, className, arrange }: {
+export function SlideStage({ note, md, dirs, blank, counter, frameless, onZoom, className, arrange, bare }: {
   note: Pick<Note, "id" | "spaceId">; md: string; dirs?: Dirs; blank?: boolean; counter?: { i: number; n: number }; frameless?: boolean; onZoom?: (src: string, alt: string) => void; className?: string;
-  arrange?: (line: number, pos: BoxPos) => void;
+  arrange?: (line: number, pos: BoxPos) => void; /** No rounding or border (inside a SlideFrame). */ bare?: boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0);
@@ -199,34 +207,68 @@ export function SlideStage({ note, md, dirs, blank, counter, frameless, onZoom, 
     const el = slideRef.current;
     if (!el || !arrange || !scale) return;
     const cleanups: (() => void)[] = [];
-    el.querySelectorAll<HTMLElement>(".md-box[data-line]").forEach((b) => {
-      const h = document.createElement("span"); h.className = "box-h";
+    // Guides: amber lines when an edge or centre lines up with the slide's edges/centre or another box (snaps within 1%).
+    const gx = document.createElement("div"); gx.className = "guide gx";
+    const gy = document.createElement("div"); gy.className = "guide gy";
+    el.append(gx, gy);
+    cleanups.push(() => { gx.remove(); gy.remove(); });
+    const boxes = [...el.querySelectorAll<HTMLElement>(".md-box[data-line]")];
+    const read = (b: HTMLElement) => { const cs = getComputedStyle(b); const v = (k: string) => parseFloat(cs.getPropertyValue(k)); return { x: v("--x"), y: v("--y"), w: v("--w"), h: Number.isFinite(v("--h")) ? v("--h") : (b.offsetHeight / 720) * 100 }; };
+    boxes.forEach((b) => {
+      const handles = (["nw", "ne", "sw", "se"] as const).map((d) => { const h = document.createElement("span"); h.className = `box-h h-${d}`; h.dataset.dir = d; return h; });
       const tag = document.createElement("span"); tag.className = "box-tag";
-      b.append(h, tag);
-      const read = () => { const cs = getComputedStyle(b); const v = (k: string) => parseFloat(cs.getPropertyValue(k)); return { x: v("--x"), y: v("--y"), w: v("--w"), h: Number.isFinite(v("--h")) ? v("--h") : (b.offsetHeight / 720) * 100 }; };
+      b.append(...handles, tag);
       const show = (p: BoxPos) => { tag.textContent = `x ${Math.round(p.x)} · y ${Math.round(p.y)} · ${Math.round(p.w)}×${Math.round(p.h ?? 0)}`; };
-      show(read());
+      show(read(b));
       const down = (e: PointerEvent) => {
         e.preventDefault(); e.stopPropagation();
-        const resize = e.target === h;
-        const s = read(), x0 = e.clientX, y0 = e.clientY;
+        const dir = (e.target as HTMLElement).dataset.dir ?? "";
+        const s = read(b), x0 = e.clientX, y0 = e.clientY;
         const sx = 100 / (1280 * scale), sy = 100 / (720 * scale);
-        const snap = (v: number) => Math.round(v * 2) / 2;
+        const others = boxes.filter((o) => o !== b).map(read);
+        const tx = [0, 50, 100, ...others.flatMap((o) => [o.x, o.x + o.w / 2, o.x + o.w])];
+        const ty = [0, 50, 100, ...others.flatMap((o) => [o.y, o.y + o.h / 2, o.y + o.h])];
+        /** Nearest target for any of `edges` (within 1%): the shift to apply and where to draw the guide. */
+        const near = (edges: number[], ts: number[]) => {
+          let best: { d: number; at: number } | null = null;
+          for (const e of edges) for (const t of ts) { const d = t - e; if (Math.abs(d) < 1 && (!best || Math.abs(d) < Math.abs(best.d))) best = { d, at: t }; }
+          return best;
+        };
+        const half = (v: number) => Math.round(v * 2) / 2;
         let cur: BoxPos = s;
         b.setPointerCapture(e.pointerId);
         const move = (m: PointerEvent) => {
           const dx = (m.clientX - x0) * sx, dy = (m.clientY - y0) * sy;
-          cur = resize ? { ...s, w: snap(Math.max(4, s.w + dx)), h: snap(Math.max(4, (s.h ?? 10) + dy)) } : { ...s, x: snap(Math.min(98, Math.max(-20, s.x + dx))), y: snap(Math.min(98, Math.max(-20, s.y + dy))) };
-          b.style.setProperty("--x", String(cur.x)); b.style.setProperty("--y", String(cur.y)); b.style.setProperty("--w", String(cur.w));
-          if (resize) b.style.setProperty("--h", String(cur.h));
+          let { x, y, w } = s, h = s.h ?? 10;
+          let snapX: { d: number; at: number } | null = null, snapY: { d: number; at: number } | null = null;
+          if (!dir) {
+            x = half(Math.min(98, Math.max(-20, s.x + dx))); y = half(Math.min(98, Math.max(-20, s.y + dy)));
+            snapX = m.altKey ? null : near([x, x + w / 2, x + w], tx); snapY = m.altKey ? null : near([y, y + h / 2, y + h], ty);
+            if (snapX) x += snapX.d;
+            if (snapY) y += snapY.d;
+          } else {
+            if (dir.includes("e")) { w = half(Math.max(4, s.w + dx)); snapX = m.altKey ? null : near([x + w], tx); if (snapX) w += snapX.d; }
+            if (dir.includes("w")) { const r = s.x + s.w; x = half(Math.min(r - 4, s.x + dx)); snapX = m.altKey ? null : near([x], tx); if (snapX) x += snapX.d; w = r - x; }
+            if (dir.includes("s")) { h = half(Math.max(4, (s.h ?? 10) + dy)); snapY = m.altKey ? null : near([y + h], ty); if (snapY) h += snapY.d; }
+            if (dir.includes("n")) { const btm = s.y + (s.h ?? 10); y = half(Math.min(btm - 4, s.y + dy)); snapY = m.altKey ? null : near([y], ty); if (snapY) y += snapY.d; h = btm - y; }
+          }
+          cur = { x, y, w, h };
+          b.style.setProperty("--x", String(x)); b.style.setProperty("--y", String(y)); b.style.setProperty("--w", String(w));
+          if (dir || Number.isFinite(parseFloat(getComputedStyle(b).getPropertyValue("--h")))) b.style.setProperty("--h", String(h));
+          gx.style.display = snapX ? "block" : "none"; if (snapX) gx.style.left = `${snapX.at}%`;
+          gy.style.display = snapY ? "block" : "none"; if (snapY) gy.style.top = `${snapY.at}%`;
           show(cur);
         };
-        const up = () => { b.removeEventListener("pointermove", move); b.removeEventListener("pointerup", up); if (cur !== s) arrange(Number(b.dataset.line), cur); };
+        const up = () => {
+          b.removeEventListener("pointermove", move); b.removeEventListener("pointerup", up);
+          gx.style.display = gy.style.display = "none";
+          if (cur !== s) arrange(Number(b.dataset.line), { ...cur, h: dir || s.h !== undefined ? cur.h : undefined });
+        };
         b.addEventListener("pointermove", move);
         b.addEventListener("pointerup", up);
       };
       b.addEventListener("pointerdown", down);
-      cleanups.push(() => { b.removeEventListener("pointerdown", down); h.remove(); tag.remove(); });
+      cleanups.push(() => { b.removeEventListener("pointerdown", down); handles.forEach((h) => h.remove()); tag.remove(); });
     });
     return () => cleanups.forEach((c) => c());
   });
@@ -251,7 +293,7 @@ export function SlideStage({ note, md, dirs, blank, counter, frameless, onZoom, 
   return (
     <div ref={box} className={cx("flex h-full w-full items-center justify-center", className)}>
       <style>{CSS}</style>
-      <div className={cx("relative overflow-hidden bg-bg", frameless ? "rounded-[6px] md:rounded-[10px]" : "rounded-[10px] border border-line")} style={{ width: 1280 * scale, height: 720 * scale, visibility: scale ? "visible" : "hidden" }}
+      <div className={cx("relative overflow-hidden bg-bg", bare ? "" : frameless ? "rounded-[6px] md:rounded-[10px]" : "rounded-[10px] border border-line")} style={{ width: 1280 * scale, height: 720 * scale, visibility: scale ? "visible" : "hidden" }}
         onClick={(e) => {
           const img = (e.target as HTMLElement).closest("img");
           if (img && onZoom) { e.stopPropagation(); onZoom(img.currentSrc || img.src, img.alt); }
@@ -304,6 +346,8 @@ export function ImageZoom({ src, alt, onClose }: { src: string; alt: string; onC
 }
 
 const pad2 = (x: number) => String(x).padStart(2, "0");
+/** What the phone remote calls this presenter ("Remote · laptop"). */
+const DEVICE = typeof navigator === "undefined" ? "laptop" : /iPad|Tablet|Android(?!.*Mobile)/i.test(navigator.userAgent) ? "tablet" : /Mobile/i.test(navigator.userAgent) ? "phone" : "laptop";
 
 function RemotePopover({ link, onClose }: { link: ReturnType<typeof useRemoteLink>; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -336,13 +380,16 @@ function RemotePopover({ link, onClose }: { link: ReturnType<typeof useRemoteLin
 export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
   // A deck is shown as written; any other note is laid out automatically (doc → deck), without touching the note.
   const written = useMemo(() => isWrittenDeck(note), [note]);
-  const deckMd = useMemo(() => (written ? note.body : docToDeck(note.body, note.title)), [written, note.body, note.title]);
+  // Doc → deck: a note that isn't a deck first shows the preview (split at H1 / H2 / ---), then presents or saves.
+  const [split, setSplit] = useState<SplitAt>("auto");
+  const [preview, setPreview] = useState(() => !written);
+  const deckMd = useMemo(() => (written ? note.body : docToDeck(note.body, note.title, split)), [written, note.body, note.title, split]);
   const slides = useMemo(() => deckSlides(deckMd), [deckMd]);
   const infos = useMemo(() => slides.map((s) => slideInfo(s.md)), [slides]);
   const [overview, setOverview] = useState(false);
-  const [arrange, setArrange] = useState(false);
+  // The deck workspace (Arrange / Overview tabs, opened with A or the Arrange button); null = presenting.
+  const [deckTab, setDeckTab] = useState<DeckTab | null>(() => { try { if (sessionStorage.getItem("lumen.deckStage") === note.id) { sessionStorage.removeItem("lumen.deckStage"); return "arrange"; } } catch { /* ignore */ } return null; });
   const [jump, setJump] = useState("");
-  const arranging = arrange && written;
   const [i, setI] = useState(0);
   const [blank, setBlank] = useState(false);
   const [presenter, setPresenter] = useState(false);
@@ -359,7 +406,9 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
   const cur = slides[Math.min(i, n - 1)];
   const next = infos[i + 1];
 
-  const state: DeckState = { type: "state", noteId: note.id, spaceId: note.spaceId, title: note.title, i, n, blank, md: cur?.md.replace(/^\n+/, (m) => (m.length > 400 ? "" : m)) ?? "", dirs: cur?.dirs, notes: cur?.notes ?? "", next: next?.title ?? "", t0: timer.t0, pausedAt: timer.pausedAt };
+  const trimMd = (md: string) => md.replace(/^\n+/, (m) => (m.length > 400 ? "" : m));
+  const nx = slides[i + 1];
+  const state: DeckState = { type: "state", noteId: note.id, spaceId: note.spaceId, title: note.title, i, n, blank, md: cur ? trimMd(cur.md) : "", dirs: cur?.dirs, notes: cur?.notes ?? "", next: next?.title ?? "", nextMd: nx && nx.md.length < 12_000 ? trimMd(nx.md) : undefined, nextDirs: nx?.dirs, device: DEVICE, t0: timer.t0, pausedAt: timer.pausedAt };
 
   /** Arrange mode wrote a new position: rewrite that `::: box …` line in the note. */
   async function writeBox(line: number, p: BoxPos) {
@@ -384,8 +433,9 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
   }
   async function saveAsDeck() {
     const d = await createNote({ type: "slides", title: `${note.title} (deck)`, spaceId: note.spaceId, folderId: note.folderId, body: deckMd });
-    toast("Saved as a deck: edit its layouts, then present it");
-    openNote(d.id, "edit");
+    toast("Saved as a deck: pick layouts and arrange, then present");
+    try { sessionStorage.setItem("lumen.deckStage", d.id); } catch { /* ignore */ }
+    openNote(d.id, "slides");
   }
   function onCmd(c: DeckCmd) {
     if (c.cmd === "next") go(1);
@@ -426,6 +476,7 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
+      if (deckTab || preview) return; // the workspace and the preview dialog handle their own keys
       if ((e.target as HTMLElement).closest("input,textarea,.cm-editor") || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === " ") {
         // Space plays/pauses media on the current slide (never autoplays); otherwise advances.
@@ -439,18 +490,20 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
       else if (["ArrowLeft", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); if (jump) setJump((j) => j.slice(0, -1)); else go(-1); }
       else if (e.key === "Home") setI(0);
       else if (e.key === "End") setI(n - 1);
-      else if (e.key === "Escape") { if (jump) setJump(""); else if (overview) setOverview(false); else if (arrange) setArrange(false); else if (!document.fullscreenElement) onExit(); }
+      else if (e.key === "Escape") { if (jump) setJump(""); else if (overview) setOverview(false); else if (!document.fullscreenElement) onExit(); }
       else if (e.key === "f") void root.current?.requestFullscreen?.();
       else if (e.key === "b" || e.key === ".") setBlank((b) => !b);
       else if (e.key === "p") setPresenter((p) => !p);
       else if (e.key === "o" || e.key === "g") setOverview((o) => !o);
-      else if (e.key === "a" && written) setArrange((x) => !x);
+      else if (e.key === "a" && written) setDeckTab("arrange");
     };
     addEventListener("keydown", k);
     return () => removeEventListener("keydown", k);
   });
 
   if (!n) return <div className="p-10 text-muted">No slides. Separate slides with a line containing only <code>---</code>.</div>;
+  if (preview && !written) return <DocToDeckDialog note={note} slides={slides} split={split} onSplit={setSplit} onPresent={() => setPreview(false)} onSave={() => void saveAsDeck()} onClose={onExit} />;
+  if (deckTab && written) return <DeckWorkspace note={note} slides={slides} i={Math.min(i, n - 1)} setI={(k) => { setBlank(false); setI(k); }} tab={deckTab} setTab={setDeckTab} onPresent={() => setDeckTab(null)} writeBox={(l, p) => void writeBox(l, p)} addBox={() => void addBox()} />;
   const zoomer = (src: string, alt: string) => setZoom({ src, alt });
   const thumbs = (big: boolean) => (
     <div className={cx("hidden shrink-0 items-center gap-2.5 overflow-x-auto px-6 min-[1200px]:flex", big ? "h-[120px] py-4" : "h-[120px] border-t border-surface-2")}>
@@ -458,7 +511,7 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
         <button key={k} onClick={() => go(k - i)} className={cx("relative flex shrink-0 flex-col rounded-[6px] bg-bg text-left", big ? "h-20 w-[142px] gap-1.5 p-2.5" : "h-[68px] w-[120px] gap-[5px] p-2", k === i ? "border-2 border-accent" : "border border-line", k < i && (big ? "opacity-60" : "opacity-55"))}>
           <span className={cx("truncate font-[650]", big ? "text-[10.5px]" : "text-[9.5px]")}>{s.title}</span>
           {big ? <><span className="h-[3px] w-[80%] rounded-[2px] bg-muted/40" /><span className="h-[3px] w-[60%] rounded-[2px] bg-muted/40" /></> : <span className="h-[3px] w-[70%] rounded-[2px] bg-muted/35" />}
-          {s.media && <span className="absolute bottom-[5px] left-1.5 rounded-[4px] bg-white/10 px-[5px] text-[9.5px] leading-[15px]">{s.media}</span>}
+          {s.media && <span className="absolute bottom-[5px] left-1.5 rounded-[4px] bg-white/[.12] px-[5px] text-[9.5px] leading-[15px]">{s.media}</span>}
           <span className={cx("absolute text-muted", big ? "bottom-1 right-1.5 text-[10px]" : "bottom-1 right-1.5 text-[9.5px]")}>{k + 1}</span>
         </button>
       ))}
@@ -485,8 +538,8 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
         <>
           <div className="flex min-h-0 flex-1 gap-6 px-6 pt-6">
             <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-              <div ref={stage} className="aspect-video min-h-0 w-full shrink" onClick={(e) => { if (!arranging && !(e.target as HTMLElement).closest("a,button,input,details,video,audio,iframe,img")) go(1); }}>
-                <SlideStage key={i} note={note} md={cur.md} dirs={cur.dirs} blank={blank} counter={{ i, n }} onZoom={arranging ? undefined : zoomer} className="!justify-start" arrange={arranging ? writeBox : undefined} />
+              <div ref={stage} className="aspect-video min-h-0 w-full shrink" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button,input,details,video,audio,iframe,img")) go(1); }}>
+                <SlideStage key={i} note={note} md={cur.md} dirs={cur.dirs} blank={blank} counter={{ i, n }} onZoom={zoomer} className="!justify-start" />
               </div>
               <div className="flex shrink-0 items-center gap-4 text-[12px] text-muted">
                 <span>← → / Space to move</span><span>O overview</span><span>1–9 Enter jump</span><span>F full screen</span><span>B blank</span><span>Esc exit</span>
@@ -520,16 +573,15 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
         <>
           <div className="h-8 shrink-0 md:hidden" />
           <div className="safe-t h-[3px] shrink-0 bg-surface-2"><div className="h-full bg-accent transition-all" style={{ width: `${((i + 1) / n) * 100}%` }} /></div>
-          <div ref={stage} className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-2 md:p-6" onClick={(e) => { if (!arranging && !(e.target as HTMLElement).closest("a,button,input,details,video,audio,iframe,img")) go(1); }}>
-            <div className="h-full w-full md:max-w-[1120px]"><SlideStage key={i} note={note} md={cur.md} dirs={cur.dirs} blank={blank} onZoom={arranging ? undefined : zoomer} frameless arrange={arranging ? writeBox : undefined} /></div>
+          <div ref={stage} className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-2 md:p-6" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button,input,details,video,audio,iframe,img")) go(1); }}>
+            <div className="h-full w-full md:max-w-[1120px]"><SlideStage key={i} note={note} md={cur.md} dirs={cur.dirs} blank={blank} onZoom={zoomer} frameless /></div>
           </div>
           {thumbs(false)}
           {/* Desktop bar */}
           <div className="hidden h-[52px] shrink-0 items-center gap-3.5 border-t border-surface-2 px-6 text-[13px] text-muted md:flex">
             <span className="flex flex-1 items-center gap-2 truncate">
               <span className="truncate">{note.title}</span>
-              {!written && <button onClick={saveAsDeck} title="This note is laid out automatically. Save the layout as a deck note you can edit." className="flex shrink-0 items-center gap-1.5 rounded-[7px] border border-line px-2 py-1 text-[12px] hover:text-ink"><Save size={13} />Auto layout · Save as deck</button>}
-              {arranging && <><span className="shrink-0 rounded-[6px] bg-accent px-2 py-0.5 text-[12px] font-semibold text-accent-fg">Arranging: drag boxes, corner resizes</span><button onClick={addBox} className="flex shrink-0 items-center gap-1 rounded-[7px] border border-line px-2 py-1 text-[12px] hover:text-ink"><Plus size={13} />Box</button></>}
+              {!written && <button onClick={() => setPreview(true)} title="This note is laid out automatically. Preview the deck, change where it splits, save it as a deck note you can edit." className="flex shrink-0 items-center gap-1.5 rounded-[7px] border border-line px-2 py-1 text-[12px] hover:text-ink"><Save size={13} />Auto layout · Save as deck</button>}
             </span>
             <button aria-label="Previous" onClick={() => go(-1)} disabled={i === 0} className="flex size-[34px] items-center justify-center rounded-[8px] border border-line text-ink disabled:opacity-40"><ChevronLeft size={16} /></button>
             <span className="text-ink tabular-nums">{i + 1} / {n}</span>
@@ -537,7 +589,7 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
             <span className="flex flex-1 items-center justify-end gap-1">
               <span className="mr-2 hidden xl:inline">O overview · F fullscreen · Esc exit</span>
               <IconButton label="Overview (O)" onClick={() => setOverview(true)}><LayoutGrid size={16} /></IconButton>
-              {written && <IconButton label={arranging ? "Done arranging (A)" : "Arrange boxes (A): drag to move, corner to resize"} onClick={() => setArrange((x) => !x)}><Move size={16} style={{ color: arranging ? "var(--accent)" : undefined }} /></IconButton>}
+              {written && <IconButton label="Arrange (A): layouts, order, boxes" onClick={() => setDeckTab("arrange")}><Move size={16} /></IconButton>}
               <IconButton label="Presenter view (P)" onClick={() => setPresenter(true)}><PanelRight size={16} /></IconButton>
               {remoteBtn(<Smartphone size={16} style={{ color: link.status === "synced" ? "var(--success)" : undefined }} />, "flex size-8 items-center justify-center rounded-[8px] hover:bg-surface-2 hover:text-ink")}
               <IconButton label="Exit slides" onClick={onExit}><X size={18} /></IconButton>
@@ -556,19 +608,9 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
         </>
       )}
       {overview && (
-        <div className="absolute inset-0 z-50 flex flex-col bg-[#0A0C0F]/95 fade-in" onClick={() => setOverview(false)}>
-          <div className="flex h-12 shrink-0 items-center gap-3 px-6 text-[13px] text-muted">
-            <LayoutGrid size={15} /><span className="text-ink">{n} slides</span><span>Click a slide to jump · type a number + Enter · Esc closes</span>
-            <span className="flex-1" /><button aria-label="Close overview" onClick={() => setOverview(false)} className="flex size-8 items-center justify-center rounded-[8px] hover:bg-surface-2 hover:text-ink"><X size={18} /></button>
-          </div>
-          <div className="grid min-h-0 flex-1 grid-cols-2 content-start gap-4 overflow-y-auto px-6 pb-8 md:grid-cols-3 xl:grid-cols-4">
-            {slides.map((s, k) => (
-              <button key={k} onClick={(e) => { e.stopPropagation(); setBlank(false); setI(k); setOverview(false); }} className="flex flex-col gap-1.5 text-left">
-                <div className={cx("pointer-events-none aspect-video w-full overflow-hidden rounded-[8px]", k === i ? "ring-2 ring-accent" : "ring-1 ring-line")}><SlideStage note={note} md={s.md} dirs={s.dirs} frameless /></div>
-                <span className="flex gap-2 text-[12px] text-muted"><span className="tabular-nums">{k + 1}</span><span className="truncate">{infos[k].title}</span></span>
-              </button>
-            ))}
-          </div>
+        // R4-17C: the grid only (click a slide or type its number + Enter; Esc or a click outside closes)
+        <div className="absolute inset-0 z-50 overflow-y-auto bg-[#0A0C0F] px-4 py-6 fade-in md:px-[60px] md:py-12" onClick={() => setOverview(false)}>
+          <OverviewGrid note={note} slides={slides} i={i} onPick={(k) => { setBlank(false); setI(k); setOverview(false); }} />
         </div>
       )}
       {jump && <div className="pointer-events-none absolute left-1/2 top-6 z-[55] -translate-x-1/2 rounded-[10px] border border-line bg-surface px-4 py-2 text-[15px] shadow-xl">Go to slide <b className="tabular-nums">{jump}</b> · Enter</div>}

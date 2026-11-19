@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:absolute;inset:0;display:flex;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:13px;overflow:hidden">
+  <div style="display:{{ deskOnly }};height:100%"><dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,100%" style="height:100%"></dc-import></div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+    <div style="height:{{ barH }};padding:0 {{ px }};display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><dc-import name="LumenGlyph" glyph="dashboard" size="{{ 18 }}" hint-size="18px,18px"></dc-import><span style="font-weight:650;font-size:16px;flex:1;white-space:nowrap">AI Engineer path</span><span style="display:{{ deskOnly }};color:var(--mu)">Last 8 weeks ▾</span><span style="display:{{ deskOnly }};height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);align-items:center">YAML</span><span style="height:30px;padding:0 12px;border-radius:8px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">Add tile</span></div>
+    <div style="flex:1;padding:{{ gp }};display:grid;grid-template-columns:repeat({{ cols }},1fr);grid-auto-rows:{{ rowH }};gap:14px;overflow:hidden;position:relative;background-image:{{ gridBg }}">
+      <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="8">
+        <div style="grid-column:span {{ t.cs }};grid-row:span {{ t.rs }};border-radius:12px;background:var(--sf);border:{{ t.b }};padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0;overflow:hidden;position:relative">
+          <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.title }}</span><span style="display:{{ t.tblS }};font-size:11.5px;color:var(--mu)">Table</span><span style="color:var(--mu)">⋯</span></div>
+          <sc-if value="{{ t.isNum }}"><div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:34px;font-weight:650;letter-spacing:-.02em">{{ t.val }}</span><span style="font-size:12.5px;font-weight:600;color:{{ t.dc }}">{{ t.delta }}</span></div><span style="color:var(--mu);font-size:12px">{{ t.sub }}</span></sc-if>
+          <sc-if value="{{ t.isBar }}"><div style="flex:1;display:flex;align-items:flex-end;gap:6px;padding-top:6px;border-bottom:1px solid var(--bd)"><sc-for list="{{ t.bars }}" as="b" hint-placeholder-count="8"><div style="flex:1;display:flex;flex-direction:column-reverse;height:100%"><sc-for list="{{ b.segs }}" as="s" hint-placeholder-count="2"><span style="height:{{ s.h }};background:{{ s.c }};border-radius:{{ s.r }}"></span></sc-for></div></sc-for></div><div style="display:flex;gap:6px;font-size:10.5px;color:var(--mu)"><sc-for list="{{ t.bars }}" as="b" hint-placeholder-count="8"><span style="flex:1;text-align:center">{{ b.l }}</span></sc-for></div></sc-if>
+          <sc-if value="{{ t.isLine }}"><svg viewBox="0 0 300 110" preserveAspectRatio="none" style="flex:1;width:100%"><path d="M0 30H300 M0 65H300 M0 100H300" style="stroke:var(--bd);stroke-width:1;fill:none"></path><path d="{{ t.area }}" style="fill:color-mix(in srgb,var(--c1) 18%,transparent);stroke:none"></path><path d="{{ t.line }}" style="fill:none;stroke:var(--c1);stroke-width:2"></path><path d="{{ t.line2 }}" style="fill:none;stroke:var(--c2);stroke-width:2;stroke-dasharray:5 4"></path></svg><div style="display:flex;gap:14px;font-size:11.5px;color:var(--mu)"><span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:2px;background:var(--c1)"></span>Reviews</span><span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:2px;background:var(--c2)"></span>Retention</span></div></sc-if>
+          <sc-if value="{{ t.isDonut }}"><div style="flex:1;display:flex;align-items:center;gap:16px"><div style="width:110px;height:110px;border-radius:50%;background:conic-gradient(var(--c1) 0 34%, var(--c2) 34% 58%, var(--c3) 58% 76%, var(--c4) 76% 88%, var(--c5) 88% 100%);display:flex;align-items:center;justify-content:center;flex-shrink:0"><div style="width:70px;height:70px;border-radius:50%;background:var(--sf);display:flex;flex-direction:column;align-items:center;justify-content:center"><b style="font-size:17px">41 h</b><span style="font-size:10.5px;color:var(--mu)">studied</span></div></div><div style="display:flex;flex-direction:column;gap:5px;font-size:12px"><sc-for list="{{ t.legend }}" as="l" hint-placeholder-count="5"><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:{{ l.c }}"></span>{{ l.n }}<span style="color:var(--mu)">{{ l.v }}</span></span></sc-for></div></div></sc-if>
+          <sc-if value="{{ t.isRing }}"><div style="flex:1;display:flex;align-items:center;justify-content:center"><div style="width:96px;height:96px;border-radius:50%;background:conic-gradient(var(--ok) 0 41%, var(--sf2) 41% 100%);display:flex;align-items:center;justify-content:center"><div style="width:78px;height:78px;border-radius:50%;background:var(--sf);display:flex;flex-direction:column;align-items:center;justify-content:center"><b style="font-size:18px">41%</b><span style="font-size:10.5px;color:var(--mu);white-space:nowrap">41 / 101</span></div></div></div></sc-if>
+          <sc-if value="{{ t.isHeat }}"><div style="display:grid;grid-template-columns:repeat(20,1fr);grid-template-rows:repeat(7,1fr);gap:3px;flex:1"><sc-for list="{{ t.cells }}" as="c" hint-placeholder-count="140"><span style="border-radius:2px;background:{{ c }}"></span></sc-for></div></sc-if>
+          <sc-if value="{{ t.isTable }}"><div style="display:flex;flex-direction:column;font-size:12px"><sc-for list="{{ t.rows }}" as="r" hint-placeholder-count="5"><div style="display:grid;grid-template-columns:1.6fr 1fr 1fr;height:28px;align-items:center;border-top:{{ r.bt }};font-weight:{{ r.w }};color:{{ r.c }}"><span>{{ r.a }}</span><span style="text-align:right">{{ r.b }}</span><span style="text-align:right">{{ r.d }}</span></div></sc-for></div></sc-if>
+          <span style="display:{{ t.handleS }};position:absolute;right:4px;bottom:4px;width:10px;height:10px;border-right:2px solid var(--ac);border-bottom:2px solid var(--ac)"></span>
+        </div>
+      </sc-for>
+    </div>
+    <sc-if value="{{ wiz }}">
+      <div style="position:absolute;inset:0;background:rgba(5,6,8,.58)"></div>
+      <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:{{ wizW }};border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:16px 20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--bd)"><span style="font-size:17px;font-weight:650;flex:1">Add tile</span><sc-for list="{{ steps }}" as="s" hint-placeholder-count="3"><span style="display:flex;align-items:center;gap:6px;color:{{ s.c }};font-weight:{{ s.w }};font-size:12.5px"><span style="width:20px;height:20px;border-radius:50%;border:1.5px solid {{ s.c }};background:{{ s.bg }};color:{{ s.nc }};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">{{ s.n }}</span>{{ s.l }}</span></sc-for></div>
+        <div style="display:grid;grid-template-columns:{{ wizCols }};min-height:380px">
+          <div style="padding:18px 20px;display:flex;flex-direction:column;gap:10px">
+            <sc-if value="{{ step1 }}"><span style="color:var(--mu)">What should the tile count?</span><sc-for list="{{ sources }}" as="s" hint-placeholder-count="5"><div style="min-height:52px;border-radius:10px;border:{{ s.b }};background:{{ s.bg }};padding:0 12px;display:flex;align-items:center;gap:12px"><dc-import name="LumenGlyph" glyph="{{ s.g }}" size="{{ 18 }}" hint-size="18px,18px"></dc-import><div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">{{ s.n }}</span><span style="font-size:12px;color:var(--mu)">{{ s.d }}</span></div></div></sc-for></sc-if>
+            <sc-if value="{{ step2 }}"><span style="color:var(--mu)">Chart type</span><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"><sc-for list="{{ types }}" as="s" hint-placeholder-count="8"><div style="height:74px;border-radius:10px;border:{{ s.b }};background:{{ s.bg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:12px"><dc-import name="LumenGlyph" glyph="{{ s.g }}" size="{{ 20 }}" hint-size="20px,20px"></dc-import>{{ s.n }}</div></sc-for></div></sc-if>
+            <sc-if value="{{ step3 }}"><span style="color:var(--mu)">Fields</span><sc-for list="{{ fields }}" as="f" hint-placeholder-count="7"><div style="display:flex;align-items:center;gap:10px"><span style="width:110px;color:var(--mu)">{{ f.l }}</span><span style="flex:1;height:32px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);display:flex;align-items:center;padding:0 10px">{{ f.v }}</span></div></sc-for></sc-if>
+          </div>
+          <div style="display:{{ prevS }};border-left:1px solid var(--bd);background:var(--bg);padding:16px;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Live preview</span>
+            <div style="flex:1;border-radius:12px;background:var(--sf);border:1px solid var(--bd);padding:14px;display:flex;flex-direction:column;gap:8px"><span style="font-weight:600">Review minutes per week</span><div style="flex:1;display:flex;align-items:flex-end;gap:6px;border-bottom:1px solid var(--bd)"><sc-for list="{{ prevBars }}" as="b" hint-placeholder-count="8"><div style="flex:1;display:flex;flex-direction:column-reverse;height:100%"><sc-for list="{{ b.segs }}" as="s" hint-placeholder-count="2"><span style="height:{{ s.h }};background:{{ s.c }};border-radius:{{ s.r }}"></span></sc-for></div></sc-for></div><span style="font-size:11.5px;color:var(--mu)">Stacked by course · CS231n, CS224n, Karpathy</span></div></div>
+        </div>
+        <div style="padding:14px 20px;border-top:1px solid var(--bd);display:flex;gap:8px;justify-content:flex-end"><span style="height:34px;padding:0 14px;display:flex;align-items:center;color:var(--mu)">Back</span><span style="height:34px;padding:0 16px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">{{ nextL }}</span></div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;wizard&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:0,&quot;tsType&quot;:&quot;number&quot;},&quot;edit&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;table&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = !!this.props.phone, wizS = this.props.wizard ?? 0, edit = !!this.props.edit, tbl = !!this.props.table;
+    const C = ['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)'];
+    const bars = (vals, st) => vals.map((v,i) => ({ l:'W'+(i+1), segs: (st ? [v*.5, v*.3, v*.2] : [v]).map((h,j,a) => ({ h: h+'%', c: C[j], r: j===a.length-1 ? '3px 3px 0 0' : '0' })) }));
+    const ln = [60,52,58,40,44,30,34,22], ln2 = [40,38,36,36,34,33,32,30];
+    const pathOf = a => a.map((y,i) => `${i?'L':'M'}${i*300/(a.length-1)} ${y}`).join('');
+    const heat = Array.from({length:140},(_,i) => { const v = (i*37 % 11); return v<3 ? 'var(--sf2)' : v<6 ? 'color-mix(in srgb,var(--c1) 35%,var(--sf2))' : v<9 ? 'color-mix(in srgb,var(--c1) 65%,var(--sf2))' : 'var(--c1)'; });
+    const T = (o) => ({ isNum:false, isBar:false, isLine:false, isDonut:false, isRing:false, isHeat:false, isTable:false, b: edit&&o.sel ? '1.5px solid var(--ac)' : '1px solid var(--bd)', handleS: edit&&o.sel?'block':'none', tblS: o.tbl?'inline':'none', ...o });
+    let tiles = [
+      T({ title:'Concepts learned', isNum:true, val:'41', delta:'+6 this week', dc:'var(--ok)', sub:'of 101 in AI Engineer', cs:3, rs:1 }),
+      T({ title:'Cards due today', isNum:true, val:'38', delta:'−12 vs avg', dc:'var(--ok)', sub:'FSRS · retention 0.90', cs:3, rs:1 }),
+      T({ title:'Minutes studied', isNum:true, val:'312', delta:'−18%', dc:'var(--da)', sub:'this week · goal 420', cs:3, rs:1 }),
+      T({ title:'Path progress', isRing:true, cs:3, rs:2 }),
+      T({ title:'Minutes per week by course', isBar:true, bars:bars([70,55,80,62,90,48,72,84],true), cs:5, rs:2, sel:1, tbl: tbl }),
+      T({ title:'Reviews vs retention', isLine:true, line:pathOf(ln), line2:pathOf(ln2), area:pathOf(ln)+'L300 110L0 110Z', cs:4, rs:2 }),
+      T({ title:'Time by course', isDonut:true, legend:[['CS231n','14 h'],['CS224n','10 h'],['Karpathy','7 h'],['DL Spec.','5 h'],['fast.ai','5 h']].map(([n,v],i) => ({ n, v, c:C[i] })), cs:5, rs:2 }),
+      T({ title:'Study days · 20 weeks', isHeat:true, cells:heat, cs:4, rs:2 }),
+      T({ title:'Slowest concepts', isTable:true, rows:[['Concept','Days','Cards',1],['Backpropagation','12','12'],['Attention','9','4'],['Tokenization','8','6']].map(([a,b,d,h],i) => ({ a, b, d, bt: i?'1px solid var(--bd)':'none', w: h?600:400, c: h?'var(--mu)':'var(--tx)' })), cs:3, rs:2 })
+    ];
+    if (tbl) tiles[4] = T({ title:'Minutes per week by course · as table', isTable:true, rows:[['Week','CS231n','CS224n',1],['W5','45','27'],['W6','24','14'],['W7','36','22'],['W8','42','25']].map(([a,b,d,h],i) => ({ a, b, d, bt: i?'1px solid var(--bd)':'none', w: h?600:400, c: h?'var(--mu)':'var(--tx)' })), cs:5, rs:2, tbl:true });
+    if (p) tiles = tiles.filter((t,i) => [0,1,4,3,7].includes(i)).map((t,i) => ({ ...t, cs: i<2 ? 1 : 2, rs: t.rs }));
+    const steps = [['1','Source'],['2','Chart'],['3','Fields']].map(([n,l],i) => { const done = i+1 < wizS, cur = i+1 === wizS; return { n: done?'✓':n, l, c: cur||done ? 'var(--tx)' : 'var(--mu)', w: cur?600:450, bg: cur?'var(--ac)':'transparent', nc: cur?'var(--af)':'var(--tx)' }; });
+    const sources = [['dashboard','Study sessions','Timer minutes, by day/course',1],['flashcards','Flashcards','Reviews, due, retention'],['path','A learning path','Concept status by stage'],['base','A base view','“Lessons by status × course”'],['note','Notes','Count by type, tag, folder']].map(([g,n,d,on]) => ({ g, n, d, b: on?'1.5px solid var(--ac)':'1px solid var(--bd)', bg: on?'color-mix(in srgb,var(--ac) 8%,transparent)':'transparent' }));
+    const types = [['dashboard','Number'],['v-board','Bar',0],['v-board','Stacked',1],['graph','Line'],['graph','Area'],['s-learning','Donut'],['s-todo','Ring'],['v-table','Table']].map(([g,n,on]) => ({ g, n, b: on?'1.5px solid var(--ac)':'1px solid var(--bd)', bg: on?'color-mix(in srgb,var(--ac) 8%,transparent)':'transparent' }));
+    const fields = [['Title','Review minutes per week'],['X axis','Week'],['Value','Sum of minutes'],['Series','Course'],['Range','Last 8 weeks'],['Filter','path = AI Engineer'],['Running total','Off']].map(([l,v]) => ({ l, v }));
+    return { tiles, steps, sources, types, fields, prevBars: bars([70,55,80,62,90,48,72,84],true),
+      wiz: wizS > 0, step1: wizS===1, step2: wizS===2, step3: wizS===3, nextL: wizS===3 ? 'Add to dashboard' : 'Next',
+      deskOnly: p?'none':'flex', barH: p?'56px':'52px', px: p?'16px':'28px', gp: p?'14px 16px':'18px 28px', cols: p?2:12, rowH: p?'120px':'150px',
+      gridBg: edit ? 'repeating-linear-gradient(90deg, color-mix(in srgb,var(--ac) 6%,transparent) 0 calc((100% - 154px)/12), transparent calc((100% - 154px)/12) calc((100% - 154px)/12 + 14px))' : 'none',
+      wizW: p?'380px':'900px', wizCols: p?'1fr':'1fr 360px', prevS: p?'none':'flex' };
+  }
+}
+</script>
+</body>
+</html>
