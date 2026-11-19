@@ -7,6 +7,7 @@ import { writeVault, type Vault } from "./kit";
 import { seedEmpty, seedShowcase, seedSpaces, seedStarter, seedStudy } from "./scenarios-a";
 import { seedPaths } from "./scenarios-paths";
 import { seedProject } from "./scenarios-project";
+import { seedSlides } from "./scenarios-slides";
 import { CONFLICT_NOTE, seedBig, seedConflicts, seedEdge, seedSharing } from "./scenarios-b";
 
 export interface Scenario {
@@ -32,6 +33,7 @@ export const SCENARIOS: Scenario[] = [
   { id: "big-5k", name: "Big vault · 5k notes", description: "Same as 1k with 5,000 notes. Takes a few seconds to seed.", build: seedBig(5000), ui: { view: "home", spaceId: "bg-s-0" } },
   { id: "paths", name: "Learning paths", description: "Three overlapping courses (ML Foundations, CS231n, fast.ai) combined into one concept path: merged topics, cross-course prerequisites, video resources, revision due today.", build: seedPaths, ui: { view: "notes", spaceId: "all", filter: "paths", noteId: "lp-path", folderId: null, tag: null } },
   { id: "project", name: "Software project hub", description: "An AI-feature project: PRD, RFC in review, ADRs (one superseded), requirements with MoSCoW, an action plan with cards in every state (backlog/todo/doing/review/done/cancelled, one overdue), meeting notes, repo/PR/Figma links.", build: seedProject, ui: { view: "space", spaceId: "pj-s", noteId: null, folderId: null, tag: null, filter: null } },
+  { id: "slides", name: "Slides lab", description: "19 dummy decks, one per Slides capability: auto layouts, every layout directive + alias, classes/backgrounds/Marp bg, front-matter defaults, free boxes + Arrange, code + KaTeX, Mermaid, callouts/panels/columns/tabs/tables/transclusion, PNG/SVG/WebM/WAV/PDF attachments + YouTube/Vimeo/mp4/mp3/PDF URLs + link cards, mixed media, Arabic RTL deck, kitchen sink, and edge cases (1 slide, 80 slides, 4000×3000 / tall / wide images, missing attachment, very long text, empty slides, doc → deck). First slide of each deck says what to check.", build: seedSlides, ui: { view: "notes", spaceId: "sl-s", noteId: "sl-start", folderId: null, tag: null, filter: null } },
   { id: "sharing", name: "Sharing & blog", description: "Shared course + project spaces, shared note/canvas/deck, published posts (slugs, excerpts, tags, Arabic, long title, duplicate slug), unpublished drafts.", build: seedSharing, ui: { view: "home", spaceId: "sh-s-course" } },
   { id: "edge", name: "Edge cases & broken data", description: "Invalid/odd JSON Canvas, edges to missing nodes, broken whiteboards, invalid Mermaid, malformed front-matter, empty/duplicate/very long/zero-width/RTL titles, notes in deleted/missing folders and spaces, trash, tombstones of every kind, missing attachments, XSS strings, bad dates, cyclic roadmap.", build: seedEdge, ui: { view: "notes", spaceId: "ed-s" } },
   { id: "conflicts", name: "Conflicts & history", description: "A note with 60 versions (incl. conflict copies), a note with pending dirty edits, a remote tombstone. Use “Simulate incoming conflict” to fire the live conflict toast.", build: seedConflicts, ui: { view: "notes", spaceId: "cf-s", noteId: CONFLICT_NOTE, panel: "versions" } },

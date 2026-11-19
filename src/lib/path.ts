@@ -15,6 +15,7 @@
 //     - note: [[Eigenvectors]]
 //     - review: 2026-11-20 7                        ← next revision date + current interval (days)
 //     - done: 2026-11-10                            ← manual completion (concepts with no course topic)
+//     - needs: Calculus, Probability               ← path-level prerequisites (concept names), on top of the courses' own
 //
 // Course topics not listed under any concept still appear (merged by name across courses) in "Not placed yet",
 // so the path never hides anything a course teaches. Courses stay independent: their own roadmaps are untouched.
@@ -32,6 +33,8 @@ export interface PathConcept {
   review: string | null;
   interval: number;
   done: string | null;
+  /** Path-level prerequisites (concept names or aliases), added on top of the ones the courses define. */
+  needs: string[];
   extra: string[];
 }
 export interface PathStage { name: string; concepts: PathConcept[] }
@@ -57,7 +60,7 @@ export function parsePath(body: string): PathDoc {
     if (h2) { stage = { name: h2[1].trim(), concepts: [] }; doc.stages.push(stage); concept = null; continue; }
     if (stage && top) {
       const [name, al] = top[1].split(/\s+=\s+/);
-      concept = { name: name.trim(), aliases: al ? al.split("|").map((a) => a.trim()).filter(Boolean) : [], resources: [], notes: [], review: null, interval: 0, done: null, extra: [] };
+      concept = { name: name.trim(), aliases: al ? al.split("|").map((a) => a.trim()).filter(Boolean) : [], resources: [], notes: [], review: null, interval: 0, done: null, needs: [], extra: [] };
       stage.concepts.push(concept);
       continue;
     }
@@ -69,6 +72,7 @@ export function parsePath(body: string): PathDoc {
       } else if (k === "note") concept.notes.push(...[...v.matchAll(/\[\[([^\]|]+)/g)].map((m) => m[1].trim()));
       else if (k === "review") { const [d, i] = v.trim().split(/\s+/); concept.review = d || null; concept.interval = Number(i) || 0; }
       else if (k === "done") concept.done = v.trim() || null;
+      else if (k === "needs") concept.needs.push(...v.split(",").map((x) => x.trim()).filter(Boolean));
       else concept.extra.push(l);
       continue;
     }
@@ -88,6 +92,7 @@ export function serializePath(doc: PathDoc): string {
     out.push(`## ${s.name}`);
     for (const c of s.concepts) {
       out.push(`- ${c.name}${c.aliases.length ? ` = ${c.aliases.join(" | ")}` : ""}`);
+      if (c.needs.length) out.push(`  - needs: ${c.needs.join(", ")}`);
       for (const r of c.resources) out.push(`  - resource: [${r.label}](${r.url})`);
       if (c.notes.length) out.push(`  - note: ${c.notes.map((n) => `[[${n}]]`).join(", ")}`);
       if (c.review) out.push(`  - review: ${c.review} ${c.interval}`);
@@ -115,9 +120,21 @@ export interface BuiltConcept {
   due: string | null; // earliest course due date
   reviewDue: boolean;
   placed: boolean;
+  /** How it became learned: "manual" (you marked it / tested out) or the course key whose lessons on it are all finished. */
+  learnedVia: string | null;
+  /** Learned and its spaced reviews reached the 14-day step (Khan-style "mastered": shown again after a delay). */
+  mastered: boolean;
 }
+/** Review interval (days) from which a learned concept counts as mastered. */
+export const MASTERY_INTERVAL = 14;
 export interface BuiltPath { doc: PathDoc; courses: CourseRef[]; concepts: BuiltConcept[]; stages: { name: string; concepts: BuiltConcept[] }[]; byKey: Map<string, BuiltConcept> }
 
+const blank = (name: string): PathConcept => ({ name, aliases: [], resources: [], notes: [], review: null, interval: 0, done: null, needs: [], extra: [] });
+/** A concept by name, key or alias. */
+function resolveConcept(concepts: BuiltConcept[], byKey: Map<string, BuiltConcept>, name: string): BuiltConcept | undefined {
+  const k = norm(name);
+  return byKey.get(k) ?? concepts.find((c) => c.def.aliases.some((a) => norm(a) === k));
+}
 export const COURSE_COLORS = ["#A371F7", "#39C5CF", "#E8893A", "#57AB5A", "#E5534B", "#E3B341", "#7AA2F7", "#D37FB4"];
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -142,7 +159,7 @@ export function buildPath(body: string, courses: CourseRef[]): BuiltPath {
   }
   const claimed = new Set<Coverage>();
   const concepts: BuiltConcept[] = [];
-  const mk = (def: PathConcept, stage: string, stageIndex: number, placed: boolean): BuiltConcept => ({ key: norm(def.name), def, stage, stageIndex, coverage: [], status: "todo", needs: [], unlocks: [], due: null, reviewDue: false, placed });
+  const mk = (def: PathConcept, stage: string, stageIndex: number, placed: boolean): BuiltConcept => ({ key: norm(def.name), def, stage, stageIndex, coverage: [], status: "todo", needs: [], unlocks: [], due: null, reviewDue: false, placed, learnedVia: null, mastered: false });
   doc.stages.forEach((s, si) => {
     for (const def of s.concepts) {
       const c = mk(def, s.name, si, true);
@@ -157,7 +174,7 @@ export function buildPath(body: string, courses: CourseRef[]): BuiltPath {
     if (claimed.has(cov)) continue;
     const k = norm(cov.topic.name);
     let c = loose.get(k);
-    if (!c) { c = mk({ name: cov.topic.name, aliases: [], resources: [], notes: [], review: null, interval: 0, done: null, extra: [] }, UNPLACED, doc.stages.length, false); loose.set(k, c); }
+    if (!c) { c = mk(blank(cov.topic.name), UNPLACED, doc.stages.length, false); loose.set(k, c); }
     c.coverage.push(cov);
   }
   concepts.push(...loose.values());
@@ -171,21 +188,32 @@ export function buildPath(body: string, courses: CourseRef[]): BuiltPath {
       const d = topicConcept.get(`${cov.course.key}::${norm(n)}`) ?? byKey.get(norm(n));
       if (d && d !== c) needs.add(d.key);
     }
+    // path-level `needs:` lines (concept name or any alias)
+    for (const n of c.def.needs) { const d = resolveConcept(concepts, byKey, n); if (d && d !== c) needs.add(d.key); }
     c.needs = [...needs];
     const dues = c.coverage.map((x) => x.topic.due).filter((x): x is string => !!x).sort();
     c.due = dues[0] ?? null;
   }
   for (const c of concepts) for (const n of c.needs) byKey.get(n)?.unlocks.push(c.key);
   const t = today();
+  // Mastery rules (Math Academy / Khan / competency-based practice):
+  //  · learned = you marked it (or tested out), OR you finished every lesson on it in ANY one course; the other courses are
+  //    optional extra material, not requirements (a concept taught by 11 sources must not need all 11)
+  //  · locked  = not started and some prerequisite concept isn't learned yet
+  //  · mastered = learned and its spaced reviews reached the 14-day step
   for (const c of concepts) {
-    const st = c.coverage.map((x) => x.topic.status);
-    const learned = st.filter((s) => s === "done" || s === "skipped").length;
-    const done = (st.length > 0 && learned === st.length) || !!c.def.done;
-    const started = st.some((s) => s === "learning" || s === "done");
-    c.status = done ? "done" : started ? "learning" : "todo";
+    const byCourse = new Map<string, TopicStatus[]>();
+    for (const x of c.coverage) byCourse.set(x.course.key, [...(byCourse.get(x.course.key) ?? []), x.topic.status]);
+    const via = [...byCourse].find(([, st]) => st.some((s) => s === "done") && st.every((s) => s === "done" || s === "skipped"))?.[0] ?? null;
+    c.learnedVia = c.def.done ? "manual" : via;
+    const started = c.coverage.some((x) => x.topic.status === "learning" || x.topic.status === "done");
+    c.status = c.learnedVia ? "done" : started ? "learning" : "todo";
   }
   for (const c of concepts) if (c.status === "todo" && c.needs.some((n) => byKey.get(n)?.status !== "done")) c.status = "locked";
-  for (const c of concepts) c.reviewDue = c.status === "done" && (c.def.review ? c.def.review <= t : false);
+  for (const c of concepts) {
+    c.reviewDue = c.status === "done" && (c.def.review ? c.def.review <= t : false);
+    c.mastered = c.status === "done" && c.def.interval >= MASTERY_INTERVAL;
+  }
   const stages = doc.stages.map((s) => ({ name: s.name, concepts: concepts.filter((c) => c.placed && c.stage === s.name) }));
   if (loose.size) stages.push({ name: UNPLACED, concepts: [...loose.values()] });
   return { doc, courses, concepts, stages, byKey };
@@ -194,7 +222,7 @@ export function buildPath(body: string, courses: CourseRef[]): BuiltPath {
 export function pathProgress(p: BuiltPath) {
   const all = p.concepts.length;
   const done = p.concepts.filter((c) => c.status === "done").length;
-  return { done, total: all, pct: all ? Math.round((done / all) * 100) : 0, learning: p.concepts.filter((c) => c.status === "learning").length, review: p.concepts.filter((c) => c.reviewDue).length };
+  return { done, total: all, pct: all ? Math.round((done / all) * 100) : 0, learning: p.concepts.filter((c) => c.status === "learning").length, review: p.concepts.filter((c) => c.reviewDue).length, mastered: p.concepts.filter((c) => c.mastered).length };
 }
 
 /** Topic status in one course for a concept ("—" when the course doesn't cover it). */
@@ -209,7 +237,6 @@ export function cellStatus(c: BuiltConcept, course: CourseRef): TopicStatus | nu
 // ------------------------------------------------------------------ mutations (return new Markdown)
 function edit(body: string, fn: (doc: PathDoc) => void) { const d = parsePath(body); fn(d); return serializePath(d); }
 function findDef(doc: PathDoc, key: string) { for (const s of doc.stages) { const c = s.concepts.find((x) => norm(x.name) === key); if (c) return { s, c }; } return null; }
-const blank = (name: string): PathConcept => ({ name, aliases: [], resources: [], notes: [], review: null, interval: 0, done: null, extra: [] });
 
 /** Move (or place) a concept into a stage. Unplaced concepts get written into the path. */
 export const moveConcept = (body: string, concept: BuiltConcept, stage: string, index?: number) => edit(body, (d) => {
@@ -235,8 +262,105 @@ export const mergeConcepts = (body: string, into: BuiltConcept, other: BuiltConc
   const o = findDef(d, other.key);
   const names = [other.def.name, ...other.def.aliases, ...other.coverage.map((x) => x.topic.name)];
   t.aliases = [...new Set([...t.aliases, ...names.filter((n) => norm(n) !== norm(t!.name))])];
-  if (o) { t.resources.push(...o.c.resources); t.notes.push(...o.c.notes); o.s.concepts.splice(o.s.concepts.indexOf(o.c), 1); }
+  if (o) {
+    t.resources.push(...o.c.resources); t.notes.push(...o.c.notes);
+    const own = new Set([norm(t.name), ...t.aliases.map(norm)]);
+    t.needs = [...new Set([...t.needs, ...o.c.needs])].filter((n) => !own.has(norm(n)));
+    if (o.c.done && !t.done) t.done = o.c.done;
+    t.extra.push(...o.c.extra);
+    o.s.concepts.splice(o.s.concepts.indexOf(o.c), 1);
+  }
 });
+/** Find or create (in the first stage) the written definition of a concept, so path-level data can be attached to it. */
+function ensureDef(d: PathDoc, c: BuiltConcept): PathConcept {
+  const f = findDef(d, c.key);
+  if (f) return f.c;
+  const b = blank(c.def.name);
+  b.aliases = c.coverage.map((x) => x.topic.name).filter((n, i, a) => norm(n) !== c.key && a.findIndex((y) => norm(y) === norm(n)) === i);
+  (d.stages[0] ?? (d.stages.push({ name: "Stage 1", concepts: [] }), d.stages[0])).concepts.push(b);
+  return b;
+}
+/**
+ * Put a concept into `stage` right before the concept `beforeKey` (null = at the end). Works for reordering inside a stage,
+ * moving between stages, and placing a "Not placed yet" concept. All its written data moves with it.
+ */
+export const placeConcept = (body: string, concept: BuiltConcept, stage: string, beforeKey: string | null) => edit(body, (d) => {
+  if (beforeKey === concept.key) return;
+  const f = findDef(d, concept.key);
+  const def = f ? f.c : { ...blank(concept.def.name) };
+  if (f) f.s.concepts.splice(f.s.concepts.indexOf(f.c), 1);
+  let s = d.stages.find((x) => x.name === stage);
+  if (!s) { s = { name: stage, concepts: [] }; d.stages.push(s); }
+  const i = beforeKey === null ? -1 : s.concepts.findIndex((x) => norm(x.name) === beforeKey);
+  s.concepts.splice(i < 0 ? s.concepts.length : i, 0, def);
+});
+/** Keyboard reorder: one step up/down inside the stage (Alt+↑/↓). */
+export const nudgeConcept = (body: string, concept: BuiltConcept, dir: -1 | 1) => edit(body, (d) => {
+  const f = findDef(d, concept.key);
+  if (!f) return;
+  const i = f.s.concepts.indexOf(f.c), j = i + dir;
+  if (j < 0 || j >= f.s.concepts.length) return;
+  [f.s.concepts[i], f.s.concepts[j]] = [f.s.concepts[j], f.s.concepts[i]];
+});
+/** Reorder stages: put stage `name` before stage `before` (null = last). */
+export const reorderStage = (body: string, name: string, before: string | null) => edit(body, (d) => {
+  const i = d.stages.findIndex((s) => s.name === name);
+  if (i < 0 || name === before) return;
+  const [s] = d.stages.splice(i, 1);
+  const j = before === null ? -1 : d.stages.findIndex((x) => x.name === before);
+  d.stages.splice(j < 0 ? d.stages.length : j, 0, s);
+});
+/** New concept of your own (typed, or from a dropped note) in `stage`, before `beforeKey`. No-op if the name is taken. */
+export const addConcept = (body: string, stage: string, name: string, opts: { note?: string; beforeKey?: string | null } = {}) => edit(body, (d) => {
+  const n = name.trim();
+  if (!n || d.stages.some((s) => s.concepts.some((c) => norm(c.name) === norm(n) || c.aliases.some((a) => norm(a) === norm(n))))) return;
+  let s = d.stages.find((x) => x.name === stage);
+  if (!s) { s = { name: stage, concepts: [] }; d.stages.push(s); }
+  const c = blank(n);
+  if (opts.note) c.notes.push(opts.note);
+  const i = opts.beforeKey ? s.concepts.findIndex((x) => norm(x.name) === opts.beforeKey) : -1;
+  s.concepts.splice(i < 0 ? s.concepts.length : i, 0, c);
+});
+/** Take a concept out of the path (its course topics go back to "Not placed yet"). */
+export const removeConcept = (body: string, c: BuiltConcept) => edit(body, (d) => { const f = findDef(d, c.key); if (f) f.s.concepts.splice(f.s.concepts.indexOf(f.c), 1); });
+/**
+ * Attach one course topic name to `into` as an alias (drag a topic from a concept's sheet onto another concept).
+ * The alias is removed from the concept that listed it before (`from`), so the topic moves instead of being claimed twice.
+ */
+export const moveAlias = (body: string, name: string, into: BuiltConcept, from?: BuiltConcept | null) => edit(body, (d) => {
+  const k = norm(name);
+  if (from && from.key !== into.key) { const f = findDef(d, from.key); if (f) f.c.aliases = f.c.aliases.filter((a) => norm(a) !== k); }
+  const t = ensureDef(d, into);
+  if (norm(t.name) !== k && !t.aliases.some((a) => norm(a) === k)) t.aliases.push(name.trim());
+});
+/** Path-level prerequisite: `c` needs `prereq` (written as `  - needs: …` under c). */
+export const addConceptNeed = (body: string, c: BuiltConcept, prereq: BuiltConcept) => edit(body, (d) => {
+  if (c.key === prereq.key) return;
+  const t = ensureDef(d, c);
+  const names = new Set([prereq.key, ...prereq.def.aliases.map(norm)]);
+  if (!t.needs.some((n) => names.has(norm(n)))) t.needs.push(prereq.def.name);
+});
+export const removeConceptNeed = (body: string, c: BuiltConcept, prereq: BuiltConcept) => edit(body, (d) => {
+  const f = findDef(d, c.key);
+  if (!f) return;
+  const names = new Set([prereq.key, ...prereq.def.aliases.map(norm)]);
+  f.c.needs = f.c.needs.filter((n) => !names.has(norm(n)));
+});
+/** Does `c` need `prereq` through a `needs:` line in the path (removable here), rather than only through a course roadmap? */
+export const pathNeeds = (c: BuiltConcept, prereq: BuiltConcept) => { const names = new Set([prereq.key, ...prereq.def.aliases.map(norm)]); return c.def.needs.some((n) => names.has(norm(n))); };
+/** Would `c` needing `prereq` create a cycle (prereq already depends on c, directly or not)? */
+export function wouldCycle(p: BuiltPath, c: BuiltConcept, prereq: BuiltConcept) {
+  if (c.key === prereq.key) return true;
+  const seen = new Set<string>(), stack = [prereq.key];
+  while (stack.length) {
+    const k = stack.pop()!;
+    if (k === c.key) return true;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    stack.push(...(p.byKey.get(k)?.needs ?? []));
+  }
+  return false;
+}
 export const renameConcept = (body: string, c: BuiltConcept, name: string) => edit(body, (d) => {
   const f = findDef(d, c.key);
   const def = f?.c ?? (() => { const b = blank(c.def.name); (d.stages[0] ?? (d.stages.push({ name: "Stage 1", concepts: [] }), d.stages[0])).concepts.push(b); return b; })();
@@ -261,11 +385,25 @@ export const markRevised = (body: string, c: BuiltConcept, remembered: boolean) 
   f.c.interval = next;
   f.c.review = addDays(today(), next);
 });
-/** Start the revision ladder for concepts that became done (call after building). */
+/**
+ * Start the revision ladder for concepts that became learned (call after building).
+ * Implicit review: learning a concept exercises its direct prerequisites, so their next review is pushed back
+ * by their current interval (never earlier than already scheduled; the ladder step itself doesn't change).
+ */
 export function scheduleNewlyDone(body: string, p: BuiltPath): string | null {
   const fresh = p.concepts.filter((c) => c.placed && c.status === "done" && !c.def.review);
   if (!fresh.length) return null;
-  return edit(body, (d) => { for (const c of fresh) { const f = findDef(d, c.key); if (f) { f.c.review = addDays(today(), REVIEW_LADDER[0]); f.c.interval = REVIEW_LADDER[0]; } } });
+  return edit(body, (d) => {
+    for (const c of fresh) {
+      const f = findDef(d, c.key);
+      if (f) { f.c.review = addDays(today(), REVIEW_LADDER[0]); f.c.interval = REVIEW_LADDER[0]; }
+      for (const n of c.needs) {
+        const pre = p.byKey.get(n);
+        const g = pre && pre.status === "done" ? findDef(d, n) : null;
+        if (g?.c.review && g.c.interval) { const later = addDays(today(), g.c.interval); if (later > g.c.review) g.c.review = later; }
+      }
+    }
+  });
 }
 export function addDays(iso: string, n: number) { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
 
@@ -305,8 +443,10 @@ export function newPathBody(title: string, courseNames: string[], courses: Cours
 }
 
 // ------------------------------------------------------------------ overlap suggestions (likely the same concept, different names)
-const STOP = new Set(["the", "a", "an", "and", "of", "to", "in", "for", "by", "from", "with", "your", "intro", "introduction", "basics", "part", "lecture", "review", "hand", "scratch"]);
-const stems = (s: string) => norm(s).split(" ").filter((w) => w.length > 2 && !STOP.has(w)).map((w) => w.slice(0, 6));
+// Generic words ("learning", "models", "deep"…) say nothing about which concept a name is; they never count as a match.
+const STOP = new Set(["the", "a", "an", "and", "of", "to", "in", "for", "by", "from", "with", "your", "intro", "introduction", "basics", "part", "lecture", "review", "hand", "scratch",
+  "learning", "learn", "model", "models", "deep", "neural", "network", "networks", "using", "use", "how", "what", "why", "overview", "practice", "practical", "advanced", "understanding", "building", "build", "data", "machine", "systems", "system"]);
+const stems = (s: string) => norm(s).split(" ").filter((w) => w.length > 2 && !STOP.has(w)).map((w) => w.slice(0, 7));
 /** Pairs of concepts from different courses whose names share their key words (e.g. "Backprop by hand" ~ "Backpropagation"). */
 export function overlapSuggestions(p: BuiltPath, dismissed: string[] = []): [BuiltConcept, BuiltConcept][] {
   const out: [BuiltConcept, BuiltConcept][] = [];
@@ -318,7 +458,9 @@ export function overlapSuggestions(p: BuiltPath, dismissed: string[] = []): [Bui
     if (dismissed.includes(`${a.key}|${b.key}`)) continue;
     const sa = stems(a.def.name), sb = stems(b.def.name);
     if (!sa.length || !sb.length) continue;
-    const shared = sa.filter((w) => sb.some((v) => v.startsWith(w.slice(0, 5)) || w.startsWith(v.slice(0, 5)))).length;
+    // 7-letter stems: "quantization" ≠ "quantifying", "backprop" ≈ "backpropagation"
+    const same = (w: string, v: string) => (w.length >= 5 && v.length >= 5 ? v.startsWith(w) || w.startsWith(v) : w === v);
+    const shared = sa.filter((w) => sb.some((v) => same(w, v))).length;
     if (shared / Math.min(sa.length, sb.length) >= 1 || shared >= 2) out.push(a.coverage.length >= b.coverage.length ? [a, b] : [b, a]);
   }
   return out.slice(0, 20);

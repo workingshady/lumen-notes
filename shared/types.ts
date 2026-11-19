@@ -1,10 +1,11 @@
 // Shared between the app (src) and the Worker (worker).
 
-/** `diagram` = a `.mermaid` file: body is raw Mermaid source (no front-matter), title ends in `.mermaid` (lib/diagrams.ts). */
-export type NoteType = "note" | "lesson" | "journal" | "flashcards" | "slides" | "post" | "canvas" | "whiteboard" | "roadmap" | "moc" | "path" | "diagram";
+/** `diagram` = a `.mermaid` file: body is raw Mermaid source (no front-matter), title ends in `.mermaid` (lib/diagrams.ts).
+ *  `base` = a database view of notes (Obsidian Bases style): the body holds the view definition (filters, views, columns) as YAML-ish Markdown. */
+export type NoteType = "note" | "lesson" | "journal" | "flashcards" | "slides" | "post" | "canvas" | "whiteboard" | "roadmap" | "moc" | "path" | "diagram" | "base";
 export type Status = "todo" | "learning" | "review" | "mastered";
 export const STATUSES: Status[] = ["todo", "learning", "review", "mastered"];
-export const NOTE_TYPES: NoteType[] = ["note", "lesson", "journal", "flashcards", "slides", "post", "canvas", "whiteboard", "roadmap", "moc", "path", "diagram"];
+export const NOTE_TYPES: NoteType[] = ["note", "lesson", "journal", "flashcards", "slides", "post", "canvas", "whiteboard", "roadmap", "moc", "path", "diagram", "base"];
 
 /** PARA-style space kinds. A space encapsulates its own folder tree, notes, roadmap and settings. */
 export type SpaceKind = "project" | "area" | "course" | "resource" | "archive";
@@ -80,6 +81,11 @@ export interface Card extends Synced {
   lapses: number;
   /** 1 = suspended (S in review): never shows up as due until unsuspended. */
   suspended?: 0 | 1;
+  /** FSRS memory state (absent on cards scheduled by the older SM-2 ladder; they migrate on their next review). */
+  stability?: number; // days until recall probability drops to 90 %
+  difficulty?: number; // 1 (easy) … 10 (hard)
+  lastReview?: number; // epoch ms
+  state?: "new" | "learning" | "review" | "relearning";
 }
 
 /** Study timer session. */

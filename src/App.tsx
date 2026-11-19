@@ -4,7 +4,8 @@ import { Capacitor } from "@capacitor/core";
 import { ConflictSheet } from "./components/ws-conflict";
 import { createNote } from "./lib/actions";
 import { DEMO, setDemo, setMeta } from "./lib/db";
-import { back, dismissToast, getUI, go, openNote, runLatestUndo, setUI, toast, useToasts, useUI, useVault, type Toast } from "./lib/store";
+import { dismissToast, getUI, openNote, runLatestUndo, setUI, toast, useToasts, useUI, useVault, type Toast } from "./lib/store";
+import { currentIdx, installNavHistory, keepPlace, restoreFrom } from "./lib/nav-history";
 import { Sidebar } from "./components/Sidebar";
 import { Skeleton } from "./components/Skeleton";
 import { NoteList } from "./components/NoteList";
@@ -88,16 +89,23 @@ function useTablet() {
   return t;
 }
 
-/** Android / browser back (design: Lumen 12 · R3-5F "Back gesture order"):
- *  1 close the open sheet / popover · 2 leave a mode (Focus, Slides, selection) · 3 dismiss the keyboard · 4 go back a screen · 5 on Home "Swipe again to exit". */
+/** Android / browser Back + Forward (design: Lumen 12 · R3-5F "Back gesture order"):
+ *  1 close the open sheet / popover · 2 leave a mode (Focus, Slides, selection) · 3 dismiss the keyboard ·
+ *  4 go to the previous page in the real history (every page is a history entry, see lib/nav-history.ts; Forward works too) ·
+ *  5 phone / app at the first page: "Swipe again to exit". */
 function useBackGesture(wide: boolean) {
   const lastExit = useRef(0);
   useEffect(() => {
+    installNavHistory();
     const phone = !wide || Capacitor.isNativePlatform();
-    if (!phone) return;
-    const arm = () => history.pushState({ lumenBack: 1 }, "");
-    if (!history.state?.lumenBack) arm();
-    const handle = (): boolean => {
+    // phones / the app: a guard entry under the first page, so Back there asks "swipe again to exit" instead of leaving
+    if (phone && !sessionStorage.getItem("lumen.navGuard")) {
+      const cur = history.state;
+      history.replaceState({ lumenGuard: 1 }, "");
+      history.pushState(cur, "");
+      sessionStorage.setItem("lumen.navGuard", "1");
+    }
+    const closeLayer = (): boolean => {
       // 1 · sheets / popovers
       const sheet = [...document.querySelectorAll<HTMLElement>(".sheet-in")].pop();
       if (sheet) {
@@ -108,23 +116,28 @@ function useBackGesture(wide: boolean) {
       }
       const u = getUI();
       if (u.palette || u.newSpace || u.io) { setUI({ palette: false, newSpace: false, io: false }); return true; }
-      if (u.panel && !wide) { setUI({ panel: null }); return true; }
-      if (u.sidebar && !wide) { setUI({ sidebar: false }); return true; }
+      if (u.panel && phone) { setUI({ panel: null }); return true; }
+      if (u.sidebar && phone) { setUI({ sidebar: false }); return true; }
       // 2 · modes
       if (u.view === "notes" && u.noteId && (u.mode === "focus" || u.mode === "slides" || u.mode === "review")) { setUI({ mode: wide ? "split" : "edit" }); return true; }
       // 3 · keyboard
       const a = document.activeElement as HTMLElement | null;
-      if (a && (a.isContentEditable || a.tagName === "INPUT" || a.tagName === "TEXTAREA")) { a.blur(); return true; }
-      // 4 · back a screen
-      if (u.view === "notes" && u.noteId) { if (u.history.length) back(); else setUI({ noteId: null }); return true; }
-      if (u.view !== "home") { go("home"); return true; }
-      // 5 · Home: swipe again to exit
-      if (Date.now() - lastExit.current < 2000) return false;
-      lastExit.current = Date.now();
-      toast("Swipe again to exit", undefined, { icon: "info", ms: 2000 });
-      return true;
+      if (phone && a && (a.isContentEditable || a.tagName === "INPUT" || a.tagName === "TEXTAREA")) { a.blur(); return true; }
+      return false;
     };
-    const onPop = () => { if (handle()) arm(); else history.back(); };
+    const onPop = (e: PopStateEvent) => {
+      // Forward never closes layers; Back closes the top layer first and keeps the page
+      const goingBack = !e.state?.lumen || (e.state.idx as number) < currentIdx();
+      if (goingBack && closeLayer()) { keepPlace(); return; }
+      if (restoreFrom(e.state)) return; // 4 · previous / next page
+      if (e.state?.lumenGuard) {
+        // 5 · first page on a phone: swipe again to exit
+        if (Date.now() - lastExit.current < 2000) { sessionStorage.removeItem("lumen.navGuard"); history.back(); return; }
+        lastExit.current = Date.now();
+        toast("Swipe again to exit", undefined, { icon: "info", ms: 2000 });
+        keepPlace();
+      }
+    };
     addEventListener("popstate", onPop);
     return () => removeEventListener("popstate", onPop);
   }, [wide]);

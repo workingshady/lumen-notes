@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Card, Note } from "../../shared/types";
 import { db, save } from "../lib/db";
 import { flashcards, type Flashcard } from "../lib/parse";
-import { newCard, previewIntervals, schedule, type Grade } from "../lib/srs";
+import { inSteps, paramsFor, previewIntervals, schedule, type Grade } from "../lib/fsrs";
+import { getSettings } from "../lib/settings";
+import { newCard } from "../lib/srs";
 import { go, noteDerived, openNote, toast, useVault } from "../lib/store";
 import { Preview } from "./Preview";
 import { cardLine, openNoteAtLine } from "./study-nav";
@@ -101,8 +103,11 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
   async function grade(g: Grade) {
     if (!cur) return;
     history.current.push(snapshot("grade", cur));
-    const next = schedule(cur.card, g);
+    // FSRS-6 (lib/fsrs.ts); SM-2 cards migrate here on their first FSRS review.
+    const next = schedule(cur.card, g, Date.now(), paramsFor(getSettings().retention));
     await save("card", next);
+    // "Again" and cards still in their minute-long learning steps come back later in this session (Anki-style).
+    const requeue = g === 0 || inSteps(next);
     setStats((s) => s.map((x, i) => (i === g ? x + 1 : x)));
     if (g === 0) {
       const a = again.current.get(cur.card.id);
@@ -112,10 +117,9 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
     setFlipped(false);
     setQueue((q) => {
       const rest = q!.slice(1);
-      // "Again" comes back later in this session.
-      return g === 0 ? [...rest, { ...cur, card: next }] : rest;
+      return requeue ? [...rest, { ...cur, card: next }] : rest;
     });
-    if (g > 0) setDone((d) => d + 1);
+    if (!requeue) setDone((d) => d + 1);
     setElapsed(Date.now() - started);
   }
 
@@ -215,7 +219,7 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
       </div>
     );
   }
-  const iv = previewIntervals(cur.card);
+  const iv = previewIntervals(cur.card, Date.now(), paramsFor(getSettings().retention));
   const total = done + queue.length;
   const left = queue.length - 1;
   const pos = Math.min(done + 1, total);

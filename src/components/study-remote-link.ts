@@ -11,6 +11,8 @@ export interface DeckState {
   n: number;
   blank: boolean;
   md: string;
+  /** Layout directives in effect on this slide (lib/deck.ts). */
+  dirs?: Record<string, string>;
   notes: string;
   next: string;
   t0: number;

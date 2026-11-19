@@ -1,24 +1,23 @@
-import { ChevronLeft, ChevronRight, PanelRight, Smartphone, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutGrid, Move, PanelRight, Plus, Save, Smartphone, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Note } from "../../shared/types";
-import { splitFrontMatter } from "../lib/parse";
+import { createNote, updateNote } from "../lib/actions";
+import { deckSlides, docToDeck, flatSlide, planSlide, slideChunks, splitNotes, type Dirs } from "../lib/deck";
+import { parseBlockInfo } from "../lib/markdown";
+import { openNote, toast } from "../lib/store";
 import { Preview } from "./Preview";
 import { cx, IconButton } from "./ui";
 import { clock, prettyCode, qrDataUrl, remoteUrl, useRemoteLink, type DeckCmd, type DeckState } from "./study-remote-link";
 
-/** `---` on its own line (outside code fences) separates slides. */
+/** `---` on its own line (outside code fences) separates slides; directive comments and region markers removed. */
 export function splitSlides(md: string) {
-  const body = splitFrontMatter(md).body;
-  const out: string[] = [];
-  let cur: string[] = [];
-  let fence = false;
-  for (const l of body.split("\n")) {
-    if (/^```/.test(l)) fence = !fence;
-    if (!fence && /^---\s*$/.test(l)) { out.push(cur.join("\n")); cur = []; continue; }
-    cur.push(l);
-  }
-  out.push(cur.join("\n"));
-  return out.filter((s) => s.trim());
+  return slideChunks(md).map((c) => flatSlide(splitNotes(c.md).body)).filter((s) => s.trim());
+}
+
+/** A note written as a deck (type Slides, layout directives, or `---` between slides) is shown as written;
+ *  any other note is laid out automatically (lib/deck.ts docToDeck). */
+export function isWrittenDeck(note: Pick<Note, "type" | "body">) {
+  return note.type === "slides" || /<!--\s*_?(layout|class)\s*:/.test(note.body) || slideChunks(note.body).length >= 3;
 }
 
 // ------------------------------------------------------------------ layout detection (styling, not a layout engine)
@@ -29,19 +28,8 @@ const IMG = /^!\[([^\]]*)\]\([^)]+\)$|^!\[\[[^\]]+\]\]$/;
 const MEDIA = /^<?https?:\/\/\S+>?$/;
 const isMediaUrl = (l: string) => MEDIA.test(l) && /youtu\.?be|vimeo\.com|\.(mp4|webm|mov|m4v|mp3|wav|ogg|m4a)(\?|>|$)/i.test(l);
 
-/** Split a slide into its visible Markdown and speaker notes (everything after a `Note:` line). */
-function parseSlide(md: string) {
-  const lines = md.split("\n");
-  let fence = false;
-  for (let k = 0; k < lines.length; k++) {
-    if (/^```/.test(lines[k])) fence = !fence;
-    if (!fence && /^Notes?:/i.test(lines[k])) return { body: lines.slice(0, k).join("\n"), notes: [lines[k].replace(/^Notes?:\s*/i, ""), ...lines.slice(k + 1)].join("\n").trim() };
-  }
-  return { body: md, notes: "" };
-}
-
 function slideInfo(md: string) {
-  const lines = md.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = md.split("\n").map((l) => l.trim()).filter((l) => l && !/^<!--.*-->$/.test(l) && !/^::[\w-]+::$/.test(l));
   const heads = lines.filter((l) => HEAD.test(l));
   // A short paragraph straight before the first heading is a kicker, not content.
   const hi = lines.findIndex((l) => HEAD.test(l));
@@ -81,7 +69,7 @@ const CSS = `
 .lslide .prose ul>li:not(.task-list-item)::before{content:"•";color:var(--muted)}
 .l-bullets .prose :is(h1,h2){margin-bottom:0}
 .l-bullets .prose li{margin:0}
-.l-bullets .prose>ul,.l-bullets .prose>ol{margin:48px 0 0;display:flex;flex-direction:column;gap:26px;font-size:34px;line-height:44px}
+.l-bullets .prose>ul,.l-bullets .prose>ol{margin:48px 0 0;display:flex;flex-direction:column;gap:.76em;font-size:1.13em;line-height:1.3}
 .l-bullets .prose ul ul{font-size:.8em;margin:12px 0 0;gap:12px;display:flex;flex-direction:column}
 .l-title .prose{justify-content:center}
 .l-title .prose h1,.l-title .prose h2{font-size:84px;letter-spacing:-.035em;line-height:1;margin:0}
@@ -102,16 +90,146 @@ const CSS = `
 .lslide .mm-head{display:none}
 .l-diagram .prose .mermaid-card{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:transparent;border:0;margin:0;padding:0}
 .l-diagram .prose .mermaid-card .mermaid-block svg{min-width:900px}
+.lslide{isolation:isolate}
+.lslide .tbl-tools{display:none}
+.lslide .tbl{margin:0}
+.lslide .tbl-scroll{overflow:hidden}
+.lslide .prose .tbl table{font-size:20px;line-height:1.35}
+.lslide .prose .tbl :is(th,td){padding:12px 16px;min-width:0}
+.lslide .prose .tbl th{font-size:16px}
+/* chosen layouts (<!-- layout: … -->): header + body regions */
+.L{padding:64px 88px}
+.L .s-head{flex:none;margin-bottom:30px}
+.L .s-head .prose :is(h1,h2,h3){font-size:54px;margin:0;line-height:1.08}
+.L .s-body{flex:1;min-height:0;display:flex;gap:48px}
+.L .s-r{flex:1;min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.L .s-r .prose{flex:none;display:block}
+.L .s-r .prose>:last-child{margin-bottom:0}
+.L .s-r .prose ul,.L .s-r .prose ol{display:flex;flex-direction:column;gap:.5em;margin:0 0 .6em}
+.L .s-r .prose h3{font-size:1.25em;margin:0 0 .4em}
+.L-two-cols .s-body{display:grid;grid-template-columns:minmax(0,var(--split,1fr)) minmax(0,1fr)}
+.L-cards .s-body{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));grid-auto-rows:minmax(min-content,auto);align-content:center;gap:24px}
+.L-cards .s-r{border:1px solid var(--border);border-radius:20px;padding:30px 32px;background:var(--surface);min-height:220px;max-height:100%}
+.L-cards .s-r .prose{font-size:24px;line-height:1.4}
+.L-cards .s-r .prose h3,.L-cards .s-r .prose>p:first-child>strong:first-child{display:block;font-size:30px;line-height:1.15;margin:0 0 12px;color:var(--text)}
+.L-image-right{padding-right:calc(var(--split,45%) + 64px)}
+.L-image-left{padding-left:calc(var(--split,45%) + 64px)}
+.L .s-side{position:absolute;top:0;bottom:0;width:var(--split,45%);overflow:hidden;z-index:0}
+.L-image-right .s-side{right:0}.L-image-left .s-side{left:0}
+.s-side .prose,.s-side .prose>p,.s-bg .prose,.s-bg .prose>p{height:100%;margin:0;max-width:none}
+.s-side img,.s-bg img{width:100%;height:100%;object-fit:cover;border-radius:0;max-height:none;display:block}
+.s-side .embed,.s-bg .embed{height:100%;margin:0;border-radius:0}
+.s-bg{position:absolute;inset:0;z-index:-1}
+.lslide.invert{color:#fff;--text:#fff;--muted:rgba(255,255,255,.75)}
+.lslide.invert .s-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.65))}
+.lslide.accent{background:var(--accent);color:var(--accent-fg);--text:var(--accent-fg);--muted:var(--accent-fg)}
+.L-title{justify-content:center}
+.L-title .s-r .prose :is(h1,h2){font-size:84px;letter-spacing:-.035em;line-height:1;margin:0}
+.L-title .s-r .prose :is(h1,h2)~p{font-size:28px;color:var(--muted);margin:28px 0 0}
+.L-title .s-r .prose>p:first-child:has(+h1,+h2){font-size:20px;font-weight:600;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;margin:0 0 26px}
+.L-title .s-body,.L-section .s-body,.L-center .s-body,.L-stat .s-body,.L-quote .s-body{align-items:center}
+.L-section .s-r .prose :is(h1,h2){font-size:72px;letter-spacing:-.03em;line-height:1.05;margin:0}
+.L-section .s-r .prose :is(h1,h2)::before{content:"";display:block;width:72px;height:6px;border-radius:3px;background:var(--accent);margin-bottom:34px}
+.L-section .s-r .prose :is(h1,h2)~p{font-size:28px;color:var(--muted);margin:24px 0 0}
+.L-center .s-r,.L-stat .s-r,.L-quote .s-r{text-align:center;align-items:center}
+.L-center .s-r .prose{font-size:44px;line-height:1.3}
+.L-center .s-r .prose :is(h1,h2){font-size:64px;margin:0 0 .3em}
+.L-stat .s-r .prose{font-size:30px;color:var(--muted)}
+.L-stat .s-r .prose strong,.L-stat .s-r .prose h1{display:block;font-size:132px;line-height:1;letter-spacing:-.04em;color:var(--accent);font-weight:750;margin:0 0 12px}
+.L-quote .s-r .prose blockquote{border:0;padding:0;margin:0;color:var(--text);font-family:var(--read-font);font-size:52px;line-height:1.25;font-style:italic}
+.L-quote .s-r .prose blockquote::before{content:"\\201C";display:block;font-size:120px;line-height:.6;color:var(--accent);font-style:normal}
+.L-quote .s-r .prose>p{font-size:24px;color:var(--muted);margin-top:28px}
+.L-full .s-r{align-items:stretch;justify-content:center}
+.L-full .s-r .prose{display:flex;flex-direction:column;justify-content:center;flex:1;min-height:0}
+.L-full .s-r .prose p:has(>img){display:flex;justify-content:center;margin:0}
+.L-full .s-r .prose img{max-height:520px;max-width:100%;object-fit:contain;border-radius:14px}
+.L-full .s-r .mermaid-card{background:transparent;border:0;margin:0;padding:0;display:flex;justify-content:center}
+.L-full .s-r .mermaid-block{background:transparent;border:0;padding:0}
+.L-full .s-r .mermaid-block svg{max-height:500px;max-width:1100px}
+.L-blank{padding:0}
+.lslide.align-left .s-r{text-align:left;align-items:flex-start}
+/* free placement: ::: box x y w h (percent of the slide) */
+.lslide .md-box{position:absolute;left:calc(var(--x)*1%);top:calc(var(--y)*1%);width:calc(var(--w)*1%);height:calc(var(--h)*1%);transform:rotate(var(--r,0deg));z-index:2;overflow:hidden;font-size:26px;line-height:1.35}
+.lslide .md-box>:first-child{margin-top:0}.lslide .md-box>:last-child{margin-bottom:0}
+.lslide .md-box img{width:100%;height:100%;object-fit:contain;max-height:none;border-radius:12px}
+.lslide .md-box.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px 26px}
+.lslide .md-box.center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.lslide.arranging .md-box{outline:2px dashed var(--accent);outline-offset:2px;cursor:move;overflow:visible;user-select:none}
+.lslide.arranging .md-box:hover{outline-style:solid}
+.lslide .box-h{position:absolute;right:-9px;bottom:-9px;width:18px;height:18px;border-radius:5px;background:var(--accent);cursor:nwse-resize;z-index:3}
+.lslide .box-tag{position:absolute;left:-2px;top:-26px;font:600 13px/20px Inter,sans-serif;color:var(--accent-fg);background:var(--accent);border-radius:5px;padding:0 6px;white-space:nowrap}
 `;
 
-/** One slide rendered at 1280 × 720 and scaled to fit its box. Images are tap-to-zoom. */
-export function SlideStage({ note, md, blank, counter, frameless, onZoom, className }: {
-  note: Pick<Note, "id" | "spaceId">; md: string; blank?: boolean; counter?: { i: number; n: number }; frameless?: boolean; onZoom?: (src: string, alt: string) => void; className?: string;
+/** Shrink a region's text until it fits its box (down to 62%); media keeps its own limits. */
+function fitText(box: HTMLElement, target: HTMLElement) {
+  target.style.fontSize = "";
+  const base = parseFloat(getComputedStyle(target).fontSize) || 30;
+  let f = 1;
+  while (box.scrollHeight > box.clientHeight + 2 && f > 0.62) { f -= 0.06; target.style.fontSize = `${base * f}px`; }
+}
+
+export interface BoxPos { x: number; y: number; w: number; h?: number }
+
+/** One slide rendered at 1280 × 720 and scaled to fit its box. Images are tap-to-zoom.
+ *  With a layout directive it renders header/regions/side image/background (lib/deck.ts planSlide); without one it
+ *  keeps the automatic styling (title / bullets / image / video / diagram / text). `arrange` makes boxes draggable. */
+export function SlideStage({ note, md, dirs, blank, counter, frameless, onZoom, className, arrange }: {
+  note: Pick<Note, "id" | "spaceId">; md: string; dirs?: Dirs; blank?: boolean; counter?: { i: number; n: number }; frameless?: boolean; onZoom?: (src: string, alt: string) => void; className?: string;
+  arrange?: (line: number, pos: BoxPos) => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0);
   const info = useMemo(() => slideInfo(md), [md]);
+  const plan = useMemo(() => planSlide(md, dirs), [md, dirs]);
   const slideRef = useRef<HTMLDivElement>(null);
+  const P = (body: string) => <Preview note={{ id: note.id, body, spaceId: note.spaceId }} />;
+  // Fit text to its region after render, again when diagrams/images arrive.
+  useEffect(() => {
+    const el = slideRef.current;
+    if (!el) return;
+    const run = () => {
+      if (plan.layout) el.querySelectorAll<HTMLElement>(".s-r").forEach((r) => { const p = r.querySelector<HTMLElement>(":scope > .prose"); if (p) fitText(r, p); });
+      else if (info.layout === "text" || info.layout === "bullets") { const p = el.querySelector<HTMLElement>(":scope > .prose"); if (p) fitText(p, p); }
+    };
+    const ts = [0, 250, 900, 2000].map((d) => setTimeout(run, d));
+    return () => ts.forEach(clearTimeout);
+  }, [md, plan, info.layout]);
+  // Arrange: drag a box to move it, its corner handle to resize; the new x/y/w/h is written back to the note.
+  useEffect(() => {
+    const el = slideRef.current;
+    if (!el || !arrange || !scale) return;
+    const cleanups: (() => void)[] = [];
+    el.querySelectorAll<HTMLElement>(".md-box[data-line]").forEach((b) => {
+      const h = document.createElement("span"); h.className = "box-h";
+      const tag = document.createElement("span"); tag.className = "box-tag";
+      b.append(h, tag);
+      const read = () => { const cs = getComputedStyle(b); const v = (k: string) => parseFloat(cs.getPropertyValue(k)); return { x: v("--x"), y: v("--y"), w: v("--w"), h: Number.isFinite(v("--h")) ? v("--h") : (b.offsetHeight / 720) * 100 }; };
+      const show = (p: BoxPos) => { tag.textContent = `x ${Math.round(p.x)} · y ${Math.round(p.y)} · ${Math.round(p.w)}×${Math.round(p.h ?? 0)}`; };
+      show(read());
+      const down = (e: PointerEvent) => {
+        e.preventDefault(); e.stopPropagation();
+        const resize = e.target === h;
+        const s = read(), x0 = e.clientX, y0 = e.clientY;
+        const sx = 100 / (1280 * scale), sy = 100 / (720 * scale);
+        const snap = (v: number) => Math.round(v * 2) / 2;
+        let cur: BoxPos = s;
+        b.setPointerCapture(e.pointerId);
+        const move = (m: PointerEvent) => {
+          const dx = (m.clientX - x0) * sx, dy = (m.clientY - y0) * sy;
+          cur = resize ? { ...s, w: snap(Math.max(4, s.w + dx)), h: snap(Math.max(4, (s.h ?? 10) + dy)) } : { ...s, x: snap(Math.min(98, Math.max(-20, s.x + dx))), y: snap(Math.min(98, Math.max(-20, s.y + dy))) };
+          b.style.setProperty("--x", String(cur.x)); b.style.setProperty("--y", String(cur.y)); b.style.setProperty("--w", String(cur.w));
+          if (resize) b.style.setProperty("--h", String(cur.h));
+          show(cur);
+        };
+        const up = () => { b.removeEventListener("pointermove", move); b.removeEventListener("pointerup", up); if (cur !== s) arrange(Number(b.dataset.line), cur); };
+        b.addEventListener("pointermove", move);
+        b.addEventListener("pointerup", up);
+      };
+      b.addEventListener("pointerdown", down);
+      cleanups.push(() => { b.removeEventListener("pointerdown", down); h.remove(); tag.remove(); });
+    });
+    return () => cleanups.forEach((c) => c());
+  });
   // Title slides: when a long title wraps, break after its first comma ("Backprop,⏎from one neuron up").
   useEffect(() => {
     const h = slideRef.current?.querySelector<HTMLElement>(".l-title :is(h1,h2)");
@@ -138,12 +256,23 @@ export function SlideStage({ note, md, blank, counter, frameless, onZoom, classN
           const img = (e.target as HTMLElement).closest("img");
           if (img && onZoom) { e.stopPropagation(); onZoom(img.currentSrc || img.src, img.alt); }
         }}>
-        {!blank && (
-          <div ref={slideRef} className={cx("lslide", "l-" + info.layout, onZoom && "zoomable")} style={{ transform: `scale(${scale})` }}>
-            <Preview note={{ id: note.id, body: md, spaceId: note.spaceId }} />
+        {!blank && (plan.layout ? (
+          <div ref={slideRef} className={cx("lslide L", "L-" + plan.layout, plan.layout === "title" && "l-title", plan.cls, onZoom && "zoomable", arrange && "arranging")}
+            style={{ transform: `scale(${scale})`, ...(plan.split ? { "--split": plan.split } : {}), ...(plan.cols ? { "--cols": plan.cols } : {}) } as React.CSSProperties}>
+            {plan.bg && <div className="s-bg">{P(plan.bg)}</div>}
+            {plan.side && <div className="s-side">{P(plan.side)}</div>}
+            {plan.header && <div className="s-head">{P(plan.header)}</div>}
+            <div className="s-body">
+              {plan.regions.map((r, k) => <div key={r.name + k} className={"s-r s-r-" + r.name}>{P(r.md)}</div>)}
+            </div>
+          </div>
+        ) : (
+          <div ref={slideRef} className={cx("lslide", "l-" + info.layout, plan.cls, onZoom && "zoomable", arrange && "arranging")} style={{ transform: `scale(${scale})` }}>
+            {plan.bg && <div className="s-bg">{P(plan.bg)}</div>}
+            {P(plan.regions.length === 1 ? plan.regions[0].md : md.replace(/^\s*<!--.*-->\s*$/gm, ""))}
             {info.caption && (info.layout === "image" || info.layout === "diagram") && <div className="cap">{info.caption}</div>}
           </div>
-        )}
+        ))}
         {counter && !blank && <>
           <span className="absolute bottom-5 right-7 text-[14px] text-muted tabular-nums">{counter.i + 1} / {counter.n}</span>
           <div className="absolute inset-x-0 bottom-0 h-[3px] bg-surface-2"><div className="h-full bg-accent transition-all" style={{ width: `${((counter.i + 1) / counter.n) * 100}%` }} /></div>
@@ -205,9 +334,15 @@ function RemotePopover({ link, onClose }: { link: ReturnType<typeof useRemoteLin
 }
 
 export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
-  const raw = useMemo(() => splitSlides(note.body), [note.body]);
-  const slides = useMemo(() => raw.map(parseSlide), [raw]);
-  const infos = useMemo(() => slides.map((s) => slideInfo(s.body)), [slides]);
+  // A deck is shown as written; any other note is laid out automatically (doc → deck), without touching the note.
+  const written = useMemo(() => isWrittenDeck(note), [note]);
+  const deckMd = useMemo(() => (written ? note.body : docToDeck(note.body, note.title)), [written, note.body, note.title]);
+  const slides = useMemo(() => deckSlides(deckMd), [deckMd]);
+  const infos = useMemo(() => slides.map((s) => slideInfo(s.md)), [slides]);
+  const [overview, setOverview] = useState(false);
+  const [arrange, setArrange] = useState(false);
+  const [jump, setJump] = useState("");
+  const arranging = arrange && written;
   const [i, setI] = useState(0);
   const [blank, setBlank] = useState(false);
   const [presenter, setPresenter] = useState(false);
@@ -224,7 +359,34 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
   const cur = slides[Math.min(i, n - 1)];
   const next = infos[i + 1];
 
-  const state: DeckState = { type: "state", noteId: note.id, spaceId: note.spaceId, title: note.title, i, n, blank, md: cur?.body ?? "", notes: cur?.notes ?? "", next: next?.title ?? "", t0: timer.t0, pausedAt: timer.pausedAt };
+  const state: DeckState = { type: "state", noteId: note.id, spaceId: note.spaceId, title: note.title, i, n, blank, md: cur?.md.replace(/^\n+/, (m) => (m.length > 400 ? "" : m)) ?? "", dirs: cur?.dirs, notes: cur?.notes ?? "", next: next?.title ?? "", t0: timer.t0, pausedAt: timer.pausedAt };
+
+  /** Arrange mode wrote a new position: rewrite that `::: box …` line in the note. */
+  async function writeBox(line: number, p: BoxPos) {
+    const lines = note.body.split("\n");
+    const m = /^(\s*:{3,})\s*(.*)$/.exec(lines[line] ?? "");
+    const spec = m && parseBlockInfo(m[2]);
+    if (!m || !spec || spec.name !== "box") return;
+    const r = (v: number) => String(Number(v.toFixed(1)));
+    const keep = Object.entries(spec.attrs).filter(([k]) => !["x", "y", "w", "h"].includes(k)).map(([k, v]) => `${k}=${/\s/.test(v) ? `"${v}"` : v}`);
+    lines[line] = `${m[1]} box x=${r(p.x)} y=${r(p.y)} w=${r(p.w)}${p.h != null ? ` h=${r(p.h)}` : ""}${keep.length ? " " + keep.join(" ") : ""}${spec.classes.length ? ` {${spec.classes.map((c) => "." + c).join(" ")}}` : ""}`;
+    await updateNote(note.id, { body: lines.join("\n") });
+  }
+  /** Add a free box to the current slide (before its speaker notes). */
+  async function addBox() {
+    if (!cur) return;
+    const lines = note.body.split("\n");
+    let at = Math.min(cur.end, lines.length);
+    for (let k = cur.start; k < at; k++) if (/^Notes?:/i.test(lines[k])) { at = k; break; }
+    while (at > cur.start && !lines[at - 1].trim()) at--;
+    lines.splice(at, 0, "", "::: box x=30 y=36 w=40 h=24 {.card .center}", "New box: drag to move, corner to resize", ":::");
+    await updateNote(note.id, { body: lines.join("\n") });
+  }
+  async function saveAsDeck() {
+    const d = await createNote({ type: "slides", title: `${note.title} (deck)`, spaceId: note.spaceId, folderId: note.folderId, body: deckMd });
+    toast("Saved as a deck: edit its layouts, then present it");
+    openNote(d.id, "edit");
+  }
   function onCmd(c: DeckCmd) {
     if (c.cmd === "next") go(1);
     else if (c.cmd === "prev") go(-1);
@@ -271,14 +433,18 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
         const m = stage.current?.querySelector<HTMLMediaElement>("video,audio");
         if (m) void (m.paused ? m.play() : m.pause());
         else go(1);
-      } else if (["ArrowRight", "PageDown", "Enter"].includes(e.key)) { e.preventDefault(); go(1); }
-      else if (["ArrowLeft", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); go(-1); }
+      } else if (/^\d$/.test(e.key)) setJump((j) => (j + e.key).slice(-3)); // type a number, Enter jumps there
+      else if (e.key === "Enter" && jump) { e.preventDefault(); setBlank(false); setI(Math.max(0, Math.min(n - 1, Number(jump) - 1))); setJump(""); setOverview(false); }
+      else if (["ArrowRight", "PageDown", "Enter"].includes(e.key)) { e.preventDefault(); go(1); }
+      else if (["ArrowLeft", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); if (jump) setJump((j) => j.slice(0, -1)); else go(-1); }
       else if (e.key === "Home") setI(0);
       else if (e.key === "End") setI(n - 1);
-      else if (e.key === "Escape" && !document.fullscreenElement) onExit();
+      else if (e.key === "Escape") { if (jump) setJump(""); else if (overview) setOverview(false); else if (arrange) setArrange(false); else if (!document.fullscreenElement) onExit(); }
       else if (e.key === "f") void root.current?.requestFullscreen?.();
-      else if (e.key === "b") setBlank((b) => !b);
+      else if (e.key === "b" || e.key === ".") setBlank((b) => !b);
       else if (e.key === "p") setPresenter((p) => !p);
+      else if (e.key === "o" || e.key === "g") setOverview((o) => !o);
+      else if (e.key === "a" && written) setArrange((x) => !x);
     };
     addEventListener("keydown", k);
     return () => removeEventListener("keydown", k);
@@ -319,11 +485,11 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
         <>
           <div className="flex min-h-0 flex-1 gap-6 px-6 pt-6">
             <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-              <div ref={stage} className="aspect-video min-h-0 w-full shrink" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button,input,details,video,audio,iframe,img")) go(1); }}>
-                <SlideStage key={i} note={note} md={cur.body} blank={blank} counter={{ i, n }} onZoom={zoomer} className="!justify-start" />
+              <div ref={stage} className="aspect-video min-h-0 w-full shrink" onClick={(e) => { if (!arranging && !(e.target as HTMLElement).closest("a,button,input,details,video,audio,iframe,img")) go(1); }}>
+                <SlideStage key={i} note={note} md={cur.md} dirs={cur.dirs} blank={blank} counter={{ i, n }} onZoom={arranging ? undefined : zoomer} className="!justify-start" arrange={arranging ? writeBox : undefined} />
               </div>
               <div className="flex shrink-0 items-center gap-4 text-[12px] text-muted">
-                <span>← → / Space to move</span><span>F full screen</span><span>B blank</span><span>Esc exit</span>
+                <span>← → / Space to move</span><span>O overview</span><span>1–9 Enter jump</span><span>F full screen</span><span>B blank</span><span>Esc exit</span>
                 <span className="flex-1" />
                 <button onClick={openAudience} className="hover:text-ink">Audience window</button>
                 <button onClick={() => setPresenter(false)} className="hover:text-ink">P hide notes</button>
@@ -354,18 +520,24 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
         <>
           <div className="h-8 shrink-0 md:hidden" />
           <div className="safe-t h-[3px] shrink-0 bg-surface-2"><div className="h-full bg-accent transition-all" style={{ width: `${((i + 1) / n) * 100}%` }} /></div>
-          <div ref={stage} className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-2 md:p-6" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button,input,details,video,audio,iframe,img")) go(1); }}>
-            <div className="h-full w-full md:max-w-[1120px]"><SlideStage key={i} note={note} md={cur.body} blank={blank} onZoom={zoomer} frameless /></div>
+          <div ref={stage} className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-2 md:p-6" onClick={(e) => { if (!arranging && !(e.target as HTMLElement).closest("a,button,input,details,video,audio,iframe,img")) go(1); }}>
+            <div className="h-full w-full md:max-w-[1120px]"><SlideStage key={i} note={note} md={cur.md} dirs={cur.dirs} blank={blank} onZoom={arranging ? undefined : zoomer} frameless arrange={arranging ? writeBox : undefined} /></div>
           </div>
           {thumbs(false)}
           {/* Desktop bar */}
           <div className="hidden h-[52px] shrink-0 items-center gap-3.5 border-t border-surface-2 px-6 text-[13px] text-muted md:flex">
-            <span className="flex-1 truncate">{note.title}</span>
+            <span className="flex flex-1 items-center gap-2 truncate">
+              <span className="truncate">{note.title}</span>
+              {!written && <button onClick={saveAsDeck} title="This note is laid out automatically. Save the layout as a deck note you can edit." className="flex shrink-0 items-center gap-1.5 rounded-[7px] border border-line px-2 py-1 text-[12px] hover:text-ink"><Save size={13} />Auto layout · Save as deck</button>}
+              {arranging && <><span className="shrink-0 rounded-[6px] bg-accent px-2 py-0.5 text-[12px] font-semibold text-accent-fg">Arranging: drag boxes, corner resizes</span><button onClick={addBox} className="flex shrink-0 items-center gap-1 rounded-[7px] border border-line px-2 py-1 text-[12px] hover:text-ink"><Plus size={13} />Box</button></>}
+            </span>
             <button aria-label="Previous" onClick={() => go(-1)} disabled={i === 0} className="flex size-[34px] items-center justify-center rounded-[8px] border border-line text-ink disabled:opacity-40"><ChevronLeft size={16} /></button>
             <span className="text-ink tabular-nums">{i + 1} / {n}</span>
             <button aria-label="Next" onClick={() => go(1)} disabled={i === n - 1} className="flex size-[34px] items-center justify-center rounded-[8px] border border-line text-ink disabled:opacity-40"><ChevronRight size={16} /></button>
             <span className="flex flex-1 items-center justify-end gap-1">
-              <span className="mr-2 hidden lg:inline">F fullscreen · Esc exit</span>
+              <span className="mr-2 hidden xl:inline">O overview · F fullscreen · Esc exit</span>
+              <IconButton label="Overview (O)" onClick={() => setOverview(true)}><LayoutGrid size={16} /></IconButton>
+              {written && <IconButton label={arranging ? "Done arranging (A)" : "Arrange boxes (A): drag to move, corner to resize"} onClick={() => setArrange((x) => !x)}><Move size={16} style={{ color: arranging ? "var(--accent)" : undefined }} /></IconButton>}
               <IconButton label="Presenter view (P)" onClick={() => setPresenter(true)}><PanelRight size={16} /></IconButton>
               {remoteBtn(<Smartphone size={16} style={{ color: link.status === "synced" ? "var(--success)" : undefined }} />, "flex size-8 items-center justify-center rounded-[8px] hover:bg-surface-2 hover:text-ink")}
               <IconButton label="Exit slides" onClick={onExit}><X size={18} /></IconButton>
@@ -383,6 +555,23 @@ export function Slides({ note, onExit }: { note: Note; onExit: () => void }) {
           <button aria-label="Exit slides" onClick={onExit} className="safe-t absolute left-2 top-0 flex size-8 items-center justify-center text-muted md:hidden"><X size={18} /></button>
         </>
       )}
+      {overview && (
+        <div className="absolute inset-0 z-50 flex flex-col bg-[#0A0C0F]/95 fade-in" onClick={() => setOverview(false)}>
+          <div className="flex h-12 shrink-0 items-center gap-3 px-6 text-[13px] text-muted">
+            <LayoutGrid size={15} /><span className="text-ink">{n} slides</span><span>Click a slide to jump · type a number + Enter · Esc closes</span>
+            <span className="flex-1" /><button aria-label="Close overview" onClick={() => setOverview(false)} className="flex size-8 items-center justify-center rounded-[8px] hover:bg-surface-2 hover:text-ink"><X size={18} /></button>
+          </div>
+          <div className="grid min-h-0 flex-1 grid-cols-2 content-start gap-4 overflow-y-auto px-6 pb-8 md:grid-cols-3 xl:grid-cols-4">
+            {slides.map((s, k) => (
+              <button key={k} onClick={(e) => { e.stopPropagation(); setBlank(false); setI(k); setOverview(false); }} className="flex flex-col gap-1.5 text-left">
+                <div className={cx("pointer-events-none aspect-video w-full overflow-hidden rounded-[8px]", k === i ? "ring-2 ring-accent" : "ring-1 ring-line")}><SlideStage note={note} md={s.md} dirs={s.dirs} frameless /></div>
+                <span className="flex gap-2 text-[12px] text-muted"><span className="tabular-nums">{k + 1}</span><span className="truncate">{infos[k].title}</span></span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {jump && <div className="pointer-events-none absolute left-1/2 top-6 z-[55] -translate-x-1/2 rounded-[10px] border border-line bg-surface px-4 py-2 text-[15px] shadow-xl">Go to slide <b className="tabular-nums">{jump}</b> · Enter</div>}
       {zoom && <ImageZoom src={zoom.src} alt={zoom.alt} onClose={() => setZoom(null)} />}
     </div>
   );

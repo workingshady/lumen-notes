@@ -8,6 +8,8 @@ import extNavigate from "./ext/navigate";
 import extStudy from "./ext/study";
 import extSettings from "./ext/settings";
 import extWorkspace from "./ext/workspace";
+import extPractice from "./ext/practice";
+import registerAsk from "./ext/ask";
 import { accountRouter } from "./accounts";
 
 export type Env = {
@@ -487,7 +489,8 @@ api.get("/health", (c) => c.json({ ok: true, r2: !!c.env.FILES, ai: !!c.env.AI }
 // Area extensions (one file per area so parallel work never collides). Each gets the API router + shared helpers.
 const helpers = { auth, getNote, putNote, upserts, hmac, safeEqual };
 export type Helpers = typeof helpers;
-for (const ext of [extHome, extSpaces, extNavigate, extStudy, extSettings, extWorkspace]) ext(api, helpers);
+for (const ext of [extHome, extSpaces, extNavigate, extStudy, extSettings, extWorkspace, extPractice]) ext(api, helpers);
+registerAsk(api, helpers); // "Ask your vault" (worker/ext/ask.ts)
 
 app.route("/api", api);
 app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));

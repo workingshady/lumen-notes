@@ -136,6 +136,71 @@ flowchart LR
 `,
   },
   {
+    id: "base", name: "Base (database view)", type: "base", title: "New base", hint: "Table, board, gallery & calendar of notes",
+    body: `Notes shown as a database. Change views with the toolbar, or edit the YAML below (Obsidian Bases format).
+
+\`\`\`base
+views:
+  - type: table
+    name: All notes
+    order:
+      - file.name
+      - type
+      - status
+      - space
+      - file.tags
+      - file.mtime
+    sort:
+      - property: file.mtime
+        direction: DESC
+\`\`\`
+`,
+  },
+  {
+    id: "base-lessons", name: "Lessons by status × course", type: "base", title: "Lessons by status × course", hint: "Base: board by status, table grouped by course",
+    body: `Every lesson in one place: drag a card to change its status, group the table by course (space).
+
+\`\`\`base
+filters:
+  and:
+    - type == "lesson"
+views:
+  - type: board
+    name: By status
+    groupBy:
+      property: status
+      direction: ASC
+    order:
+      - file.name
+      - space
+      - file.tags
+  - type: table
+    name: By course
+    groupBy:
+      property: space
+      direction: ASC
+    order:
+      - file.name
+      - status
+      - space
+      - file.tags
+      - file.mtime
+    sort:
+      - property: status
+        direction: ASC
+  - type: cards
+    name: Gallery
+    order:
+      - file.name
+      - status
+      - space
+  - type: calendar
+    name: Calendar
+    date: file.mtime
+\`\`\`
+`,
+  },
+  {
     id: "whiteboard", name: "Whiteboard", type: "whiteboard", title: "New whiteboard", hint: "Freehand drawing, shapes, stickies (Excalidraw)",
     body: "",
   },

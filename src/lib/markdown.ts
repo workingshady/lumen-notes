@@ -7,6 +7,7 @@ import taskLists from "markdown-it-task-lists";
 import katexPlugin from "@vscode/markdown-it-katex";
 import hljs from "highlight.js/lib/common";
 import { attMime, resolveAtt } from "./attachments";
+import { blockSource, pendingBlock, setPendingBlock } from "./blocks";
 import { audioFileHtml, hydrateEmbeds, linkCardHtml, pdfHtml, videoFileHtml, videoThumbHtml, type EmbedCtx } from "../components/ws-embeds";
 import { icon } from "../components/ws-icons";
 
@@ -28,6 +29,182 @@ function strongDir(s: string): "ltr" | "rtl" | "auto" {
   const m = /[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF]|[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/.exec(s.replace(/\[[^\]]*\]\([^)]*\)|\x60[^\x60]*\x60|\$[^$]*\$/g, ""));
   return !m ? "auto" : /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/.test(m[0]) ? "rtl" : "ltr";
 }
+
+/** Opening HTML of a callout / panel (blockquote `> [!type]` and `::: info` panels share it). */
+function calloutOpen(md: MD, callout: string, title: string, fold: string, line: string, dir: string) {
+  const ic = `<span class="callout-icon">${icon(CALLOUT_ICONS[callout] ?? "info", 15)}</span>`;
+  const type = callout[0].toUpperCase() + callout.slice(1);
+  if (fold) {
+    // Folded: chevron · icon · Type (colored) · title · "folded" (design: 5A "Question … folded")
+    const t = title && title.toLowerCase() !== callout ? `<span class="callout-t2" dir="auto">${md.renderInline(title)}</span>` : "";
+    return `<details class="callout" data-callout="${esc(callout)}"${line} dir="${dir}"${fold === "+" ? " open" : ""}><summary class="callout-title"><span class="callout-chev">${icon("chevron-right", 14)}</span>${ic}<span class="callout-type">${esc(type)}</span>${t}<span class="callout-fold"></span></summary><div class="callout-body">`;
+  }
+  return `<div class="callout" data-callout="${esc(callout)}"${line} dir="${dir}"><div class="callout-title">${ic}<span dir="auto">${md.renderInline(title || type)}</span></div><div class="callout-body">`;
+}
+
+// ------------------------------------------------------------------ layout blocks (`:::` fenced divs)
+/** Parsed `:::` info string: `columns`, `column 30%`, `{.column width="40%"}`, `expand Title`, `box x=5 y=8 w=30`. */
+export type BlockSpec = { name: string; title: string; classes: string[]; attrs: Record<string, string> };
+const PANELS = new Set(["info", "note", "tip", "hint", "important", "warning", "caution", "danger", "error", "success", "check", "example", "question", "abstract", "summary", "todo", "bug", "quote"]);
+/** Quarto / Pandoc / Docusaurus / HackMD spellings → Lumen names. */
+const ALIAS: Record<string, string> = {
+  "panel-tabset": "tabs", tabset: "tabs", "column-page": "wide", "column-body-outset": "wide", "column-screen": "full", "column-screen-inset": "full",
+  details: "expand", spoiler: "expand", toggle: "expand", collapse: "expand", "column-margin": "aside", sidebar: "aside", grid: "columns", cols: "columns", col: "column",
+};
+export function parseBlockInfo(info: string): BlockSpec | null {
+  const classes: string[] = [];
+  const attrs: Record<string, string> = {};
+  let rest = info.replace(/\{([^}]*)\}/g, (_m, inner: string) => {
+    for (const p of inner.matchAll(/([.#])([\w-]+)|([\w-]+)=(?:"([^"]*)"|'([^']*)'|(\S+))/g)) {
+      if (p[1] === ".") classes.push(p[2]);
+      else if (p[1] === "#") attrs.id = p[2];
+      else attrs[p[3]] = p[4] ?? p[5] ?? p[6] ?? "";
+    }
+    return " ";
+  }).trim();
+  // key=value pairs outside braces (`box x=5 y=8 w=30 h=20`)
+  rest = rest.replace(/(^|\s)([a-z][\w-]*)=("[^"]*"|\S+)/gi, (_m, sp: string, k: string, v: string) => { attrs[k] = v.replace(/^"|"$/g, ""); return sp; }).trim();
+  let name = (/^[\w-]+/.exec(rest)?.[0] ?? "").toLowerCase();
+  let title = name ? rest.slice(name.length).trim() : rest;
+  if (!name) {
+    const cls = classes.find((c) => /^(columns?|panel-tabset|tabs|column-(page|screen|screen-inset|body-outset|margin)|callout-\w+|wide|full|expand|box|center)$/.test(c));
+    if (!cls) return classes.length ? { name: "div", title, classes, attrs } : null;
+    name = cls;
+  }
+  if (name.startsWith("callout-")) { attrs.callout = name.slice(8); name = "panel"; }
+  name = ALIAS[name] ?? name;
+  if (PANELS.has(name)) { attrs.callout = name; name = "panel"; }
+  if (name === "column" && /^\d+(\.\d+)?%$/.test(title)) { attrs.width = title; title = ""; }
+  if (name === "columns" && /^\d$/.test(title)) { attrs.count = title; title = ""; }
+  return { name, title, classes, attrs };
+}
+
+const num = (v: string | undefined, d: number) => { const n = parseFloat(v ?? ""); return Number.isFinite(n) ? n : d; };
+
+function layoutBlocks(md: MD) {
+  const isFenceLine = (s: string) => /^\s*:{3,}/.test(s);
+  md.block.ruler.before("fence", "lblock", (state, startLine, endLine, silent) => {
+    if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+    const line = state.src.slice(state.bMarks[startLine] + state.tShift[startLine], state.eMarks[startLine]);
+    const m = /^(:{3,})\s*(.*)$/.exec(line);
+    if (!m || !m[2].trim()) return false;
+    const spec = parseBlockInfo(m[2].trim());
+    if (!spec) return false;
+    if (silent) return true;
+    // Closer: a bare colon fence at the same depth. Nested blocks may use the same number of colons
+    // (`::: columns` / `::: column`) or more on the outer one (Pandoc style); code fences are skipped.
+    let depth = 1, close = -1, code = "";
+    for (let l = startLine + 1; l < endLine; l++) {
+      if (state.sCount[l] < state.blkIndent) break;
+      const s = state.src.slice(state.bMarks[l] + state.tShift[l], state.eMarks[l]);
+      const f = /^(`{3,}|~{3,})/.exec(s);
+      if (code) { if (f && s.startsWith(code)) code = ""; continue; }
+      if (f) { code = f[1]; continue; }
+      if (!isFenceLine(s)) continue;
+      if (/^:{3,}\s*$/.test(s)) { if (--depth === 0) { close = l; break; } } else if (parseBlockInfo(s.replace(/^\s*:{3,}\s*/, ""))) depth++;
+    }
+    const end = close < 0 ? endLine : close;
+    const oldParent = state.parentType, oldMax = state.lineMax;
+    state.parentType = "lblock" as typeof state.parentType;
+    state.lineMax = end;
+    const open = state.push("lblock_open", "div", 1);
+    open.block = true; open.meta = spec; open.map = [startLine, end]; open.markup = m[1];
+    state.md.block.tokenize(state, startLine + 1, end);
+    const cls = state.push("lblock_close", "div", -1);
+    cls.block = true; cls.meta = spec;
+    state.parentType = oldParent; state.lineMax = oldMax;
+    state.line = close < 0 ? endLine : close + 1;
+    return true;
+  }, { alt: ["paragraph", "reference", "blockquote", "list"] });
+
+  md.renderer.rules.lblock_open = (tokens, idx) => {
+    const t = tokens[idx];
+    const s = t.meta as BlockSpec;
+    const line = t.map ? ` data-line="${t.map[0]}"` : "";
+    const extra = s.classes.filter((c) => !/^(columns?|panel-tabset|column-.*|callout-.*)$/.test(c)).map(esc).join(" ");
+    const cls = (base: string) => `class="${base}${extra ? " " + extra : ""}"`;
+    switch (s.name) {
+      case "columns": return `<div ${cls("md-cols")}${line}${s.attrs.count ? ` style="--n:${num(s.attrs.count, 2)}"` : ""}>`;
+      case "column": {
+        const w = s.attrs.width && /^\d+(\.\d+)?%?$/.test(s.attrs.width) ? (s.attrs.width.endsWith("%") ? s.attrs.width : s.attrs.width + "%") : "";
+        return `<div ${cls("md-col")}${line}${w ? ` style="flex:0 1 ${w}"` : ""}>`;
+      }
+      case "tabs": return `<div ${cls("md-tabs")}${line}>`;
+      case "wide": case "full": return `<div ${cls("md-" + s.name)}${line}>`;
+      case "aside": return `<aside ${cls("md-aside")}${line}>`;
+      case "center": return `<div ${cls("md-center")}${line}>`;
+      case "expand": return `<details ${cls("md-expand")}${line}${s.attrs.open != null || s.classes.includes("open") ? " open" : ""}><summary dir="auto">${md.renderInline(s.title || "Details")}</summary><div class="md-expand-body">`;
+      case "panel": {
+        const fold = s.attrs.collapse === "true" ? "-" : s.attrs.collapse === "false" ? "+" : "";
+        return calloutOpen(md, s.attrs.callout ?? "note", s.title || s.attrs.title || "", fold, line, "auto");
+      }
+      case "box": {
+        const v = (k: string, d: number) => Math.max(-100, Math.min(200, num(s.attrs[k], d)));
+        const h = s.attrs.h && s.attrs.h !== "auto" ? `;--h:${v("h", 20)}` : "";
+        return `<div ${cls("md-box")}${line}${s.attrs.id ? ` data-id="${esc(s.attrs.id)}"` : ""} style="--x:${v("x", 10)};--y:${v("y", 10)};--w:${v("w", 30)}${h}${s.attrs.z ? `;z-index:${num(s.attrs.z, 1)}` : ""}${s.attrs.rotate ? `;--r:${num(s.attrs.rotate, 0)}deg` : ""}">`;
+      }
+      default: return `<div ${cls("md-div md-" + esc(s.name))}${line}>`;
+    }
+  };
+  md.renderer.rules.lblock_close = (tokens, idx) => {
+    const s = tokens[idx].meta as BlockSpec;
+    if (s.name === "expand") return "</div></details>";
+    if (s.name === "panel") return s.attrs.collapse === "true" || s.attrs.collapse === "false" ? "</div></details>" : "</div></div>";
+    if (s.name === "aside") return "</aside>";
+    return "</div>";
+  };
+
+  // Tables: a frame with its own scroll box (sticky header, sort, filter, full screen are added on hydrate).
+  // `{.wide .compact .nowrap}` on the line right after a table sets options and is hidden.
+  md.core.ruler.after("block", "table-attrs", (state) => {
+    const toks = state.tokens as Token[];
+    for (let i = 0; i < toks.length; i++) {
+      if (toks[i].type !== "table_close") continue;
+      const p = toks[i + 1], inl = toks[i + 2];
+      let open = i; while (open >= 0 && toks[open].type !== "table_open") open--;
+      // Written right under the table (no blank line), GFM reads `{.wide}` as a last row: take it back out.
+      let tr = i; while (tr > open && toks[tr].type !== "tr_open") tr--;
+      const cells = toks.slice(tr, i).filter((t) => t.type === "inline");
+      if (tr > open && cells.length && /^\{(\s*\.[\w-]+)+\s*\}$/.test(cells[0].content.trim()) && cells.slice(1).every((c) => !c.content.trim())) {
+        toks[open].meta = { classes: [...cells[0].content.matchAll(/\.([\w-]+)/g)].map((x) => x[1]) };
+        let end = tr; while (toks[end].type !== "tr_close") end++;
+        toks.splice(tr, end - tr + 1);
+        i = tr;
+        continue;
+      }
+      if (p?.type === "paragraph_open" && inl?.type === "inline" && /^\{(\s*\.[\w-]+)+\s*\}$/.test(inl.content.trim())) {
+        toks[open].meta = { classes: [...inl.content.matchAll(/\.([\w-]+)/g)].map((x) => x[1]) };
+        toks.splice(i + 1, 3);
+      }
+    }
+  });
+  md.renderer.rules.table_open = (tokens, idx, opts, _env, self) => {
+    const t = tokens[idx];
+    const line = t.attrGet("data-line") ?? (t.map ? String(t.map[0]) : null);
+    t.attrs = (t.attrs ?? []).filter(([k]) => k !== "data-line");
+    const cls = ((t.meta as { classes?: string[] } | null)?.classes ?? []).map((c) => " tbl-" + esc(c)).join("");
+    return `<div class="tbl${cls}"${line != null ? ` data-line="${line}"` : ""}><div class="tbl-scroll">` + self.renderToken(tokens, idx, opts);
+  };
+  md.renderer.rules.table_close = (tokens, idx, opts, _env, self) => self.renderToken(tokens, idx, opts) + "</div></div>";
+
+  // A paragraph that is only `::left::` / `::2::` marks a slide region: show it as a small label outside slides.
+  md.core.ruler.push("slot-marks", (state) => {
+    const toks = state.tokens as Token[];
+    for (let i = 0; i < toks.length - 2; i++) {
+      if (toks[i].type !== "paragraph_open" || toks[i + 1].type !== "inline" || toks[i + 2].type !== "paragraph_close") continue;
+      const c = toks[i + 1].content.trim();
+      const m = /^::([\w-]+)::$/.exec(c);
+      const toc = /^\[{1,2}toc\]{1,2}$/i.test(c);
+      if (!m && !toc) continue;
+      const tok = new state.Token("html_block", "", 0);
+      tok.content = toc ? `<nav class="md-toc"${toks[i].map ? ` data-line="${toks[i].map![0]}"` : ""}></nav>` : `<div class="slot-mark">${esc(m![1])}</div>`;
+      toks.splice(i, 3, tok);
+    }
+  });
+}
+
+const STATUS_C: [RegExp, string][] = [[/\b(done|complete[d]?|approved|accepted|green|ok|live|shipped|pass(ed)?)\b/i, "green"], [/\b(blocked|blocker|fail(ed)?|rejected|red|at risk|overdue|stopped)\b/i, "red"], [/\b(review|in review|waiting|on hold|yellow|pending|proposed)\b/i, "yellow"], [/\b(in progress|progress|doing|active|blue|wip|building)\b/i, "blue"], [/\b(purple|idea|exploring)\b/i, "purple"]];
+const statusColor = (t: string, c?: string) => (c && /^(green|red|yellow|blue|purple|grey|gray)$/.test(c) ? c.replace("gray", "grey") : STATUS_C.find(([re]) => re.test(t))?.[1] ?? "grey");
 
 function build() {
   const md: MD = new MarkdownIt({
@@ -78,7 +255,8 @@ function build() {
   md.inline.ruler.before("link", "wikilink", (state: StateInline, silent: boolean) => {
     const src = state.src;
     let pos = state.pos;
-    if (src[pos] === "!" && src[pos + 1] === "[") pos++;
+    const embed = src[pos] === "!" && src[pos + 1] === "[";
+    if (embed) pos++;
     if (src[pos] !== "[" || src[pos + 1] !== "[") return false;
     const end = src.indexOf("]]", pos + 2);
     if (end < 0) return false;
@@ -89,13 +267,15 @@ function build() {
       const [target, alias] = inner.replace(/\\\|/g, "|").split("|");
       const [title, heading] = target.split("#");
       const tok = state.push("wikilink", "", 0);
-      tok.meta = { title: title.trim(), heading: heading?.trim() ?? "", label: (alias ?? target).trim() };
+      tok.meta = { title: title.trim(), heading: heading?.trim() ?? "", label: (alias ?? target).trim(), embed };
     }
     state.pos = end + 2;
     return true;
   });
   md.renderer.rules.wikilink = (tokens, idx) => {
-    const m = tokens[idx].meta as { title: string; heading: string; label: string };
+    const m = tokens[idx].meta as { title: string; heading: string; label: string; embed?: boolean };
+    // ![[Note]] / ![[Note#Heading]] → live include (filled on hydrate); files (![[x.png]]) stay links.
+    if (m.embed && !/\.[a-z0-9]{2,5}$/i.test(m.title)) return `<span class="transclude" data-note="${esc(m.title)}" data-heading="${esc(m.heading)}"><a class="wikilink" href="#" data-note="${esc(m.title)}" data-heading="${esc(m.heading)}">${esc(m.label)}</a></span>`;
     return `<a class="wikilink" href="#" data-note="${esc(m.title)}" data-heading="${esc(m.heading)}">${esc(m.label)}</a>`;
   };
 
@@ -130,6 +310,8 @@ function build() {
     return linkOpen(tokens, idx, opts, env, self);
   };
 
+  layoutBlocks(md);
+
   // Callouts: > [!type]± Title
   md.core.ruler.before("inline", "callout", (state) => {
     const toks = state.tokens;
@@ -150,15 +332,7 @@ function build() {
   md.renderer.rules.blockquote_open = (tokens, idx, opts, _env, self) => {
     const m = tokens[idx].meta as { callout?: string; fold?: string; title?: string; dir?: string } | null;
     if (!m?.callout) return self.renderToken(tokens, idx, opts);
-    const ic = `<span class="callout-icon">${icon(CALLOUT_ICONS[m.callout] ?? "info", 15)}</span>`;
-    const line = tokens[idx].map ? ` data-line="${tokens[idx].map![0]}"` : "";
-    const type = m.callout[0].toUpperCase() + m.callout.slice(1);
-    if (m.fold) {
-      // Folded: chevron · icon · Type (colored) · title · "folded" (design: 5A "Question … folded")
-      const t = m.title && m.title.toLowerCase() !== m.callout ? `<span class="callout-t2" dir="auto">${md.renderInline(m.title)}</span>` : "";
-      return `<details class="callout" data-callout="${esc(m.callout)}"${line} dir="${m.dir ?? "auto"}"${m.fold === "+" ? " open" : ""}><summary class="callout-title"><span class="callout-chev">${icon("chevron-right", 14)}</span>${ic}<span class="callout-type">${esc(type)}</span>${t}<span class="callout-fold"></span></summary><div class="callout-body">`;
-    }
-    return `<div class="callout" data-callout="${esc(m.callout)}"${line} dir="${m.dir ?? "auto"}"><div class="callout-title">${ic}<span dir="auto">${md.renderInline(m.title ?? "")}</span></div><div class="callout-body">`;
+    return calloutOpen(md, m.callout, m.title ?? "", m.fold ?? "", tokens[idx].map ? ` data-line="${tokens[idx].map![0]}"` : "", m.dir ?? "auto");
   };
   md.renderer.rules.blockquote_close = (tokens, idx, opts, _env, self) => {
     const m = tokens[idx].meta as { callout?: string; fold?: string } | null;
@@ -186,8 +360,11 @@ function build() {
     return `<span class="${d < today ? "due over" : "due"}">${icon("calendar", 13)}${d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).replace(",", "")}</span>`;
   };
   md.renderer.rules.text = (tokens, idx) => {
-    const h = esc(tokens[idx].content);
-    return /📅|@due\(/u.test(h) ? h.replace(/(?:📅\s*|@due\()(\d{4}-\d{2}-\d{2})\)?/gu, (_m, d: string) => dueChip(d)) : h;
+    let h = esc(tokens[idx].content);
+    if (/📅|@due\(/u.test(h)) h = h.replace(/(?:📅\s*|@due\()(\d{4}-\d{2}-\d{2})\)?/gu, (_m, d: string) => dueChip(d));
+    // :status[In review]{yellow} → coloured pill (Confluence status lozenge); colour guessed from the text when omitted.
+    if (h.includes(":status[")) h = h.replace(/:status\[([^\]]{1,40})\](?:\{(\w+)\})?/g, (_m, t: string, c?: string) => `<span class="status-pill" data-c="${statusColor(t, c)}">${t}</span>`);
+    return h;
   };
 
   // data-line on top-level blocks (scroll sync) + dir="auto" so Arabic and English lines each get the right direction.
@@ -197,6 +374,35 @@ function build() {
       if (t.map && t.nesting === 1 && t.level === 0 && !t.meta?.callout) t.attrSet("data-line", String(t.map[0]));
       if (BIDI.has(t.type)) t.attrSet("dir", (t.meta?.forceDir as string) ?? "auto");
       if (t.meta?.forceDir) t.attrJoin("class", "dir-forced");
+    }
+  });
+
+  // Block ids (Obsidian): `text ^id` at the end of a block, or `^id` on its own line after one → an anchor
+  // (data-block-id) that [[Note#^id]] links scroll to; the id itself is dimmed until hover (lib/blocks.ts).
+  md.core.ruler.push("blockrefs", (state) => {
+    const toks = state.tokens as Token[];
+    const anchor = (id: string, after = false) => `<span class="blk-id${after ? " blk-after" : ""}" data-block-id="${esc(id)}">${after ? "" : "^" + esc(id)}</span>`;
+    for (let i = 0; i < toks.length; i++) {
+      const t = toks[i];
+      if (t.type !== "inline" || !t.children?.length) continue;
+      const m = /(?:^|\s)\^([A-Za-z0-9-]+)\s*$/.exec(t.content);
+      if (!m) continue;
+      const kids = t.children;
+      const last = kids[kids.length - 1];
+      if (last.type !== "text" || !/(?:^|\s)\^[A-Za-z0-9-]+\s*$/.test(last.content)) continue;
+      if (t.content.trim() === "^" + m[1] && toks[i - 1]?.type === "paragraph_open" && toks[i + 1]?.type === "paragraph_close") {
+        const h = new state.Token("html_block", "", 0);
+        h.content = anchor(m[1], true);
+        toks.splice(i - 1, 3, h);
+        i--;
+        continue;
+      }
+      last.content = last.content.replace(/\s*\^[A-Za-z0-9-]+\s*$/, "");
+      t.content = t.content.slice(0, m.index).replace(/\s+$/, "");
+      if (!last.content) { kids.pop(); if (kids[kids.length - 1]?.type === "softbreak") kids.pop(); }
+      const h = new state.Token("html_inline", "", 0);
+      h.content = anchor(m[1]);
+      kids.push(h);
     }
   });
 
@@ -459,9 +665,203 @@ export interface HydrateCtx extends EmbedCtx {
   query?: (el: HTMLElement, q: string) => void;
   /** Renders a ```canvas block preview into the element. */
   canvas?: (el: HTMLElement, json: string) => void;
+  /** Markdown of `![[Note#Heading]]` (the whole note or one section), or null when the note doesn't exist. */
+  include?: (title: string, heading: string) => string | null;
+}
+
+// ------------------------------------------------------------------ layout hydration: tables, tabs, TOC, includes
+const SORT_NUM = /^[-+]?[$€£]?\s*[\d.,]+\s*(%|[kKmMbB]|h|min|s|d|ms|GB|MB|KB)?$/;
+function cellVal(td: Element | undefined) {
+  const t = (td?.textContent ?? "").trim();
+  if (SORT_NUM.test(t)) { const n = parseFloat(t.replace(/[^\d.+-]/g, "")); if (Number.isFinite(n)) return n; }
+  const d = /^\d{4}-\d{2}-\d{2}/.test(t) ? Date.parse(t.slice(0, 10)) : NaN;
+  return Number.isFinite(d) ? d : t.toLowerCase();
+}
+/** Tables: sticky header + scroll shadows, click a header to sort (viewer only), filter long tables, full screen. */
+function hydrateTables(root: HTMLElement) {
+  root.querySelectorAll<HTMLElement>(".tbl:not([data-ok])").forEach((wrap) => {
+    wrap.dataset.ok = "1";
+    const box = wrap.querySelector<HTMLElement>(".tbl-scroll");
+    const table = box?.querySelector("table");
+    const body = table?.tBodies[0];
+    if (!box || !table) return;
+    const rows = body ? [...body.rows] : [];
+    if (rows.length > 14) wrap.classList.add("tbl-tall");
+    // Size columns by content: short values (ids, numbers, dates) stay on one line, prose columns get room.
+    const all = [...table.rows];
+    const ncol = Math.max(0, ...all.map((r) => r.cells.length));
+    for (let c = 0; c < ncol; c++) {
+      let max = 0;
+      for (const r of rows.slice(0, 200)) max = Math.max(max, (r.cells[c]?.textContent ?? "").trim().length);
+      const cls = max <= 22 ? "c-short" : max >= 32 ? "c-long" : "";
+      if (cls) for (const r of all) r.cells[c]?.classList.add(cls);
+    }
+    const tools = document.createElement("div");
+    tools.className = "tbl-tools";
+    const meta = `<span class="tbl-count">${rows.length} row${rows.length === 1 ? "" : "s"}</span>`;
+    tools.innerHTML = meta + (rows.length > 8 ? `<label class="tbl-filter">${icon("search", 12)}<input type="search" placeholder="Filter rows" aria-label="Filter rows"></label>` : "")
+      + `<button type="button" class="tbl-full" title="Full screen" aria-label="Show table full screen">${icon("maximize-2", 13)}</button>`;
+    wrap.prepend(tools);
+    const input = tools.querySelector("input");
+    const count = tools.querySelector<HTMLElement>(".tbl-count")!;
+    input?.addEventListener("input", () => {
+      const q = input.value.trim().toLowerCase();
+      let shown = 0;
+      for (const r of rows) { const hit = !q || (r.textContent ?? "").toLowerCase().includes(q); r.hidden = !hit; if (hit) shown++; }
+      count.textContent = q ? `${shown} of ${rows.length} rows` : `${rows.length} row${rows.length === 1 ? "" : "s"}`;
+    });
+    tools.querySelector(".tbl-full")!.addEventListener("click", () => { if (document.fullscreenElement === wrap) void document.exitFullscreen(); else void wrap.requestFullscreen?.(); });
+    // Sort: asc → desc → original order. Only the view changes; the Markdown stays as written.
+    const heads = [...(table.tHead?.rows[0]?.cells ?? [])];
+    if (body && rows.length > 1) heads.forEach((th, col) => {
+      th.classList.add("tbl-sortable");
+      th.tabIndex = 0;
+      const sort = () => {
+        const dir = th.getAttribute("aria-sort") === "ascending" ? "descending" : th.getAttribute("aria-sort") === "descending" ? "none" : "ascending";
+        heads.forEach((h) => h.removeAttribute("aria-sort"));
+        const order = dir === "none" ? rows : [...rows].sort((a, b) => {
+          const x = cellVal(a.cells[col]), y = cellVal(b.cells[col]);
+          const c = typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true });
+          return dir === "ascending" ? c : -c;
+        });
+        if (dir !== "none") th.setAttribute("aria-sort", dir);
+        body.append(...order);
+      };
+      th.addEventListener("click", (e) => { if (!(e.target as HTMLElement).closest("a")) sort(); });
+      th.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sort(); } });
+    });
+    // Scroll cues + sticky first column when the table is wider than its box; break out of the text column first.
+    const edges = () => {
+      const over = box.scrollWidth > box.clientWidth + 2;
+      wrap.classList.toggle("tbl-over", over);
+      wrap.classList.toggle("tbl-sl", over && Math.abs(box.scrollLeft) > 2);
+      wrap.classList.toggle("tbl-sr", over && Math.abs(box.scrollLeft) + box.clientWidth < box.scrollWidth - 2);
+    };
+    requestAnimationFrame(() => {
+      if (!wrap.isConnected) return;
+      if (wrap.closest(".reading") && !wrap.closest(".md-col, .md-box, .lslide") && box.scrollWidth > box.clientWidth + 2) wrap.classList.add("tbl-auto-wide");
+      edges();
+    });
+    box.addEventListener("scroll", edges, { passive: true });
+    new ResizeObserver(edges).observe(box);
+  });
+}
+/** `::: tabs`: each heading directly inside becomes a tab; the content under it is its panel. */
+function hydrateTabs(root: HTMLElement) {
+  root.querySelectorAll<HTMLElement>(".md-tabs:not([data-ok])").forEach((tabs, ti) => {
+    tabs.dataset.ok = "1";
+    const kids = [...tabs.children] as HTMLElement[];
+    const level = kids.map((k) => /^H([1-6])$/.exec(k.tagName)?.[1]).filter(Boolean).sort()[0];
+    if (!level) return;
+    const bar = document.createElement("div");
+    bar.className = "md-tablist";
+    bar.setAttribute("role", "tablist");
+    const panels: HTMLElement[] = [];
+    let cur: HTMLElement | null = null;
+    const pre = document.createElement("div");
+    for (const k of kids) {
+      if (k.tagName === "H" + level) {
+        const i = panels.length;
+        const b = document.createElement("button");
+        b.type = "button"; b.setAttribute("role", "tab"); b.id = `tab-${ti}-${i}`; b.dir = "auto";
+        b.innerHTML = k.innerHTML;
+        b.addEventListener("click", () => select(i));
+        bar.append(b);
+        cur = document.createElement("div");
+        cur.className = "md-tabpanel"; cur.setAttribute("role", "tabpanel"); cur.setAttribute("aria-labelledby", b.id);
+        if (k.dataset.line) cur.dataset.line = k.dataset.line;
+        panels.push(cur);
+        k.remove();
+      } else (cur ?? pre).append(k);
+    }
+    const select = (i: number) => {
+      panels.forEach((p, j) => { p.hidden = j !== i; });
+      [...bar.children].forEach((b, j) => { b.setAttribute("aria-selected", String(j === i)); (b as HTMLElement).tabIndex = j === i ? 0 : -1; });
+      panels[i]?.querySelectorAll<HTMLElement>(".tbl").forEach((t) => t.querySelector(".tbl-scroll")?.dispatchEvent(new Event("scroll")));
+    };
+    bar.addEventListener("keydown", (e) => {
+      const i = [...bar.children].findIndex((b) => b.getAttribute("aria-selected") === "true");
+      const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      const n = (i + d + panels.length) % panels.length;
+      select(n); (bar.children[n] as HTMLElement).focus();
+    });
+    tabs.replaceChildren(...(pre.childNodes.length ? [pre] : []), bar, ...panels);
+    select(0);
+  });
+}
+/** `[[toc]]` / `[TOC]`: the H2–H3 headings of the note (not of included notes), click to scroll. */
+function hydrateToc(root: HTMLElement) {
+  const tocs = root.querySelectorAll<HTMLElement>(".md-toc");
+  if (!tocs.length) return;
+  const hs = [...root.querySelectorAll<HTMLElement>("h2, h3")].filter((h) => !h.closest(".transclusion, .md-toc, .md-tabs"));
+  for (const toc of tocs) {
+    toc.innerHTML = `<div class="md-toc-t">Contents</div>` + (hs.length ? `<ol>${hs.map((h, i) => `<li class="toc-${h.tagName.toLowerCase()}"><a href="#" data-i="${i}" dir="auto">${esc(h.textContent ?? "")}</a></li>`).join("")}</ol>` : `<div class="muted">No headings yet.</div>`);
+    toc.onclick = (e) => { const a = (e.target as HTMLElement).closest<HTMLAnchorElement>("a[data-i]"); if (!a) return; e.preventDefault(); e.stopPropagation(); hs[Number(a.dataset.i)]?.scrollIntoView({ behavior: "smooth", block: "start" }); };
+  }
+}
+/** `![[Note]]` / `![[Note#Heading]]`: the note or section rendered in place (3 levels deep at most, no loops). */
+function hydrateIncludes(root: HTMLElement, ctx: HydrateCtx) {
+  if (!ctx.include) return;
+  root.querySelectorAll<HTMLElement>("span.transclude").forEach((span) => {
+    const title = span.dataset.note ?? "", heading = span.dataset.heading ?? "";
+    const chain = [...ancestors(span)].map((x) => x.dataset.from).filter(Boolean);
+    const key = `${title}#${heading}`.toLowerCase();
+    if (chain.length >= 3 || chain.includes(key)) return;
+    // ![[Note#^id]] → just that block (lib/blocks.ts), cut from the whole note.
+    const blockId = heading.startsWith("^") ? heading.slice(1) : "";
+    const whole = blockId ? ctx.include!(title, "") : null;
+    const src = blockId ? (whole == null ? null : blockSource(whole, blockId) ?? `*No block ^${blockId} in ${title}.*`) : ctx.include!(title, heading);
+    if (src == null) { span.querySelector("a")?.classList.add("missing"); return; }
+    const box = document.createElement("div");
+    box.className = "transclusion";
+    box.dataset.from = key;
+    box.innerHTML = `<div class="tc-head">${icon("corner-down-right", 12)}<a class="wikilink" href="#" data-note="${esc(title)}" data-heading="${esc(heading)}">${esc(title)}${heading ? ` › ${esc(heading)}` : ""}</a></div><div class="tc-body">${render(src).replace(/ data-line="\d+"/g, "")}</div>`;
+    const p = span.parentElement;
+    if (p?.tagName === "P" && p.childNodes.length === 1) p.replaceWith(box); else span.replaceWith(box);
+    hydrateIncludes(box.querySelector<HTMLElement>(".tc-body")!, ctx); // nested includes; the rest hydrates with the page
+  });
+}
+function* ancestors(el: HTMLElement) { for (let p = el.parentElement?.closest<HTMLElement>(".transclusion"); p; p = p.parentElement?.closest<HTMLElement>(".transclusion")) yield p; }
+
+/** Block anchors: [[Note#^id]] remembers the target so the next render scrolls to it; [[#^id]] scrolls in place. */
+function blockTarget(el: HTMLElement) {
+  return (el.classList.contains("blk-after") ? (el.previousElementSibling as HTMLElement | null) : el.closest<HTMLElement>("[data-line]") ?? el.parentElement) ?? el;
+}
+function findBlock(root: ParentNode, id: string) {
+  return [...root.querySelectorAll<HTMLElement>("[data-block-id]")].find((x) => x.dataset.blockId === id && !x.closest(".transclusion")) ?? null;
+}
+function flashBlock(el: HTMLElement) {
+  const t = blockTarget(el);
+  requestAnimationFrame(() => { t.scrollIntoView({ block: "center", behavior: "smooth" }); t.classList.add("blk-flash"); setTimeout(() => t.classList.remove("blk-flash"), 1800); });
+}
+function hydrateBlockRefs(root: HTMLElement) {
+  if (!root.dataset.blkNav) {
+    root.dataset.blkNav = "1";
+    root.addEventListener("click", (e) => {
+      const a = (e.target as HTMLElement).closest<HTMLAnchorElement>("a.wikilink");
+      const h = a?.dataset.heading ?? "";
+      if (!a || !h.startsWith("^")) return;
+      const id = h.slice(1), title = a.dataset.note ?? "";
+      if (!title) { e.preventDefault(); e.stopPropagation(); const el = findBlock(root, id); if (el) flashBlock(el); return; }
+      setPendingBlock(title, id);
+      // Same note (nothing re-renders): scroll here once the click has been handled.
+      setTimeout(() => { if (pendingBlock.id !== id) return; const el = findBlock(root.isConnected ? root : document, id); if (el) { pendingBlock.id = ""; flashBlock(el); } }, 350);
+    }, true);
+  }
+  if (pendingBlock.id && Date.now() - pendingBlock.at < 8000) {
+    const el = findBlock(root, pendingBlock.id);
+    if (el) { pendingBlock.id = ""; flashBlock(el); }
+  }
 }
 
 export function hydrate(root: HTMLElement, ctx: HydrateCtx = {}) {
+  hydrateIncludes(root, ctx);
+  hydrateBlockRefs(root);
+  hydrateTabs(root);
+  hydrateTables(root);
+  hydrateToc(root);
   markArabic(root);
   root.querySelectorAll<HTMLElement>(".mermaid-block").forEach((el) => void renderMermaid(el));
   root.querySelectorAll<HTMLElement>(".mermaid-card").forEach((card) => {

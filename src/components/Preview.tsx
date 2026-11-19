@@ -28,6 +28,26 @@ export function renderQuery(el: HTMLElement, q: string, v: Vault) {
     : `<div class="muted" style="font-size:12px;margin-bottom:4px">${rows.length} notes · <code>${esc(q)}</code></div><ul style="margin:0">${rows.map((n) => `<li><a class="wikilink" href="#" data-note="${esc(n.title)}">${esc(n.title)}</a></li>`).join("")}</ul>`;
 }
 
+const plainHeading = (s: string) => s.replace(/[*_`[\]]/g, "").replace(/\s+#*\s*$/, "").trim().toLowerCase();
+/** `![[Note]]` / `![[Note#Heading]]` source: the note body (no front-matter, no H1) or one section of it. */
+export function includeSource(v: Vault, title: string, heading: string): string | null {
+  const n = v.byTitle.get(title.toLowerCase());
+  if (!n || n.deleted || n.type === "canvas" || n.type === "whiteboard") return null;
+  const body = n.body.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
+  const lines = body.split("\n");
+  if (!heading) return lines.filter((l, i) => !(i === lines.findIndex((x) => /^#\s/.test(x)) && /^#\s/.test(l))).join("\n");
+  const want = plainHeading(heading);
+  let fence = false, start = -1, level = 0;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*(`{3,}|~{3,})/.test(lines[i])) fence = !fence;
+    const h = !fence && /^(#{1,6})\s+(.+)$/.exec(lines[i]);
+    if (!h) continue;
+    if (start >= 0 && h[1].length <= level) return lines.slice(start + 1, i).join("\n");
+    if (start < 0 && plainHeading(h[2]) === want) { start = i; level = h[1].length; }
+  }
+  return start >= 0 ? lines.slice(start + 1).join("\n") : `*No heading “${heading}” in ${n.title}.*`;
+}
+
 /** Source line of the last block the reader clicked (for the ¶ direction menu in Read mode). */
 export const lastBlock = { noteId: "", line: -1 };
 
@@ -43,6 +63,7 @@ export function Preview({ note, className, onLine }: { note: Pick<Note, "id" | "
     el.querySelectorAll<HTMLAnchorElement>("a.wikilink").forEach((a) => { if (!vault.byTitle.has((a.dataset.note ?? "").toLowerCase())) a.classList.add("missing"); });
     hydrate(el, {
       query: (q, src) => renderQuery(q, src, vault),
+      include: (title, heading) => includeSource(vault, title, heading),
       canvas: (c, json) => { const { canvas, error } = parseCanvas(json); c.innerHTML = error ? `<div class="render-error">${esc(error)}</div>` : previewSvg(canvas); },
       // PDF highlight → quote at the end of the note (design 08: "Highlights made here become quotes in the note").
       quote: async (text, page, name) => {

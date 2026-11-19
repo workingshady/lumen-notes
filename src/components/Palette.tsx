@@ -1,4 +1,4 @@
-import { Route, ArrowLeft, CornerDownLeft, FileText, Hash, LayoutDashboard, Search, Sparkles, Waypoints, X, Zap } from "lucide-react";
+import { MessagesSquare, Route, ArrowLeft, CornerDownLeft, FileText, Hash, LayoutDashboard, Search, Sparkles, Waypoints, X, Zap } from "lucide-react";
 import { Fragment, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Note } from "../../shared/types";
 import { createNote, dailyNote } from "../lib/actions";
@@ -7,6 +7,8 @@ import { activeTheme, getSettings, setSettings } from "../lib/settings";
 import { go, openNote, setUI, useUI, useVault, type Mode } from "../lib/store";
 import { syncNow } from "../lib/sync";
 import { plainText } from "./nav-text";
+import { AskSheet } from "./AskVault";
+import { openAsk } from "../lib/ask";
 import { NewPathDialog } from "./NewPathDialog";
 import { NewVisualChooser } from "./NewVisualChooser";
 import { cx } from "./ui";
@@ -86,6 +88,7 @@ export function Palette() {
     const c = (id: string, label: string, run: Cmd["run"], extra: Partial<Cmd> = {}): Cmd => ({ id, label, text: label, run, ...extra });
     const mode = (m: Mode, label: string) => c(`mode-${m}`, `Mode: ${label}`, () => setUI({ mode: m, view: "notes" }));
     return [
+      c("ask", "Ask your notes…", () => openAsk(), { hint: "answers from your notes, with sources", icon: <MessagesSquare size={16} /> }),
       c("new", "New note", async () => openNote((await createNote({ spaceId, folderId: ui.folderId })).id, "edit"), { hint: `${MOD}Alt N` }),
       c("new-visual", "New visual…", () => setChooser(true), { hint: "canvas · whiteboard · graph", icon: <LayoutDashboard size={16} /> }),
       c("new-path", "New learning path…", () => setPathDlg(true), { hint: "combine several courses into one roadmap", icon: <Route size={16} /> }),
@@ -139,6 +142,9 @@ export function Palette() {
   const short = target ? shortTitle(target.title) : "";
   const aiCmd = (n: Note) => { try { sessionStorage.setItem("lumen.aiAuto", JSON.stringify({ id: n.id, action: "flashcards" })); } catch { /* ignore */ } openNote(n.id); setUI({ panel: "ai" }); };
   const graphCmd = (n: Note) => { try { sessionStorage.setItem("lumen.graphLocal", n.id); } catch { /* ignore */ } go("graph"); };
+  const askText = !isCmd && !isTag ? query.text.trim() : "";
+  const askCmd = (qq: string) => { try { sessionStorage.setItem("lumen.askAuto", qq); } catch { /* ignore */ } openAsk(qq); };
+  const askRow: Cmd[] = askText.split(/\s+/).length >= 2 ? [{ id: "ask-q", text: "ask", label: <>Ask your notes: “{askText}”</>, hint: `${MOD}⇧A`, icon: <MessagesSquare size={16} />, run: () => askCmd(askText) }] : [];
   const noteCmds: Cmd[] = target && query.text.trim() && !isCmd && !isTag ? [
     { id: "ai-cards", text: "flashcards", label: <>Generate flashcards from “{hl(short, terms)}”</>, hint: `${MOD}⇧G`, icon: <Sparkles size={16} />, run: () => aiCmd(target) },
     { id: "local-graph", text: "graph", label: <><span className="md:hidden">Open local graph</span><span className="hidden md:inline">Open local graph for “{hl(short, terms)}”</span></>, hint: `${MOD}⇧L`, icon: <Waypoints size={16} />, run: () => graphCmd(target) },
@@ -166,7 +172,7 @@ export function Palette() {
   const noteGroup = q.trim() ? `Notes · ${hits.length}` : "Recent";
   const rows: Row[] = [
     ...hits.map((h): Row => ({ key: h.note.id, group: noteGroup, kind: "note", note: h.note, icon: <FileText size={16} />, label: hl(h.note.title, terms), path: pathOf(h.note), sub: hl(snippet(h.note, terms, h.snippet), terms, "font-semibold text-ink"), run: () => openNote(h.note.id) })),
-    ...[...noteCmds, ...cmdHits].map((c): Row => ({ key: c.id, group: q.trim() ? "Commands" : "Suggested", kind: "cmd", icon: c.icon ?? <Zap size={16} />, label: typeof c.label === "string" ? hl(c.label, terms) : c.label, hint: c.hint, run: c.run })),
+    ...[...askRow, ...noteCmds, ...cmdHits].map((c): Row => ({ key: c.id, group: q.trim() ? "Commands" : "Suggested", kind: "cmd", icon: c.icon ?? <Zap size={16} />, label: typeof c.label === "string" ? hl(c.label, terms) : c.label, hint: c.hint, run: c.run })),
     ...tagHits.map(([t, c]): Row => ({ key: "t" + t, group: "Tags", kind: "tag", icon: <Hash size={16} />, label: hl(t, [tagTerm], "font-bold text-accent"), hint: `${c} notes`, run: () => go("notes", { tag: t, spaceId: "all", folderId: null }) })),
     ...(createTitle ? [{ key: "create", group: "Create", kind: "cmd", icon: <CornerDownLeft size={16} />, label: <>Create note “{createTitle}”</>, run: async () => openNote((await createNote({ title: createTitle, spaceId })).id, "edit") } as Row] : []),
   ];
@@ -188,6 +194,7 @@ export function Palette() {
     <>
       <NewVisualChooser open={chooser} onClose={() => setChooser(false)} />
       <NewPathDialog open={pathDlg} onClose={() => setPathDlg(false)} />
+      <AskSheet />
       {ui.palette && (
         <div className="fixed inset-0 z-50 flex items-start justify-center md:bg-[rgba(5,6,8,.6)] md:pt-[110px] fade-in" onMouseDown={(e) => e.target === e.currentTarget && close()}>
           <div className="safe-t flex h-full w-full flex-col overflow-hidden bg-bg text-[14px] md:h-auto md:max-w-[660px] md:rounded-[14px] md:border md:border-line md:bg-surface-2 md:text-[13px] md:shadow-[0_24px_64px_rgba(0,0,0,.5)]">
@@ -214,6 +221,7 @@ export function Palette() {
                     else if (e.key === "Backspace" && parts.length && (e.currentTarget.selectionStart ?? 0) === 0 && (e.currentTarget.selectionEnd ?? 0) === 0) { e.preventDefault(); editPart(parts.length - 1); }
                     else if (mod && e.key === "0") { e.preventDefault(); setWide((w) => !w); }
                     else if (mod && e.shiftKey && e.key.toLowerCase() === "g" && target) { e.preventDefault(); close(); aiCmd(target); }
+                    else if (mod && e.shiftKey && e.key.toLowerCase() === "a" && askText) { e.preventDefault(); close(); askCmd(askText); }
                     else if (mod && e.shiftKey && e.key.toLowerCase() === "l" && target) { e.preventDefault(); close(); graphCmd(target); }
                   }}
                   placeholder={parts.length ? "" : "Search notes, > commands, # tags"}

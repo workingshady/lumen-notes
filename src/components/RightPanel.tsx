@@ -12,6 +12,7 @@ import { db } from "../lib/db";
 import { inlineTags, outline, setFrontMatter, splitFrontMatter } from "../lib/parse";
 import { openNote, setUI, toast, useUI, useVault, type Panel } from "../lib/store";
 import { getSelectionText, insertText, scrollEditorToLine } from "./Editor";
+import { AskVault } from "./AskVault";
 import { Preview } from "./Preview";
 import { Button, cx, STATUS_COLOR } from "./ui";
 
@@ -53,7 +54,7 @@ export function RightPanel({ note }: { note: Note }) {
         {panel === "backlinks" && <Backlinks note={note} />}
         {panel === "properties" && <Properties note={note} />}
         {panel === "versions" && <Versions note={note} />}
-        {panel === "ai" && <AI note={note} />}
+        {panel === "ai" && <AiTab note={note} />}
       </div>
     </aside>
   );
@@ -562,6 +563,25 @@ function withCards(body: string, cards: { q: string; a: string }[]) {
   const next = body.slice(start).search(/\n#{1,2}\s/);
   const end = next < 0 ? body.length : start + next;
   return `${body.slice(0, end).replace(/\s*$/, "")}\n${lines.join("\n")}\n${body.slice(end)}`;
+}
+
+/** AI tab: actions on this note, or "Ask vault" (questions answered from all your notes, with citations). */
+function AiTab({ note }: { note: Note }) {
+  const [mode, setMode] = useState<"note" | "ask">(() => { try { return sessionStorage.getItem("lumen.aiMode") === "ask" ? "ask" : "note"; } catch { return "note"; } });
+  const pick = (m: "note" | "ask") => { setMode(m); try { sessionStorage.setItem("lumen.aiMode", m); } catch { /* private mode */ } };
+  return (
+    <div className="flex flex-col">
+      <div role="tablist" aria-label="AI mode" className="mx-3.5 mt-3.5 grid grid-cols-2 gap-0.5 rounded-[9px] bg-surface-2 p-0.5">
+        {([["note", "This note", <Sparkles key="n" size={13} />], ["ask", "Ask vault", <MessageCircleQuestion key="a" size={13} />]] as const).map(([m, label, icon]) => (
+          <button key={m} role="tab" aria-selected={mode === m} onClick={() => pick(m)}
+            className={cx("flex h-7 items-center justify-center gap-1.5 rounded-[7px] text-[12.5px]", mode === m ? "bg-surface font-semibold text-ink shadow-[0_1px_2px_rgba(0,0,0,.18)] [&>svg]:text-accent" : "text-muted hover:text-ink")}>
+            {icon}{label}
+          </button>
+        ))}
+      </div>
+      {mode === "ask" ? <div className="p-3.5"><AskVault note={note} /></div> : <AI note={note} />}
+    </div>
+  );
 }
 
 function AI({ note }: { note: Note }) {

@@ -106,3 +106,57 @@ export function unfurl(url: string): Promise<Unfurl | null> {
   }
   return unfurlCache.get(url)!;
 }
+
+export interface AskSource { n: number; title: string; heading?: string; text: string }
+/**
+ * "Ask your vault" (worker/ext/ask.ts): question + numbered excerpts → grounded answer. Streams (SSE from Workers AI)
+ * and calls `onDelta` with the text so far; falls back to a plain JSON answer. Resolves with the full answer.
+ */
+export async function aiAsk(question: string, sources: AskSource[], onDelta: (text: string) => void, signal?: AbortSignal): Promise<string> {
+  const sim = await simApi("/ai/ask", "POST");
+  if (sim && "mock" in sim) {
+    // Dev simulator: a canned answer that cites the retrieved excerpts, streamed word by word.
+    const cite = (i: number) => (sources[i] ? `[${sources[i].n}]` : "");
+    const full = sources.length
+      ? `**Mock answer (simulator).** Your notes describe this in ${sources.length} places ${cite(0)}. ${sources[1] ? `Another note adds detail ${cite(1)}${cite(2)}.` : ""}\n\n- First point from your notes ${cite(0)}\n- Second point ${cite(1) || cite(0)}`
+      : "Not in your notes.";
+    let out = "";
+    for (const w of full.split(/(?<=\s)/)) { if (signal?.aborted) break; out += w; onDelta(out); await new Promise((r) => setTimeout(r, 25)); }
+    return out;
+  }
+  if (sim) { if (sim.status === 401) setToken(null); throw new ApiError(sim.error, sim.status); }
+  const headers = new Headers({ "Content-Type": "application/json" });
+  const tok = getToken();
+  if (tok) headers.set("Authorization", `Bearer ${tok}`);
+  const res = await fetch(API_BASE + "/api/ai/ask", { method: "POST", headers, body: JSON.stringify({ question, sources }), signal });
+  const type = res.headers.get("content-type") ?? "";
+  if (!res.ok) {
+    const data = type.includes("json") ? ((await res.json()) as { error?: string }) : { error: await res.text() };
+    if (res.status === 401) { setToken(null); forgetAccount(getAccount()); }
+    throw new ApiError(data?.error || `HTTP ${res.status}`, res.status);
+  }
+  if (type.includes("json")) { const t = ((await res.json()) as { text?: string }).text ?? ""; onDelta(t); return t; }
+  if (!res.body) { const t = await res.text(); onDelta(t); return t; }
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "", out = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i: number;
+    while ((i = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, i).trim();
+      buf = buf.slice(i + 1);
+      if (!line.startsWith("data:")) continue;
+      const d = line.slice(5).trim();
+      if (!d || d === "[DONE]") continue;
+      try {
+        const j = JSON.parse(d) as { response?: string; choices?: { delta?: { content?: string } }[] };
+        const piece = j.response ?? j.choices?.[0]?.delta?.content ?? "";
+        if (piece) { out += piece; onDelta(out); }
+      } catch { /* partial / keep-alive line */ }
+    }
+  }
+  return out.trim();
+}

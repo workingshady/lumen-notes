@@ -417,6 +417,10 @@ a.link-card.lc-failed { height: auto; } .lc-failed { border-style: dashed; backg
 .mermaid-card .mm-tocanvas { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 6px; color: var(--text); border: 1px solid var(--border); } .mermaid-card .mm-tocanvas:hover { background: var(--surface-2); }
 .diagram-file .mermaid-card .mm-head > span:first-child { visibility: visible; }
 .diagram-node > .prose, .diagram-node > .prose > .mermaid-card { width: 100%; }
+/* Fullscreen must always paint a themed background: canvas nodes and slides set the card transparent,
+   which otherwise shows the browser's default black ::backdrop through the diagram. */
+.mermaid-card:fullscreen { background: var(--bg) !important; color: var(--text); border: 0; border-radius: 0; margin: 0; }
+.mermaid-card::backdrop { background: var(--bg, #0f1115); }
 /* Export dialog preview: checkerboard shows transparency. */
 .export-checker { background-color: var(--surface); background-image: linear-gradient(45deg, color-mix(in srgb, var(--text) 7%, transparent) 25%, transparent 25%, transparent 75%, color-mix(in srgb, var(--text) 7%, transparent) 75%), linear-gradient(45deg, color-mix(in srgb, var(--text) 7%, transparent) 25%, transparent 25%, transparent 75%, color-mix(in srgb, var(--text) 7%, transparent) 75%); background-size: 16px 16px; background-position: 0 0, 8px 8px; }
 

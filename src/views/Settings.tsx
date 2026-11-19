@@ -25,6 +25,7 @@ import { AISection, BlogSection } from "./settings-blog-ai";
 import { DiagramsSection } from "./settings-diagrams";
 import { AccountSwitcher } from "../components/AccountSwitcher";
 import { ReadingSection } from "./settings-reading";
+import { ReviewSettings } from "./settings-review";
 
 type SecId = "appearance" | "branding" | "reading" | "diagrams" | "sync" | "sharing" | "blog" | "storage" | "ai" | "developer" | "about";
 // Round-3 settings nav (Lumen 09 / 11): Appearance · Branding · Sync · Sharing · Blog · Storage · AI · Developer · About.
@@ -169,7 +170,7 @@ export function SettingsView() {
         <div className={cx("pb-10 md:px-10 md:py-7", sec === "appearance" ? "max-md:px-0" : "px-4")}>
           {sec === "appearance" && <Appearance />}
           {sec === "branding" && <Branding />}
-          {sec === "reading" && <ReadingSection />}
+          {sec === "reading" && <><ReadingSection /><ReviewSettings /></>}
           {sec === "diagrams" && <DiagramsSection />}
           {sec === "sync" && <><SyncSection /><div className="mt-6"><AppLockSetting /></div></>}
           {sec === "sharing" && <SharingSection />}

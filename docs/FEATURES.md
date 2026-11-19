@@ -21,7 +21,10 @@ Research basis: Obsidian (plain Markdown files, `[[links]]`, backlinks, graph vi
 | Inline `#tags` + front-matter tags | ✅ | |
 | Embedded canvas in a note (fenced `canvas` block with JSON Canvas) | ✅ | |
 | Formatting toolbar (bold, italic, heading, list, task, quote, code, math, mermaid, table, link) | ✅ | mobile: sticky above keyboard |
-| Slash commands `/` in editor | 🔜 | |
+| Slash commands `/` in editor | ✅ | see 3b |
+| **Block editing** (`lib/blocks.ts`, `editor-blocks.ts`): ⋮⋮ handle on every top-level block (drag to move with drop line, click for menu, Shift/Ctrl-click or long-press to multi-select); **Turn into** text/H1–H3/lists/quote/code/toggle/callouts; duplicate, move (Alt+↑/↓), delete, Mod+Shift+D; RTL-aware; one undo step per action | ✅ | |
+| **Block references**: `^id` anchors (Obsidian rules), `[[Note#^id]]` jumps + highlights, `![[Note#^id]]` embeds one block, `[[Note#^` autocomplete adds missing ids, Copy link to block | ✅ | |
+| **Paste menu** (> 200 chars or inline URL): Keep · Clean up formatting · As quote · As link card · Summarize with AI · Make flashcards with AI | ✅ | |
 | Images & files: paste, drag-drop, pick, or phone camera → stored on device (IndexedDB) and uploaded free to **Cloudflare D1 in 1.5 MB parts** (max 100 MB/file, Range streaming for video); `![](att:id)` links work offline and online | ✅ | |
 | Voice notes → text (Workers AI Whisper, Arabic + English) | ✅ | |
 | Properties panel (front-matter key/value: source, course, due, url…) | ✅ | |
@@ -33,9 +36,16 @@ Research basis: Obsidian (plain Markdown files, `[[links]]`, backlinks, graph vi
 |---|---|---|
 | **Edit** | ✅ | editor only |
 | **Split** | ✅ | editor + live preview (desktop default) |
-| **Read** | ✅ | rendered note, typographic reading layout (mobile default) |
+| **Read** | ✅ | rendered note, typographic reading layout (mobile default); page width Fixed / Wide / Full per note (↔ in the header, front-matter `width:`); wide tables and `::: wide` / `::: full` blocks break out of the text column |
+| **Page layout blocks** | ✅ | `::: columns` + `::: column 30%` (2, 3, main + sidebar; stack on narrow screens; `{.cards}` `{.divided}`), `::: tabs` (each heading = a tab), `::: expand Title`, panels `::: info/note/tip/warning/danger/success Title`, `::: wide`, `::: full`, `::: aside`, `::: center`; Pandoc/Quarto spellings accepted (`:::: {.columns}`, `{.panel-tabset}`, `.column-page`). More › Insert layout adds them |
+| **Tables** | ✅ | framed scroll box, sticky header, zebra rows, click a header to sort (view only), filter box on long tables, row count, full screen, sticky first column + scroll fade on wide tables, columns sized by content; `{.wide .compact .nowrap .plain}` under a table |
+| **Doc extras** | ✅ | `![[Note]]` / `![[Note#Heading]]` live includes (3 levels, no loops), `:status[In review]` pills (colour from the text or `{green}`), `[[toc]]` contents box |
 | **Focus / Zen** | ✅ | chrome hidden, centered column, typewriter feel |
 | **Slides** | ✅ | `---` separates slides; images (uploaded or URL), YouTube/Vimeo and uploaded video, Mermaid, math, tables, code; media auto-fits the slide; keyboard / swipe; fullscreen |
+| **Slide layouts** | ✅ | `<!-- layout: … -->` per slide: title, section, default, center, two-cols, image-left/right (`split: 40%`), cards, stat, quote, full, blank; regions `::left::` `::right::` `::1::`…; Marp `![bg](url)` / `![bg left:40%](url)`; `class: invert/accent`; text auto-shrinks to fit (to 62%) |
+| **Free placement** | ✅ | `::: box x=10 y=20 w=40 h=30 {.card .center}` (percent of the slide); Arrange mode (A) drags/resizes boxes and writes the numbers back; + Box adds one |
+| **Doc → deck** | ✅ | any note without `---` slides is laid out automatically: H1 cover, section slides, layout picked from content (2 sub-sections → two-cols, 3–6 → cards, numbers → stat, quote, image + text, diagram/table full), long prose → speaker notes, long lists/tables → "(cont.)" slides; "Save as deck" / More › Make a slide deck turns it into editable slide Markdown |
+| **Presenting** | ✅ | overview grid (O), type a number + Enter to jump, B / . black screen, P presenter view, audience window, phone remote |
 | **Review** | ✅ | flashcards from the note (`Question :: Answer` or `?` lines) |
 | Canvas | ✅ | infinite board of cards/notes/links/groups |
 | Graph | ✅ | force-directed note graph, global + local |
@@ -143,12 +153,16 @@ Chosen over tldraw because Excalidraw is MIT-licensed with no production license
 | Feature | Status |
 |---|---|
 | Flashcards from Markdown (`Q :: A`, multiline `?` separator) | ✅ |
-| Spaced repetition scheduling (SM-2) with due counts | ✅ |
+| Spaced repetition scheduling with due counts: **FSRS-6** (`lib/fsrs.ts`, target retention in Settings › Review, default 0.9); older SM-2 cards migrate on their next review | ✅ |
+| **Concept practice** (path concept sheet): AI quiz (MCQ + short answer) from the concept's notes, falls back to their flashcards offline; save questions as cards; **test out** marks the concept learned | ✅ |
+| **Ask your vault** (`lib/ask-retrieve.ts`, `/api/ai/ask`): question → on-device BM25 passages → streamed Workers AI answer with numbered citations; scope vault / space / note + links / learning path; Arabic + English; AI tab › Ask vault, palette "Ask your notes…" (Ctrl/⌘⇧A) | ✅ |
 | Learning status + progress dashboard (notes by status, streak, due cards, words written) | ✅ |
 | Study streak / activity heatmap | ✅ |
 | Cornell notes template, lesson template with objectives / summary / questions | ✅ |
-| FSRS scheduler | 🔜 |
+| FSRS scheduler | ✅ |
 | Cloze deletions `==text==` | 🔜 |
+
+| **Bases** (`type: base`, Obsidian Bases YAML, see `docs/BASES.md`): Table · Board · Gallery · List · Calendar views of notes with filters, sort, group, inline editing, drag cards between columns/days (writes front matter) | ✅ |
 
 ## 7b. Productivity views
 | Feature | Status |
@@ -189,6 +203,10 @@ One concept-first roadmap on top of several overlapping courses. Each course kee
 | Combine any course spaces / roadmap notes; same-named topics merge into one concept automatically | ✅ |
 | **Overlap suggestions** across courses (similar names, e.g. "Backprop by hand" ≈ "Backpropagation") with one-click Merge / "Different" | ✅ |
 | Prerequisites merged across all courses; locked/unlocked concepts | ✅ |
+| **Mastery rules**: a concept is *learned* when you mark it ("I already know this") or finish its lessons in **any one** course (other courses = optional material); *locked* until its prerequisites are learned; *mastered* when spaced reviews reach the 14-day step; learning a concept counts as an implicit review of its direct prerequisites. Course lesson ticks stay per course | ✅ |
+| Collapsible path summary (auto-collapsed for paths with > 6 courses); course chips open the course page; Back returns to the page a note was opened from | ✅ |
+| **Slash commands** (`lib/slash.ts`): `/` at line start or after a space opens a grouped menu (Basic · Layout · Panels & callouts · Media & embeds · Knowledge · Advanced, 55 blocks, Confluence/Notion/Obsidian names as aliases); `//` = today's date; never inside URLs or code fences. Same catalog drives the visual **Insert layout** gallery in the note ⋯ menu | ✅ |
+| **Browser history**: every page (note, space, list, filter) is a history entry: browser / Android Back + Forward, phone gesture and the in-app Back arrow walk the same sequence; Back closes sheets / modes / keyboard first; clickable breadcrumb (space → its page, folder → its list) | ✅ |
 | **Stages** board (drag concepts between stages, rename/reorder stages, "Not placed yet" lane) | ✅ |
 | **Matrix**: concepts × courses with per-course status and overlap count (2×, 3×) | ✅ |
 | **Graph**: left→right by prerequisite depth, course color bars, stage badge | ✅ |
@@ -198,6 +216,7 @@ One concept-first roadmap on top of several overlapping courses. Each course kee
 | Resources per concept: YouTube/Vimeo/course videos play inline; articles/books/courses as links; links in course lesson notes collected automatically | ✅ |
 | Auto-organize (stages from prerequisite depth) and AI organize (Workers AI groups + merges) | ✅ |
 | Dev simulator scenario "Learning paths" (ML Foundations + CS231n + fast.ai) | ✅ |
+| **Drag-and-drop editing**: roadmap outline (reorder topics/modules, drop on a topic = prerequisite, + New module, drag notes in from the Notes tray, Alt+↑/↓), skill tree (+ Topic chip, connect to empty canvas = new dependent topic, click an arrow to remove); path stages (reorder/move/merge concepts, reorder stages, drop notes, Alt+arrows), path graph `needs:` edges; loops refused; phones use ⋯ menus instead of drag; empty roadmap opens as a builder | ✅ |
 
 ## 3c. Project hub (software projects, links only)
 Project spaces become a hub for building software. Nothing connects to GitHub/Bitbucket: repo, PR, Figma and Jira are plain links.

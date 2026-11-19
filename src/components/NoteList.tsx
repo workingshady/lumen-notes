@@ -1,6 +1,6 @@
 import { NewVisualChooser } from "./NewVisualChooser";
 import { NewPathDialog } from "./NewPathDialog";
-import { ArrowDownWideNarrow, Globe, Link2, Pin, Plus, SquarePen, Star, X } from "lucide-react";
+import { ArrowDownWideNarrow, Globe, LayoutTemplate, Table2, Link2, Pin, Plus, SquarePen, Star, X } from "lucide-react";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { Note, Space } from "../../shared/types";
 import { createNote } from "../lib/actions";
@@ -15,7 +15,7 @@ import { PhoneChips, PhoneListHeader, SwipeRow, type PhoneFilter } from "./ws-ph
 import { num, tr, useRtl } from "./ws-dir";
 
 type Sort = "updated" | "created" | "title";
-const TYPE_ICON: Record<Note["type"], string> = { note: "", lesson: "📘", journal: "📓", flashcards: "🧠", slides: "📽️", post: "✍️", canvas: "🧩", whiteboard: "🖍️", roadmap: "🗺️", moc: "🧭", path: "🛤️", diagram: "📈" };
+const TYPE_ICON: Record<Note["type"], string> = { note: "", lesson: "📘", journal: "📓", flashcards: "🧠", slides: "📽️", post: "✍️", canvas: "🧩", whiteboard: "🖍️", roadmap: "🗺️", moc: "🧭", path: "🛤️", diagram: "📈", base: "🗃️" };
 const useWide = () => { const [w, setW] = useState(() => innerWidth >= 900); useEffect(() => { const f = () => setW(innerWidth >= 900); addEventListener("resize", f); return () => removeEventListener("resize", f); }, []); return w; };
 
 /** Body without front-matter and the title H1 (the title is shown above the excerpt). */
@@ -124,7 +124,9 @@ export function NoteList() {
           ))}
           {more}
           {empty}
+          <button onClick={() => setTpl(true)} className="mx-auto my-3 flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[13px] text-muted active:bg-surface"><LayoutTemplate size={14} />New from template · base</button>
         </div>
+        <TemplatePicker open={tpl} onClose={() => setTpl(false)} spaceId={spaceId} folderId={ui.folderId} />
       </div>
     );
   }
@@ -139,6 +141,7 @@ export function NoteList() {
         <span className="flex-1" />
         {ui.filter === "published" && <a href="/blog" target="_blank" rel="noreferrer" className="text-[12px] text-link">View blog ↗</a>}
         <button title={`Sort: ${sort}`} aria-label="Sort" className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={cycleSort}><ArrowDownWideNarrow size={15} /></button>
+        <button title="New base (database view of notes) or another template" aria-label="New base" className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={() => setTpl(true)}><Table2 size={15} /></button>
         <button title={ui.filter === "visual" ? "New canvas or whiteboard" : ui.filter === "paths" ? "New learning path" : "New note (right-click: from template)"} aria-label="New note" className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={() => (ui.filter === "visual" ? setChooser(true) : ui.filter === "paths" ? setPathDlg(true) : newNote())} onContextMenu={(e) => { e.preventDefault(); setTpl(true); }}><SquarePen size={15} /></button>
       </div>
       <div className={cx("flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-1.5", over && "bg-accent/5 ring-1 ring-inset ring-accent/40")}>
@@ -186,8 +189,8 @@ export function TemplatePicker({ open, onClose, spaceId, folderId }: { open: boo
   return (
     <Sheet open={open} onClose={onClose} title="New from template">
       <div className="grid grid-cols-2 gap-2">
-        {TEMPLATES.map((t) => (
-          <button key={t.id} onClick={async () => { onClose(); openNote((await createNote({ template: t.id, spaceId, folderId })).id, t.type === "slides" || t.type === "canvas" || t.type === "whiteboard" ? undefined : "edit"); }}
+        {[...TEMPLATES.filter((t) => t.type === "base"), ...TEMPLATES.filter((t) => t.type !== "base")].map((t) => (
+          <button key={t.id} onClick={async () => { onClose(); openNote((await createNote({ template: t.id, spaceId, folderId })).id, t.type === "slides" || t.type === "canvas" || t.type === "whiteboard" ? undefined : t.type === "base" ? "read" : "edit"); }}
             className="rounded-[10px] border border-line p-3 text-start hover:border-accent">
             <div className="text-[13.5px] font-semibold">{TYPE_ICON[t.type]} {t.name}</div>
             <div className="text-[12px] text-muted">{t.hint}</div>

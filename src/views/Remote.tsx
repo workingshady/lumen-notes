@@ -117,7 +117,7 @@ function PhoneRemote({ code }: { code: string }) {
               const r = e.currentTarget.getBoundingClientRect();
               send(e.clientX - r.left < r.width / 3 ? "prev" : "next");
             }}>
-            <SlideStage key={st.i + st.md} note={{ id: st.noteId, spaceId: st.spaceId }} md={st.md} blank={st.blank} onZoom={(src, alt) => setZoom({ src, alt })} />
+            <SlideStage key={st.i + st.md} note={{ id: st.noteId, spaceId: st.spaceId }} md={st.md} dirs={st.dirs} blank={st.blank} onZoom={(src, alt) => setZoom({ src, alt })} />
             {st.blank && <span className="absolute inset-0 flex items-center justify-center gap-2 text-[13px] text-muted"><EyeOff size={15} />Screen blanked</span>}
           </div>
         ) : (
@@ -175,7 +175,7 @@ function Audience({ id }: { id: string }) {
   });
   return (
     <div className="flex h-full items-center justify-center bg-black text-muted" onClick={() => send("next")} onDoubleClick={() => void document.documentElement.requestFullscreen?.()}>
-      {st ? <SlideStage key={st.i + st.md} note={{ id: st.noteId, spaceId: st.spaceId }} md={st.md} blank={st.blank} frameless /> : "Waiting for the presenter… (F for full screen)"}
+      {st ? <SlideStage key={st.i + st.md} note={{ id: st.noteId, spaceId: st.spaceId }} md={st.md} dirs={st.dirs} blank={st.blank} frameless /> : "Waiting for the presenter… (F for full screen)"}
     </div>
   );
 }

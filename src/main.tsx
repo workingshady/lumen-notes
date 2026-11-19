@@ -4,6 +4,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import "./layout.css";
 import { DEMO, db, ensureDefaults, getMeta, setMeta } from "./lib/db";
 import { applyTheme } from "./lib/settings";
 import { startSync } from "./lib/sync";

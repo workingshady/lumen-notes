@@ -26,6 +26,8 @@ export interface UI {
   newSpace: boolean;
   io: boolean;
   history: string[];
+  /** Where a note was opened from when that wasn't a note list (home, a space page, review…): Back returns there. */
+  returnTo?: { view: View; spaceId: string; folderId: string | null; filter: UI["filter"]; tag: string | null } | null;
 }
 
 const KEY = "lumen.ui";
@@ -42,11 +44,14 @@ let ui: UI = (() => {
 const subs = new Set<() => void>();
 export const useUI = () => useSyncExternalStore((f) => (subs.add(f), () => subs.delete(f)), () => ui);
 export const getUI = () => ui;
+/** Plain (non-React) subscription to UI changes; used by the browser-history sync (lib/nav-history.ts). */
+export const subscribeUI = (f: () => void) => { subs.add(f); return () => { subs.delete(f); }; };
 export function setUI(p: Partial<UI> | ((u: UI) => Partial<UI>)) {
   ui = { ...ui, ...(typeof p === "function" ? p(ui) : p) };
   try {
-    const { view, noteId, spaceId, folderId, mode, panel, sidebar, list } = ui;
-    localStorage.setItem(KEY, JSON.stringify({ view, noteId, spaceId, folderId, mode, panel, sidebar, list }));
+    // filter/tag are saved too: otherwise a reload inside "Canvases" or "Learning paths" fell back to the space list (often Inbox)
+    const { view, noteId, spaceId, folderId, tag, filter, mode, panel, sidebar, list, returnTo } = ui;
+    localStorage.setItem(KEY, JSON.stringify({ view, noteId, spaceId, folderId, tag, filter, mode, panel, sidebar, list, returnTo }));
   } catch { /* ignore */ }
   subs.forEach((f) => f());
 }
@@ -56,13 +61,18 @@ export function openNote(id: string, mode?: Mode) {
     view: "notes", noteId: id, ...(mode ? { mode } : {}),
     history: u.noteId && u.noteId !== id ? [...u.history.slice(-30), u.noteId] : u.history,
     sidebar: docked() ? u.sidebar : false,
+    // opened from a page that isn't the note list (home, a course/space page, review…) → remember it for Back
+    returnTo: u.view !== "notes" ? { view: u.view, spaceId: u.spaceId, folderId: u.folderId, filter: u.filter, tag: u.tag } : u.noteId ? u.returnTo : null,
   }));
 }
-export const go = (view: View, extra: Partial<UI> = {}) => setUI((u) => ({ view, sidebar: docked() ? u.sidebar : false, ...extra }));
+export const go = (view: View, extra: Partial<UI> = {}) => setUI((u) => ({ view, sidebar: docked() ? u.sidebar : false, returnTo: null, ...extra }));
 export function back() {
   setUI((u) => {
     const prev = u.history[u.history.length - 1];
-    return prev ? { noteId: prev, history: u.history.slice(0, -1), view: "notes" } : { noteId: null };
+    if (prev) return { noteId: prev, history: u.history.slice(0, -1), view: "notes" };
+    // first note of the trip: go back to the page it was opened from instead of an unrelated note list
+    if (u.returnTo) return { ...u.returnTo, noteId: null, returnTo: null };
+    return { noteId: null };
   });
 }
 

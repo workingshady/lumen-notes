@@ -1,12 +1,16 @@
-import { Handle, Position, ReactFlow, ReactFlowProvider, useReactFlow, ViewportPortal, type Connection, type Edge, type Node as RFNode, type NodeProps } from "@xyflow/react";
-import { Ban, Check, ChevronDown, ChevronRight, Columns2, FileText, GanttChart, GitFork, ListTree, Lock, Minus, MoveHorizontal, Plus, Scan, X } from "lucide-react";
-import { createContext, memo, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from "react";
+import { Handle, MarkerType, Position, ReactFlow, ReactFlowProvider, useReactFlow, ViewportPortal, type Connection, type Edge, type Node as RFNode, type NodeProps } from "@xyflow/react";
+import { ArrowDown, ArrowUp, Ban, Check, ChevronDown, ChevronRight, Columns2, FileText, GanttChart, GitFork, GripVertical, Link2, ListTree, Lock, Minus, MoveHorizontal, NotebookPen, Plus, Scan, Trash2, X } from "lucide-react";
+import { createContext, memo, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type PointerEvent as RPointerEvent } from "react";
 import type { Note } from "../../shared/types";
 import { createNote, updateNote } from "../lib/actions";
-import { excerpt, flashcards, linkTopicNote, progress, roadmap, setTopicStatus, type Module, type Topic, type TopicStatus } from "../lib/parse";
-import { openNote, useVault, type Vault } from "../lib/store";
+import {
+  addModule, addTopic, addTopicNeed, deleteModule, deleteTopic, excerpt, flashcards, linkTopicNote, moveModule, moveTopic, nudgeModule, nudgeTopic, progress, removeTopicNeed,
+  renameModule, renameTopic, roadmap, setTopicDue, setTopicNeeds, setTopicStatus, topicBlock, topicLineByName, uniqueTopicName, type Module, type Topic, type TopicStatus,
+} from "../lib/parse";
+import { openNote, toast, useVault, type Vault } from "../lib/store";
 import { cx, StatusDot } from "../components/ui";
 import { DAY, fmtDay, fmtLong, isoDay, todayIso, usePhone } from "./spaces-util";
+import { announce, dragging, dragKind, dropData, endDrag, NotesTray, startDrag, useConfirm, useRefocus, zoneY } from "./dnd-parts";
 
 const NEXT: Record<TopicStatus, TopicStatus> = { todo: "learning", learning: "done", done: "todo", skipped: "todo" };
 const STATUS_LABEL: Record<TopicStatus, string> = { todo: "Todo", learning: "Learning", done: "Done", skipped: "Skipped" };
@@ -55,24 +59,9 @@ export async function openTopicNote(note: Note, t: Topic, byTitle: Map<string, N
   openNote(n.id, mode ?? "edit");
 }
 
-// Line edits (same Markdown syntax the parser reads).
-function editLine(md: string, line: number, f: (l: string) => string) {
-  const lines = md.split("\n");
-  lines[line] = f(lines[line]);
-  return lines.join("\n");
-}
-function insertBeforeTail(l: string, frag: string, tail: RegExp) {
-  const m = tail.exec(l);
-  return m ? `${l.slice(0, m.index).trimEnd()} ${frag} ${l.slice(m.index).trimStart()}` : `${l.trimEnd()} ${frag}`;
-}
-export const setTopicNeeds = (md: string, line: number, needs: string[]) => editLine(md, line, (l) => {
-  const s = l.replace(/\s*\(needs:[^)]*\)/i, "");
-  return needs.length ? insertBeforeTail(s, `(needs: ${needs.join(", ")})`, /\s(📅|→|->)/u) : s;
-});
-export const setTopicDue = (md: string, line: number, due: string | null) => editLine(md, line, (l) => {
-  const s = l.replace(/\s*📅\s*\d{4}-\d{2}-\d{2}/u, "");
-  return due ? insertBeforeTail(s, `📅 ${due}`, /\s(→|->)/) : s;
-});
+// Line edits live in lib/parse.ts (pure Markdown rewrites); re-exported for older imports.
+export { setTopicDue, setTopicNeeds };
+const sel$ = (attr: string, v: string) => `[${attr}="${CSS.escape(v)}"]`;
 
 /** First prose of a lesson (skips front-matter, headings, callouts, lists, code), keeping hyphens. */
 function lessonExcerpt(md: string) {
@@ -163,39 +152,82 @@ function Legend() {
  */
 export function RoadmapView({ note, compact, target, view: cView, onView }: { note: Note; compact?: boolean; target?: string | null; view?: RoadmapViewKind; onView?: (v: RoadmapViewKind) => void }) {
   const [uView, setUView] = useState<RoadmapViewKind>("outline");
-  const view = cView ?? uView;
-  const setView = onView ?? setUView;
-  const [sel, setSel] = useState<number | null>(null);
   const mods = useMemo(() => roadmap(note.body), [note.body]);
+  const empty = !mods.some((m) => m.topics.length);
+  // an empty roadmap opens as the "Create roadmap" builder: outline + notes to drag in
+  const view = empty ? "outline" : cView ?? uView;
+  const setView = onView ?? setUView;
+  // selection follows the topic by name, so it survives reorders that change line numbers
+  const [selKey, setSelKey] = useState<string | null>(null);
   const fresh = useJustUnlocked(mods);
   const phone = usePhone();
   const p = progress(mods);
   const v = useVault();
   const all = mods.flatMap((m) => m.topics);
   const cur = currentTopic(mods);
-  const selected = sel === null ? undefined : all.find((t) => t.line === sel);
+  const selected = selKey === null ? undefined : all.find((t) => t.name.toLowerCase() === selKey);
+  const sel = selected?.line ?? null;
+  const select = (t: Topic) => setSelKey(t.name.toLowerCase());
+  // the builder keeps its notes list open after the first drop (the roadmap stops being empty then)
+  const [trayPref, setTray] = useState<boolean | null>(() => (empty ? true : null));
+  const tray = !phone && view === "outline" && (trayPref ?? empty);
+  const [confirmNode, confirm] = useConfirm();
 
-  const write = (body: string) => void updateNote(note.id, { body });
+  const write = (body: string) => { if (body !== note.body) void updateNote(note.id, { body }); };
   const setStatus = (t: Topic, s: TopicStatus) => write(setTopicStatus(note.body, t.line, s));
   const openTopic = (t: Topic, mode?: "edit" | "split") => void openTopicNote(note, t, v.byTitle, mode);
   const addNeed = (topicLine: number, prereqLine: number) => {
+    const md = addTopicNeed(note.body, topicLine, prereqLine);
     const t = all.find((x) => x.line === topicLine), d = all.find((x) => x.line === prereqLine);
-    if (!t || !d || t.line === d.line || t.needs.some((n) => n.toLowerCase() === d.name.toLowerCase())) return;
-    if (ancestors(all, d).has(t.line)) return; // would create a cycle
-    write(setTopicNeeds(note.body, t.line, [...t.needs, d.name]));
+    if (md === note.body) { if (t && d && t.line !== d.line && !t.needs.some((n) => n.toLowerCase() === d.name.toLowerCase())) toast("That would make a loop: it already depends on this topic."); return; }
+    write(md);
+    announce(`${t?.name} now needs ${d?.name}`);
   };
   const setDue = (t: Topic, due: string | null) => write(setTopicDue(note.body, t.line, due));
   const stats = (t: Topic) => topicStats(v, note, t);
+  /** New topic (palette drop, edge dropped on the canvas, "+ Topic"): optionally needing another one; it opens selected. */
+  const createTopic = (module: number | null, needs?: Topic) => {
+    const name = uniqueTopicName(mods);
+    let md = addTopic(note.body, module ?? (mods.length ? mods.length - 1 : null), name);
+    const line = topicLineByName(md, name);
+    if (needs && line !== null) md = setTopicNeeds(md, line, [needs.name]);
+    write(md);
+    setSelKey(name.toLowerCase());
+    announce(`Added ${name}${needs ? `, needs ${needs.name}` : ""}`);
+  };
+  const removeTopic = (t: Topic) => confirm(<>Delete topic “<b dir="auto">{t.name}</b>”? Topics that need it stop needing it.</>, "Delete", () => {
+    write(deleteTopic(note.body, t.line));
+    if (selKey === t.name.toLowerCase()) setSelKey(null);
+    announce(`Deleted ${t.name}`);
+  }, true);
+  const removeNeed = (t: Topic, name: string) => { write(removeTopicNeed(note.body, t.line, name)); announce(`${t.name} no longer needs ${name}`); };
+  const ops: TopicOps = {
+    body: note.body, write, mods, remove: removeTopic,
+    rename: (t, name) => { const md = renameTopic(note.body, t.line, name); write(md); if (md !== note.body) setSelKey(name.trim().replace(/[()]/g, "").toLowerCase()); },
+  };
+  // Delete / Backspace removes the selected node in the skill tree
+  useEffect(() => {
+    if (view !== "tree" || !selected) return;
+    const k = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      if ((e.key === "Delete" || e.key === "Backspace") && !/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && !el.isContentEditable) { e.preventDefault(); removeTopic(selected); }
+    };
+    addEventListener("keydown", k);
+    return () => removeEventListener("keydown", k);
+  });
+  const used = useMemo(() => new Set(mods.flatMap((m) => m.topics).flatMap((t) => [t.name.toLowerCase(), ...(t.note ? [t.note.toLowerCase()] : [])])), [mods]);
+  const pickNote = (n: Note) => {
+    if (used.has(n.title.toLowerCase())) return;
+    write(mods.length ? addTopic(note.body, mods.length - 1, n.title, { note: n.title }) : addModule(note.body, "Module 1", [{ name: n.title, note: n.title }]));
+    announce(`Added ${n.title}`);
+  };
 
-  if (!mods.some((m) => m.topics.length)) {
-    return <div className="p-8 text-[13px] text-muted">No topics yet. Switch to <b>Edit</b> and add lines like <code>- [ ] Topic (needs: Other)</code> under <code>## Module</code> headings.</div>;
-  }
   return (
     <UnlockCtx.Provider value={fresh}>
       <style>{STYLE}</style>
       <div className={cx("flex h-full min-h-0 flex-col", !compact && "relative")}>
         {phone ? (
-          <div className={cx("px-4", view === "tree" ? "pb-2.5" : "pb-3 pt-1")}><ViewSwitch view={view} onView={setView} phone /></div>
+          <div className={cx("px-4", view === "tree" ? "pb-2.5" : "pb-3 pt-1")}>{empty ? <p className="text-[15px] font-semibold">Create roadmap</p> : <ViewSwitch view={view} onView={setView} phone />}</div>
         ) : (
           <div className={cx("flex flex-wrap items-center gap-4 border-b border-line", compact ? "mx-12 mt-5 pb-3.5" : "px-6 py-3")}>
             {!compact && (
@@ -204,25 +236,39 @@ export function RoadmapView({ note, compact, target, view: cView, onView }: { no
                 <div className="flex flex-col text-[12px] text-muted"><span><b className="font-semibold text-ink">{p.done}</b> of {p.total} topics</span><span>{all.filter((t) => t.status === "learning").length} learning · {all.filter((t) => t.locked).length} locked</span></div>
               </div>
             )}
-            <ViewSwitch view={view} onView={setView} />
+            {empty ? <span className="text-[14px] font-semibold">Create roadmap</span> : <ViewSwitch view={view} onView={setView} />}
             <span className="flex-1" />
-            <Legend />
+            {!empty && <Legend />}
+            {view === "outline" && (
+              <button onClick={() => setTray(!tray)} aria-pressed={tray} title="Drag notes in to make them topics"
+                className={cx("flex h-7 items-center gap-1.5 rounded-[8px] border px-2.5 text-[12.5px]", tray ? "border-accent/50 bg-accent/10 text-ink" : "border-line text-muted hover:text-ink")}>
+                <NotebookPen size={13} />Add notes
+              </button>
+            )}
           </div>
         )}
-        <div className={cx("min-h-0 flex-1", view === "tree" ? "relative overflow-hidden" : "overflow-auto")}>
-          {view === "outline" && (phone
-            ? <PhoneOutline mods={mods} cur={selected?.line ?? cur?.line} stats={stats} onSelect={(t) => setSel(t.line)} />
-            : <Outline mods={mods} cur={selected?.line ?? cur?.line} onStatus={setStatus} onOpen={openTopic} onSelect={(t) => setSel(t.line)} />)}
-          {view === "tree" && <ReactFlowProvider><Tree mods={mods} sel={sel} phone={phone} onSelect={(t) => setSel(t.line)} onConnect={addNeed} /></ReactFlowProvider>}
-          {view === "timeline" && <Timeline mods={mods} target={target} onSelect={(t) => setSel(t.line)} onDue={setDue} />}
+        <div className="flex min-h-0 flex-1">
+          <div className={cx("min-h-0 min-w-0 flex-1", view === "tree" ? "relative overflow-hidden" : "overflow-auto")}>
+            {view === "outline" && (phone
+              ? <PhoneOutline mods={mods} cur={selected?.line ?? cur?.line} stats={stats} onSelect={select} ops={ops} spaceId={note.spaceId} used={used} onPickNote={pickNote} />
+              : <Outline mods={mods} cur={selected?.line ?? cur?.line} onStatus={setStatus} onOpen={openTopic} onSelect={select} ops={ops} empty={empty} />)}
+            {view === "tree" && <ReactFlowProvider><Tree mods={mods} sel={sel} phone={phone} onSelect={select} onConnect={addNeed} onCreate={createTopic} onRemoveNeed={removeNeed} /></ReactFlowProvider>}
+            {view === "timeline" && <Timeline mods={mods} target={target} onSelect={select} onDue={setDue} />}
+          </div>
+          {tray && <NotesTray className="w-[260px] shrink-0 border-l" spaceId={note.spaceId} used={used} onPick={pickNote} onClose={() => setTray(false)} title="Notes → topics"
+            hint={<>Drag a note onto a module (or between topics) to make it a topic linked to that note.</>} />}
         </div>
         {selected && (phone
-          ? <PhoneTopicSheet note={note} mods={mods} t={selected} stats={stats(selected)} onClose={() => setSel(null)} onStatus={setStatus} onOpen={openTopic} onSelect={(t) => setSel(t.line)} />
-          : <TopicSheet note={note} mods={mods} t={selected} stats={stats(selected)} onClose={() => setSel(null)} onStatus={setStatus} onOpen={openTopic} onSelect={(t) => setSel(t.line)} />)}
+          ? <PhoneTopicSheet note={note} mods={mods} t={selected} stats={stats(selected)} onClose={() => setSelKey(null)} onStatus={setStatus} onOpen={openTopic} onSelect={select} ops={ops} />
+          : <TopicSheet note={note} mods={mods} t={selected} stats={stats(selected)} onClose={() => setSelKey(null)} onStatus={setStatus} onOpen={openTopic} onSelect={select} ops={ops} />)}
+        {confirmNode}
       </div>
     </UnlockCtx.Provider>
   );
 }
+
+/** What the outline / sheets need to rewrite the roadmap. */
+interface TopicOps { body: string; write: (body: string) => void; mods: Module[]; remove: (t: Topic) => void; rename: (t: Topic, name: string) => void }
 
 /** Every topic `t` (transitively) depends on, by line. */
 function ancestors(all: Topic[], t: Topic): Set<number> {
@@ -236,12 +282,35 @@ function ancestors(all: Topic[], t: Topic): Set<number> {
   return out;
 }
 
-// ------------------------------------------------------------------ outline
+/** Every topic that (transitively) needs `t`: what finishing it unlocks. */
+function descendants(all: Topic[], t: Topic): Set<number> {
+  const kids = new Map<string, Topic[]>();
+  for (const x of all) for (const n of x.needs) { const k = n.toLowerCase(); kids.set(k, [...(kids.get(k) ?? []), x]); }
+  const out = new Set<number>();
+  const stack = [t];
+  while (stack.length) {
+    const x = stack.pop()!;
+    for (const c of kids.get(x.name.toLowerCase()) ?? []) if (!out.has(c.line)) { out.add(c.line); stack.push(c); }
+  }
+  return out;
+}
 
-function TopicRow({ t, cur, onStatus, onOpen, onSelect }: { t: Topic; cur?: boolean; onStatus: (t: Topic, s: TopicStatus) => void; onOpen: (t: Topic) => void; onSelect: (t: Topic) => void }) {
+/// ------------------------------------------------------------------ outline
+
+/** Drop feedback on the outline: line before/after a topic, "becomes a prerequisite" ring, module ends, the new-module zone. */
+type Hint = { kind: "before" | "after" | "need"; line: number } | { kind: "mod-before" | "mod-after" | "mod-end"; i: number } | { kind: "new" } | null;
+const hintCls = (h: Hint, line: number) => (h && "line" in h && h.line === line ? (h.kind === "need" ? "pdnd-inside" : `pdnd-${h.kind}`) : "");
+
+type RowDnd = { cls: string; needTag: boolean; over: (e: DragEvent) => void; drop: (e: DragEvent) => void; key: (e: React.KeyboardEvent) => void; dragging: boolean };
+function TopicRow({ t, cur, onStatus, onOpen, onSelect, dnd }: { t: Topic; cur?: boolean; onStatus: (t: Topic, s: TopicStatus) => void; onOpen: (t: Topic) => void; onSelect: (t: Topic) => void; dnd?: RowDnd }) {
   const fresh = useContext(UnlockCtx);
   return (
-    <div onClick={() => onSelect(t)} className={cx("group flex h-[38px] cursor-pointer items-center gap-3 rounded-[8px] pl-[34px] pr-3", cur ? "bg-surface-2" : "hover:bg-surface-2/60", unlockCls(fresh, t))} style={{ opacity: t.locked ? 0.5 : 1 }}>
+    <div onClick={() => onSelect(t)} data-topic={t.name} data-pdnd-row tabIndex={dnd ? 0 : undefined} role={dnd ? "button" : undefined}
+      aria-label={dnd ? `${t.name}, ${STATUS_LABEL[t.status]}. Alt+Up or Alt+Down to move.` : undefined}
+      draggable={!!dnd} onDragStart={dnd && ((e) => startDrag(e, "topic", String(t.line), t.name))} onDragEnd={dnd && (() => endDrag())}
+      onDragOver={dnd?.over} onDrop={dnd?.drop} onKeyDown={dnd?.key}
+      className={cx("group relative flex h-[38px] cursor-pointer items-center gap-3 rounded-[8px] pl-[34px] pr-3", cur ? "bg-surface-2" : "hover:bg-surface-2/60", unlockCls(fresh, t), dnd?.cls, dnd?.dragging && "pdnd-dragging")} style={{ opacity: t.locked && !dnd?.dragging ? 0.5 : undefined }}>
+      {dnd && <GripVertical size={13} aria-hidden className="pdnd-grip absolute left-[10px] top-1/2 -translate-y-1/2 text-muted" />}
       <button title={`${STATUS_LABEL[t.status]}. Click: ${STATUS_LABEL[NEXT[t.status]]}, right-click: skip`}
         onClick={(e) => { e.stopPropagation(); onStatus(t, NEXT[t.status]); }}
         onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onStatus(t, t.status === "skipped" ? "todo" : "skipped"); }}
@@ -251,11 +320,17 @@ function TopicRow({ t, cur, onStatus, onOpen, onSelect }: { t: Topic; cur?: bool
       <span className={cx("w-[230px] min-w-0 shrink-0 truncate font-medium", t.status === "skipped" && "line-through")} dir="auto">{t.name}</span>
       {t.locked && <Lock size={13} className="shrink-0 text-muted" />}
       <span className="min-w-0 flex-1 truncate text-[12px] text-muted">{t.needs.length && t.locked ? `needs ${t.needs.join(", ")}` : ""}</span>
+      {dnd && (
+        <span draggable onDragStart={(e) => startDrag(e, "need", String(t.line), t.name)} onDragEnd={() => endDrag()} onClick={(e) => e.stopPropagation()}
+          title="Drag onto another topic: that topic will need this one" aria-hidden
+          className="pdnd-grip flex size-6 shrink-0 items-center justify-center rounded-[6px] text-muted hover:bg-surface hover:text-accent"><Link2 size={13} /></span>
+      )}
       <button onClick={(e) => { e.stopPropagation(); onOpen(t); }} title={t.note ? `Open ${t.note}` : "Create lesson note"}
         className={cx("flex w-[230px] min-w-0 shrink-0 items-center gap-1.5 text-left text-[12.5px]", t.note ? "text-link hover:underline" : "text-muted hover:text-ink")}>
         {t.note ? <FileText size={13} className="shrink-0" /> : <Plus size={13} className="shrink-0" />}<span className="truncate">{t.note ?? "Create lesson note"}</span>
       </button>
       <span className={cx("w-16 shrink-0 text-right text-[12px] tabular-nums", overdue(t) ? "text-bad" : "text-muted")}>{t.due ? fmtDay(t.due) : ""}</span>
+      {dnd?.needTag && <span className="pdnd-tag">needs this</span>}
     </div>
   );
 }
@@ -274,35 +349,203 @@ function useClosed() {
   return [closed, toggle] as const;
 }
 
-function Outline({ mods, cur, onStatus, onOpen, onSelect }: { mods: Module[]; cur?: number; onStatus: (t: Topic, s: TopicStatus) => void; onOpen: (t: Topic) => void; onSelect: (t: Topic) => void }) {
+/** Inline "+ Add …" input: Enter adds and keeps the field open for the next one. */
+function AddRow({ placeholder, onAdd, className, inputCls, value, onValue }: { placeholder: string; onAdd: (name: string) => void; className?: string; inputCls?: string; value?: string; onValue?: (v: string) => void }) {
+  const [own, setOwn] = useState("");
+  const v = value ?? own;
+  const setV = onValue ?? setOwn;
+  return (
+    <form className={cx("flex items-center gap-2", className)} onSubmit={(e) => { e.preventDefault(); if (v.trim()) { onAdd(v.trim()); setV(""); } }} onClick={(e) => e.stopPropagation()}>
+      <Plus size={13} className="shrink-0 text-muted" />
+      <input value={v} onChange={(e) => setV(e.target.value)} placeholder={placeholder} aria-label={placeholder} dir="auto"
+        className={cx("min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-muted", inputCls)} />
+    </form>
+  );
+}
+
+/** Desktop outline with drag & drop: reorder topics and modules, drop on a topic's middle to make it a prerequisite, drop notes in. */
+function Outline({ mods, cur, onStatus, onOpen, onSelect, ops, empty }: { mods: Module[]; cur?: number; onStatus: (t: Topic, s: TopicStatus) => void; onOpen: (t: Topic) => void; onSelect: (t: Topic) => void; ops: TopicOps; empty?: boolean }) {
   // Modules that are all done start folded, like the design (03/04 collapsed).
   const [closed, toggle] = useClosed();
   const [init] = useState(() => new Set(mods.map((m, i) => (m.topics.length && (m.topics.every(finished) || (cur !== undefined && !m.topics.some((t) => t.line === cur) && i > mods.findIndex((x) => x.topics.some((t) => t.line === cur)) + 1)) ? i : -1)).filter((i) => i >= 0)));
   const isOpen = (i: number) => closed.has(i) === init.has(i);
+  const [hint, setHint] = useState<Hint>(null);
+  const [renaming, setRenaming] = useState<number | null>(null);
+  const [newMod, setNewMod] = useState("");
+  const { body, write } = ops;
+  const refocus = useRefocus(body);
+  const lines = useMemo(() => body.split("\n"), [body]);
+  const all = mods.flatMap((m) => m.topics);
+  const byLine = (l: number) => all.find((t) => t.line === l);
+  const hasTopic = (name: string) => all.some((t) => t.name.toLowerCase() === name.toLowerCase());
+  /** The topic right after `t`'s block in its module (null = t is last): "drop after t" = "insert before that one". */
+  const after = (m: Module, t: Topic) => { const end = topicBlock(lines, t.line)[1]; return m.topics.find((x) => x.line >= end)?.line ?? null; };
+  const draggedLine = () => { const d = dragging(); return d && (d.kind === "topic" || d.kind === "need") ? Number(d.id) : null; };
+  const set = (h: Hint) => setHint((o) => (JSON.stringify(o) === JSON.stringify(h) ? o : h));
+  const finish = () => { setHint(null); endDrag(); };
+  const addNote = (md: string, mi: number, title: string, beforeLine: number | null) => {
+    if (hasTopic(title)) { toast(`“${title}” is already a topic`); return; }
+    write(addTopic(md, mi, title, { note: title, beforeLine }));
+    announce(`Added ${title}`);
+  };
+
+  const rowDnd = (m: Module, mi: number, t: Topic): RowDnd => ({
+    cls: hintCls(hint, t.line),
+    needTag: !!hint && "line" in hint && hint.line === t.line && hint.kind === "need",
+    dragging: draggedLine() === t.line && !!hint,
+    over: (e) => {
+      const k = dragKind(e);
+      if (k !== "topic" && k !== "need" && k !== "note") return;
+      if (draggedLine() === t.line) return;
+      e.preventDefault(); e.stopPropagation();
+      e.dataTransfer.dropEffect = k === "need" ? "link" : "move";
+      const z = k === "need" ? "inside" : zoneY(e);
+      set({ kind: z === "inside" ? (k === "note" ? (zoneY(e, 0.5) === "after" ? "after" : "before") : "need") : z, line: t.line });
+    },
+    drop: (e) => {
+      const k = dragKind(e);
+      const h = hint;
+      e.preventDefault(); e.stopPropagation();
+      if (!h || !("line" in h) || (k !== "topic" && k !== "need" && k !== "note")) return finish();
+      const id = dropData(e, k);
+      finish();
+      const before = h.kind === "before" ? t.line : after(m, t);
+      if (k === "note") return addNote(body, mi, id, before);
+      const from = byLine(Number(id));
+      if (!from) return;
+      if (h.kind === "need") {
+        const md = addTopicNeed(body, t.line, from.line);
+        if (md === body) { toast(t.needs.some((n) => n.toLowerCase() === from.name.toLowerCase()) ? `${t.name} already needs ${from.name}` : "That would make a loop: it already depends on this topic."); return; }
+        write(md);
+        announce(`${t.name} now needs ${from.name}`);
+        return;
+      }
+      write(moveTopic(body, from.line, mi, before));
+      announce(`Moved ${from.name} ${h.kind} ${t.name}`);
+    },
+    key: (e) => {
+      if (e.key === "Enter" && e.target === e.currentTarget) { onSelect(t); return; }
+      if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+      e.preventDefault();
+      const md = nudgeTopic(body, t.line, e.key === "ArrowUp" ? -1 : 1);
+      if (md === body) return;
+      write(md);
+      refocus(sel$("data-topic", t.name));
+      const nm = roadmap(md).find((x) => x.topics.some((y) => y.name === t.name));
+      announce(`${t.name} moved ${e.key === "ArrowUp" ? "up" : "down"}${nm ? `, in ${nm.name}` : ""}`);
+    },
+  });
+
+  const modOver = (e: DragEvent, i: number) => {
+    const k = dragKind(e);
+    if (k === "module") {
+      const d = dragging();
+      if (d && Number(d.id) === i) return;
+      e.preventDefault();
+      set({ kind: zoneY(e, 0.5) === "after" ? "mod-after" : "mod-before", i });
+    } else if (k === "topic" || k === "note") { e.preventDefault(); set({ kind: "mod-end", i }); }
+  };
+  const modDrop = (e: DragEvent, i: number) => {
+    const k = dragKind(e);
+    const h = hint;
+    e.preventDefault();
+    if (!k || !h || !("i" in h)) return finish();
+    const id = dropData(e, k);
+    finish();
+    if (k === "module") {
+      const from = Number(id);
+      const before = h.kind === "mod-before" ? i : i + 1 < mods.length ? i + 1 : null;
+      write(moveModule(body, from, before));
+      announce(`Moved module ${mods[from]?.name}`);
+    } else if (k === "topic") {
+      const t = byLine(Number(id));
+      if (t) { write(moveTopic(body, t.line, i, null)); announce(`Moved ${t.name} to ${mods[i].name}`); }
+    } else if (k === "note") addNote(body, i, id, null);
+  };
+  const newOver = (e: DragEvent) => { const k = dragKind(e); if (k === "topic" || k === "note") { e.preventDefault(); set({ kind: "new" }); } };
+  const newDrop = (e: DragEvent) => {
+    const k = dragKind(e);
+    e.preventDefault();
+    if (k !== "topic" && k !== "note") return finish();
+    const id = dropData(e, k);
+    finish();
+    const name = newMod.trim() || `Module ${mods.length + 1}`;
+    if (k === "note" && hasTopic(id)) { toast(`“${id}” is already a topic`); return; }
+    let md = addModule(body, name);
+    const idx = roadmap(md).length - 1;
+    md = k === "topic" ? moveTopic(md, Number(id), idx, null) : addTopic(md, idx, id, { note: id });
+    write(md);
+    setNewMod("");
+    announce(`New module ${name}`);
+  };
+
   return (
-    <div className="flex max-w-[1076px] flex-col gap-2.5 px-12 py-4">
+    <div className="flex max-w-[1076px] flex-col gap-2.5 px-12 py-4" onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setHint(null); }} onDragEnd={finish}>
+      {empty && (
+        <p className="mb-1 max-w-[640px] text-[13px] leading-relaxed text-muted">
+          Start your roadmap: drag notes from the list on the right into a module (each becomes a topic linked to that note), or type a module name below and add topics. You can still write the Markdown by hand in <b>Edit</b>: <code>## Module</code> and <code>- [ ] Topic (needs: Other)</code>.
+        </p>
+      )}
       {mods.map((m, i) => {
         const p = progress([m]);
         const open = isOpen(i);
         const due = moduleDue(m);
+        const mh = hint && "i" in hint && hint.i === i ? hint.kind : null;
         return (
-          <section key={i} className="overflow-hidden rounded-[14px] border border-line bg-surface">
-            <button className="flex h-[52px] w-full items-center gap-3 px-4 text-left" onClick={() => toggle(i)} aria-expanded={open}>
+          <section key={i} data-module-section={i} onDragOver={(e) => modOver(e, i)} onDrop={(e) => modDrop(e, i)}
+            className={cx("overflow-hidden rounded-[14px] border border-line bg-surface", mh === "mod-before" && "pdnd-before !overflow-visible", mh === "mod-after" && "pdnd-after !overflow-visible", mh === "mod-end" && "pdnd-inside")}>
+            <div role="button" tabIndex={0} aria-expanded={open} data-module={m.name} data-pdnd-row draggable={m.line >= 0 && renaming !== i}
+              aria-label={`Module ${m.name}. Enter to fold. Alt+Up or Alt+Down to move.`}
+              onDragStart={(e) => startDrag(e, "module", String(i), m.name)} onDragEnd={finish}
+              onClick={() => renaming !== i && toggle(i)}
+              onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return;
+                if ((e.key === "Enter" || e.key === " ") && !e.altKey) { e.preventDefault(); toggle(i); return; }
+                if (e.key === "F2") { setRenaming(i); return; }
+                if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+                  e.preventDefault();
+                  const md = nudgeModule(body, i, e.key === "ArrowUp" ? -1 : 1);
+                  if (md !== body) { write(md); refocus(sel$("data-module", m.name)); announce(`Module ${m.name} moved ${e.key === "ArrowUp" ? "up" : "down"}`); }
+                }
+              }}
+              className="group flex h-[52px] w-full cursor-pointer items-center gap-3 px-4 text-left">
               {open ? <ChevronDown size={15} className="shrink-0 text-muted" /> : <ChevronRight size={15} className="shrink-0 text-muted" />}
-              <span className="w-[220px] shrink-0 truncate text-[14px] font-semibold" dir="auto">{m.name}</span>
+              {renaming === i ? (
+                <input autoFocus defaultValue={m.name} dir="auto" aria-label="Module name" onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setRenaming(null); }}
+                  onBlur={(e) => { const v = e.target.value.trim(); setRenaming(null); if (v && v !== m.name) write(renameModule(body, i, v)); }}
+                  className="w-[220px] shrink-0 rounded-[6px] border border-line bg-bg px-1.5 text-[14px] font-semibold outline-none" />
+              ) : (
+                <span className="w-[220px] shrink-0 truncate text-[14px] font-semibold" dir="auto" title={m.line >= 0 ? "Double-click to rename · drag to reorder" : undefined}
+                  onDoubleClick={(e) => { if (m.line >= 0) { e.stopPropagation(); setRenaming(i); } }}>{m.name}</span>
+              )}
               <span className="h-1.5 max-w-[260px] flex-1 overflow-hidden rounded-[3px] bg-surface-2"><span className="block h-full bg-ok" style={{ width: `${p.pct}%` }} /></span>
               <span className="w-[90px] shrink-0 text-[12px] text-muted">{p.pct}% · {p.done}/{p.total}</span>
               <span className="flex-1" />
               {due && <span className={cx("shrink-0 text-[12px]", due.late ? "text-bad" : "text-muted")}>{due.text}</span>}
-            </button>
-            {open && m.topics.length > 0 && <div className="border-t border-line px-2 pb-2 pt-1">{m.topics.map((t) => <TopicRow key={t.line} t={t} cur={t.line === cur} onStatus={onStatus} onOpen={onOpen} onSelect={onSelect} />)}</div>}
+              {!m.topics.length && m.line >= 0 && (
+                <button aria-label={`Delete module ${m.name}`} title="Delete empty module" onClick={(e) => { e.stopPropagation(); write(deleteModule(body, i)); announce(`Deleted module ${m.name}`); }}
+                  className="pdnd-grip flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-bad"><Trash2 size={13} /></button>
+              )}
+              {m.line >= 0 && <GripVertical size={14} aria-hidden className="pdnd-grip shrink-0 text-muted" />}
+            </div>
+            {open && (
+              <div className="border-t border-line px-2 pb-2 pt-1">
+                {m.topics.map((t) => <TopicRow key={t.line} t={t} cur={t.line === cur} onStatus={onStatus} onOpen={onOpen} onSelect={onSelect} dnd={rowDnd(m, i, t)} />)}
+                <AddRow placeholder={m.topics.length ? "Add topic" : "Add a topic, or drop topics and notes here"} className="h-[34px] pl-[34px] pr-3"
+                  onAdd={(name) => { if (hasTopic(name)) return toast(`“${name}” is already a topic`); write(addTopic(body, i, name)); announce(`Added ${name}`); }} />
+              </div>
+            )}
           </section>
         );
       })}
+      <div onDragOver={newOver} onDrop={newDrop} className={cx("pdnd-zone flex h-[52px] items-center px-4", hint?.kind === "new" && "pdnd-over")}>
+        <AddRow placeholder={hint?.kind === "new" ? `Drop to start “${newMod.trim() || `Module ${mods.length + 1}`}”` : "New module: type a name, or drop topics / notes here"} className="flex-1"
+          inputCls="font-semibold" value={newMod} onValue={setNewMod} onAdd={(name) => { write(addModule(body, name)); announce(`New module ${name}`); }} />
+      </div>
     </div>
   );
 }
-
 function phoneSub(t: Topic, notes: number) {
   if (t.locked) return `Locked · needs ${t.needs.join(", ")}`;
   if (t.status === "done") return t.due ? `Done ${fmtDay(t.due)}` : "Done";
@@ -312,14 +555,18 @@ function phoneSub(t: Topic, notes: number) {
   return parts.join(" · ");
 }
 
-function PhoneOutline({ mods, cur, stats, onSelect }: { mods: Module[]; cur?: number; stats: (t: Topic) => { notes: number }; onSelect: (t: Topic) => void }) {
+function PhoneOutline({ mods, cur, stats, onSelect, ops, spaceId, used, onPickNote }: { mods: Module[]; cur?: number; stats: (t: Topic) => { notes: number }; onSelect: (t: Topic) => void; ops: TopicOps; spaceId: string; used: Set<string>; onPickNote: (n: Note) => void }) {
   const fresh = useContext(UnlockCtx);
   const [closed, toggle] = useClosed();
+  const [notes, setNotes] = useState(false);
   const curMod = mods.findIndex((m) => m.topics.some((t) => t.line === cur));
   const firstOpen = curMod >= 0 ? curMod : 0;
   const isOpen = (i: number) => (i === firstOpen) !== closed.has(i);
+  const { body, write } = ops;
+  const hasTopic = (name: string) => mods.some((m) => m.topics.some((t) => t.name.toLowerCase() === name.toLowerCase()));
   return (
     <div className="flex flex-col gap-2.5 px-4 pb-3">
+      {!mods.length && <p className="text-[13px] leading-relaxed text-muted">Name a first module below, then add topics, or add notes as topics.</p>}
       {mods.map((m, i) => {
         const p = progress([m]);
         const open = isOpen(i);
@@ -338,9 +585,21 @@ function PhoneOutline({ mods, cur, stats, onSelect }: { mods: Module[]; cur?: nu
                 {t.locked ? <Lock size={15} className="shrink-0 text-muted" /> : <ChevronRight size={15} className="shrink-0 text-muted" />}
               </button>
             ))}
+            {open && <AddRow placeholder="Add topic" className="h-12 border-t border-line pl-10 pr-3.5" inputCls="text-[15px]"
+              onAdd={(name) => { if (hasTopic(name)) return toast(`“${name}” is already a topic`); write(addTopic(body, i, name)); }} />}
           </section>
         );
       })}
+      <div className="pdnd-zone flex h-12 items-center px-3.5"><AddRow placeholder="New module" className="flex-1" inputCls="text-[15px] font-semibold" onAdd={(name) => write(addModule(body, name))} /></div>
+      <button onClick={() => setNotes(true)} className="flex h-11 items-center justify-center gap-2 rounded-[12px] border border-line text-[14px] text-muted"><NotebookPen size={15} />Add notes as topics</button>
+      {notes && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setNotes(false)} />
+          <div className="sheet-in safe-b fixed inset-x-0 bottom-0 z-50 flex h-[70dvh] flex-col overflow-hidden rounded-t-[14px] border-t border-line">
+            <NotesTray className="h-full" spaceId={spaceId} used={used} onPick={onPickNote} onClose={() => setNotes(false)} title="Add notes as topics" hint={<>Tap + to add a note to the last module.</>} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -423,48 +682,104 @@ function TreeControls() {
   );
 }
 
-function Tree({ mods, sel, phone, onSelect, onConnect }: { mods: Module[]; sel: number | null; phone: boolean; onSelect: (t: Topic) => void; onConnect: (topicLine: number, prereqLine: number) => void }) {
+function Tree({ mods, sel, phone, onSelect, onConnect, onCreate, onRemoveNeed }: {
+  mods: Module[]; sel: number | null; phone: boolean; onSelect: (t: Topic) => void; onConnect: (topicLine: number, prereqLine: number) => void;
+  onCreate: (module: number | null, needs?: Topic) => void; onRemoveNeed: (t: Topic, name: string) => void;
+}) {
   const fresh = useContext(UnlockCtx);
   const [hover, setHover] = useState<number | null>(null);
+  const [edgeMenu, setEdgeMenu] = useState<{ x: number; y: number; from: Topic; to: Topic } | null>(null);
+  const [paletteOver, setPaletteOver] = useState<number | "pane" | null>(null);
+  const box = useRef<HTMLDivElement>(null);
   const L = useMemo(() => treeLayout(mods, phone), [mods, phone]);
+  // focus = hovered topic, else the selected one: highlight its prerequisite chain AND everything it unlocks
+  const focus = hover ?? sel;
   const path = useMemo(() => {
-    if (hover === null) return null;
-    const t = L.all.find((x) => x.line === hover);
+    if (focus === null) return null;
+    const t = L.all.find((x) => x.line === focus);
     if (!t) return null;
     const s = ancestors(L.all, t);
+    for (const d of descendants(L.all, t)) s.add(d);
     s.add(t.line);
-    return s;
-  }, [hover, L]);
+    return s.size > 1 ? s : null;
+  }, [focus, L]);
   const nodes = useMemo(() => L.all.map((t): RFNode<TData> => ({
     id: String(t.line), type: "topic", position: L.pos(t), width: L.G.w, height: L.G.h, draggable: false, selectable: false,
-    data: { t, sel: t.line === sel, dim: !!path && !path.has(t.line), path: !!path && path.has(t.line) && t.line !== hover && t.line !== sel, w: L.G.w, h: L.G.h, fresh: fresh.has(t.name.toLowerCase()), phone },
-  })), [L, sel, path, hover, fresh, phone]);
-  const edges = useMemo(() => L.edges.map(({ from, to }, i): Edge => {
+    data: { t, sel: t.line === sel || paletteOver === t.line, dim: !!path && !path.has(t.line), path: !!path && path.has(t.line) && t.line !== focus, w: L.G.w, h: L.G.h, fresh: fresh.has(t.name.toLowerCase()), phone },
+  })), [L, sel, path, focus, fresh, phone, paletteOver]);
+  const edges = useMemo(() => L.edges.map(({ from, to }): Edge => {
     const on = !!path && path.has(from.line) && path.has(to.line);
-    const c = on ? "var(--accent)" : to.locked ? "var(--muted)" : to.status === "done" ? "var(--success)" : "var(--info)";
-    return { id: `e${i}`, source: String(from.line), target: String(to.line), type: "straight", selectable: false, focusable: false,
-      style: { strokeWidth: on ? 2 : 1.5, stroke: c, opacity: on ? 1 : path ? 0.15 : to.locked ? 0.35 : 0.8 } };
+    // colour = state of the prerequisite: done (green) unlocks, in progress (blue), still to do (muted)
+    const c = on ? "var(--accent)" : from.status === "done" ? "var(--success)" : from.status === "learning" ? "var(--info)" : "var(--muted)";
+    return { id: `${from.line}>${to.line}`, source: String(from.line), target: String(to.line), type: "default", selectable: false, focusable: false, className: "pdnd-edge", interactionWidth: 18,
+      markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14, color: c },
+      style: { strokeWidth: on ? 2.25 : 1.5, stroke: c, opacity: on ? 1 : path ? 0.12 : to.locked ? 0.45 : 0.85, transition: "opacity .12s" } };
   }), [L, path]);
   const connect = (c: Connection) => { if (c.source && c.target && c.source !== c.target) onConnect(Number(c.target), Number(c.source)); };
+  const byLine = (id: string) => L.all.find((t) => t.line === Number(id));
+  const openEdgeMenu = (e: React.MouseEvent, edge: Edge) => {
+    e.preventDefault();
+    const from = byLine(edge.source), to = byLine(edge.target), r = box.current!.getBoundingClientRect();
+    if (from && to) setEdgeMenu({ x: Math.min(e.clientX - r.left, r.width - 230), y: Math.min(e.clientY - r.top, r.height - 90), from, to });
+  };
+  // palette: drag "+ Topic" onto the canvas (new topic) or onto a node (new topic that needs it)
+  const nodeAt = (e: DragEvent) => { const el = (e.target as Element).closest?.(".react-flow__node"); return el ? Number(el.getAttribute("data-id")) : null; };
+  const onPaletteOver = (e: DragEvent) => { if (dragKind(e) !== "palette") return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; const n = nodeAt(e); setPaletteOver(n ?? "pane"); };
+  const onPaletteDrop = (e: DragEvent) => {
+    if (dragKind(e) !== "palette") return;
+    e.preventDefault();
+    const n = nodeAt(e);
+    setPaletteOver(null);
+    endDrag();
+    const t = n === null ? undefined : L.all.find((x) => x.line === n);
+    onCreate(t ? t.module : null, t);
+  };
 
   return (
-    <div className="lm-flow absolute inset-0" style={{ backgroundImage: "radial-gradient(var(--border) 1px, transparent 1px)", backgroundSize: "20px 20px" }}>
+    <div ref={box} className="lm-flow absolute inset-0" style={{ backgroundImage: "radial-gradient(var(--border) 1px, transparent 1px)", backgroundSize: "20px 20px" }}
+      onDragOver={onPaletteOver} onDrop={onPaletteDrop} onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setPaletteOver(null); }}>
       <ReactFlow nodes={nodes} edges={edges} nodeTypes={{ topic: TopicNode }} defaultViewport={{ x: 0, y: 0, zoom: 1 }} minZoom={0.2} maxZoom={2}
-        proOptions={{ hideAttribution: true }} onNodeClick={(_, n) => onSelect((n.data as TData).t)}
+        proOptions={{ hideAttribution: true }} onNodeClick={(_, n) => { setEdgeMenu(null); onSelect((n.data as TData).t); }}
         onNodeMouseEnter={(_, n) => setHover(Number(n.id))} onNodeMouseLeave={() => setHover(null)}
+        onEdgeClick={openEdgeMenu} onEdgeContextMenu={openEdgeMenu} onPaneClick={() => setEdgeMenu(null)}
         onConnect={connect} isValidConnection={(c) => c.source !== c.target} connectionLineStyle={{ stroke: "var(--accent)", strokeWidth: 1.5 }}
+        onConnectEnd={(e, st) => {
+          // dropped on empty canvas: a new topic that needs the one you dragged from
+          if (st.isValid || !st.fromNode) return;
+          const target = (e as MouseEvent).target as Element | null;
+          if (!target?.classList.contains("react-flow__pane")) return;
+          const from = byLine(st.fromNode.id);
+          if (from) onCreate(from.module, from);
+        }}
         nodesConnectable connectOnClick={false} zoomOnDoubleClick={false} panOnScroll={!phone} elementsSelectable={false}>
         {!phone && (
           <ViewportPortal>
-            <div className="pointer-events-none absolute flex gap-[156px] whitespace-nowrap text-[11px] font-semibold uppercase tracking-[.06em] text-muted" style={{ left: L.G.x0, top: 20, transform: "translate(0,0)" }}>
-              {LABELS.slice(0, Math.min(4, L.cols)).map((l, i) => <span key={l} style={{ marginLeft: i === 2 ? 6 : i === 3 ? 4 : 0 }}>{l}</span>)}
-            </div>
-            {Array.from({ length: Math.max(0, L.cols - 4) }, (_, i) => (
-              <span key={i} className="pointer-events-none absolute whitespace-nowrap text-[11px] font-semibold uppercase tracking-[.06em] text-muted" style={{ left: L.G.x0 + (i + 4) * L.G.colW, top: 20 }}>Level {i + 5}</span>
+            {/* one label per column, aligned to it: columns are prerequisite depth ("step"), not difficulty */}
+            {Array.from({ length: L.cols }, (_, i) => (
+              <span key={i} className="pointer-events-none absolute whitespace-nowrap text-[11px] font-semibold uppercase tracking-[.06em] text-muted" style={{ left: L.G.x0, top: 20, transform: `translateX(${i * L.G.colW}px)` }}>
+                Step {i + 1}{i < LABELS.length ? <span className="font-medium normal-case tracking-normal opacity-70"> · {LABELS[i]}</span> : null}
+              </span>
             ))}
           </ViewportPortal>
         )}
       </ReactFlow>
+      {paletteOver === "pane" && <div className="pointer-events-none absolute inset-2 rounded-[14px] border-2 border-dashed border-accent/60" />}
+      {edgeMenu && (
+        <div role="dialog" aria-label="Prerequisite" className="fade-in absolute z-20 w-[220px] rounded-[10px] border border-line bg-surface p-1.5 text-[12.5px] shadow-xl" style={{ left: Math.max(8, edgeMenu.x), top: Math.max(8, edgeMenu.y) }}>
+          <div className="px-2 pb-1.5 pt-1 text-muted" dir="auto"><b className="text-ink">{edgeMenu.to.name}</b> needs <b className="text-ink">{edgeMenu.from.name}</b></div>
+          <button autoFocus onClick={() => { onRemoveNeed(edgeMenu.to, edgeMenu.from.name); setEdgeMenu(null); }} className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-bad hover:bg-bad/10"><X size={13} />Remove prerequisite</button>
+          <button onClick={() => setEdgeMenu(null)} className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-muted hover:bg-surface-2">Cancel</button>
+        </div>
+      )}
+      {/* palette: drag onto the canvas / a topic, or click to add */}
+      <div className={cx("absolute z-10 flex items-center gap-1.5", phone ? "bottom-3 left-3" : "bottom-5 left-[124px]")}>
+        <button draggable onDragStart={(e) => startDrag(e, "palette", "topic", "New topic")} onDragEnd={() => { endDrag(); setPaletteOver(null); }} onClick={() => onCreate(sel !== null ? L.all.find((t) => t.line === sel)?.module ?? null : null)}
+          title="Drag onto the canvas for a new topic, or onto a topic for a next step that needs it. Click to add."
+          className={cx("flex cursor-grab items-center gap-1.5 rounded-[10px] border border-line bg-surface px-2.5 text-[12.5px] font-medium hover:border-accent/60 active:cursor-grabbing", phone ? "h-10" : "h-[36px]")}>
+          <Plus size={13} />Topic
+        </button>
+        {!phone && <span className="text-[11.5px] text-muted">drag from a dot to link · click an arrow to remove · Del deletes</span>}
+      </div>
       {phone
         ? <span className="pointer-events-none absolute right-3 top-3 flex h-7 items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 text-[12px] text-muted"><MoveHorizontal size={13} />swipe</span>
         : <TreeControls />}
@@ -575,7 +890,7 @@ function TimelineBar({ t, due, left, top, pxPerDay, onSelect, onDrop, freeze }: 
 
 // ------------------------------------------------------------------ topic sheet
 
-type SheetProps = { note: Note; mods: Module[]; t: Topic; stats: ReturnType<typeof topicStats>; onClose: () => void; onStatus: (t: Topic, s: TopicStatus) => void; onOpen: (t: Topic, mode?: "edit" | "split") => void; onSelect: (t: Topic) => void };
+type SheetProps = { note: Note; mods: Module[]; t: Topic; stats: ReturnType<typeof topicStats>; onClose: () => void; onStatus: (t: Topic, s: TopicStatus) => void; onOpen: (t: Topic, mode?: "edit" | "split") => void; onSelect: (t: Topic) => void; ops: TopicOps };
 
 function useEsc(onClose: () => void) {
   useEffect(() => {
@@ -598,7 +913,7 @@ function StatusSelector({ t, onStatus, tall }: { t: Topic; onStatus: (t: Topic, 
 }
 
 /** Body shared by the desktop side sheet and the expanded phone sheet. */
-function SheetSections({ note, mods, t, stats, onStatus, onOpen, onSelect, phone }: SheetProps & { phone?: boolean }) {
+function SheetSections({ note, mods, t, stats, onStatus, onOpen, onSelect, phone, ops }: SheetProps & { phone?: boolean }) {
   const v = useVault();
   const fresh = useContext(UnlockCtx);
   const [adding, setAdding] = useState(false);
@@ -684,6 +999,7 @@ function SheetSections({ note, mods, t, stats, onStatus, onOpen, onSelect, phone
           <span className="font-semibold">{stats.notes ? `${stats.notes} note${stats.notes === 1 ? "" : "s"}${stats.cards ? ` · ${stats.cards} card${stats.cards === 1 ? "" : "s"}` : ""}` : "No notes yet"}</span>
         </div>
       </div>
+      <TopicOrganize t={t} phone={phone} ops={ops} />
     </>
   );
 }
@@ -699,7 +1015,10 @@ function TopicSheet(props: SheetProps) {
           <span className="truncate">{m?.name ?? "Topics"} · Topic {(m?.topics.indexOf(t) ?? 0) + 1} of {m?.topics.length ?? 1}</span>
           <button aria-label="Close" title="Close (Esc)" onClick={onClose} className="-m-1 rounded-md p-1 hover:bg-surface hover:text-ink"><X size={16} /></button>
         </div>
-        <span className="text-[20px] font-[650] tracking-[-.01em]" dir="auto">{t.name}</span>
+        <input key={t.name} defaultValue={t.name} dir="auto" aria-label="Topic name" title="Rename (updates every “needs” that mentions it)"
+          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+          onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== t.name) props.ops.rename(t, v); }}
+          className="-mx-1 rounded-[6px] bg-transparent px-1 text-[20px] font-[650] tracking-[-.01em] outline-none focus:bg-surface" />
       </div>
       <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-4 text-[13px]">
         <SheetSections {...props} />
@@ -746,5 +1065,31 @@ function PhoneTopicSheet(props: SheetProps) {
         </div>
       </aside>
     </>
+  );
+}
+
+/** Move / rename / delete without dragging: the phone path (no hover, no drag) and the keyboard-free desktop alternative. */
+function TopicOrganize({ t, phone, ops }: { t: Topic; phone?: boolean; ops: TopicOps }) {
+  const { body, write, mods } = ops;
+  const label = "text-[12px] font-medium text-muted";
+  const btn = cx("flex items-center justify-center gap-1.5 rounded-[8px] border border-line hover:bg-surface", phone ? "h-10 px-3" : "h-8 px-2.5");
+  const nudge = (dir: -1 | 1) => { const md = nudgeTopic(body, t.line, dir); if (md !== body) { write(md); announce(`${t.name} moved ${dir < 0 ? "up" : "down"}`); } };
+  return (
+    <div className="flex flex-col gap-2"><span className={label}>Organize</span>
+      {phone && (
+        <input key={t.name} defaultValue={t.name} dir="auto" aria-label="Topic name" onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+          onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== t.name) ops.rename(t, v); }}
+          className="h-10 rounded-[8px] border border-line bg-bg px-3 text-[14px] outline-none" />
+      )}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <button className={btn} onClick={() => nudge(-1)} aria-label="Move up"><ArrowUp size={13} />{phone && "Up"}</button>
+        <button className={btn} onClick={() => nudge(1)} aria-label="Move down"><ArrowDown size={13} />{phone && "Down"}</button>
+        <select aria-label="Move to module" value={t.module} className={cx("min-w-0 flex-1 rounded-[8px] border border-line bg-bg px-2", phone ? "h-10" : "h-8")}
+          onChange={(e) => { const i = Number(e.target.value); write(moveTopic(body, t.line, i, null)); announce(`${t.name} moved to ${mods[i]?.name}`); }}>
+          {mods.map((m, i) => <option key={i} value={i}>{i === t.module ? `In ${m.name}` : `Move to ${m.name}`}</option>)}
+        </select>
+        <button className={cx(btn, "text-bad hover:bg-bad/10")} onClick={() => ops.remove(t)} aria-label="Delete topic"><Trash2 size={13} />{phone && "Delete"}</button>
+      </div>
+    </div>
   );
 }

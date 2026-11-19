@@ -92,5 +92,35 @@ export async function seedPaths(): Promise<Vault> {
   for (const st of d.stages) for (const k of st.concepts) if (k.name === "Loss functions") { k.review = c.iso(0); k.interval = 3; }
   body = serializePath(d);
   v.notes.push(note({ id: "lp-path", title: "Deep learning, end to end", type: "path", body, updated: c.ago(20), pinned: 1 }));
+  // a base (database view) over the lessons: board by status, table grouped by course, calendar by `due`
+  v.notes.push(
+    note({ id: "lp-n-cnn", title: "Convolutions", space: "lp-s-fa", type: "lesson", status: "learning", tags: ["vision"], fm: { due: c.iso(4), difficulty: "3" }, text: "Kernels slide over the image." }),
+    note({ id: "lp-n-lr", title: "Learning rate finder", space: "lp-s-fa", type: "lesson", status: "review", fm: { due: c.iso(1), difficulty: "2" }, text: "Increase the LR until the loss explodes." }),
+    note({ id: "lp-n-ar", title: "الانتشار العكسي (ملخص)", space: "lp-s-ml", type: "lesson", status: "review", tags: ["arabic"], fm: { due: c.iso(9) }, text: "قاعدة السلسلة على مخطط الحساب." }),
+    note({ id: "lp-base", title: "Lessons by status × course", type: "base", updated: c.ago(5), pinned: 1, text: `All lessons from the three courses.
+
+\`\`\`base
+filters:
+  and:
+    - type == "lesson"
+views:
+  - type: board
+    name: By status
+    groupBy:
+      property: status
+      direction: ASC
+    order: [file.name, space, due]
+  - type: table
+    name: By course
+    groupBy:
+      property: space
+      direction: ASC
+    order: [file.name, status, space, due, difficulty, file.tags, file.mtime]
+  - type: calendar
+    name: Due dates
+    date: due
+\`\`\`
+` }),
+  );
   return v;
 }

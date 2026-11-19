@@ -18,6 +18,8 @@ Every write goes to IndexedDB first, so the app works offline. With sync unlocke
 | Roadmap | Markdown: `## Module`, `- [ ] / [/] / [x] / [-] Topic (needs: X) 📅 date → [[Note]]` | same as notes |
 | Flashcards | `Question :: Answer` or `Question` / `?` / answer lines | same as notes |
 | Query block | ```` ```query tag:ml type:lesson sort:title view:table ```` | — |
+| Layout blocks | Pandoc-style fenced divs: `::: columns` / `::: column 30%`, `::: tabs`, `::: expand Title`, `::: info Title`, `::: wide`, `::: full`; `{.wide .compact}` under a table; `![[Note#Heading]]` include; `:status[Done]`; `[[toc]]` | same as notes |
+| Slides | `---` between slides; `<!-- layout: two-cols; split: 60% -->`; regions `::left::` `::right::` `::1::`; `::: box x=10 y=20 w=40 h=30`; `Note:` speaker notes (see `src/lib/deck.ts`) | same as notes |
 | Share link | `/s/<token>` (note) or `/s/<token>/<noteId>` (inside a shared space) | `GET /api/share/:token` · `GET /api/share/:token/note/:id` (public, read-only) |
 | Vault | `.zip` of `<Space>/<folders>/<note>.md` (Obsidian-compatible) | — |
 

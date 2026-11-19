@@ -1,4 +1,5 @@
 import { autocompletion, type CompletionContext } from "@codemirror/autocomplete";
+import { slashIconOption, slashSource } from "../lib/slash";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
@@ -17,6 +18,10 @@ import { toast, useVault } from "../lib/store";
 import { cx } from "./ui";
 import { isTooBig, TooBigDialog } from "./StorageTooBig";
 import { setSaving } from "./ws-sync";
+import { blockEditing, blockRefSource, type BlockMenuRequest } from "./editor-blocks";
+import { BlockMenu } from "./BlockMenu";
+import { PasteMenu, pasteWatch, type PasteInfo } from "./PasteMenu";
+import { parseBlocks, pendingBlock } from "../lib/blocks";
 
 let showTooBig: ((f: File) => void) | null = null;
 
@@ -170,6 +175,15 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
   const pasteRef = useRef<PasteState | null>(null);
   pasteRef.current = paste;
   const wrapRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<EditorView | null>(null);
+  // Block handle menu + paste options (editor-blocks.ts, PasteMenu.tsx)
+  const [blockMenu, setBlockMenu] = useState<BlockMenuRequest | null>(null);
+  const [pasteMenu, setPasteMenu] = useState<PasteInfo | null>(null);
+  const [pasteBusy, setPasteBusy] = useState<"keep" | "clean" | "quote" | "card" | "summary" | "cards" | null>(null);
+  const pasteBusyRef = useRef(pasteBusy);
+  pasteBusyRef.current = pasteBusy;
+  const titleRef = useRef(note.title);
+  titleRef.current = note.title;
   showTooBig = setTooBig;
   const wide = typeof innerWidth === "number" && innerWidth >= 900;
 
@@ -187,6 +201,22 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
   }, [note.id]);
   // the paste chip lasts 6 s or until you type
   useEffect(() => { if (!paste) return; const tm = setTimeout(() => setPaste(null), 6000); return () => clearTimeout(tm); }, [paste]);
+  // the paste-options menu lasts 12 s (not while the AI works)
+  useEffect(() => { if (!pasteMenu || pasteBusy) return; const tm = setTimeout(() => setPasteMenu(null), 12000); return () => clearTimeout(tm); }, [pasteMenu, pasteBusy]);
+  // Arrived through a [[Note#^id]] link while editing: put the caret on that block (the preview scrolls on its own).
+  useEffect(() => {
+    if (!pendingBlock.id || Date.now() - pendingBlock.at > 8000 || pendingBlock.title.toLowerCase() !== note.title.toLowerCase()) return;
+    const blk = parseBlocks(note.body).find((b) => b.id === pendingBlock.id);
+    if (!blk) return;
+    const tm = setTimeout(() => {
+      const v = viewRef.current;
+      if (!v || blk.a + 1 > v.state.doc.lines) return;
+      const l = v.state.doc.line(blk.a + 1);
+      v.dispatch({ selection: { anchor: l.from }, effects: EditorView.scrollIntoView(l.from, { y: "center" }) });
+    }, 60);
+    return () => clearTimeout(tm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note.id]);
 
   const onChange = (v: string) => {
     setText(v);
@@ -212,10 +242,14 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
   }
 
   const titles = useMemo(() => vault.notes.map((n) => n.title), [vault.notes]);
+  const notesRef = useRef(vault.notes);
+  notesRef.current = vault.notes;
+  const pasteMenuRef = useRef(pasteMenu);
+  pasteMenuRef.current = pasteMenu;
   const extensions = useMemo(() => {
     const wikiComplete = (ctx: CompletionContext) => {
       const m = ctx.matchBefore(/\[\[[^\]\n]*/);
-      if (!m) return null;
+      if (!m || m.text.includes("#^")) return null; // [[Note#^ → block completion (editor-blocks.ts)
       return { from: m.from + 2, options: titles.map((x) => ({ label: x, apply: `${x}]]` })), validFor: /^[^\]\n]*$/ };
     };
     const tagComplete = (ctx: CompletionContext) => {
@@ -241,9 +275,23 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
       linkMarks,
       lineMarks,
       ...(focus ? [focusPara] : []),
+      // ⋮⋮ block handle / drag / block menu / Alt+↑↓ / Mod+Shift+D (handles hidden in focus mode and .mermaid files)
+      blockEditing({ menu: (r) => setBlockMenu(r), handles: !focus && note.type !== "diagram" }),
+      pasteWatch(
+        (p, v) => {
+          const c = v.coordsAtPos(p.to);
+          const box = wrapRef.current?.getBoundingClientRect();
+          setPasteMenu({ ...p, x: (c?.left ?? 0) - (box?.left ?? 0) - 40, y: (c?.bottom ?? 0) - (box?.top ?? 0) + 8 });
+        },
+        (ch) => setPasteMenu((m) => (!m ? m : pasteBusyRef.current ? { ...m, from: ch.mapPos(m.from), to: ch.mapPos(m.to, 1) } : null)),
+      ),
       EditorView.perLineTextDirection.of(true), // Arabic lines RTL, English lines LTR, in the same note
       EditorView.contentAttributes.of({ spellcheck: String(getSettings().spellcheck), dir: "auto", autocorrect: "on", autocapitalize: "sentences" }),
-      autocompletion({ override: [wikiComplete, tagComplete], icons: false }),
+      // "/" menu (Confluence / Notion style) + [[wiki]] and #tag completion; options get theme-aware icons / layout thumbnails
+      autocompletion({
+        override: [slashSource((a) => (a === "file" ? editorBridge.image?.() : editorBridge.voice?.())), blockRefSource(() => notesRef.current, () => titleRef.current, (id, body) => void updateNote(id, { body })), wikiComplete, tagComplete],
+        icons: false, addToOptions: [slashIconOption], maxRenderedOptions: 80, tooltipClass: () => "lm-complete",
+      }),
       keymap.of([
         { key: "Mod-b", run: (v) => (ACTIONS.bold(v), true) },
         { key: "Mod-i", run: (v) => (ACTIONS.italic(v), true) },
@@ -275,6 +323,11 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
           return false;
         },
         keydown: (e) => {
+          // paste-options menu: Esc dismisses (keeps the paste); any other key just closes it and goes through
+          if (pasteMenuRef.current && !pasteBusyRef.current && !["Shift", "Control", "Alt", "Meta"].includes(e.key)) {
+            setPasteMenu(null);
+            if (e.key === "Escape") { e.preventDefault(); return true; }
+          }
           const p = pasteRef.current;
           if (!p) return false;
           if (e.key === "Enter") { e.preventDefault(); applyPaste(p.sel); return true; }
@@ -299,7 +352,7 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
       }),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [titles, vault.tags, focus]);
+  }, [titles, vault.tags, focus, note.type]);
 
   const run = (k: keyof typeof ACTIONS) => { if (active) ACTIONS[k](active); setMore(false); };
 
@@ -363,7 +416,7 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
         <CodeMirror
           value={text}
           onChange={onChange}
-          onCreateEditor={(v) => (active = v)}
+          onCreateEditor={(v) => { active = v; viewRef.current = v; }}
           extensions={extensions}
           theme="none"
           height="100%"
@@ -383,6 +436,13 @@ export function Editor({ note, focus, live }: { note: Note; focus?: boolean; liv
           <span className="px-2 text-[11.5px] text-muted">↵ choose · Esc keep link</span>
         </div>
       )}
+      {pasteMenu && viewRef.current && (wide || !showBar) && (
+        <PasteMenu info={pasteMenu} view={viewRef.current} phone={false} busy={pasteBusy} setBusy={setPasteBusy} onClose={() => setPasteMenu(null)} />
+      )}
+      {pasteMenu && viewRef.current && showBar && !wide && (
+        <PasteMenu info={pasteMenu} view={viewRef.current} phone busy={pasteBusy} setBusy={setPasteBusy} onClose={() => setPasteMenu(null)} />
+      )}
+      <BlockMenu req={blockMenu} title={note.title} onClose={() => setBlockMenu(null)} />
       {showBar && paste && (
         <div className="flex gap-2 border-t border-line bg-surface-2 px-3 py-2" onMouseDown={(e) => e.preventDefault()}>
           {pasteOpts.map((o) => (

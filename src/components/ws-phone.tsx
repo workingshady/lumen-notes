@@ -56,7 +56,7 @@ export function PhoneChips({ filter, setFilter, onSort, sortLabel }: { filter: P
     <div className="flex shrink-0 items-center gap-2 px-4 pb-2.5 pt-1">
       <button onClick={() => setTree(true)} className={cx(chip(true), "min-w-0 gap-2")}>
         {folder ? <span className="size-2 shrink-0 rounded-[3px]" style={{ background: colorOf(folder.color) ?? "var(--muted)" }} /> : null}
-        <span className="truncate">{folder?.name ?? (ui.tag ? `#${ui.tag}` : tr("All notes", rtl))}</span>
+        <span className="truncate">{folder?.name ?? (ui.tag ? `#${ui.tag}` : ui.filter === "paths" ? "Learning paths" : ui.filter === "visual" ? "Canvases & whiteboards" : ui.filter === "published" ? "Blog posts" : tr("All notes", rtl))}</span>
         <ChevronDown size={14} className="shrink-0 text-muted" />
       </button>
       <button className={chip(filter === "pinned")} onClick={() => setFilter(filter === "pinned" ? null : "pinned")}>{tr("Pinned", rtl)}</button>
