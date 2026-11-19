@@ -1103,7 +1103,7 @@ See also ${links.map((x) => `[[${x.title}]]`).join(", ")}.
   ];
 
   // ---------------------------------------------------------------- write
-  const tables = [db.spaces, db.notes, db.folders, db.versions, db.cards, db.sessions, db.attachments, db.blobs];
+  const tables = [db.spaces, db.notes, db.folders, db.versions, db.cards, db.sessions, db.attachments, db.blobs, db.reviews];
   await db.transaction("rw", tables, async () => {
     await Promise.all(tables.map((t) => t.clear()));
     await db.spaces.bulkPut(spaces);

@@ -16,11 +16,14 @@
 //     - review: 2026-11-20 7                        ← next revision date + current interval (days)
 //     - done: 2026-11-10                            ← manual completion (concepts with no course topic)
 //     - needs: Calculus, Probability               ← path-level prerequisites (concept names), on top of the courses' own
+//     - after: Statistics                          ← recommended order (better first, not required; never locks)
+//     - related: Eigenvectors                      ← related, no order (see also)
 //
 // Course topics not listed under any concept still appear (merged by name across courses) in "Not placed yet",
 // so the path never hides anything a course teaches. Courses stay independent: their own roadmaps are untouched.
 import type { Note } from "../../shared/types";
 import { roadmap, splitFrontMatter, type Topic, type TopicStatus } from "./parse";
+import { depths, untangle } from "./prereq-graph";
 
 export const REVIEW_LADDER = [1, 3, 7, 14, 30, 60, 120];
 export const UNPLACED = "Not placed yet";
@@ -35,6 +38,9 @@ export interface PathConcept {
   done: string | null;
   /** Path-level prerequisites (concept names or aliases), added on top of the ones the courses define. */
   needs: string[];
+  /** Path-level recommended order (`after:`) and related (`related:`) links (round 4, 14b). */
+  after?: string[];
+  related?: string[];
   extra: string[];
 }
 export interface PathStage { name: string; concepts: PathConcept[] }
@@ -73,6 +79,7 @@ export function parsePath(body: string): PathDoc {
       else if (k === "review") { const [d, i] = v.trim().split(/\s+/); concept.review = d || null; concept.interval = Number(i) || 0; }
       else if (k === "done") concept.done = v.trim() || null;
       else if (k === "needs") concept.needs.push(...v.split(",").map((x) => x.trim()).filter(Boolean));
+      else if (k === "after" || k === "related") (concept[k] ??= []).push(...v.split(",").map((x) => x.trim()).filter(Boolean));
       else concept.extra.push(l);
       continue;
     }
@@ -93,6 +100,8 @@ export function serializePath(doc: PathDoc): string {
     for (const c of s.concepts) {
       out.push(`- ${c.name}${c.aliases.length ? ` = ${c.aliases.join(" | ")}` : ""}`);
       if (c.needs.length) out.push(`  - needs: ${c.needs.join(", ")}`);
+      if (c.after?.length) out.push(`  - after: ${c.after.join(", ")}`);
+      if (c.related?.length) out.push(`  - related: ${c.related.join(", ")}`);
       for (const r of c.resources) out.push(`  - resource: [${r.label}](${r.url})`);
       if (c.notes.length) out.push(`  - note: ${c.notes.map((n) => `[[${n}]]`).join(", ")}`);
       if (c.review) out.push(`  - review: ${c.review} ${c.interval}`);
@@ -117,6 +126,10 @@ export interface BuiltConcept {
   coverage: Coverage[];
   status: ConceptStatus;
   needs: string[]; // concept keys
+  /** Recommended-order prerequisites (concept keys, from `after:` in the path or `(after: …)` in a course). Never lock. */
+  after: string[];
+  /** Related concepts, no order (keys; stored on one side, listed here on the side that wrote it). */
+  related: string[];
   unlocks: string[];
   due: string | null; // earliest course due date
   reviewDue: boolean;
@@ -177,7 +190,7 @@ export function buildPath(body: string, courses: CourseRef[]): BuiltPath {
   }
   const claimed = new Set<Coverage>();
   const concepts: BuiltConcept[] = [];
-  const mk = (def: PathConcept, stage: string, stageIndex: number, placed: boolean): BuiltConcept => ({ key: norm(def.name), def, stage, stageIndex, coverage: [], status: "todo", needs: [], unlocks: [], due: null, reviewDue: false, placed, learnedVia: null, mastered: false });
+  const mk = (def: PathConcept, stage: string, stageIndex: number, placed: boolean): BuiltConcept => ({ key: norm(def.name), def, stage, stageIndex, coverage: [], status: "todo", needs: [], after: [], related: [], unlocks: [], due: null, reviewDue: false, placed, learnedVia: null, mastered: false });
   doc.stages.forEach((s, si) => {
     for (const def of s.concepts) {
       const c = mk(def, s.name, si, true);
@@ -209,6 +222,13 @@ export function buildPath(body: string, courses: CourseRef[]): BuiltPath {
     // path-level `needs:` lines (concept name or any alias)
     for (const n of c.def.needs) { const d = resolveConcept(concepts, byKey, n); if (d && d !== c) needs.add(d.key); }
     c.needs = [...needs];
+    // recommended order / related: course `(after|related: …)` + path `after:` / `related:` lines
+    for (const k of ["after", "related"] as const) {
+      const set = new Set<string>();
+      for (const cov of c.coverage) for (const n of cov.topic[k] ?? []) { const d = topicConcept.get(`${cov.course.key}::${norm(n)}`) ?? byKey.get(norm(n)); if (d && d !== c && !needs.has(d.key)) set.add(d.key); }
+      for (const n of c.def[k] ?? []) { const d = resolveConcept(concepts, byKey, n); if (d && d !== c && !needs.has(d.key)) set.add(d.key); }
+      c[k] = [...set];
+    }
     const dues = c.coverage.map((x) => x.topic.due).filter((x): x is string => !!x).sort();
     c.due = dues[0] ?? null;
   }
@@ -284,6 +304,7 @@ export const mergeConcepts = (body: string, into: BuiltConcept, other: BuiltConc
     t.resources.push(...o.c.resources); t.notes.push(...o.c.notes);
     const own = new Set([norm(t.name), ...t.aliases.map(norm)]);
     t.needs = [...new Set([...t.needs, ...o.c.needs])].filter((n) => !own.has(norm(n)));
+    for (const k of ["after", "related"] as const) { const m = [...new Set([...(t[k] ?? []), ...(o.c[k] ?? [])])].filter((n) => !own.has(norm(n))); if (m.length) t[k] = m; }
     if (o.c.done && !t.done) t.done = o.c.done;
     t.extra.push(...o.c.extra);
     o.s.concepts.splice(o.s.concepts.indexOf(o.c), 1);
@@ -357,6 +378,27 @@ export const addConceptNeed = (body: string, c: BuiltConcept, prereq: BuiltConce
   const t = ensureDef(d, c);
   const names = new Set([prereq.key, ...prereq.def.aliases.map(norm)]);
   if (!t.needs.some((n) => names.has(norm(n)))) t.needs.push(prereq.def.name);
+});
+/** Kind of the path-written link `c` → `other` (needs / after / related), or null if the path doesn't write one. */
+export function pathLinkKind(c: BuiltConcept, other: BuiltConcept): "needs" | "after" | "related" | null {
+  const names = new Set([other.key, ...other.def.aliases.map(norm)]);
+  for (const k of ["needs", "after", "related"] as const) if ((c.def[k] ?? []).some((n) => names.has(norm(n)))) return k;
+  return null;
+}
+/**
+ * Set the path-level link from `c` to `other`: prerequisite (`needs:`), recommended order (`after:`), related (`related:`)
+ * or none (null). The name leaves the other lists, so a type change rewrites one link (14b-L).
+ */
+export const setConceptLink = (body: string, c: BuiltConcept, other: BuiltConcept, kind: "needs" | "after" | "related" | null) => edit(body, (d) => {
+  if (c.key === other.key) return;
+  const t = kind ? ensureDef(d, c) : findDef(d, c.key)?.c;
+  if (!t) return;
+  const names = new Set([other.key, ...other.def.aliases.map(norm)]);
+  for (const k of ["needs", "after", "related"] as const) {
+    const cur = (t[k] ?? []).filter((n) => !names.has(norm(n)));
+    if (k === kind) cur.push(other.def.name);
+    if (k === "needs") t.needs = cur; else if (cur.length) t[k] = cur; else delete t[k];
+  }
 });
 export const removeConceptNeed = (body: string, c: BuiltConcept, prereq: BuiltConcept) => edit(body, (d) => {
   const f = findDef(d, c.key);
@@ -542,38 +584,47 @@ export interface GraphColLayout { stage: number; name: string; x: number; width:
  * same stage move one sub-column right. A collapsed stage becomes one summary node. Unplaced concepts are left out unless
  * nothing is placed yet. Pure (no DOM) so it can be tested.
  */
-export function graphLayout(p: BuiltPath, keep: (c: BuiltConcept) => boolean, collapsed: Set<string>, o = { colW: 214, nodeW: 176, rowH: 68, top: 72, left: 24, sumW: 150 }) {
+export interface GraphLayoutOpts {
+  /** Group by stage (default): one column group per stage. Off: columns = prerequisite depth across the whole path. */
+  byStage?: boolean;
+  /** Tidy up: order cards inside each column by the barycentre of their links (fewer crossings). */
+  untangle?: boolean;
+  /** Roomy spacing (Display panel): 1.35× gaps. */
+  roomy?: boolean;
+}
+export function graphLayout(p: BuiltPath, keep: (c: BuiltConcept) => boolean, collapsed: Set<string>, opt: GraphLayoutOpts = {}, base = { colW: 214, nodeW: 176, rowH: 68, top: 72, left: 24, sumW: 150 }) {
+  const o = opt.roomy ? { ...base, colW: base.nodeW + (base.colW - base.nodeW) * 2.2, rowH: Math.round(base.rowH * 1.35) } : base;
   const anyPlaced = p.concepts.some((c) => c.placed);
   const stages = anyPlaced ? p.stages.filter((s) => s.name !== UNPLACED) : p.stages;
   const nodes: GraphNodeLayout[] = [];
   const cols: GraphColLayout[] = [];
   const summary = new Map<string, string>(); // concept key → summary node id (collapsed stages)
+  const needsOf = (k: string) => p.byKey.get(k)?.needs ?? [];
+  const unlocksOf = (k: string) => p.byKey.get(k)?.unlocks ?? [];
+  // one group of sub-columns per stage, or (not grouped) one group for everything
+  const groups: { name: string; si: number; list: BuiltConcept[] }[] = opt.byStage === false
+    ? [{ name: "", si: -1, list: stages.flatMap((s) => s.concepts.filter(keep)) /* not grouped: collapsing a stage doesn't apply */ }]
+    : stages.map((s, si) => ({ name: s.name, si, list: s.concepts.filter(keep) }));
+  const stageOf = new Map(stages.flatMap((s, si) => s.concepts.map((c) => [c.key, si] as [string, number])));
   let x = o.left;
-  stages.forEach((s, si) => {
-    const list = s.concepts.filter(keep);
-    if (collapsed.has(s.name)) {
-      cols.push({ stage: si, name: s.name, x, width: o.sumW, count: list.length, collapsed: true });
-      for (const c of list) summary.set(c.key, `stage:${s.name}`);
+  const subCols: { x: number; keys: string[] }[] = [];
+  for (const g of groups) {
+    if (g.si >= 0 && collapsed.has(g.name)) {
+      cols.push({ stage: g.si, name: g.name, x, width: o.sumW, count: g.list.length, collapsed: true });
+      for (const c of g.list) summary.set(c.key, `stage:${g.name}`);
       x += o.sumW + (o.colW - o.nodeW);
-      return;
+      continue;
     }
-    const inStage = new Set(list.map((c) => c.key));
-    const depth = new Map<string, number>();
-    const d = (c: BuiltConcept, seen: Set<string>): number => {
-      if (depth.has(c.key)) return depth.get(c.key)!;
-      if (seen.has(c.key)) return 0;
-      seen.add(c.key);
-      const local = c.needs.filter((n) => inStage.has(n));
-      const v = local.length ? 1 + Math.max(...local.map((n) => d(p.byKey.get(n)!, seen))) : 0;
-      depth.set(c.key, v);
-      return v;
-    };
-    list.forEach((c) => d(c, new Set()));
+    const keys = g.list.map((c) => c.key);
+    const depth = depths(keys, needsOf);
     const sub = Math.max(0, ...depth.values()) + 1;
-    const rows = new Array(sub).fill(0);
-    for (const c of list) { const k = depth.get(c.key) ?? 0; nodes.push({ key: c.key, x: x + k * o.colW, y: o.top + rows[k]++ * o.rowH, stage: si }); }
-    cols.push({ stage: si, name: s.name, x, width: Math.max(1, sub) * o.colW - (o.colW - o.nodeW), count: list.length, collapsed: false });
+    const cs: string[][] = Array.from({ length: sub }, () => []);
+    for (const k of keys) cs[depth.get(k) ?? 0].push(k);
+    cs.forEach((ks, i) => subCols.push({ x: x + i * o.colW, keys: ks }));
+    if (g.si >= 0) cols.push({ stage: g.si, name: g.name, x, width: Math.max(1, sub) * o.colW - (o.colW - o.nodeW), count: g.list.length, collapsed: false });
     x += Math.max(1, sub) * o.colW;
-  });
+  }
+  const ordered = opt.untangle ? untangle(subCols.map((c) => c.keys), needsOf, unlocksOf) : subCols.map((c) => c.keys);
+  ordered.forEach((ks, ci) => ks.forEach((k, r) => nodes.push({ key: k, x: subCols[ci].x, y: o.top + r * o.rowH, stage: stageOf.get(k) ?? stages.length })));
   return { nodes, cols, summary, width: x };
 }

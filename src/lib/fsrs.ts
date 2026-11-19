@@ -147,7 +147,8 @@ export function scheduleAll(card: Card, now = Date.now(), p: FsrsParams = DEFAUL
   let hi = intervalDays(hard.stability!, p), gi = intervalDays(good.stability!, p);
   hi = Math.min(hi, gi); gi = Math.max(gi, hi + 1);
   const ei = Math.max(intervalDays(easy.stability!, p), gi + 1);
-  for (const [n, i] of [[hard, hi], [good, gi], [easy, ei]] as const) { n.interval = i; n.due = now + i * DAY; }
+  // Settings › Review › Max interval caps every answer (the ordering nudges above may step past it).
+  for (const [n, i] of [[hard, hi], [good, gi], [easy, ei]] as const) { n.interval = Math.min(i, p.maxInterval); n.due = now + n.interval * DAY; }
   return [again, hard, good, easy];
 }
 
@@ -167,4 +168,27 @@ export function fmtInterval(ms: number) {
 /** True while the card is in (re)learning steps: it comes back within minutes, so a session shows it again. */
 export const inSteps = (c: Card) => c.state === "learning" || c.state === "relearning";
 /** Scheduler parameters with the user's desired retention. */
-export const paramsFor = (retention?: number): FsrsParams => ({ ...DEFAULT_PARAMS, retention: clamp(retention ?? 0.9, 0.7, 0.97) });
+export const paramsFor = (retention?: number, o: Partial<Omit<FsrsParams, "retention">> = {}): FsrsParams => ({
+  ...DEFAULT_PARAMS,
+  retention: clamp(retention ?? 0.9, 0.7, 0.97),
+  ...(o.w && o.w.length === DEFAULT_W.length && o.w.every(Number.isFinite) ? { w: o.w } : {}),
+  ...(o.learningSteps ? { learningSteps: o.learningSteps.filter((m) => m > 0 && m < 1440) } : {}),
+  ...(o.relearningSteps ? { relearningSteps: o.relearningSteps.filter((m) => m > 0 && m < 1440) } : {}),
+  ...(o.maxInterval ? { maxInterval: clamp(Math.round(o.maxInterval), 1, 36500) } : {}),
+});
+/** The user's scheduler (Settings › Review): retention + Advanced (max interval, steps, fitted weights). */
+export const userParams = (s: { retention?: number; fsrsMaxInterval?: number; fsrsLearningSteps?: number[]; fsrsRelearningSteps?: number[]; fsrsWeights?: number[] | null }, retention = s.retention): FsrsParams =>
+  paramsFor(retention, { maxInterval: s.fsrsMaxInterval, learningSteps: s.fsrsLearningSteps, relearningSteps: s.fsrsRelearningSteps, w: s.fsrsWeights ?? undefined });
+/** "1, 10" / "1m 10m 1h" → minutes; null when a part isn't a duration under a day. */
+export function parseSteps(text: string): number[] | null {
+  const parts = text.split(/[\s,;·]+/).filter(Boolean);
+  const out: number[] = [];
+  for (const p of parts) {
+    const m = /^(\d+(?:\.\d+)?)(m|min|h|s)?$/i.exec(p);
+    if (!m) return null;
+    const v = Number(m[1]) * (m[2]?.toLowerCase() === "h" ? 60 : m[2]?.toLowerCase() === "s" ? 1 / 60 : 1);
+    if (!(v > 0 && v < 1440)) return null;
+    out.push(+v.toFixed(2));
+  }
+  return out;
+}

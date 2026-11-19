@@ -1,6 +1,7 @@
 // PDF reader side panels (Lumen 19 · PdfDesk): the left rail (Pages / Outline / Highlights, 220 px) and the right
 // Highlights panel (320 px: by page, kind, comment, "Make a note from all highlights", "Export as Markdown").
 // On phones the same lists sit in bottom sheets.
+import { EmptyState } from "./EmptyState";
 import { Image as ImageIcon } from "lucide-react";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { resolveAtt } from "../lib/attachments";
@@ -163,7 +164,8 @@ export function HlPanel({ highlights, title, onHl, onAllNote, onExport, sheet }:
             {h.comment && <span dir="auto" className="text-[12.5px] text-muted">{h.comment}</span>}
           </DragHl>
         ))}
-        {!highlights.length && <div className="py-3 text-[12.5px] leading-5 text-muted">No highlights yet. Select text on a page and pick a colour, or switch on Area to capture a figure.</div>}
+        {/* Lumen 21 empty state (the design's "Open reader" action is moot here: this panel lives in the reader) */}
+        {!highlights.length && <EmptyState className="!px-2" glyph="pdf" text="No highlights yet. Select text on a page, or switch on Area to capture a figure." />}
         {highlights.length > 0 && !shown.length && <div className="py-3 text-[12.5px] text-muted">No highlights match this filter.</div>}
       </div>
       <div className={cx("mt-auto flex shrink-0 flex-col gap-2 border-t border-line py-3", sheet ? "px-4" : "px-[14px]")}>

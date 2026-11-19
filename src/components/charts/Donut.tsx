@@ -48,7 +48,7 @@ export function DonutChart({ data, colors, label }: { data: SeriesData; colors: 
         {paths.map((p, i) => (
           <li key={p.c.key} className={active === i ? "is-on" : undefined} onMouseEnter={() => setActive(i)}>
             <span className="chart-swatch" style={{ background: p.color }} />
-            <span dir="auto" className="min-w-0 truncate text-ink">{p.c.label}</span>
+            <span dir="auto" className="min-w-0 truncate text-ink">{legendLabel(p.c.label)}</span>
             <span className="shrink-0 tabular-nums">{fmt(p.v, data.unit)}</span>
           </li>
         ))}
@@ -56,3 +56,7 @@ export function DonutChart({ data, colors, label }: { data: SeriesData; colors: 
     </div>
   );
 }
+
+/** Status / card-state values read as words in the legend ("Todo", "Mastered"); names (fast.ai, CS231n) stay as written. */
+const ENUM = /^(locked|todo|learning|learned|review|mastered|new|relearning|suspended|none|done|open)$/;
+const legendLabel = (l: string) => (ENUM.test(l) ? l[0].toUpperCase() + l.slice(1) : l);

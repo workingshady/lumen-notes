@@ -14,7 +14,7 @@ export function publicApi<T>(path: string): Promise<T> {
 }
 
 const excerpt = (md: string) =>
-  md.replace(/^---[\s\S]*?---/, "").replace(/```[\s\S]*?```/g, "").replace(/\$\$[\s\S]*?\$\$/g, "").replace(/\$[^$\n]+\$/g, "…").replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/[#>*_`[\]!]|\(.*?\)/g, "").replace(/\s+/g, " ").trim().slice(0, 220);
+  md.replace(/^---[\s\S]*?---/, "").replace(/^\s*#\s.*$/m, "").replace(/^\s*(---|\*\*\*)\s*$/gm, "").replace(/\[![\w-]+\][+-]?/g, "").replace(/^\s*[-*+]\s+\[[ xX/>?-]\]\s+/gm, "").replace(/\s*\p{Extended_Pictographic}\uFE0F?\s*\d{4}-\d{2}-\d{2}/gu, "").replace(/```[\s\S]*?```/g, "").replace(/\$\$[\s\S]*?\$\$/g, "").replace(/\$[^$\n]+\$/g, "…").replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/[#>*_`[\]!]|\(.*?\)/g, "").replace(/\s+/g, " ").trim().slice(0, 220);
 const publicNote = (n: Note) => ({ id: n.id, title: n.title, body: n.body, type: n.type, tags: n.tags, status: n.status, createdAt: n.createdAt, updatedAt: n.updatedAt });
 const toPost = (n: Note, full = false) => ({
   id: n.id, title: n.title, slug: n.slug || n.id, tags: n.tags, createdAt: n.createdAt, updatedAt: n.updatedAt, props: n.props ?? {},

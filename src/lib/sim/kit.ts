@@ -189,7 +189,7 @@ export function addFile(v: Vault, id: string, name: string, blob: Blob) {
 // ------------------------------------------------------------------ write
 /** Wipe every demo table (meta keeps only UI-independent keys) and bulk-write the vault. */
 export async function writeVault(db: LumenDB, v: Vault) {
-  const tables = [db.spaces, db.notes, db.folders, db.versions, db.cards, db.sessions, db.attachments, db.blobs];
+  const tables = [db.spaces, db.notes, db.folders, db.versions, db.cards, db.sessions, db.attachments, db.blobs, db.reviews];
   seeding.on = true;
   try { await write(); } finally { seeding.on = false; }
   async function write() { await db.transaction("rw", [...tables, db.meta], async () => {

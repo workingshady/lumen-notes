@@ -167,9 +167,19 @@ export function flashcards(md: string): Flashcard[] {
 export type TopicStatus = "todo" | "learning" | "done" | "skipped";
 const MARK: Record<string, TopicStatus> = { " ": "todo", "/": "learning", x: "done", X: "done", "-": "skipped" };
 export const STATUS_MARK: Record<TopicStatus, string> = { todo: " ", learning: "/", done: "x", skipped: "-" };
-export interface Topic { name: string; status: TopicStatus; needs: string[]; due: string | null; note: string | null; line: number; module: number; locked: boolean }
+export interface Topic {
+  name: string; status: TopicStatus; needs: string[];
+  /** Recommended order `(after: …)` and see-also `(related: …)` links (round 4, 14b): drawn, never lock a topic. Optional for old callers. */
+  after?: string[]; related?: string[];
+  due: string | null; note: string | null; line: number; module: number; locked: boolean;
+}
 export interface Module { name: string; line: number; due: string | null; topics: Topic[] }
 
+export type TopicLinkKey = "needs" | "after" | "related";
+const linkRe = (k: TopicLinkKey) => new RegExp(String.raw`\s*\(` + k + String.raw`:[^)]*\)`, "i");
+const listOf = (l: string, k: TopicLinkKey) => { const m = new RegExp(String.raw`\(` + k + String.raw`:\s*([^)]+)\)`, "i").exec(l); return m ? m[1].split(",").map((s) => s.trim()).filter(Boolean) : []; };
+/** Every `(needs: …)` / `(after: …)` / `(related: …)` group on a topic line. */
+const LINKS_G = /\s*\((?:needs|after|related):[^)]*\)/gi;
 const TOPIC_RE = /^\s*[-*+]\s+\[( |\/|x|X|-)\]\s+(.*)$/;
 /** A roadmap date: `(calendar emoji) 2026-12-01` (written by the app), or the plain-text forms `due:2026-12-01` / `@due(2026-12-01)`. */
 const RM_DUE = /(?:\u{1F4C5}\s*|(?<![\w/])due:\s*|@due\()(\d{4}-\d{2}-\d{2})\)?/u;
@@ -179,6 +189,7 @@ const RM_DUE_G = /\s*(?:\u{1F4C5}\s*|(?<![\w/])due:\s*|@due\()\d{4}-\d{2}-\d{2}\
  *   ## Module name 📅 2026-12-01
  *   - [ ] Topic
  *   - [/] Topic (needs: Other topic, Another) 📅 2026-12-01 → [[Lesson note]]
+ *   - [ ] Topic (after: Better first) (related: See also)   ← recommended order · related (no order)
  *   - [x] done · [-] skipped
  */
 export function roadmap(md: string): Module[] {
@@ -197,9 +208,10 @@ export function roadmap(md: string): Module[] {
     const needs = /\(needs:\s*([^)]+)\)/i.exec(rest);
     const due = RM_DUE.exec(rest);
     const note = /(?:→|->)\s*\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/.exec(rest);
-    rest = rest.replace(/\(needs:[^)]*\)/i, "").replace(RM_DUE_G, "").replace(/(?:→|->)\s*\[\[[^\]]+\]\]/, "").trim();
+    const after = listOf(rest, "after"), related = listOf(rest, "related");
+    rest = rest.replace(LINKS_G, "").replace(RM_DUE_G, "").replace(/(?:→|->)\s*\[\[[^\]]+\]\]/, "").trim();
     mods[mods.length - 1].topics.push({
-      name: rest, status: MARK[m[1]], needs: needs ? needs[1].split(",").map((s) => s.trim()).filter(Boolean) : [],
+      name: rest, status: MARK[m[1]], needs: needs ? needs[1].split(",").map((s) => s.trim()).filter(Boolean) : [], after, related,
       due: due?.[1] ?? null, note: note?.[1].trim() ?? null, line, module: mods.length - 1, locked: false,
     });
   });
@@ -254,7 +266,7 @@ export function topicBlock(lines: string[], line: number): [number, number] {
 function topicName(l: string): string {
   const m = TOPIC_RE.exec(l);
   if (!m) return "";
-  return m[2].replace(/\(needs:[^)]*\)/i, "").replace(RM_DUE_G, "").replace(/(?:→|->)\s*\[\[[^\]]+\]\]/, "").trim();
+  return m[2].replace(LINKS_G, "").replace(RM_DUE_G, "").replace(/(?:→|->)\s*\[\[[^\]]+\]\]/, "").trim();
 }
 function editLine(md: string, line: number, f: (l: string) => string) {
   const lines = md.split("\n");
@@ -267,10 +279,28 @@ function insertBeforeTail(l: string, frag: string, tail: RegExp) {
   return m ? `${l.slice(0, m.index).trimEnd()} ${frag} ${l.slice(m.index).trimStart()}` : `${l.trimEnd()} ${frag}`;
 }
 /** Replace a topic's `(needs: …)` list (removed when empty). */
-export const setTopicNeeds = (md: string, line: number, needs: string[]) => editLine(md, line, (l) => {
-  const s = l.replace(/\s*\(needs:[^)]*\)/i, "");
-  return needs.length ? insertBeforeTail(s, `(needs: ${needs.join(", ")})`, /\s(\u{1F4C5}|due:|@due\(|→|->)/u) : s;
+export const setTopicNeeds = (md: string, line: number, needs: string[]) => setTopicList(md, line, "needs", needs);
+/** Replace a topic's `(needs|after|related: …)` list (removed when empty). */
+export const setTopicList = (md: string, line: number, key: TopicLinkKey, items: string[]) => editLine(md, line, (l) => {
+  const s = l.replace(linkRe(key), "");
+  return items.length ? insertBeforeTail(s, `(${key}: ${items.join(", ")})`, /\s(\u{1F4C5}|due:|@due\(|→|->)/u) : s;
 });
+/**
+ * How topic `line` links to `name`: prerequisite, recommended order, related, or not at all (null). The name leaves the other
+ * two lists, so a type change keeps one link and rewrites it (needs → after → related). Other lines stay byte-identical.
+ */
+export function setTopicLink(md: string, line: number, name: string, kind: TopicLinkKey | null): string {
+  const l = md.split("\n")[line];
+  if (l === undefined || !TOPIC_RE.test(l)) return md;
+  const low = name.toLowerCase();
+  for (const k of ["needs", "after", "related"] as const) {
+    const cur = listOf(md.split("\n")[line], k);
+    const rest = cur.filter((n) => n.toLowerCase() !== low);
+    const next = k === kind ? [...rest, name] : rest;
+    if (next.length !== cur.length || next.some((x, i) => x !== cur[i])) md = setTopicList(md, line, k, next);
+  }
+  return md;
+}
 export const setTopicDue = (md: string, line: number, due: string | null) => editLine(md, line, (l) => {
   const s = l.replace(RM_DUE_G, "");
   return due ? insertBeforeTail(s, `📅 ${due}`, /\s(→|->)/) : s;
@@ -456,12 +486,16 @@ export function renameTopic(md: string, line: number, name: string): string {
 function mapNeeds(md: string, f: (n: string) => string | null): string {
   return md.split("\n").map((l) => {
     if (!TOPIC_RE.test(l)) return l;
-    const m = /\(needs:\s*([^)]+)\)/i.exec(l);
-    if (!m) return l;
-    const needs = m[1].split(",").map((s) => s.trim()).filter(Boolean);
-    const next = needs.map(f).filter((x): x is string => !!x);
-    if (next.length === needs.length && next.every((x, i) => x === needs[i])) return l;
-    return next.length ? l.replace(m[0], `(needs: ${next.join(", ")})`) : l.replace(/\s*\(needs:[^)]*\)/i, "");
+    // (needs: …) plus the round-4 (after: …) / (related: …) lists: renames and deletes follow every link type
+    for (const key of ["needs", "after", "related"] as const) {
+      const m = new RegExp(String.raw`\(` + key + String.raw`:\s*([^)]+)\)`, "i").exec(l);
+      if (!m) continue;
+      const needs = m[1].split(",").map((s) => s.trim()).filter(Boolean);
+      const next = needs.map(f).filter((x): x is string => !!x);
+      if (next.length === needs.length && next.every((x, i) => x === needs[i])) continue;
+      l = next.length ? l.replace(m[0], `(${key}: ${next.join(", ")})`) : l.replace(linkRe(key), "");
+    }
+    return l;
   }).join("\n");
 }
 const stripNeed = (md: string, name: string) => mapNeeds(md, (n) => (n.toLowerCase() === name.toLowerCase() ? null : n));

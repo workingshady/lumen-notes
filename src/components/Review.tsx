@@ -1,18 +1,19 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowUpRight, Brain, Check, Layers, X } from "lucide-react";
+import { ArrowUpRight, Check, Layers, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Card, Note } from "../../shared/types";
-import { db, save } from "../lib/db";
+import { db, patch, save, uid } from "../lib/db";
 import { flashcards, type Flashcard } from "../lib/parse";
 import { clozeEnabled, clozeSides } from "../lib/cloze";
 import { OcclusionImage } from "./OcclusionEditor";
-import { inSteps, paramsFor, previewIntervals, schedule, type Grade } from "../lib/fsrs";
-import { getSettings } from "../lib/settings";
+import { inSteps, memoryOf, previewIntervals, schedule, userParams, type FsrsCard, type Grade } from "../lib/fsrs";
+import { getSettings, useSettings } from "../lib/settings";
 import { newCard } from "../lib/srs";
 import { go, noteDerived, openNote, toast, useVault } from "../lib/store";
 import { Preview } from "./Preview";
 import { cardLine, openNoteAtLine } from "./study-nav";
-import { cx, Empty } from "./ui";
+import { cx } from "./ui";
+import { EmptyState } from "./EmptyState";
 
 interface Item { note: Note; fc: Flashcard; card: Card }
 
@@ -47,8 +48,11 @@ function SpecialCard({ fc, note, flipped, md }: { fc: Flashcard; note: Note; fli
 /** Collect due cards for some notes (one note in Review mode, or all notes in the Review view). Suspended cards never count. */
 export function useDueCards(notes: Note[], includeNew = true) {
   const cards = useLiveQuery(() => db.cards.toArray(), []);
+  // Settings › Review › New cards a day (0 = no limit): new cards already started today (review log) count against it.
+  const perDay = useSettings().fsrsNewPerDay ?? 0;
+  const startedToday = useLiveQuery(() => (perDay > 0 ? db.reviews.where("at").aboveOrEqual(new Date().setHours(0, 0, 0, 0)).filter((r) => r.state === "new" && !r.deleted).count() : 0), [perDay, cards]);
   return useMemo(() => {
-    if (!cards) return null;
+    if (!cards || startedToday === undefined) return null;
     const map = new Map(cards.map((c) => [c.id, c]));
     const now = Date.now();
     const out: Item[] = [];
@@ -61,8 +65,11 @@ export function useDueCards(notes: Note[], includeNew = true) {
         if (card.due <= now && (includeNew || card.reps > 0)) out.push({ note: n, fc, card });
       }
     }
-    return out.sort((a, b) => a.card.due - b.card.due);
-  }, [cards, notes, includeNew]);
+    out.sort((a, b) => a.card.due - b.card.due);
+    if (perDay <= 0) return out;
+    let left = Math.max(0, perDay - startedToday);
+    return out.filter((x) => memoryOf(x.card as FsrsCard, now).state !== "new" || left-- > 0);
+  }, [cards, notes, includeNew, perDay, startedToday]);
 }
 
 const GRADES = [
@@ -76,6 +83,8 @@ const Kbd = ({ children }: { children: React.ReactNode }) => <span className="mr
 const DAY = 86_400_000;
 /** One-line answers: the first sentence is the headline, the rest the explanation ("The step size. θ ← …"). */
 const headline = (a: string) => (a.includes("\n") ? a : a.replace(/^(.{3,120}?[.!?])\s+(?=\S)/, "$1\n\n"));
+/** "tomorrow", "today", "in 3 days" for the empty state's next-due line. */
+const nextWhen = (t: number) => { const d = Math.round((new Date(t).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / DAY); return d <= 0 ? "later today" : d === 1 ? "tomorrow" : `in ${d} days`; };
 const dayKey = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
 
 /** Days in a row with study activity (edits, timer sessions, reviews), ending today or yesterday. Same rule as Home's streak. */
@@ -100,7 +109,7 @@ function useStreak(tick: number) {
   }, [data, v.notes]);
 }
 
-type Step = { kind: "grade" | "suspend"; item: Item; prev: Card; queue: Item[]; done: number; stats: number[]; again: [string, { n: number; q: string }][] };
+type Step = { kind: "grade" | "suspend"; item: Item; prev: Card; log?: string; queue: Item[]; done: number; stats: number[]; again: [string, { n: number; q: string }][] };
 
 export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?: string; onExit?: () => void }) {
   const v = useVault();
@@ -127,6 +136,21 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
     return (await db.cards.where("due").below(end.getTime()).toArray()).filter((c) => ids.has(c.noteId) && c.due > now && !c.suspended && !c.deleted).length;
   }, [ids, done]);
 
+  // "Practice anyway" (Lumen 21 empty state): review ahead, the 20 soonest-due cards of these notes, graded normally.
+  const upcoming = useLiveQuery(async () => {
+    const cards = new Map((await db.cards.where("noteId").anyOf([...ids]).toArray()).map((c) => [c.id, c]));
+    const out: Item[] = [];
+    for (const n of notes) {
+      if (n.type === "canvas") continue;
+      for (const fc of noteDerived("flashcards", n, (x) => flashcards(x.body))) {
+        const card = cards.get(`${n.id}:${fc.key}`);
+        if (card && !card.suspended && !card.deleted && card.due > Date.now()) out.push({ note: n, fc, card });
+      }
+    }
+    return out.sort((a, b) => a.card.due - b.card.due).slice(0, 20);
+  }, [ids, notes, done]) ?? [];
+  function practice() { setQueue(upcoming); setDone(0); setStats([0, 0, 0, 0]); setStarted(Date.now()); history.current = []; }
+
   const cur = queue?.[0];
   const snapshot = (kind: Step["kind"], item: Item): Step => ({ kind, item, prev: item.card, queue: queue!, done, stats, again: [...again.current] });
 
@@ -134,8 +158,15 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
     if (!cur) return;
     history.current.push(snapshot("grade", cur));
     // FSRS-6 (lib/fsrs.ts); SM-2 cards migrate here on their first FSRS review.
-    const next = schedule(cur.card, g, Date.now(), paramsFor(getSettings().retention));
+    const at = Date.now();
+    const prevMem = memoryOf(cur.card as FsrsCard, at);
+    const next = schedule(cur.card, g, at, userParams(getSettings()));
     await save("card", next);
+    // Review log (synced as kind "review"): feeds Settings › Review › Optimize from history and the new-cards limit.
+    const log = uid();
+    history.current[history.current.length - 1].log = log;
+    await save("review", { id: log, cardId: cur.card.id, noteId: cur.card.noteId, at, grade: g, state: prevMem.state,
+      elapsed: prevMem.state === "new" ? 0 : +((at - prevMem.last) / DAY).toFixed(4), scheduled: +((next.due - at) / DAY).toFixed(4), updatedAt: at, deleted: 0 });
     // "Again" and cards still in their minute-long learning steps come back later in this session (Anki-style).
     const requeue = g === 0 || inSteps(next);
     setStats((s) => s.map((x, i) => (i === g ? x + 1 : x)));
@@ -165,6 +196,7 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
   async function undo() {
     const s = history.current.pop();
     if (!s) return;
+    if (s.log) await patch("review", s.log, { deleted: 1 }); // an undone grade leaves the review log
     // Put the card back exactly as it was (a never-reviewed card goes back to "new").
     await save("card", s.prev);
     again.current = new Map(s.again);
@@ -214,7 +246,9 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
     if (!done) return (
       <div className="relative h-full">
         {close && <div className="absolute left-2 top-1.5 md:left-6 md:top-3">{close}</div>}
-        <Empty icon={<Brain size={36} />} title="Nothing due" hint="Write cards as `Question :: Answer`, or a question line, then `?`, then the answer. Due cards show up here." />
+        {upcoming.length
+          ? <EmptyState className="h-full" glyph="flashcards" text={`No cards due. Next ones ${nextWhen(upcoming[0].card.due)}.`} action={{ label: "Practice anyway", onClick: practice }} />
+          : <EmptyState className="h-full" glyph="flashcards" text="No cards yet. Write Question :: Answer in any note." action={onExit ? { label: "Back to Home", onClick: onExit } : undefined} />}
       </div>
     );
     const total = stats.reduce((a, b) => a + b, 0) || 1;
@@ -249,7 +283,7 @@ export function ReviewSession({ notes, title, onExit }: { notes: Note[]; title?:
       </div>
     );
   }
-  const iv = previewIntervals(cur.card, Date.now(), paramsFor(getSettings().retention));
+  const iv = previewIntervals(cur.card, Date.now(), userParams(getSettings()));
   const total = done + queue.length;
   const left = queue.length - 1;
   const pos = Math.min(done + 1, total);

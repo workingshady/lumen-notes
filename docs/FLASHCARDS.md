@@ -92,3 +92,23 @@ boxes:
 
 - Review, hide-one: the target box is solid accent, the others are outlined. Hide-all: every box is solid, the target is accent. Showing the answer turns the target into an accent outline and shows its label.
 - Read mode: the image with outlined boxes and an "N cards" chip.
+
+## 4. Scheduling settings and the review log
+
+Settings › Reading › Review › **Advanced** (Lumen 20 · A12):
+
+- **Max interval** (days, default 36500): no answer schedules a card further out.
+- **New cards a day** (default 0 = no limit): never-reviewed cards shown in Review / due counts are capped; new cards started today (from the review log) count against it.
+- **Learning steps** / **Relearning steps** (minutes or hours under a day, e.g. `1m 10m`, default `1m 10m` / `10m`).
+- **Optimize from history**: fits the 21 FSRS-6 weights to your review log (`src/lib/fsrs-optimize.ts`). It replays every card's logged reviews with FSRS-6, scores the predicted recall of each review a day or more after the previous one with log loss, pretrains the four initial stabilities per first rating (golden-section search) and then runs a coordinate descent over all weights inside the FSRS-6 bounds, with an L2 pull toward the defaults. Needs at least 50 such reviews. This is a derivative-free stand-in for the official fsrs-optimizer (gradient descent in PyTorch/Rust), not a port of it. "Use defaults" drops the fitted weights.
+
+These values live in the device's settings (`lumen.settings`: `fsrsMaxInterval`, `fsrsNewPerDay`, `fsrsLearningSteps`, `fsrsRelearningSteps`, `fsrsWeights`, `fsrsFit`).
+
+**Review log** (new synced record, kind `review`, Dexie table `reviews`, DB version 2): one row per graded card:
+
+```json
+{ "id": "…", "cardId": "<noteId>:<key>", "noteId": "…", "at": 1794598867341, "grade": 2,
+  "state": "review", "elapsed": 3.02, "scheduled": 9, "updatedAt": 1794598867341, "deleted": 0 }
+```
+
+`grade` 0 Again · 1 Hard · 2 Good · 3 Easy; `state` = the card's state before the review; `elapsed` / `scheduled` in (fractional) days. Undo in a review session marks the row deleted. Older clients ignore the new kind (sync skips unknown kinds).

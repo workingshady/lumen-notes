@@ -233,7 +233,7 @@ export function RoadmapView({ note, compact, target, view: cView, onView, header
               ? <PhoneOutline mods={mods} sel={sel ?? undefined} onSelect={select} ops={ops} fold={fold} fresh={fresh} onNotes={() => setPhoneTray(true)} />
               : empty ? <Builder mods={mods} ops={ops} />
                 : <Outline mods={mods} sel={sel ?? undefined} onSelect={select} ops={ops} fold={fold} fresh={fresh} />)}
-            {view === "tree" && <ReactFlowProvider><Tree mods={mods} sel={sel} phone={phone} fold={fold} fresh={fresh} onSelect={select} onConnect={addNeed} onCreate={createTopic} onRemoveNeed={(t, n) => { write(removeTopicNeed(note.body, t.line, n)); announce(`${t.name} no longer needs ${n}`); }} /></ReactFlowProvider>}
+            {view === "tree" && <ReactFlowProvider><Tree mods={mods} sel={sel} phone={phone} fold={fold} fresh={fresh} onSelect={select} onConnect={addNeed} onCreate={createTopic} onRemoveNeed={(t, n) => { write(removeTopicNeed(note.body, t.line, n)); announce(`${t.name} no longer needs ${n}`); }} onEditLinks={(f, said) => { write(f(note.body)); announce(said); }} /></ReactFlowProvider>}
             {view === "timeline" && <Timeline mods={mods} target={target} onSelect={select} onDue={(t, due) => write(setTopicDue(note.body, t.line, due))} fresh={fresh} />}
           </div>
           {tray && <RoadmapTray spaceId={note.spaceId} used={used} onPick={pickNote} builder={empty} onAddAll={addAll} />}

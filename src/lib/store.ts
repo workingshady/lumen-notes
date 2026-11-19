@@ -26,6 +26,8 @@ export interface UI {
   newSpace: boolean;
   io: boolean;
   history: string[];
+  /** The page (pageKey) on which the user expanded the auto-collapsed sidebar rail; not saved. */
+  railPeek?: string | null;
   /** Where a note was opened from when that wasn't a note list (home, a space page, review…): Back returns there. */
   returnTo?: { view: View; spaceId: string; folderId: string | null; filter: UI["filter"]; tag: string | null } | null;
 }
@@ -55,6 +57,25 @@ export function setUI(p: Partial<UI> | ((u: UI) => Partial<UI>)) {
   } catch { /* ignore */ }
   subs.forEach((f) => f());
 }
+
+// ------------------------------------------------------------------ sidebar rail
+// Design (LumenSidebar `collapsed` in every R4 desk: Today, notes read full width, paths, PDFs, bases, dashboards,
+// canvases, graph, settings, course roadmap, project hub): content-heavy pages show the docked sidebar as the 56 px
+// rail. App decides per render (setRailAuto); expanding it there (rail button, Ctrl \, palette) opens it for that
+// page only; pages drawn with the full sidebar (Home, notes with the list, Tasks, Calendar, Spaces) follow ui.sidebar.
+let railAuto = false;
+export const setRailAuto = (on: boolean) => { railAuto = on; };
+export const pageKey = (u: Pick<UI, "view" | "noteId" | "spaceId" | "filter">) => `${u.view}|${u.noteId ?? ""}|${u.spaceId}|${u.filter ?? ""}`;
+/** Docked sidebar drawn as the rail? */
+export const sidebarRail = (u: UI) => !u.sidebar || (railAuto && u.railPeek !== pageKey(u));
+export function toggleSidebar() {
+  setUI((u) => {
+    if (!docked()) return { sidebar: !u.sidebar };
+    if (sidebarRail(u)) return { sidebar: true, railPeek: railAuto ? pageKey(u) : null };
+    return railAuto ? { railPeek: null } : { sidebar: false };
+  });
+}
+export const expandSidebar = () => setUI((u) => (docked() ? { sidebar: true, railPeek: railAuto ? pageKey(u) : null } : { sidebar: true }));
 
 export function openNote(id: string, mode?: Mode) {
   setUI((u) => ({
@@ -198,8 +219,10 @@ export interface Toast {
   sub?: string; icon?: ToastIcon; ms: number; at: number;
   /** Action button style: "link" (teal text, conflict "View other") or "button" (bordered, Undo ⌘Z). */
   actionStyle?: "link" | "button";
+  /** "pill": the design's inverted 40 px pill (Lumen 20 · phone exit toast), text only. */
+  variant?: "card" | "pill";
 }
-export interface ToastOpts { sub?: string; icon?: ToastIcon; ms?: number; actionStyle?: "link" | "button" }
+export interface ToastOpts { sub?: string; icon?: ToastIcon; ms?: number; actionStyle?: "link" | "button"; variant?: "card" | "pill" }
 let toasts: Toast[] = [];
 const tsubs = new Set<() => void>();
 export const useToasts = () => useSyncExternalStore((f) => (tsubs.add(f), () => tsubs.delete(f)), () => toasts);
@@ -217,7 +240,7 @@ export function dismissToast(id: number) { toasts = toasts.filter((x) => x.id !=
 export function toast(text: string, action?: Toast["action"], opts: ToastOpts = {}) {
   const undo = action && /undo/i.test(action.label);
   const ms = opts.ms ?? (undo ? 8000 : action ? 6000 : 3000);
-  const t: Toast = { id: Date.now() + Math.random(), text, action, sub: opts.sub, icon: opts.icon ?? inferIcon(text, action), ms, at: Date.now(), actionStyle: opts.actionStyle ?? (undo ? "button" : "link") };
+  const t: Toast = { id: Date.now() + Math.random(), text, action, sub: opts.sub, icon: opts.icon ?? inferIcon(text, action), ms, at: Date.now(), actionStyle: opts.actionStyle ?? (undo ? "button" : "link"), variant: opts.variant ?? "card" };
   toasts = [...toasts.slice(-2), t];
   tsubs.forEach((f) => f());
   setTimeout(() => dismissToast(t.id), ms);

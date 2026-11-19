@@ -1,11 +1,11 @@
 import { Route, CalendarCheck, CalendarDays, ChevronDown, ChevronRight, ChevronsUpDown, FileText, FolderTree as FolderTreeIcon, House, Inbox, LayoutDashboard, Layers, ListChecks, NotebookPen, Plus, Rss, Search, Settings, Trash2, Waypoints } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SPACE_KINDS, type Folder, type Space } from "../../shared/types";
 import { createFolder, createNote, dailyNote, deleteFolder, moveFolder, moveNote } from "../lib/actions";
 import { patch } from "../lib/db";
 import { natural, progress, roadmap, tasks } from "../lib/parse";
 import { getSettings, useSettings } from "../lib/settings";
-import { go, noteDerived, openNote, setUI, toast, useUI, useVault, type UI, type View } from "../lib/store";
+import { expandSidebar, go, noteDerived, openNote, setUI, toast, useUI, useVault, type UI, type View } from "../lib/store";
 import { RailSync, SidebarSync } from "./ws-sync";
 import { num, tr, useRtl } from "./ws-dir";
 import { PRESETS } from "../lib/canvas";
@@ -15,13 +15,12 @@ import { SidebarSmartFolders } from "./SmartFolders";
 import { AccountSwitcher } from "./AccountSwitcher";
 import { Glyph } from "./Glyph";
 import { AvatarGlyph, SpaceIcon, SpaceTile as SpaceTileBox } from "./SpaceIcon";
-import { useFaviconBadge } from "../lib/favicon";
 import { useAvatarImage } from "../lib/home-meta";
 
 export const KIND_LABEL: Record<Space["kind"], string> = { project: "Project", area: "Area", course: "Course", resource: "Resource", archive: "Archive" };
 const colorOf = (c: string | null | undefined) => (c ? PRESETS[c] ?? c : null);
 
-type NavKey = "home" | "today" | "inbox" | "daily" | "tasks" | "calendar" | "review" | "graph" | "canvas" | "paths" | "blog";
+export type NavKey = "home" | "today" | "inbox" | "daily" | "tasks" | "calendar" | "review" | "graph" | "canvas" | "paths" | "blog";
 interface NavItem { key: NavKey; icon: React.ReactNode; label: string; count?: number; learn?: boolean }
 
 /** Which nav item is active for the current UI state. */
@@ -30,10 +29,9 @@ function activeKey(ui: UI): NavKey | null {
   return ({ home: "home", today: "today", tasks: "tasks", kanban: "tasks", calendar: "calendar", review: "review", graph: "graph" } as Partial<Record<View, NavKey>>)[ui.view] ?? null;
 }
 
-function useNav(): NavItem[] {
+export function useNav(): NavItem[] {
   const v = useVault();
   const due = useDueCards(v.notes)?.length ?? 0;
-  useFaviconBadge(due);
   const openTasks = useMemo(() => v.notes.filter((n) => n.type !== "roadmap").reduce((a, n) => a + noteDerived("openTasks", n, (x) => tasks(x.body).filter((t) => !t.done).length), 0), [v.notes]);
   const inbox = v.notes.filter((n) => n.spaceId === "inbox").length;
   return [
@@ -51,7 +49,7 @@ function useNav(): NavItem[] {
   ];
 }
 
-async function runNav(k: NavKey, spaceId: string) {
+export async function runNav(k: NavKey, spaceId: string) {
   const sp = spaceId === "all" ? "inbox" : spaceId;
   if (k === "home") go("home");
   else if (k === "today") go("today");
@@ -88,13 +86,13 @@ export function Sidebar({ rail }: { rail?: boolean }) {
   if (rail) {
     return (
       <aside className="safe-t flex h-full w-14 shrink-0 flex-col items-center gap-1 border-e border-line bg-surface py-2.5">
-        <button title={space?.name ?? "All spaces"} onClick={() => setUI({ sidebar: true })} className="mb-1.5"><SpaceTile space={space} size={32} /></button>
+        <button title={space?.name ?? "All spaces"} onClick={expandSidebar} className="mb-1.5"><SpaceTile space={space} size={32} /></button>
         <RailBtn label="Search (Ctrl K)" onClick={() => setUI({ palette: true })}><Search size={16} /></RailBtn>
         {nav.map((n) => (
           <RailBtn key={n.key} label={tr(n.label, rtl)} active={act === n.key} dot={!!(n.learn && n.count)} onClick={() => runNav(n.key, ui.spaceId)}>{n.icon}</RailBtn>
         ))}
         <div className="my-1.5 h-px w-6 bg-line" />
-        <RailBtn label="Folders" onClick={() => setUI({ sidebar: true })}><FolderTreeIcon size={16} /></RailBtn>
+        <RailBtn label="Folders" onClick={expandSidebar}><FolderTreeIcon size={16} /></RailBtn>
         <div className="flex-1" />
         <RailSync />
         <RailBtn label="Settings" active={ui.view === "settings"} onClick={() => go("settings")}><Settings size={16} /></RailBtn>
@@ -287,7 +285,11 @@ function FolderRow({ f, folders, depth, counts, onDrop }: { f: Folder; folders: 
   const [menu, setMenu] = useState(false);
   const notes = open ? v.notes.filter((n) => n.folderId === f.id).sort((a, b) => natural(a.title, b.title)).slice(0, 60) : [];
   const toggle = () => setOpen((o) => { try { localStorage.setItem(key, o ? "0" : "1"); } catch { /* ignore */ } return !o; });
-  const active = ui.folderId === f.id && ui.view === "notes";
+  // design (LumenSidebar / Lumen 02 4A): the open note's folder (and its parents) unfold and the note row is the active one
+  const openFolder = ui.view === "notes" && ui.noteId ? v.byId.get(ui.noteId)?.folderId ?? null : null;
+  const holdsOpenNote = useMemo(() => { for (let id = openFolder; id; id = folders.find((x) => x.id === id)?.parentId ?? null) if (id === f.id) return true; return false; }, [openFolder, folders, f.id]);
+  useEffect(() => { if (holdsOpenNote) setOpen(true); }, [holdsOpenNote, ui.noteId]);
+  const active = ui.folderId === f.id && ui.view === "notes" && !(open && openFolder === f.id);
   const color = colorOf(f.color) ?? "var(--muted)";
   const pl = 8 + depth * 20;
   return (

@@ -14,6 +14,8 @@ New: dates may also be written as `due:2026-12-01` or `@due(2026-12-01)` (no emo
 
 - Drop on the top/bottom third of a row inserts; the middle third makes the dragged topic a prerequisite. A drop that would create a loop is refused with the chain (`needChain` in parse.ts) and writes nothing.
 - Module fold state: `localStorage["lumen.rm.fold.<roadmapNoteId>"]` = `{ "<module name lowercased>": open }`, shared by Outline and Skill tree. Notes tray toggle: `lumen.rm.tray`.
+- **Link types (14b, audit B)**: besides `(needs: …)` a topic line may carry `(after: A, B)` (recommended order: drawn dashed, never locks) and `(related: C)` (see also: dotted, no arrow). Renames and deletes follow all three lists. `setTopicLink(md, line, name, kind|null)` in parse.ts rewrites one link between kinds. Learning paths use the same kinds as sub-lines under a concept: `  - after: …`, `  - related: …` (next to `  - needs: …`).
+- Skill tree + path Graph share `src/lib/prereq-graph.ts` (implied links = transitive reduction, `checkLink` valid/loop/implied/duplicate, edge paths, barycentre untangle, crossings) and `src/components/prereq-ui.tsx` (edge type, drop tag, link tip, link menu, Display panel/sheet). Display choices: `localStorage["lumen.prereq.display.path"|".tree"]`. Path graph per note: `lumen.path.gpos.<id>` (hand-placed cards in Free layout), `lumen.path.gpin.<id>` (pinned), `lumen.path.tidy.<id>` (Tidy up applied = untangled order). Tests: `scripts/prereq-graph.test.ts`.
 - Unlock moment: a topic whose prerequisites all became done plays a 600 ms ring/settle, its incoming link draws in green, toast "X is now open." Reduced motion: end frame only.
 
 ## Project hub (project spaces)

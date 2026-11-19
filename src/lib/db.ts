@@ -1,5 +1,5 @@
 import Dexie, { type Table } from "dexie";
-import type { AttachmentMeta, Card, Folder, Kind, Note, Session, Space, Version } from "../../shared/types";
+import type { AttachmentMeta, Card, Folder, Kind, Note, ReviewLog, Session, Space, Version } from "../../shared/types";
 
 export interface AttachmentBlob { id: string; blob: Blob; uploaded: 0 | 1 }
 export interface Meta { k: string; v: unknown }
@@ -18,6 +18,7 @@ export class LumenDB extends Dexie {
   versions!: Table<Version, string>;
   cards!: Table<Card, string>;
   sessions!: Table<Session, string>;
+  reviews!: Table<ReviewLog, string>;
   attachments!: Table<AttachmentMeta, string>;
   blobs!: Table<AttachmentBlob, string>;
   meta!: Table<Meta, string>;
@@ -36,12 +37,14 @@ export class LumenDB extends Dexie {
       blobs: "id, uploaded",
       meta: "k",
     });
+    // v2: FSRS review log (one row per graded card; synced as kind "review").
+    this.version(2).stores({ reviews: "id, cardId, at, dirty" });
   }
 }
 export const db = new LumenDB();
 
 export const TABLE: Record<Kind, Table<any, string>> = {
-  space: db.spaces, note: db.notes, folder: db.folders, version: db.versions, card: db.cards, session: db.sessions, attachment: db.attachments,
+  space: db.spaces, note: db.notes, folder: db.folders, version: db.versions, card: db.cards, session: db.sessions, attachment: db.attachments, review: db.reviews,
 };
 
 export async function getMeta<T>(k: string, fallback: T): Promise<T> {

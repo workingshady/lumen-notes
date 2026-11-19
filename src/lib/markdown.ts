@@ -1022,4 +1022,22 @@ function markArabic(root: HTMLElement) {
     if (last < text.length) frag.append(text.slice(last));
     t.replaceWith(frag);
   }
+  // HTML's dir="auto" skips descendants that carry their own dir, so a block whose first strong letter sits in an
+  // .ar span (dir="rtl") resolved to LTR (Arabic headings, list items, paragraphs read left-aligned). Resolve those
+  // blocks here with the same rule: the first strong letter of their own text (code, math and nested dir blocks skipped).
+  for (const b of root.querySelectorAll<HTMLElement>('[dir="auto"]')) {
+    if (!b.querySelector(".ar")) continue;
+    const w = document.createTreeWalker(b, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => {
+        const p = n.parentElement;
+        if (!p || p.closest("pre, code, .katex, svg")) return NodeFilter.FILTER_REJECT;
+        const ar = p.closest(".ar");
+        return (ar ? ar.parentElement : p)?.closest("[dir]") === b ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      },
+    });
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      const d = strongDir(n.nodeValue ?? "");
+      if (d !== "auto") { b.dir = d; break; }
+    }
+  }
 }

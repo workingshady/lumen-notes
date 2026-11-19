@@ -96,6 +96,22 @@ export interface Session extends Synced {
   at: number;
 }
 
+/** One flashcard review (FSRS review log, synced like cards; append-only). Feeds Settings › Review › Optimize. */
+export interface ReviewLog extends Synced {
+  cardId: string;
+  noteId: string;
+  /** epoch ms of the review */
+  at: number;
+  /** 0 Again · 1 Hard · 2 Good · 3 Easy */
+  grade: 0 | 1 | 2 | 3;
+  /** card state before this review */
+  state: "new" | "learning" | "review" | "relearning";
+  /** days since the previous review (fractional; 0 for a new card) */
+  elapsed: number;
+  /** days until the card is due after this review (fractional; minutes count as parts of a day) */
+  scheduled: number;
+}
+
 /** Attachment metadata (bytes live in IndexedDB locally and in R2 remotely). */
 export interface AttachmentMeta extends Synced {
   name: string;
@@ -103,8 +119,8 @@ export interface AttachmentMeta extends Synced {
   size: number;
 }
 
-export type Kind = "space" | "note" | "folder" | "version" | "card" | "session" | "attachment";
-export const KINDS: Kind[] = ["space", "note", "folder", "version", "card", "session", "attachment"];
+export type Kind = "space" | "note" | "folder" | "version" | "card" | "session" | "attachment" | "review";
+export const KINDS: Kind[] = ["space", "note", "folder", "version", "card", "session", "attachment", "review"];
 
 export interface SyncItem {
   kind: Kind;

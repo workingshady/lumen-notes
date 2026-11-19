@@ -16,7 +16,8 @@ import { Glyph } from "./Glyph";
 import { SpaceIcon } from "./SpaceIcon";
 import { PhoneChips, PhoneListHeader, SwipeRow, type PhoneFilter } from "./ws-phone";
 import { num, tr, useRtl } from "./ws-dir";
-import { filterByQuery, NoteListQueryBar, SmartListHeader, smartListFor, SmartRow, useSmartFolders } from "./SmartFolders";
+import { filterByQuery, NoteListQueryBar, openSmartEditor, SmartListHeader, smartListFor, SmartRow, useSmartFolders } from "./SmartFolders";
+import { EmptyState } from "./EmptyState";
 import { indexLabel, LIST_PAGE, useIndexStatus } from "../lib/big-vault";
 
 type Sort = "updated" | "created" | "title";
@@ -45,7 +46,7 @@ export function listTime(t: number) {
 }
 
 /** Task/roadmap syntax that reads as noise (and as emoji) in a one-line preview: `📅 2026-12-01`, `🛫 …`, `[x]`, `→ [[…]]` arrows stay as text. */
-const dropSyntax = (s: string) => s.replace(/\s*[\u{1F4C5}\u{1F6EB}\u{23F3}]️?\s*\d{4}-\d{2}-\d{2}/gu, "").replace(/^\s*[-*+]\s+\[[ xX/>?-]\]\s+/gm, "").replace(/\(needs:[^)]*\)/g, "");
+const dropSyntax = (s: string) => s.replace(/\s*[\u{1F4C5}\u{1F6EB}\u{23F3}]️?\s*\d{4}-\d{2}-\d{2}/gu, "").replace(/^\s*[-*+]\s+\[[ xX/>?-]\]\s+/gm, "").replace(/\((?:needs|after|related):[^)]*\)/g, "");
 const preview = (n: Note) => (n.type === "canvas" ? "Canvas board" : n.type === "whiteboard" ? "Whiteboard" : noteDerived("listPreview", n, (x) => excerpt(dropSyntax(listBody(x.body.slice(0, 8000))), 160)) || "Empty");
 
 /**
@@ -104,7 +105,13 @@ export function NoteList() {
   const nextSort: Record<Sort, Sort> = { updated: "created", created: "title", title: "updated" };
   const cycleSort = () => { const s = nextSort[sort]; setSort(s); toast(`Sorted by ${s === "updated" ? "last edited" : s === "created" ? "date created" : "title"}`, undefined, { icon: "check" }); try { localStorage.setItem("lumen.sort", s); } catch { /* ignore */ } };
   const [chooser, setChooser] = useState(false);
+  // phone: the tab bar's + on the Visual list opens the "New…" sheet (R4-17 A5) instead of a blank note
   const [pathDlg, setPathDlg] = useState(false);
+  useEffect(() => {
+    const v = () => setChooser(true), p = () => setPathDlg(true);
+    addEventListener("lumen:new-visual", v); addEventListener("lumen:new-path", p);
+    return () => { removeEventListener("lumen:new-visual", v); removeEventListener("lumen:new-path", p); };
+  }, []);
   const newNote = async (template?: string) => openNote((await createNote({ spaceId, folderId: ui.folderId, tags: ui.tag ? [ui.tag] : [], ...(template ? { template } : ui.filter === "published" ? { template: "post" } : {}) })).id, "edit");
   // Drop .md / .zip files onto the list to import them here (empty state: "or drop .md files here").
   const onDrop = async (e: React.DragEvent) => {
@@ -119,7 +126,10 @@ export function NoteList() {
     toast(`Imported ${r.notes} note${r.notes === 1 ? "" : "s"}`, undefined, { icon: "check" });
   };
   const empty = !notes.length && (
-    filter || ui.tag || ui.filter || lq.trim() ? (
+    smartSel?.sf && !lq.trim() ? (
+      // Lumen 21 empty state: smart folder with no matches → edit its search
+      <EmptyState glyph="smart-folder" text="Nothing in this smart folder right now." action={{ label: "Edit search", onClick: () => openSmartEditor(smartSel.sf!) }} />
+    ) : filter || ui.tag || ui.filter || lq.trim() ? (
       <Empty title={`No ${filter === "pinned" ? "pinned notes" : filter === "review" ? "notes to review" : "notes"} here`} hint={filter ? "Clear the filter to see every note in this folder." : "Nothing matches this filter yet."} action={<Button onClick={() => { setFilter(null); setLq(""); setUI({ tag: null, filter: null }); }}><X size={14} />Clear filter</Button>} />
     ) : (
       <Empty title={`“${folder?.name ?? space?.name ?? "Inbox"}” is empty`} hint="Start with a lesson — it comes with objectives, a summary and a questions section." action={<Button variant="primary" onClick={() => newNote("lesson")}><Plus size={14} />New lesson</Button>} foot="or drop .md files here" />
@@ -154,6 +164,8 @@ export function NoteList() {
           <button onClick={() => setPdfs(true)} className="mx-auto -mt-2 mb-3 flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[13px] text-muted active:bg-surface"><FileText size={14} />PDFs</button>
         </div>
         <TemplatePicker open={tpl} onClose={() => setTpl(false)} spaceId={spaceId} folderId={ui.folderId} />
+        <NewVisualChooser open={chooser} onClose={() => setChooser(false)} />
+        <NewPathDialog open={pathDlg} onClose={() => setPathDlg(false)} />
       </div>
     );
   }

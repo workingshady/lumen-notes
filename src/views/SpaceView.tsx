@@ -1,3 +1,4 @@
+import { EmptyState } from "../components/EmptyState";
 import { Archive, ArchiveRestore, Check, EllipsisVertical, FileText, FileUp, Flag, GraduationCap, LayoutTemplate, Loader2, MoreHorizontal, Pencil, Play, Plus, Settings2, Share2, Sparkles, Target, Trash2 } from "lucide-react";
 import { ProjectHub } from "./ProjectHub";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -167,7 +168,9 @@ export function SpaceView() {
         <SpaceIcon space={sp} size={24} tile color={color} />
         <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
           <span className="truncate whitespace-nowrap text-[20px] font-[650] tracking-[-.02em]" dir="auto" title={sp.description || undefined}>{sp.name}{sp.description ? ` · ${sp.description}` : ""}</span>
-          <span className={cx("truncate whitespace-nowrap text-muted", daysLeft !== null && daysLeft < 0 && "text-bad")}>{sp.props.url ? <a href={sp.props.url} target="_blank" rel="noreferrer" className="hover:text-ink">{sub}</a> : sub}</span>
+          {/* RoadmapDesk header; ScreenCourse's extra facts (days left, learning count, notes) stay one hover away */}
+          <span className={cx("truncate whitespace-nowrap text-muted", daysLeft !== null && daysLeft < 0 && "text-bad")}
+            title={[sub, daysLeft !== null ? (daysLeft < 0 ? `${-daysLeft} days late` : `${daysLeft} days left`) : null, p ? `${learning} learning` : null, `${notes.length} notes`].filter(Boolean).join(" · ")}>{sp.props.url ? <a href={sp.props.url} target="_blank" rel="noreferrer" className="hover:text-ink">{sub}</a> : sub}</span>
         </div>
         {p && <><span className="h-1.5 w-[150px] shrink-0 overflow-hidden rounded-[3px] bg-surface-2" title={`${learning} learning`}><span className="block h-full bg-ok" style={{ width: `${p.pct}%` }} /></span><span className="w-[34px] shrink-0 text-muted">{p.pct}%</span></>}
         {cur && <button className="flex h-[34px] max-w-[260px] shrink-0 items-center gap-2 whitespace-nowrap rounded-[10px] bg-accent px-3.5 font-semibold text-accent-fg hover:brightness-110" onClick={() => void openTopicNote(rm, cur, v.byTitle)}><Play size={13} className="shrink-0" /><span className="truncate">Continue: {cur.name}</span></button>}
@@ -233,13 +236,12 @@ export function SpaceView() {
           {(isCourse || rm) && (
             <section className="overflow-hidden rounded-[14px] border border-line bg-surface">
               {rm ? <div className="relative h-[min(70vh,640px)]"><RoadmapView note={rm} target={deadline || null} /></div> : (
-                <div className="p-8 text-center text-[13px] text-muted">
-                  No roadmap yet. Plain Markdown underneath; three views of the same file.
-                  <div className="mt-3 flex justify-center gap-2">
-                    <Button size="sm" variant="primary" onClick={addRoadmap}><Plus size={14} /> Create one</Button>
-                    <Button size="sm" onClick={aiRoadmap} disabled={busy}>{busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} Generate with AI</Button>
-                  </div>
-                </div>
+                // Lumen 21 empty state: one glyph, one line, one action (+ the AI variant kept beside it)
+                <EmptyState className="!py-10" glyph="roadmap" text="This course has no roadmap." action={
+                  <div className="flex justify-center gap-2">
+                    <button type="button" onClick={addRoadmap} className="flex h-8 items-center rounded-[9px] border border-line px-3 font-medium text-ink hover:bg-surface-2">Build roadmap</button>
+                    <button type="button" onClick={aiRoadmap} disabled={busy} className="flex h-8 items-center gap-1.5 rounded-[9px] px-3 font-medium text-muted hover:bg-surface-2 hover:text-ink">{busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}Generate with AI</button>
+                  </div>} />
               )}
             </section>
           )}

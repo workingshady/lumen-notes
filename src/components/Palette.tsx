@@ -5,7 +5,7 @@ import type { Note } from "../../shared/types";
 import { createNote, dailyNote } from "../lib/actions";
 import { around, matcher, normalize, parseQuery, search } from "../lib/search";
 import { activeTheme, getSettings, setSettings } from "../lib/settings";
-import { go, openNote, setUI, useUI, useVault, type Mode } from "../lib/store";
+import { go, openNote, setUI, toggleSidebar, useUI, useVault, type Mode } from "../lib/store";
 import { syncNow } from "../lib/sync";
 import { plainText } from "./nav-text";
 import { AskSheet } from "./AskVault";
@@ -36,7 +36,8 @@ function hl(text: string, terms: string[], cls = "font-bold text-accent"): React
 }
 /** Plain-text snippet around the first hit: no front-matter, no title line, no Markdown marks. */
 function snippet(n: Note, terms: string[], fallback: string) {
-  if (n.type === "canvas" || n.type === "whiteboard") return fallback;
+  // boards: the hit text when searching; "Recent" (no terms) would show raw scene JSON, so name the kind instead
+  if (n.type === "canvas" || n.type === "whiteboard") return terms.length ? fallback : n.type === "canvas" ? "Canvas board" : "Whiteboard";
   const plain = plainText(around(n.body, terms));
   if (!plain) return fallback;
   const low = normalize(plain);
@@ -119,7 +120,7 @@ export function Palette() {
       c("io", "Import / export…", () => setUI({ io: true })),
       c("sync", "Sync now", () => void syncNow()),
       c("theme", "Toggle light / dark", () => setSettings({ theme: activeTheme().dark ? "paper" : "lamplight" })),
-      c("sidebar", "Toggle sidebar", () => setUI((u) => ({ sidebar: !u.sidebar }))),
+      c("sidebar", "Toggle sidebar", toggleSidebar),
       mode("edit", "Edit"), mode("split", "Split"), mode("read", "Read"), mode("focus", "Focus"), mode("slides", "Slides"), mode("review", "Review cards"),
       ...smart.map((sf) => c(`sf-${sf.id}`, `Smart folder: ${sf.name}`, () => openSmart(sf), { icon: glyphOf(sf, 16), hint: sf.query })),
       c("jd", `Johnny-Decimal sorting: ${getSettings().johnnyDecimal ? "on → off" : "off → on"}`, () => setSettings({ johnnyDecimal: !getSettings().johnnyDecimal })),

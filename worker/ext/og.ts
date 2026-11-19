@@ -78,7 +78,7 @@ export function ogPages(app: Hono<Env>) {
   const page = (kind: "s" | "post") => async (c: import("hono").Context<Env>) => {
     const key = c.req.param(kind === "s" ? "token" : "slug")!;
     const origin = new URL(c.req.url).origin;
-    const index = await c.env.ASSETS.fetch(new Request(new URL("/index.html", c.req.url)));
+    const index = await c.env.ASSETS.fetch(new Request(new URL("/", c.req.url)));
     const card = await cardFor(c, kind, key).catch(() => null);
     if (!card) return index;
     const img = `${origin}/api/og/${kind}/${encodeURIComponent(key)}.png`;

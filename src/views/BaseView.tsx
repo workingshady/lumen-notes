@@ -1,6 +1,8 @@
 // Bases: database views of notes (table / board / gallery / list / calendar). Definition = YAML in the note body
 // (lib/base.ts). Every change made here is written back to that YAML or to the listed notes through updateNote.
 // Layout follows design/handoffs/2026-11-19-round-4/BaseDesk.dc.html (R4-18A..J, T).
+import { EmptyState } from "../components/EmptyState";
+import { ReaderBack } from "../components/reader-bar";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -298,6 +300,7 @@ export function BaseView({ note }: { note: Note }) {
     <div ref={rootRef} className="base relative flex h-full min-h-0 flex-col">
       <div className={cx("flex shrink-0 flex-col gap-3", wide ? "px-8 pt-5" : "px-4 pt-3")}>
         <div className="flex items-center gap-2.5">
+          <ReaderBack phone={!wide} />
           <Glyph name="base" size={20} />
           <span dir="auto" className={cx("min-w-0 flex-1 truncate font-[650] tracking-[-.02em]", wide ? "text-[20px]" : "text-[17px]")}>{note.title || "Untitled base"}</span>
           {wide && <button className="base-primary" onClick={() => newNote()}>New {newType ?? "note"}</button>}
@@ -358,7 +361,9 @@ export function BaseView({ note }: { note: Note }) {
         ) : (
           <GalleryView rows={visible} groups={groups} by={groupBy} cols={cols} ctx={ctx} colorOf={colorOf} wide={wide} more={more} />
         )}
-        {!rows.length && !tpl.show && <div className="px-6 py-14 text-center text-[13px] text-muted">{search ? `No notes match “${search}”.` : "No notes match this view's filters."}</div>}
+        {/* Lumen 21 empty state: one glyph, one line, one action (clears the search, else this view's filters, else the base-wide ones) */}
+        {!rows.length && !tpl.show && <EmptyState glyph="base" text={search ? `No notes match “${search}”.` : "No notes match this view."}
+          action={search || nFilter ? { label: search ? "Clear search" : "Clear filters", onClick: () => { if (search) { setSearch(""); return; } edit((c, w) => { if (filterCount(w.filters)) w.filters = undefined; else c.filters = undefined; }); } } : undefined} />}
       </div>
 
       {pop && pop.kind !== "search" && (wide ? (

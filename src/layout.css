@@ -674,7 +674,7 @@ div.callout.callout-inline > .callout-body { grid-row: 1; }
 .dash-tbl { font-size: 11.5px; color: var(--muted); opacity: 0; }
 .dash-tile:hover .dash-tbl, .dash-tbl:focus-visible, .dash-tbl.is-on { opacity: 1; }
 .dash-tbl:hover { color: var(--text); }
-@media (hover: none) { .dash-tbl { opacity: 1; } }
+@media (hover: none) { .dash-tbl:not(.is-on) { display: none; } } /* touch: "Show as table" is in the tile ⋯ menu (R4-18Q) */
 .dash-more { color: var(--muted); line-height: 1; padding: 0 2px; }
 .dash-more:hover { color: var(--text); }
 .dash-menu { top: 22px; min-width: 170px; background: var(--surface-2); }
@@ -789,3 +789,8 @@ div.callout.callout-inline > .callout-body { grid-row: 1; }
 .occl-r-other { border: 2px solid var(--learn); }
 .occl-r-hidden { background: color-mix(in srgb, var(--learn) 45%, #F4F1EA); border: 2px solid var(--learn); }
 /* end R4 cloze + occlusion */
+
+/* R4 audit B · prerequisite graphs (14b): a link is clickable (opens the link menu); hover thickens it in amber */
+.lm-flow .react-flow__edge.prq-edge { cursor: pointer; }
+.lm-flow .react-flow__edge.prq-edge:hover .react-flow__edge-path { stroke: var(--accent) !important; stroke-width: 2.6px !important; opacity: 1 !important; }
+/* end R4 audit B */

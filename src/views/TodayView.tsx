@@ -1,6 +1,7 @@
 // Today: the rule-based daily study plan (design: handoffs/2026-11-19-round-4/TodayDesk.dc.html; rules: docs/TODAY.md).
 // Desktop: plan list + a 360px column (This week, How today was built). Phone: one column; the board button swaps
 // the plan for the week card.
+import { EmptyState } from "../components/EmptyState";
 import { BookOpen } from "lucide-react";
 import { useCallback, useState } from "react";
 import { updateNote } from "../lib/actions";
@@ -97,18 +98,16 @@ export function TodayView() {
               {weekOpen && <div className="flex flex-col gap-3.5 lg:hidden">{side}</div>}
               {!weekOpen && (
                 <>
-                  {!plan.studyDay && (
+                  {!plan.studyDay && all.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2 rounded-[12px] border border-line bg-surface px-3.5 py-3">
                       <span className="flex-1 text-muted">Rest day: only reviews are planned.</span>
                       <button onClick={() => setForce(true)} className="flex h-[30px] items-center rounded-[8px] border border-line px-3 font-semibold hover:bg-surface-2">Plan lessons anyway</button>
                     </div>
                   )}
-                  {!all.length && (
-                    <div className="flex flex-col items-start gap-2 rounded-[12px] border border-line bg-surface px-3.5 py-3">
-                      <span>{plan.studyDay ? "All caught up." : "Nothing due today."}</span>
-                      <button onClick={() => go("notes", { spaceId: "all", filter: "paths", folderId: null, tag: null, noteId: null })} className="text-link hover:underline">Open learning paths</button>
-                    </div>
-                  )}
+                  {/* Lumen 21 empty state: rest day → "Plan anyway" pulls lessons in; study day with nothing left → learning paths */}
+                  {!all.length && (plan.studyDay
+                    ? <EmptyState framed glyph="date" text="All caught up. Nothing else is planned today." action={{ label: "Open learning paths", onClick: () => go("notes", { spaceId: "all", filter: "paths", folderId: null, tag: null, noteId: null }) }} />
+                    : <EmptyState framed glyph="date" text="Nothing planned. Today is a rest day." action={{ label: "Plan anyway", onClick: () => setForce(true) }} />)}
                   {groups.map((g) => g.items.length > 0 && (
                     <Section key={g.id} name={g.name} meta={g.meta} items={g.items} h={h} kindOf={kindOf} />
                   ))}

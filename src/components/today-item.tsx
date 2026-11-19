@@ -94,7 +94,7 @@ function RowMenu({ it, h, onClose }: { it: PlanItem; h: ItemHandlers; onClose: (
     ? [["Mark done", `Mark ${it.title} done`, run(h.done)], ["Skip today", `Skip ${it.title}`, run(h.skip)], ["Move to tomorrow", `Move ${it.title} to tomorrow`, run(h.later)]]
     : [["Undo", `Undo ${it.title}`, run(h.undo)]];
   return (
-    <div ref={ref} role="menu" className="absolute right-2 top-[calc(100%-6px)] z-30 flex w-[200px] flex-col rounded-[10px] border border-line bg-surface-2 p-1 text-[13px] shadow-[0_8px_24px_rgb(0_0_0/.25)]">
+    <div ref={ref} role="menu" className="absolute end-2 top-[calc(100%-6px)] z-30 flex w-[200px] flex-col rounded-[10px] border border-line bg-surface-2 p-1 text-[13px] shadow-[0_8px_24px_rgb(0_0_0/.25)]">
       {items.map(([l, aria, f]) => (
         <button key={l} role="menuitem" onClick={f} aria-label={aria} className="flex h-11 items-center rounded-[6px] px-2 text-left hover:bg-bg focus:bg-bg focus:outline-none sm:h-8">{l}</button>
       ))}

@@ -4,8 +4,10 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
   "assets": {
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/rss.xml"]
+    // /s/* and /blog/* go through the Worker so shared pages and posts get og:/twitter: preview tags (worker/ext/og.ts).
+    "run_worker_first": ["/api/*", "/rss.xml", "/s/*", "/blog/*"]
   },
   "d1_databases": [
     { "binding": "DB", "database_name": "lumen-notes", "database_id": "ca71c018-7d95-45e7-85b7-fb8fd5dafffc", "migrations_dir": "migrations" },

@@ -8,7 +8,7 @@
 // current retrievability: recall → S grows (Good), lapse → S shrinks (Again) and one relearning review follows the
 // next day. Each card is sampled `runs` times and the counts averaged.
 import type { Card } from "../../shared/types";
-import { forgetStability, initDifficulty, initStability, intervalDays, memoryOf, nextDifficulty, paramsFor, recallStability, retrievability, type FsrsCard } from "./fsrs";
+import { forgetStability, initDifficulty, initStability, intervalDays, memoryOf, nextDifficulty, paramsFor, recallStability, retrievability, type FsrsCard, type FsrsParams } from "./fsrs";
 
 const DAY = 86_400_000;
 
@@ -31,8 +31,8 @@ export function cardStates(cards: Card[], now = Date.now()): CardStateCounts {
 }
 
 /** Expected reviews per day (index 0 = today) for `days` days at `retention`. */
-export function estimateWorkload(cards: Card[], retention: number, days = 30, now = Date.now(), runs?: number): number[] {
-  const p = paramsFor(retention);
+export function estimateWorkload(cards: Card[], retention: number | FsrsParams, days = 30, now = Date.now(), runs?: number): number[] {
+  const p = typeof retention === "number" ? paramsFor(retention) : retention;
   const w = p.w;
   const live = cards.filter((c) => !c.deleted && !c.suspended);
   const k = runs ?? (live.length > 3000 ? 2 : live.length > 600 ? 5 : 20);

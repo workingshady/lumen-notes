@@ -11,7 +11,8 @@ import { cropPage, flatOutline, hasTextLayer, openPdf, pageText, PdfError, textI
 import { highlightsMarkdown, hlLink, isoNow, newHlId, parseHighlights, pdfMeta, progressOf, searchPages, type HlColor, type Highlight, type Rect, type SearchHit } from "../lib/pdf-format";
 import { normRects, unionRect } from "../lib/pdf-geom";
 import { addHighlightToCanvas, appendFlashcard, deleteHighlight, noteFromAll, noteFromHighlight, saveAreaImage, saveHighlight, saveReading, takePdfJump } from "../lib/pdf-note";
-import { openNote, toast } from "../lib/store";
+import { openNote, setUI, toast } from "../lib/store";
+import { ReaderBack } from "./reader-bar";
 import { Glyph } from "./Glyph";
 import { CanvasPickSheet, FlashcardSheet, HighlightBar, PasswordPrompt, PopMenu, type MenuItem } from "./pdf-dialogs";
 import { PdfPage } from "./pdf-page";
@@ -396,7 +397,11 @@ export function PdfReader({ note }: { note: Note }) {
   );
   const hlPanel = (sheetMode: boolean) => <HlPanel highlights={highlights} title={note.title} onHl={onHl} onAllNote={allNote} onExport={exportMd} sheet={sheetMode} />;
   const barH = bar?.kind === "edit" ? highlights.find((h) => h.id === bar.id) : undefined;
+  // Edit: the note's Markdown (highlights, reading position); Read in the note header comes back here.
+  const editItem: MenuItem = { label: "Edit as Markdown", hint: phone ? undefined : "Ctrl+E", run: () => setUI({ mode: "edit" }) };
   const moreItems: MenuItem[] = phone ? [
+    editItem,
+    "-",
     { label: "Highlights", hint: String(highlights.length), run: () => setSheet("highlights") },
     { label: "Pages and outline", run: () => { setTab("thumbs"); setSheet("rail"); } },
     { label: "Find in document", run: openSearch },
@@ -410,6 +415,8 @@ export function PdfReader({ note }: { note: Note }) {
     { label: "Dark pages", on: invert, run: () => setInvert(!invert) },
     { label: "Export highlights as Markdown", run: exportMd },
   ] : [
+    editItem,
+    "-",
     { label: "Pages sidebar", on: railOpen, run: () => setRailOpen(!railOpen) },
     { label: "Highlights panel", on: panel, hint: String(highlights.length), run: () => setPanel(!panel) },
     "-",
@@ -434,6 +441,7 @@ export function PdfReader({ note }: { note: Note }) {
     <div className={cx("pdfr relative flex h-full min-h-0 flex-col bg-bg text-[13px]", invert && "pdfr-inv")}>
       {/* toolbar */}
       <div className={cx("flex shrink-0 items-center gap-2.5 border-b border-line", phone ? "h-[52px] px-3" : "h-12 px-5")}>
+        <ReaderBack phone={phone} />
         <Glyph name="pdf" size={18} color="var(--danger)" />
         <span dir="auto" className="min-w-0 flex-1 truncate font-semibold">{note.title}</span>
         {!phone && (

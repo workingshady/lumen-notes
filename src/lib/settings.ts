@@ -65,12 +65,17 @@ export interface Settings {
   ttsRate: number;
   /** Flashcards (FSRS): desired retention = chance of still remembering a card when it comes due (0.8–0.95). */
   retention: number;
+  /** Flashcards › Advanced (Settings › Review): longest interval in days; new cards a day (0 = no limit);
+   *  learning / relearning steps in minutes; FSRS-6 weights fitted from the review log (null = defaults). */
+  fsrsMaxInterval: number; fsrsNewPerDay: number; fsrsLearningSteps: number[]; fsrsRelearningSteps: number[];
+  fsrsWeights: number[] | null; fsrsFit: { at: number; reviews: number; before: number; after: number } | null;
   /** Today study plan (lib/plan.ts): daily minutes, study weekdays (0 = Sun), max new lessons a day, course titles by priority. */
   planDailyMinutes: number; planStudyDays: number[]; planMaxNew: number; planCourseOrder: string[];
 }
 const DEFAULTS: Settings = {
   theme: "auto", accentHue: null, readingFont: "serif", fontSize: 16, measure: 68, density: "comfortable",
   blogName: "Lumen", tagline: "Notes from what I'm learning", author: "", avatar: "glyph:owl", johnnyDecimal: false, spellcheck: true, dailyTemplate: "journal", diagramFolder: "sub", diagramAutoSave: false, diagramAiNames: false, diagramExport: DIAGRAM_EXPORT_DEFAULTS, focusMode: "read", focusDim: true, highlightOnExit: "ask", ttsRate: 1, retention: 0.9,
+  fsrsMaxInterval: 36500, fsrsNewPerDay: 0, fsrsLearningSteps: [1, 10], fsrsRelearningSteps: [10], fsrsWeights: null, fsrsFit: null,
   planDailyMinutes: 60, planStudyDays: [1, 2, 3, 4, 5, 6], planMaxNew: 2, planCourseOrder: [],
 };
 

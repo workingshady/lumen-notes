@@ -6,7 +6,7 @@ import { AppLockSetting } from "./Welcome";
 import {
   ArrowLeft, Check, ChevronRight, CircleCheck, Clock, Code, Copy, Database, Eye, File, FileAudio, FileText, FileVideo, Globe, GraduationCap, HardDrive, Image, Info,
   Layers, LayoutDashboard, Link2, Link2Off, Loader2, LogOut, Palette, PenTool, Pencil, Presentation, RefreshCw, Rss, Share, Sparkles, Trash2, type LucideIcon,
-  Waypoints, BookOpenText, CalendarCheck,
+  Waypoints, BookOpenText, CalendarCheck, FolderTree,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Note, Space } from "../../shared/types";
@@ -16,7 +16,8 @@ import { db, DEFAULT_SPACE, patch } from "../lib/db";
 import { exportBackup } from "../lib/io";
 import { render } from "../lib/markdown";
 import { activeTheme, setSettings, THEMES, useSettings, type Settings as S, type Theme } from "../lib/settings";
-import { setUI, toast, useVault } from "../lib/store";
+import { setUI, toast, useUI, useVault } from "../lib/store";
+import { runNav, useNav, type NavKey } from "../components/Sidebar";
 import { syncNow, useSync } from "../lib/sync";
 import { bareUrl, blogUrl, SETTINGS_SECTION_KEY, shareUrl, Toggle, turnOffLink } from "../components/ShareSheet";
 import { LumenMark, Wordmark } from "../components/LumenMark";
@@ -145,7 +146,8 @@ export function SettingsView() {
 
       {/* phone root list */}
       <div className={cx("safe-t flex-1 overflow-y-auto pb-6 md:hidden", !phoneRoot && "hidden")}>
-        <div className="px-5 pb-3 pt-4 text-[26px] font-[650] tracking-[-.02em]">Settings</div>
+        {/* design 20C: the phone "More" tab is this page: profile card, the pages that aren't tabs, then settings */}
+        <div className="px-5 pb-3 pt-4 text-[26px] font-[650] tracking-[-.02em]">More</div>
         <button onClick={() => go("branding")} className="mx-4 flex w-[calc(100%-32px)] items-center gap-3 rounded-[14px] bg-surface p-3.5 text-left">
           <span className="flex size-11 items-center justify-center rounded-full bg-surface-2"><AvatarGlyph value={s.avatar} size={19} /></span>
           <div className="flex flex-1 flex-col gap-0.5"><span className="font-semibold">{s.blogName}</span>
@@ -154,6 +156,7 @@ export function SettingsView() {
           <ChevronRight size={16} className="text-muted" />
         </button>
         <div className="flex flex-col gap-3 px-4 pt-4">
+          <PhoneMoreNav />
           {[SECTIONS.filter((x) => ["appearance", "sync", "sharing", "blog"].includes(x.id)), SECTIONS.filter((x) => ["storage", "ai", "developer", "about"].includes(x.id))].map((grp, g) => (
             <div key={g} className="overflow-hidden rounded-[14px] bg-surface">
               {grp.map((n, i) => (
@@ -187,6 +190,29 @@ export function SettingsView() {
           {sec === "about" && <About />}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Phone "More" (design Lumen 06 · 20C): Daily note, Tasks, Calendar, Graph, Canvases (+ Today, Learning paths and the
+ *  spaces / folders / tags drawer, which the design keeps elsewhere but the app still needs a way to). */
+function PhoneMoreNav() {
+  const ui = useUI();
+  const v = useVault();
+  const nav = useNav();
+  const canvases = v.notes.filter((n) => n.type === "canvas" || n.type === "whiteboard").length;
+  const keys: NavKey[] = ["today", "daily", "tasks", "calendar", "graph", "canvas", "paths"];
+  const rows = keys.map((k) => nav.find((n) => n.key === k)!).filter(Boolean);
+  const row = (key: string, icon: ReactNode, label: string, value: string | number | undefined, run: () => void, i: number) => (
+    <button key={key} onClick={run} className={cx("flex h-[52px] w-full items-center gap-3.5 px-3.5 text-left", i > 0 && "border-t border-line")}>
+      <span className="flex w-[19px] justify-center text-muted [&>svg]:size-[19px]">{icon}</span><span className="flex-1">{label}</span>
+      {!!value && <span className="text-[13px] text-muted">{value}</span>}<ChevronRight size={15} className="text-muted" />
+    </button>
+  );
+  return (
+    <div className="overflow-hidden rounded-[14px] bg-surface">
+      {rows.map((n, i) => row(n.key, n.icon, n.label, n.key === "canvas" ? canvases : n.count, () => void runNav(n.key, ui.spaceId), i))}
+      {row("spaces", <FolderTree size={19} />, "Spaces, folders & tags", undefined, () => setUI({ sidebar: true }), rows.length)}
     </div>
   );
 }

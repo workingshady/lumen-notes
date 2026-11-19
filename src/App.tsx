@@ -4,9 +4,11 @@ import { Capacitor } from "@capacitor/core";
 import { ConflictSheet } from "./components/ws-conflict";
 import { createNote } from "./lib/actions";
 import { DEMO, setDemo, setMeta } from "./lib/db";
-import { dismissToast, getUI, openNote, runLatestUndo, setUI, toast, useToasts, useUI, useVault, type Toast } from "./lib/store";
+import { dismissToast, getUI, openNote, runLatestUndo, setRailAuto, setUI, sidebarRail, toast, toggleSidebar, useToasts, useUI, useVault, type Toast } from "./lib/store";
 import { currentIdx, installNavHistory, keepPlace, restoreFrom } from "./lib/nav-history";
 import { useDeviceHeartbeat } from "./lib/devices";
+import { useFaviconBadge } from "./lib/favicon";
+import { useStreakMoment } from "./components/Moments";
 import { Sidebar } from "./components/Sidebar";
 import { Skeleton } from "./components/Skeleton";
 import { NoteList } from "./components/NoteList";
@@ -137,13 +139,22 @@ function useBackGesture(wide: boolean) {
         // 5 · first page on a phone: swipe again to exit
         if (Date.now() - lastExit.current < 2000) { sessionStorage.removeItem("lumen.navGuard"); history.back(); return; }
         lastExit.current = Date.now();
-        toast("Swipe back again to close Lumen", undefined, { ms: 2000 });
+        toast("Swipe back again to close Lumen", undefined, { ms: 2000, variant: "pill", icon: "none" });
         keepPlace();
       }
     };
     addEventListener("popstate", onPop);
     return () => removeEventListener("popstate", onPop);
   }, [wide]);
+}
+
+/** Pages the design draws with the collapsed sidebar rail (LumenSidebar `collapsed` in the R4 desks + Lumen 04/07/08/11/17/20). */
+const RAIL_TYPES = new Set(["path", "pdf", "base", "dashboard", "canvas", "whiteboard"]);
+function autoRail(ui: ReturnType<typeof getUI>, note: { type: string } | undefined, space: { kind: string; roadmapId: string | null } | undefined): boolean {
+  if (ui.view === "today" || ui.view === "graph" || ui.view === "settings") return true;
+  if (ui.view === "space") return !!space && (space.kind === "project" || (space.kind === "course" && !!space.roadmapId));
+  if (ui.view !== "notes" || !note) return false;
+  return !ui.list || RAIL_TYPES.has(note.type) || ui.mode === "focus" || ui.mode === "slides";
 }
 
 function Workspace() {
@@ -156,10 +167,12 @@ function Workspace() {
   const due = useDueCards(v.notes)?.length ?? 0;
   useBackGesture(wide);
   useDeviceHeartbeat(); // Settings › Sync › Devices (lib/devices.ts)
+  useFaviconBadge(due); // Lumen 21 · favicon review-due badge (here, not in Sidebar: phones have no docked sidebar)
+  useStreakMoment(); // Lumen 21 · moments: streak
 
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "\\") { e.preventDefault(); setUI((u) => ({ sidebar: !u.sidebar })); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "\\") { e.preventDefault(); toggleSidebar(); }
       // ⌘Z / Ctrl Z outside text fields runs the newest Undo toast
       const el = e.target as HTMLElement;
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z" && !el.closest("input,textarea,[contenteditable=true],.cm-editor") && runLatestUndo()) e.preventDefault();
@@ -188,13 +201,14 @@ function Workspace() {
 
   const spaceId = ui.spaceId === "all" ? "inbox" : ui.spaceId;
   const inNote = notesView && !!note && !wide;
+  setRailAuto(autoRail(ui, note, ui.view === "space" ? v.spaceMap.get(ui.spaceId) : undefined));
 
   return (
     <div className="flex h-full overflow-hidden">
       {/* sidebar: docked on desktop, drawer on phone */}
       {/* tablet (900–1199): rail docked, full sidebar opens as a drawer over the content */}
       {wide && tablet && <Sidebar rail />}
-      {wide && !tablet ? <Sidebar rail={!ui.sidebar} /> : ui.sidebar && (
+      {wide && !tablet ? <Sidebar rail={sidebarRail(ui)} /> : ui.sidebar && (
         <div className="fixed inset-0 z-40 flex fade-in">
           <div className="sheet-in shadow-2xl"><Sidebar /></div>
           <div className="flex-1 bg-black/50" onClick={() => setUI({ sidebar: false })} />
@@ -205,7 +219,8 @@ function Workspace() {
         <OfflineBanner />
         <div className="flex min-h-0 flex-1">
           {showList && (
-            <div className={cx("min-h-0 border-e border-line bg-bg", wide ? "w-[320px] shrink-0" : "flex-1")}>
+            // list pane: 320 px (ScreenWorkspace); smart-folder lists are drawn 360 px (Lumen 20b · D7), from 1200 px up so the note keeps room
+            <div className={cx("min-h-0 border-e border-line bg-bg", wide ? (ui.filter?.startsWith("smart:") && !tablet ? "w-[360px] shrink-0" : "w-[320px] shrink-0") : "flex-1")}>
               <NoteList />
             </div>
           )}
@@ -220,7 +235,7 @@ function Workspace() {
         </div>
 
         {/* phone tab bar (design: LumenTabBar) */}
-        {!wide && !inNote && <TabBar due={due} rtl={rtl} onNew={async () => openNote((await createNote({ spaceId, folderId: ui.folderId })).id, "edit")} />}
+        {!wide && !inNote && <TabBar due={due} rtl={rtl} onNew={async () => { /* phone: + on the Visual list opens the "New…" sheet (R4-17 A5), on Learning paths the new-path dialog */ if (ui.view === "notes" && (ui.filter === "visual" || ui.filter === "paths")) { dispatchEvent(new Event(ui.filter === "visual" ? "lumen:new-visual" : "lumen:new-path")); return; } openNote((await createNote({ spaceId, folderId: ui.folderId })).id, "edit"); }} />}
       </div>
 
       <Palette />
@@ -282,7 +297,9 @@ function Toasts() {
   const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-[84px] z-[60] flex flex-col items-center gap-2 px-4 md:bottom-6">
-      {ts.map((t) => (
+      {ts.map((t) => t.variant === "pill" ? (
+        <div key={t.id} role="status" className="pointer-events-auto flex h-10 items-center rounded-[20px] bg-ink px-4 text-[14px] font-medium text-bg fade-in" dir="auto">{t.text}</div>
+      ) : (
         <div key={t.id} role="status" className="pointer-events-auto relative flex w-full max-w-[420px] items-center gap-3 overflow-hidden rounded-[10px] border border-line bg-surface-2 px-3.5 py-3 text-[13px] shadow-[0_12px_32px_rgba(0,0,0,.4)] fade-in">
           {t.icon && TOAST_ICON[t.icon]}
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -306,7 +323,7 @@ function Toasts() {
 
 function TabBar({ due, onNew, rtl }: { due: number; onNew: () => void; rtl: boolean }) {
   const ui = useUI();
-  const active = ui.sidebar ? "more" : ui.view === "home" ? "home" : ui.view === "notes" ? "notes" : ui.view === "review" ? "review" : "none";
+  const active = ui.sidebar || ui.view === "settings" ? "more" : ui.view === "home" ? "home" : ui.view === "notes" ? "notes" : ui.view === "review" ? "review" : "none";
   const tab = (k: string, icon: React.ReactNode, label: string, onClick: () => void, badge?: number) => {
     const on = active === k;
     return (
@@ -328,7 +345,7 @@ function TabBar({ due, onNew, rtl }: { due: number; onNew: () => void; rtl: bool
           <button aria-label="New note" onClick={onNew} className="-mt-[26px] flex size-14 items-center justify-center rounded-[18px] bg-accent text-accent-fg" style={{ boxShadow: "0 0 0 5px var(--bg)" }}><Plus size={26} /></button>
         </div>
         {tab("review", <Layers size={20} />, "Review", () => setUI({ view: "review", sidebar: false }), due)}
-        {tab("more", <LayoutGrid size={20} />, "More", () => setUI({ sidebar: true }))}
+        {tab("more", <LayoutGrid size={20} />, "More", () => setUI({ view: "settings", sidebar: false }))}
       </div>
     </nav>
   );

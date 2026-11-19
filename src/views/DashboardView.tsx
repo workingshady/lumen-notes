@@ -4,12 +4,13 @@
 // (keyboard: arrows move the selected tile, Shift+arrows resize). Every change rewrites only the ```dashboard block.
 // Phones show two columns; wide tiles span both.
 import { useLiveQuery } from "dexie-react-hooks";
+import { ReaderBack } from "../components/reader-bar";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Note } from "../../shared/types";
 import { updateNote } from "../lib/actions";
 import { parseBase, propsOf } from "../lib/base";
 import {
-  addTile, duplicateTile, fieldsOf, gridRows, parseDashboard, placeTile, removeTile, runTile, sourceKind, sourceArg, sourceRecords, stackOrder, tileDefaults, withDashRange, writeDashboard,
+  addTile, duplicateTile, fieldsOf, gridRows, parseDashboard, placeTile, removeTile, runTile, sourceKind, sourceArg, sourceRecords, stackOrder, tileDefaults, withDashRange, writeDashboard, parseRange,
   COLS, DASH_RANGES, type Aggregate, type Bucket, type DashboardConfig, type DashData, type Tile, type TileLayout, type TileType,
 } from "../lib/dashboard";
 import { db } from "../lib/db";
@@ -113,17 +114,23 @@ export function DashboardView({ note }: { note: Note }) {
   const ordered = phone ? stackOrder(tiles) : tiles;
   const rows = Math.max(gridRows(tiles), 1);
   const preview = drag && tiles.find((t) => t.id === drag.id)!.layout;
+  // No dashboard-wide range: the picker names the charts' own range when they share one ("Last 8 weeks", DashDesk).
+  const ownRanges = [...new Set(cfg.tiles.filter((t) => withDashRange(t, "8w") !== t).map((t) => t.range ?? ""))];
+  const ownLabel = ownRanges.length === 1 ? (ownRanges[0] ? DASH_RANGES.find(([v]) => v === ownRanges[0])?.[1] ?? (parseRange(ownRanges[0], Date.now())?.label.replace(/^./, (c) => c.toUpperCase()) ?? "Tile ranges") : "All time") : "Tile ranges";
   const setRange = (r: string) => { const next = { ...cfg }; if (r) next.range = r; else delete next.range; write(next); };
 
   return (
     <div className="dash relative flex h-full min-h-0 flex-col" onClick={() => setMenu(null)}>
       <div className={cx("flex shrink-0 items-center gap-2.5 border-b border-line", phone ? "h-14 px-4" : "h-[52px] px-7")}>
+        <ReaderBack phone={phone} />
         <Glyph name="dashboard" size={18} />
         <span dir="auto" className="min-w-0 flex-1 truncate text-[16px] font-[650]">{note.title || "Dashboard"}</span>
         {!phone && (
-          <label className="dash-range" title="Range for every chart over time">
-            <select aria-label="Dashboard range" value={cfg.range ?? ""} onChange={(e) => setRange(e.target.value)}>
-              <option value="">Tile ranges</option>
+          <label className="dash-range cursor-pointer hover:text-ink" title="Range for every chart over time">
+            {/* the label shows the chosen range at its own width ("Last 8 weeks ▾"); the native select sits on top, invisible */}
+            <b aria-hidden className="pointer-events-none pe-3 text-[13px] font-normal">{cfg.range ? DASH_RANGES.find(([v]) => v === cfg.range)?.[1] ?? cfg.range : ownLabel}</b>
+            <select aria-label="Dashboard range" value={cfg.range ?? ""} onChange={(e) => setRange(e.target.value)} className="absolute inset-0 w-full opacity-0">
+              <option value="">{ownLabel}</option>
               {DASH_RANGES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               {cfg.range && !DASH_RANGES.some(([v]) => v === cfg.range) && <option value={cfg.range}>{cfg.range}</option>}
             </select>
@@ -171,6 +178,7 @@ export function DashboardView({ note }: { note: Note }) {
                           {!chartless && <button role="menuitem" onClick={() => { setMenu(null); toggleTable(t.id); }}>{showTable ? "Show chart" : "Show as table"}</button>}
                           <button role="menuitem" onClick={() => { setMenu(null); write(duplicateTile(cfg, t.id)); }}>Duplicate</button>
                           {!phone && <button role="menuitem" onClick={() => { setMenu(null); setLayout(true); setSel(t.id); }}>Move or resize</button>}
+                          {phone && <button role="menuitem" onClick={() => { setMenu(null); setUI({ mode: "edit" }); }}>Edit dashboard YAML</button>}
                           <button role="menuitem" className="text-bad" onClick={() => { setMenu(null); write(removeTile(cfg, t.id)); }}>Delete</button>
                         </div>
                       )}

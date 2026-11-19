@@ -69,6 +69,7 @@ export function NoteView({ note }: { note: Note }) {
   const isPath = note.type === "path";
   const isRoadmap = note.type === "roadmap" || isPath;
   const isDiagram = note.type === "diagram";
+  const ownBar = note.type === "pdf" || note.type === "base" || note.type === "dashboard"; // readers with their own bar
   const diagramCount = useMemo(() => (note.type === "canvas" || note.type === "whiteboard" || note.type === "diagram" ? 0 : (note.body.match(/^\s*(`{3,}|~{3,})\s*mermaid/gim) ?? []).length), [note.body, note.type]);
   // A .mermaid file has three views (Source / Split / Preview); other modes show the preview.
   const mode: Mode = isDiagram && !["edit", "split", "read"].includes(ui.mode) ? "read" : ui.mode;
@@ -96,7 +97,7 @@ export function NoteView({ note }: { note: Note }) {
       </div>
     );
   }
-  if (mode === "slides" && !isCanvas) return <Slides note={note} onExit={() => setUI({ mode: "read" })} />;
+  if (mode === "slides" && !isCanvas && !ownBar) return <Slides note={note} onExit={() => setUI({ mode: "read" })} />;
 
   const space = v.spaceMap.get(note.spaceId);
   const crumbs: { id: string; name: string }[] = [];
@@ -223,12 +224,13 @@ export function NoteView({ note }: { note: Note }) {
 
   // Focus mode is a full-screen layer (7A / 7B): no chrome, Esc hint, saved state + word count in the corners.
   // Focus: full-screen reading (highlighter, read aloud, outline) or writing (FocusView). Leaving returns to the matching view.
-  if (effMode === "focus" && markdownNote) return <FocusView note={note} wide={wide} onExit={() => setUI({ mode: (getSettings().focusMode ?? "read") === "read" ? "read" : wide ? "split" : "edit" })} />;
+  if (effMode === "focus" && markdownNote && !ownBar) return <FocusView note={note} wide={wide} onExit={() => setUI({ mode: (getSettings().focusMode ?? "read") === "read" ? "read" : wide ? "split" : "edit" })} />;
 
   return (
     <div className="flex h-full min-h-0">
       <div className="flex min-w-0 flex-1 flex-col">
-        {isPath && !rmEdit ? null : wide ? (
+        {/* full-height readers bring their own bar (Back · title · Edit): path map, PDF (PdfDesk), base (BaseDesk), dashboard (DashDesk) */}
+        {(isPath && !rmEdit) || (ownBar && effMode !== "edit") ? null : wide ? (
           twoRows ? (
             <header className="bg-bg text-[13px]">
               <div className="flex h-11 items-center gap-2.5 pe-3 ps-5">
@@ -248,7 +250,7 @@ export function NoteView({ note }: { note: Note }) {
                   <span className="flex-1" />
                   {widthBtn}
                   <ReadMenu />
-                  <span className="text-[12px] text-muted">{words.toLocaleString()} {tr("words", rtl)} · {mins} {tr("min", rtl)}</span>
+                  <span className="whitespace-nowrap text-[12px] text-muted">{words.toLocaleString()} {tr("words", rtl)} · {mins} {tr("min", rtl)}</span>
                 </div>
               )}
               {!markdownNote && <div className="border-b border-line" />}
@@ -337,16 +339,17 @@ export function NoteView({ note }: { note: Note }) {
           ) : (
             <div data-pw={pw} className={cx("read-pane h-full overflow-y-auto", wide ? (pw === "full" ? "px-[72px] pb-14 pt-9" : "px-8 pb-14 pt-9") : "px-5 py-5")} onDoubleClick={(e) => { if (!(e.target as HTMLElement).closest("a,button,input,.embed,.vthumb,.mermaid-card")) setUI({ mode: wide ? "split" : "edit" }); }}>
               <div className={cx("mx-auto flex w-full flex-col", wide ? "gap-[18px]" : "gap-3.5")} style={wide ? { maxWidth: PAGE_W[pw] || fixedW() } : undefined}>
-                <MetaRow note={note} kind={wide ? "read" : "phone"} words={words} />
+                {/* R4-16J…L / P4 (ReadDoc): the title opens the page; the "Type · status · N min read · Updated" row moves to the end of the note */}
                 {!firstH1(note.body) && <div className={cx("prose reading", wide ? "read-wide max-w-none" : "read-phone")}><h1 dir="auto">{note.title}</h1></div>}
                 {note.body.trim() ? <Preview note={note} className={cx("reading", wide ? "read-wide max-w-none" : "read-phone")} /> : <div className="prose text-muted">Empty note. Double-click or press <b>Edit</b> to write.</div>}
+                <div className="border-t border-line pt-3"><MetaRow note={note} kind={wide ? "read" : "phone"} words={words} /></div>
                 <Backlinks note={note} />
                 <div className="h-[30vh]" />
               </div>
             </div>
           )}
           {/* phone read: floating "Outline · Links N" pill (5B) */}
-          {!wide && markdownNote && note.type !== "pdf" && effMode === "read" && <OutlinePill note={note} />}
+          {!wide && markdownNote && !ownBar && effMode === "read" && <OutlinePill note={note} />}
         </div>
       </div>
       <RightPanel note={note} />

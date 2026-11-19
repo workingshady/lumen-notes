@@ -9,7 +9,11 @@ const RTL = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
 const fmtDate = (t: number) => new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const words = (md: string) => md.split(/\s+/).filter(Boolean).length;
 const plain = (md: string) => md.replace(/^---[\s\S]*?---/, "").replace(/```[\s\S]*?```/g, "").replace(/\$\$[\s\S]*?\$\$/g, "").replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-  .replace(/^#\s.*$/m, "").replace(/[#>*_`\[\]!]|\(.*?\)/g, "").replace(/\s+/g, " ").trim();
+  .replace(/^#\s.*$/m, "")
+  // slide separators, callout headers, task / list markers, task dates (calendar emoji + 2026-11-13, @due(…)): noise in a link preview
+  .replace(/^\s*(---|\*\*\*)\s*$/gm, "").replace(/\[![\w-]+\][+-]?/g, "").replace(/^\s*[-*+]\s+\[[ xX/>?-]\]\s+/gm, "").replace(/^\s*([-*+]|\d+\.)\s+/gm, "")
+  .replace(/\s*\p{Extended_Pictographic}\uFE0F?\s*\d{4}-\d{2}-\d{2}/gu, "").replace(/@due\(\d{4}-\d{2}-\d{2}\)/g, "")
+  .replace(/[#>*_`\[\]!]|\(.*?\)/g, "").replace(/\s+/g, " ").trim();
 const TYPE_LABEL: Record<string, string> = { path: "Learning path", roadmap: "Roadmap", slides: "Slides", canvas: "Canvas", whiteboard: "Whiteboard", flashcards: "Flashcards", lesson: "Lesson", post: "Post", base: "Base", dashboard: "Dashboard", diagram: "Diagram", moc: "Map of content", journal: "Journal" };
 
 /** Greedy word wrap by estimated glyph width (serif bold ≈ 0.52 em; CJK/Arabic a bit wider). */
@@ -43,7 +47,8 @@ export function ogSvg(card: OgCard): string {
   const L = 80, R = 1200 - 80;
   const lines = wrap(card.title, R - L, 72, 3);
   const titleY = 194; // padding 72 · kicker line 30 · gap 28 · first baseline (design 97 at ½ scale)
-  const tx = rtl ? R : L, anchor = rtl ? "end" : "start";
+  // SVG text-anchor follows the direction: with direction="rtl", "start" is the right edge (x = R)
+  const tx = rtl ? R : L, anchor = "start";
   const title = lines.map((l, i) => `<text x="${tx}" y="${titleY + i * 84}" text-anchor="${anchor}" ${rtl ? 'direction="rtl"' : ""} font-family="'Source Serif 4', 'Source Serif Pro', Georgia, 'IBM Plex Sans Arabic', serif" font-size="72" font-weight="700" letter-spacing="-1.44" fill="#1F1D1A">${esc(l)}</text>`).join("");
   const metaY = titleY + (lines.length - 1) * 84 + 73;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
