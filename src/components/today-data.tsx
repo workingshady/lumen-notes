@@ -7,7 +7,7 @@ import type { Note } from "../../shared/types";
 import { createNote, updateNote } from "../lib/actions";
 import { db, DEFAULT_SPACE } from "../lib/db";
 import { setTopicStatus, topicLineByName } from "../lib/parse";
-import { buildPath, COURSE_COLORS, resolveCourses } from "../lib/path";
+import { buildPath, COURSE_COLORS, courseKind, resolveCourses } from "../lib/path";
 import {
   applyMoves, buildPlan, emptyLog, lessonMinutesOf, localDay, markItem, missedDays, parseLog, PLAN_DEFAULTS, PLAN_LOG_ID, PLAN_LOG_TITLE, serializeLog, streak,
   weekStart, type Mark, type Move, type PlanCourse, type PlanInput, type PlanItem, type PlanLog, type PlanPath, type PlanSettings,
@@ -32,7 +32,7 @@ export function planCourses(v: Vault): PlanCourse[] {
     if (sp.kind !== "course" || !sp.roadmapId) continue;
     const n = v.byId.get(sp.roadmapId);
     if (!n || n.deleted) continue;
-    out.set(n.id, { key: n.id, title: sp.name, color: "", body: n.body, spaceId: sp.id, target: sp.props?.target || null, order: sp.sort });
+    out.set(n.id, { key: n.id, title: sp.name, color: "", body: n.body, spaceId: sp.id, target: sp.props?.target || null, order: sp.sort, kind: courseKind(sp.props, sp.name) });
   }
   for (const p of v.notes) {
     if (p.type !== "path") continue;
@@ -40,7 +40,7 @@ export function planCourses(v: Vault): PlanCourse[] {
     for (const ref of resolveCourses(names, v.notes, v.spaces)) {
       if (!ref.note || out.has(ref.note.id)) continue;
       const sp = ref.spaceId ? v.spaceMap.get(ref.spaceId) : undefined;
-      out.set(ref.note.id, { key: ref.note.id, title: sp?.roadmapId === ref.note.id ? sp.name : ref.title, color: "", body: ref.note.body, spaceId: ref.spaceId, target: sp?.props?.target || null, order: sp?.sort ?? 1e9 });
+      out.set(ref.note.id, { key: ref.note.id, title: sp?.roadmapId === ref.note.id ? sp.name : ref.title, color: "", body: ref.note.body, spaceId: ref.spaceId, target: sp?.props?.target || null, order: sp?.sort ?? 1e9, kind: ref.kind });
     }
   }
   const list = [...out.values()].sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
@@ -150,7 +150,7 @@ export async function startPlanItem(item: PlanItem) {
   }
 }
 
-/** Accept a reschedule: write the new 📅 dates into each course roadmap. */
+/** Accept a reschedule: write the new due dates into each course roadmap. */
 export async function acceptMoves(moves: Move[]) {
   const byCourse = new Map<string, Move[]>();
   for (const m of moves) byCourse.set(m.courseKey, [...(byCourse.get(m.courseKey) ?? []), m]);

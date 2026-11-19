@@ -7,6 +7,8 @@
 // their wall-clock time and move by whole days. With the clock pinned to DEMO_NOW every label matches the design.
 import type { AttachmentMeta, Card, Folder, Note, NoteType, Session, Space, Status, Version } from "../../shared/types";
 import { db as defaultDb } from "./db";
+import { demoPdf } from "./demo-pdf";
+import { serializeHighlight, type Highlight } from "./pdf-format";
 import { flashcards, inlineTags, splitFrontMatter } from "./parse";
 import type { Settings } from "./settings";
 
@@ -916,6 +918,8 @@ flowchart LR
     text: "Documents over 8k tokens, 11 classes.\n\n- [x] Download and dedupe\n" });
   add({ id: "dm-th-attention-explained", title: "Attention, explained", space: TH, type: "note", updated: at(nov(5), "21:00"), created: at(nov(5), "20:00"),
     text: "Start with the visual intuition, then read the paper. The video is the best 26 minutes on the topic I've found.\n\nhttps://www.youtube.com/watch?v=eMlx5fFNoYc\n\nJay Alammar's walkthrough is still the clearest written version:\n\nhttps://jalammar.github.io/illustrated-transformer/\n\nLecture 7 recording (uploaded from my phone):\n\n![lecture-07-attention.m4a](att:dm-att-lecture07)\n\nMy screen recording of the attention-entropy plot:\n\n![entropy-per-layer.mp4](att:dm-att-entropy)\n\nAnd the paper itself, annotated:\n\n![vaswani-2017-attention.pdf](att:dm-att-vaswani)\n" });
+  // The annotated paper (PDF reader · Lumen 19): real bytes from lib/demo-pdf.ts, highlights as in the design.
+  add({ id: DEMO_PDF_NOTE, title: "Attention Is All You Need", space: TH, type: "pdf", updated: ago(40), created: at(nov(5), "20:30"), body: demoPdfNoteBody() });
   add({ id: "dm-th-arch-wb", title: "Thesis architecture sketch", space: TH, type: "whiteboard", updated: at(oct(31), "18:00"), body: JSON.stringify(smallScene([["th-1", "Tokens (8k)", 0, 0], ["th-2", "Block-sparse attention", 260, 0], ["th-3", "Classifier", 520, 0]])) });
   for (const [i, t] of ["Related work: BigBird", "Related work: Longformer", "Writing style guide", "Reading list"].entries()) add({ id: `dm-th-root-${i}`, title: t, space: TH, type: "note", updated: 0, text: `${t}.\n` });
 
@@ -1085,7 +1089,8 @@ See also ${links.map((x) => `[[${x.title}]]`).join(", ")}.
     att("dm-att-entropy", "entropy-per-layer.mp4", "video/mp4", 92 * 1024 * 1024),
     att("dm-att-lecture07", "lecture-07-attention.m4a", "audio/mp4", 61 * 1024 * 1024),
     att("dm-att-backprop-demo", "backprop-demo.webm", "video/webm", 48 * 1024 * 1024),
-    att("dm-att-vaswani", "vaswani-2017-attention.pdf", "application/pdf", Math.round(2.1 * 1024 * 1024)),
+    att("dm-att-vaswani", "vaswani-2017-attention.pdf", "application/pdf", demoPdf().bytes.length),
+    att("dm-att-vaswani-fig2", "Attention Is All You Need p4 area.svg", "image/svg+xml", FIG2_SVG.length),
     att("dm-att-whiteboard-photo", "whiteboard-photo.jpg", "image/jpeg", Math.round(9.8 * 1024 * 1024)),
     att("dm-att-feature-maps", "feature-maps.svg", "image/svg+xml", FEATURE_MAPS_SVG.length),
     att("dm-att-loss-curve", "loss-curve.svg", "image/svg+xml", LOSS_CURVE_SVG.length),
@@ -1093,6 +1098,8 @@ See also ${links.map((x) => `[[${x.title}]]`).join(", ")}.
   const blobs = [
     { id: "dm-att-feature-maps", blob: new Blob([FEATURE_MAPS_SVG], { type: "image/svg+xml" }), uploaded: 1 as const },
     { id: "dm-att-loss-curve", blob: new Blob([LOSS_CURVE_SVG], { type: "image/svg+xml" }), uploaded: 1 as const },
+    { id: "dm-att-vaswani", blob: new Blob([demoPdf().bytes as BlobPart], { type: "application/pdf" }), uploaded: 1 as const },
+    { id: "dm-att-vaswani-fig2", blob: new Blob([FIG2_SVG], { type: "image/svg+xml" }), uploaded: 1 as const },
   ];
 
   // ---------------------------------------------------------------- write
@@ -1108,4 +1115,27 @@ See also ${links.map((x) => `[[${x.title}]]`).join(", ")}.
     await db.attachments.bulkPut(attachments);
     await db.blobs.bulkPut(blobs);
   });
+}
+
+// ---------------------------------------------------------------- PDF reader seed (Lumen 19)
+export const DEMO_PDF_NOTE = "dm-pdf-attention";
+const FIG2_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="468" height="170" viewBox="0 0 468 170"><rect width="468" height="170" fill="#fff"/><g font-family="Helvetica,Arial" font-size="8" fill="#1f1d1a" stroke="#8c8578" stroke-width=".8">${[["MatMul", 10], ["SoftMax", 38], ["Mask (opt.)", 66], ["Scale", 94], ["MatMul", 122]].map(([l, y]) => `<rect x="189" y="${y}" width="90" height="18" fill="#f5f2eb"/><text x="234" y="${Number(y) + 12}" text-anchor="middle" stroke="none">${l}</text>`).join("")}<text x="204" y="160" stroke="none">Q</text><text x="230" y="160" stroke="none">K</text><text x="274" y="160" stroke="none">V</text></g></svg>`;
+function demoPdfNoteBody(): string {
+  const d = demoPdf();
+  const H: [Highlight["color"], string, string?, string[]?][] = [
+    ["green", "With attention the path is a single hop, so long-range relations are easier to learn."],
+    ["yellow", "The output is computed as a weighted sum of the values"],
+    ["blue", "We compute the dot products of the query with all keys, divide each by sqrt(d_k)", "Why sqrt(d_k): keeps softmax out of tiny-gradient zones.", ["attention"]],
+    ["green", "Multi-head attention allows the model to jointly attend to information from different subspaces"],
+    ["yellow", "with a mask so a position never sees the future"],
+    ["red", "order enters the model only through what is added to the embeddings"],
+    ["red", "We used the Adam optimizer with beta1 = 0.9, beta2 = 0.98", "Compare with AdamW notes."],
+    ["yellow", "attention over very long inputs is expensive because every position looks at every other position"],
+  ];
+  const ids = ["hl-q4n7d0", "hl-k3x9a2", "hl-p8m2c1", "hl-r2t6e5", "hl-s9v1f8", "hl-t5w3g4", "hl-u7y2h6", "hl-v1z8j3", "hl-w6a4k1"];
+  const hs: Highlight[] = H.map(([color, quote, comment, tags], i) => ({ id: ids[i], color, page: d.find(quote).page, quote, comment, tags: tags ?? [], rects: d.find(quote).rects, created: `2026-11-0${5 + (i % 4)}T2${i % 4}:1${i}:00Z` }));
+  const f2 = d.fig("attention");
+  hs.splice(3, 0, { id: ids[8], color: "purple", page: f2.page, quote: "Figure 2 · Scaled dot-product attention", image: "att:dm-att-vaswani-fig2", tags: [], rects: [f2.rect], created: "2026-11-05T20:52:00Z" });
+  return ["---", "type: pdf", "file: att:dm-att-vaswani", `page: ${hs[1].page}`, `pages: ${d.pages}`, `progress: ${Math.round((hs[1].page / d.pages) * 100)}`, "---", "# Attention Is All You Need", "",
+    "The paper behind the Transformer. Read with the thesis lit review in mind.", "", "## Highlights", "", ...hs.map(serializeHighlight), ""].join(String.fromCharCode(10));
 }

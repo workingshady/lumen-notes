@@ -1,15 +1,17 @@
 // Dev simulator panel: switch dummy-data scenarios, inject network/AI/upload faults and move the demo clock.
 // Open with openDevPanel(), Ctrl+Shift+D (registered in main.tsx) or the URL ?dev=panel. See docs/DEV_SIMULATOR.md.
 import { useLiveQuery } from "dexie-react-hooks";
-import { FlaskConical } from "lucide-react";
-import { useEffect, useId, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Glyph } from "../components/Glyph";
+import { setUiDir, useUiDir } from "../components/ws-dir";
+import { setSettings, useSettings } from "../lib/settings";
 import { db, DEMO, setDemo } from "../lib/db";
 import { clockShifted, setDemoClock, shiftDemoClock } from "../lib/demo-clock";
 import { exportBackup, exportVaultZip } from "../lib/io";
 import { currentScenario, SCENARIOS, seedScenario, tableCounts, type Scenario } from "../lib/sim";
 import { DEFAULT_FAULTS, resetFaults, setFaults, useFaults, type AiMode, type NetMode, type UploadMode } from "../lib/sim/faults";
 import { getUI, toast } from "../lib/store";
-import { Button, cx, inputCls, Sheet } from "../components/ui";
+import { Button, cx, inputCls } from "../components/ui";
 
 // ------------------------------------------------------------------ open state + single host
 let open = false;
@@ -31,11 +33,53 @@ export function DevPanel() {
     emit();
     return () => { hosts = hosts.filter((h) => h !== id); emit(); };
   }, [id]);
+  useEffect(() => {
+    if (!isOpen) return;
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") closeDevPanel(); };
+    addEventListener("keydown", k);
+    return () => removeEventListener("keydown", k);
+  }, [isOpen]);
   if (!first || !isOpen) return null;
+  // Developer › Simulator (Lumen 20 · A14): a bottom drawer to test the app.
   return (
-    <Sheet open onClose={closeDevPanel} wide title={<span className="flex items-center gap-2"><FlaskConical size={16} className="text-accent" />Dev simulator</span>}>
-      {DEMO ? <Body /> : <Enter />}
-    </Sheet>
+    <div className="fixed inset-0 z-[60] bg-[rgba(5,6,8,.45)] fade-in" onMouseDown={(e) => e.target === e.currentTarget && closeDevPanel()}>
+      <div role="dialog" aria-label="Simulator" className="sheet-in safe-b absolute inset-x-0 bottom-0 mx-auto flex max-h-[82dvh] w-full max-w-[760px] flex-col rounded-t-[14px] border border-b-0 border-line bg-surface text-[13px]">
+        <div className="flex justify-center pt-2.5"><span className="h-1 w-9 rounded-[2px] bg-line" /></div>
+        <div className="flex items-center gap-2 px-[18px] pb-1 pt-2">
+          <span className="flex-1 text-[15px] font-[650]">Simulator</span>
+          <button aria-label="Close simulator" onClick={closeDevPanel} className="flex size-8 items-center justify-center rounded-[7px] text-muted hover:bg-surface-2 hover:text-ink"><Glyph name="x" size={15} /></button>
+        </div>
+        <div className="min-h-0 overflow-y-auto px-[18px] pb-[18px]">{DEMO ? <Body /> : <Enter />}</div>
+      </div>
+    </div>
+  );
+}
+
+/** The quick toggles row (design: Date, Offline, Slow sync, big vault, RTL, Paper): 28px chips, accent when on. */
+function QuickToggles({ onBig, busy }: { onBig: () => void; busy: boolean }) {
+  const faults = useFaults();
+  const dir = useUiDir();
+  const s = useSettings();
+  const dateRef = useRef<HTMLInputElement>(null);
+  const cur = currentScenario();
+  const paper = s.theme === "paper";
+  const shifted = clockShifted();
+  const chip = (on: boolean) => cx("flex h-7 items-center rounded-[7px] border px-2.5 text-[12.5px]", on ? "border-accent" : "border-line hover:bg-surface-2");
+  const bg = (on: boolean) => (on ? { background: "color-mix(in srgb, var(--accent) 12%, transparent)" } : undefined);
+  const date = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return (
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quick toggles">
+      <span className="relative">
+        <button aria-pressed={shifted} className={chip(shifted)} style={bg(shifted)} onClick={() => { const el = dateRef.current; if (!el) return; try { el.showPicker(); } catch { el.focus(); } }}>Date: {date}</button>
+        <input ref={dateRef} type="date" tabIndex={-1} aria-hidden className="pointer-events-none absolute inset-0 opacity-0"
+          onChange={(e) => { const t = new Date(e.target.value + "T12:00:00").getTime(); if (t > 0) setDemoClock(t); }} />
+      </span>
+      <button aria-pressed={faults.net === "offline"} className={chip(faults.net === "offline")} style={bg(faults.net === "offline")} onClick={() => setFaults({ net: faults.net === "offline" ? "local" : "offline" })}>Offline</button>
+      <button aria-pressed={faults.net === "slow"} className={chip(faults.net === "slow")} style={bg(faults.net === "slow")} onClick={() => setFaults({ net: faults.net === "slow" ? "local" : "slow" })}>Slow sync</button>
+      <button aria-pressed={cur.id === "big-1k"} disabled={busy} className={chip(cur.id === "big-1k")} style={bg(cur.id === "big-1k")} onClick={onBig} title="Load the big vault scenario">1,000 notes</button>
+      <button aria-pressed={dir === "rtl"} className={chip(dir === "rtl")} style={bg(dir === "rtl")} onClick={() => setUiDir(dir === "rtl" ? "auto" : "rtl")}>RTL</button>
+      <button aria-pressed={paper} className={chip(paper)} style={bg(paper)} onClick={() => setSettings({ theme: paper ? "lamplight" : "paper" })}>Paper</button>
+    </div>
   );
 }
 
@@ -63,7 +107,8 @@ function Pills<T extends string>({ value, options, onChange }: { value: T; optio
     <div className="flex flex-wrap gap-1.5" role="radiogroup">
       {options.map(([v, label]) => (
         <button key={v} role="radio" aria-checked={value === v} onClick={() => onChange(v)}
-          className={cx("h-7 rounded-[8px] border px-2.5 text-[12px] transition-colors", value === v ? "border-accent bg-accent text-accent-fg font-semibold" : "border-line text-muted hover:bg-surface-2 hover:text-ink")}>
+          className={cx("h-7 rounded-[7px] border px-2.5 text-[12.5px] transition-colors", value === v ? "border-accent text-ink" : "border-line text-muted hover:bg-surface-2 hover:text-ink")}
+          style={value === v ? { background: "color-mix(in srgb, var(--accent) 12%, transparent)" } : undefined}>
           {label}
         </button>
       ))}
@@ -100,21 +145,20 @@ function Body() {
 
   return (
     <div className="flex flex-col gap-4 text-[13px]">
-      <div className="rounded-[10px] border border-[color-mix(in_srgb,var(--warning)_45%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] px-3 py-2 text-[12.5px]">
-        <b>Dummy data.</b> Everything here lives in the separate <code>lumen-demo</code> database on this device and never syncs. Your real notes are untouched.
-      </div>
+      <span className="leading-[18px] text-muted">Bottom drawer to test the app: fake date, offline, slow sync, big vault, RTL, Paper. Dummy data lives in the separate <code>lumen-demo</code> database and never syncs.</span>
+      <QuickToggles busy={!!busy} onBig={() => { const big = SCENARIOS.find((x) => x.id === (cur.id === "big-1k" ? "design" : "big-1k")); if (big) void load(big); }} />
 
       <Section title="Scenario" hint={<>Current: <b className="text-ink">{cur.name}</b></>}>
         <ul className="flex flex-col gap-1.5">
           {SCENARIOS.map((s) => (
-            <li key={s.id} className={cx("flex items-start gap-3 rounded-[10px] border px-3 py-2", s.id === cur.id ? "border-accent" : "border-line")}>
+            <li key={s.id} className={cx("flex items-center gap-3 rounded-[10px] border px-3 py-2", s.id === cur.id ? "border-accent" : "border-line")} style={s.id === cur.id ? { background: "color-mix(in srgb, var(--accent) 8%, transparent)" } : undefined}>
               <div className="min-w-0 flex-1">
                 <div className="font-semibold">{s.name}{s.id === cur.id && <span className="ml-2 text-[11px] font-normal text-accent">loaded</span>}</div>
                 <div className="text-[12px] leading-[17px] text-muted">{s.description}</div>
               </div>
-              <Button size="sm" variant={s.id === cur.id ? "secondary" : "primary"} disabled={!!busy} onClick={() => void load(s)} data-scenario={s.id}>
+              <button disabled={!!busy} onClick={() => void load(s)} data-scenario={s.id} className="h-7 shrink-0 rounded-[7px] border border-line px-2.5 text-[12.5px] font-medium hover:bg-surface-2 disabled:opacity-50">
                 {busy === s.id ? "Seeding…" : s.id === cur.id ? "Reload" : "Load"}
-              </Button>
+              </button>
             </li>
           ))}
         </ul>

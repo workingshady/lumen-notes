@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { API_BASE, api, getToken } from "../lib/api";
 import { toast } from "../lib/store";
 import { cx, Sheet } from "../components/ui";
+import { openDevPanel } from "./DevPanel";
 
 /** Settings › Developer (design: Lumen 07b R2-1N) with real named API tokens (worker/ext/settings.ts). */
 export type ApiToken = { id: string; name: string; last4: string; createdAt: number; lastUsedAt: number | null; lastIp: string | null };
@@ -82,6 +83,11 @@ export function DeveloperSection() {
   return (
     <div className="flex max-w-[860px] flex-col gap-[22px]">
       <div className="flex flex-col gap-1"><span className="hidden text-[22px] font-[650] tracking-[-.02em] md:block">Developer</span><span className="text-muted">Read and write your notes, canvases and whiteboards from scripts and agents.</span></div>
+      <div className="flex flex-col gap-2.5 rounded-[14px] border border-line bg-bg p-[18px]">
+        <span className="text-[11px] font-semibold uppercase tracking-[.08em] text-muted">Simulator</span>
+        <span className="leading-[18px] text-muted">Bottom drawer to test the app: fake date, offline, slow sync, big vault, RTL, Paper, plus dummy-data scenarios, AI and upload faults, and the clock. Also Ctrl+Shift+D.</span>
+        <button onClick={openDevPanel} className="flex h-7 items-center self-start rounded-[7px] border border-line px-2.5 text-[12.5px] hover:bg-surface-2">Open simulator</button>
+      </div>
       <div className="flex flex-col gap-2"><span className="font-semibold">Base URL</span>
         <div className={cx(box, "h-[42px] pl-3 pr-1.5 font-mono")}><span className="flex-1 truncate">{base}</span>
           <button onClick={() => navigator.clipboard.writeText(base).then(() => toast("Copied"))} className="flex h-[30px] items-center gap-1.5 rounded-[6px] border border-line px-2.5 font-sans"><Copy size={13} />Copy</button></div>

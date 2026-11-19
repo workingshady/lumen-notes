@@ -45,6 +45,16 @@ Smart-folder-only operators:
 | `has:<property>` / `no:<property>` | a front-matter or record property is set / not set (`no:` works for the specials too) |
 | `updated:7d` `updated:>30d` `created:2w` | changed within / more than a span ago (`d` days, `w` weeks, `m` 30-day months) |
 
+Round 4 (design 20b) operators, smart folders and the note-list filter box:
+
+| Operator | Meaning |
+|---|---|
+| `due:this-week` `due:this-month` | the designed spellings of `due:week` / `due:month` (`next-7-days`, `next-30-days` too) |
+| `-op:value` / `-#tag` | negation of any operator: `-status:done`, `-has:links`, `-tag:#x`, `-type:pdf` |
+| `course:CS231n` | the note's `course` property contains the text |
+| `"exact words"` | the phrase appears as written (case/Arabic-normalized) in the title or body |
+| `has:pdf` / `has:video` | a PDF note or a note embedding/linking a `.pdf`; a note with a video player line |
+
 Examples: `tag:#llm status:learning`, "Lessons due this week" = `type:lesson due:week`,
 "PDFs with no notes" = `type:pdf no:backlinks`, "Stale drafts" = `status:todo updated:>30d`.
 
@@ -71,7 +81,7 @@ data, see the rules in `CLAUDE.md`).
 | `name` | shown name |
 | `query` | search query (syntax above) |
 | `filters` | optional Bases filter expressions; `match`: `"and"` (default, omitted) or `"or"` |
-| `glyph` | `search` (default) `star` `book` `flag` `clock` `file` `tag` `bolt` `inbox` `layers` |
+| `glyph` | a LumenGlyph name (`src/lib/glyphs.ts`): `smart-folder` (default) `due` `s-learning` `s-revise` `s-todo` `pdf` `flashcards` `lesson` `k-video` `tag` `query` `inbox` `flame` `clock` `highlight` `p1`. Keys stored before round 4 still work: `search`→`smart-folder`, `star`/`bolt`→`flame`, `book`→`lesson`, `flag`→`p1`, `file`→`pdf`, `layers`→`flashcards` (`glyphName()` in smart.ts). |
 | `color` | colour preset key `"1"`–`"6"` (same presets as folders) or a CSS colour; omitted = none |
 | `pinned` | listed first |
 | `sort` | order within the pinned / unpinned group |
@@ -84,11 +94,23 @@ moment keeps the later list.
 The note list shows a smart folder through the UI filter `filter: "smart:<id>"` (`src/lib/store.ts`); every other
 navigation sets `filter` and so leaves the smart folder.
 
+## Round 4 UI (design 20b · D7)
+- Sidebar rows: glyph (16) in the folder colour, name, "pinned" label, live count. **Drag a row** to reorder (an accent
+  line shows the drop spot; dropping between pinned folders pins it). The ⋯ / right-click menu is unchanged.
+- Editor sheet (560 px): glyph button (picker) + name, Search with a live "N notes match right now", operator chips
+  (click to insert; placeholder values are selected), colour row, **Pin to top** toggle, optional Bases filter rows,
+  footer **Save as base…** / Delete / Save. Ctrl/Cmd+Enter saves.
+- Note list of a smart folder: header with the glyph, name and **Edit**, the query as chips; typing after the chips
+  narrows the list (and offers **Save as new**). Rows show the type glyph, title and "course · due Mon".
+- Palette (Ctrl/Cmd K): **Save search as smart folder** (Ctrl/Cmd S) and **Save as base**.
+- Phone folders sheet: Smart folders section, 48 px rows; long-press a row to edit.
+
 ## Save as base
 **Save as base** creates a new base note (`type: base`, `docs/BASES.md`) in the Inbox with the same filters:
 `tag:` → `file.hasTag(...)`, `type:` / `status:` → `==`, `in:` → `file.folder.contains(...)`, `space:` →
 `space.contains(...)`, `due:` and `updated:` / `created:` → date comparisons (relative spans are written as fixed
-dates from the day you save), `has:x` / `no:x` → `!x.isEmpty()` / `x.isEmpty()`, filter rows as they are.
+dates from the day you save), `has:x` / `no:x` → `!x.isEmpty()` / `x.isEmpty()`, `course:` → `course.contains(...)`,
+`-tag:` / `-type:` / `-status:` → `!file.hasTag(...)` / `!=`, `"exact words"` → `file.name.contains(...)`, filter rows as they are.
 Free words become `file.name.contains(...)` (Bases filter on properties, not on full text). Parts with no Bases
-equivalent (`is:` flags, `has:`/`no:` links, backlinks, tasks) are listed in the note's first paragraph and in the
+equivalent (`is:` flags, `has:`/`no:` links, backlinks, tasks, pdf, video) are listed in the note's first paragraph and in the
 toast.

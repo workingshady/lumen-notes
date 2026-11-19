@@ -115,7 +115,9 @@ function sentence(body: string, start: number, end: number) {
   let b = end;
   while (b < body.length && b - end < 90 && !stop.test(body[b])) b++;
   if (b < body.length && /[.!?؟]/.test(body[b])) b++;
-  const clean = (s: string) => s.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2").replace(/\[\[([^\]]+)\]\]/g, "$1").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/[*_`~]|==|^\s*([-*+>]|\d+\.)\s+|^\s*\[[ xX/-]\]\s+|^#+\s+/g, "");
+  const clean = (s: string) => s.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2").replace(/\[\[([^\]]+)\]\]/g, "$1").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/[*_`~]|==|^\s*([-*+>]|\d+\.)\s+|^#+\s+/g, "")
+    // task boxes and task-date markers (`[/] Plot … 📅 2026-11-20`) read as noise (and emoji) in a snippet
+    .replace(/(^|\s)\[[ xX/>?-]\]\s+/g, "$1").replace(/\s*\p{Extended_Pictographic}️?(\s*\d{4}-\d{2}-\d{2})?/gu, "");
   const before = clean(body.slice(a, start)).replace(/^\s+/, "");
   const after = clean(body.slice(end, b)).replace(/\s+$/, "");
   return { before: (a > 0 && !stop.test(body[a - 1]) ? "…" : "") + before, match: body.slice(start, end), after: after + (b < body.length && !stop.test(body[b - 1] ?? "") ? "…" : "") };

@@ -48,6 +48,18 @@ let indexed = new Map<string, number>();
  */
 let pendingNotes: Note[] | null = null;
 let indexing = false;
+
+/** Search index progress (big vaults, design 20b A15 "Indexing 512 / 738"): `done` of `total` live notes are indexed. */
+export interface IndexStatus { done: number; total: number; running: boolean }
+let status: IndexStatus = { done: 0, total: 0, running: false };
+const statusSubs = new Set<() => void>();
+export const indexStatus = () => status;
+export function onIndexStatus(f: () => void) { statusSubs.add(f); return () => void statusSubs.delete(f); }
+function setStatus(s: IndexStatus) {
+  if (s.done === status.done && s.total === status.total && s.running === status.running) return;
+  status = s;
+  statusSubs.forEach((f) => f());
+}
 export function scheduleIndex(notes: Note[]) {
   pendingNotes = notes;
   if (!indexing) void indexLoop();
@@ -60,7 +72,7 @@ async function indexLoop() {
       pendingNotes = null;
       await updateIndex(ns, () => pendingNotes !== null);
     }
-  } finally { indexing = false; }
+  } finally { indexing = false; setStatus({ ...status, done: status.total, running: false }); }
 }
 const yieldToBrowser = () => new Promise<void>((r) => setTimeout(r, 0));
 
@@ -81,13 +93,19 @@ export async function updateIndex(notes: Note[], stale: () => boolean = () => fa
   if (gone > 200 && gone > indexed.size / 3) { index.removeAll(); indexed = new Map(); }
   for (const [id] of indexed) if (!live.has(id)) { index.discard(id); indexed.delete(id); }
   let t = performance.now();
+  let done = 0;
+  for (const n of live.values()) if (indexed.get(n.id) === n.updatedAt) done++;
+  if (done < live.size) setStatus({ done, total: live.size, running: true });
+  else setStatus({ done, total: live.size, running: false });
   for (const n of live.values()) {
     const v = indexed.get(n.id);
     if (v === n.updatedAt) continue;
+    done++;
     if (v !== undefined) index.discard(n.id);
     index.add(n);
     indexed.set(n.id, n.updatedAt);
     if (performance.now() - t > 12) {
+      setStatus({ done, total: live.size, running: true });
       await yieldToBrowser();
       if (stale()) return;
       t = performance.now();

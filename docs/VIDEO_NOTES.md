@@ -72,6 +72,16 @@ Rules (exact):
 - Hooks: `markdown.ts` (inline rule `vtimestamp`), `ws-embeds.tsx` (video section registers players),
   `Editor.tsx` (extension + bar), `slash.ts` (Timestamp command), CSS block "Video notes (D8)" in `layout.css`.
 
+## Round 4 look (design 20b · D8)
+- Chips are pills (`▶ 12:34`, info colour). The chip of the moment that is playing gets a ring (`.vts-on`); chips that
+  target a player the note doesn't have are grey from the start (`.vts-none`, "No video at this position in the note").
+  `markChips()` in video-players.ts keeps both states fresh while a player runs.
+- One control bar: play/pause, `41:07 / 1:56:20` (players report `duration()`), a progress bar (click to seek), speed
+  pill (0.75–2×), **Timestamp** and **Flashcard at this moment** (glyph buttons), **Pause while typing** (toggle), and
+  **Dock / Undock**. Docked, the bar sits on the bottom of the player (dark strip); undocked, it is a strip above the editor.
+- After Alt+T (or the bar buttons) a short notice appears under the caret: "41:07 Inserted from the playing video · Alt+T".
+- In the editor `[12:34]` is tinted in the info colour.
+
 ## Limits
 
 - Vimeo speed only works when the video owner allows speed controls; private/unlisted Vimeo videos may refuse the API.

@@ -1,5 +1,5 @@
 // One entry point for every tile type: picks the chart, or the data table when the accessibility toggle is on.
-import { categoryColors, datasetTable, type DashData, type Tile, type TileResult } from "../../lib/dashboard";
+import { categoryColors, datasetTable, rangeCaption, type DashData, type Tile, type TileResult } from "../../lib/dashboard";
 import { CartesianChart } from "./Cartesian";
 import { ChartEmpty, DataTable } from "./common";
 import { DonutChart } from "./Donut";
@@ -13,7 +13,7 @@ export function TileChart({ tile, result, spaces, table, onRow }: { tile: Tile; 
   const label = tile.title || tile.type;
   if (error) return <ChartEmpty>{error}</ChartEmpty>;
   if (table) { const t = datasetTable(data); return <DataTable columns={t.columns} rows={t.rows} caption={label} />; }
-  if (data.kind === "number") return <NumberStat data={data} />;
+  if (data.kind === "number") return <NumberStat data={data.sub === undefined ? { ...data, sub: rangeCaption(tile.range, Date.now()) } : data} />;
   if (data.kind === "ring") return <Ring data={data} label={label} color={tile.colors?.value ? `var(--chart-c${tile.colors.value})` : undefined} />;
   if (data.kind === "rows") {
     if (!data.rows.length) return <ChartEmpty>Nothing to list</ChartEmpty>;

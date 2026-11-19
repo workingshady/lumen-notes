@@ -123,3 +123,15 @@ Written by Today (see docs/TODAY.md). One section per day; you can edit it.
 
 ### Course roadmaps
 Only existing syntax is written: topic status marks and `📅 YYYY-MM-DD` dates.
+
+### Round 4 layout (TodayDesk.dc.html)
+Sections: **Reviews** (cards, always first) · **Continue** (accent border, filled Start) · **New lessons** (N of max M)
+· **Revise & practice** (path revisions + one test-out quiz) · If you have time. Each row: glyph tile, `title · course`,
+reason, minutes, Start, ⋯ (Mark done / Skip today / Move to tomorrow; on phones tap the row). Desktop right column:
+This week (dashed daily goal, green done) + weekly goals + How today was built. Weekly goals are edited in
+Settings › Study plan (chips, + Goal). Missed days banner: Not now / Accept new dates, Before/After bars (14 days),
+Adjust lists every move.
+
+### Review workload (Settings › Review)
+`src/lib/workload.ts` replays every live card for 30 days from its FSRS memory at the chosen retention (seeded
+Monte Carlo: recall with the current retrievability → Good, else Again + one relearning step), averaged per card.

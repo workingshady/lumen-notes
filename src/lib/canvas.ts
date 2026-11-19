@@ -1,6 +1,7 @@
 import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY, type SimulationNodeDatum } from "d3-force";
 import type { CanvasEdge, CanvasNode, JsonCanvas, Side } from "../../shared/types";
 import { uid } from "./db";
+import { countCrossings, tidy, type LEdge, type LNode } from "./graph-layout";
 
 export const PRESETS: Record<string, string> = { "1": "#E5534B", "2": "#E8893A", "3": "#E3B341", "4": "#57AB5A", "5": "#39C5CF", "6": "#A371F7" };
 export const colorOf = (c?: string) => (c ? PRESETS[c] ?? c : undefined);
@@ -44,8 +45,9 @@ export function validate(c: unknown): string | null {
 export const stringify = (c: JsonCanvas) => JSON.stringify({ nodes: c.nodes ?? [], edges: c.edges ?? [] }, null, 2);
 
 // ------------------------------------------------------------------ layouts
-type LayoutKind = "grid" | "tree" | "force";
+type LayoutKind = "grid" | "tree" | "force" | "tidy";
 export function layout(c: JsonCanvas, kind: LayoutKind = "tree"): JsonCanvas {
+  if (kind === "tidy") return tidyCanvas(c).canvas;
   const nodes = (c.nodes ?? []).map((n) => ({ ...n }));
   const edges = c.edges ?? [];
   const items = nodes.filter((n) => n.type !== "group");
@@ -84,6 +86,107 @@ export function layout(c: JsonCanvas, kind: LayoutKind = "tree"): JsonCanvas {
     sim.forEach((p) => { const n = items.find((x) => x.id === p.id)!; n.x = Math.round(p.x! - n.width / 2); n.y = Math.round(p.y! - n.height / 2); });
   }
   return { nodes, edges };
+}
+
+// ------------------------------------------------------------------ Tidy up (design round 4, 14b · 2)
+/** Pinned cards (`"lumenPinned": true`, a Lumen extension field JSON Canvas readers ignore) never move in Tidy up. */
+export const isPinned = (n: CanvasNode) => !!(n as { lumenPinned?: boolean }).lumenPinned;
+export function setPinned(n: CanvasNode, on: boolean): CanvasNode {
+  const { lumenPinned: _old, ...rest } = n as CanvasNode & { lumenPinned?: boolean };
+  return (on ? { ...rest, lumenPinned: true } : rest) as CanvasNode;
+}
+
+export interface CanvasTidy { canvas: JsonCanvas; moved: number; before: number | null; after: number | null; pinned: number }
+
+/**
+ * Tidy up a board: groups are laid out as compound nodes (their cards first, the group resized around them), then
+ * every level is laid out left → right by its edges (layered; edges between cards in different groups are lifted
+ * to the groups), isolated cards packed in a grid, pinned cards left where they are, and edge sides set to the
+ * straightest pair. Returns the new canvas plus what changed (for the preview banner).
+ */
+export function tidyCanvas(c: JsonCanvas, opts: { keepPinned?: boolean; mode?: "layered" | "force"; dir?: "LR" | "TB" } = {}): CanvasTidy {
+  const nodes = (c.nodes ?? []).map((n) => ({ ...n }));
+  const edges = (c.edges ?? []).map((e) => ({ ...e }));
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const keep = opts.keepPinned !== false;
+  const area = (n: CanvasNode) => n.width * n.height;
+  const centre = (id: string) => { const n = byId.get(id); return n && { x: n.x + n.width / 2, y: n.y + n.height / 2 }; };
+  const edgeList = () => edges.map((e) => [e.fromNode, e.toNode] as LEdge);
+  // Parent = the smallest group that contains the card's centre (groups nest the same way).
+  const parent = new Map<string, string | null>();
+  for (const n of nodes) {
+    const cx = n.x + n.width / 2, cy = n.y + n.height / 2;
+    let best: CanvasNode | null = null;
+    for (const g of nodes) if (g.type === "group" && g.id !== n.id && area(g) > area(n) && cx >= g.x && cx <= g.x + g.width && cy >= g.y && cy <= g.y + g.height && (!best || area(g) < area(best))) best = g;
+    parent.set(n.id, best?.id ?? null);
+  }
+  const chain = (id: string) => { const out = [id]; let p = parent.get(id); while (p && out.length < 32) { out.push(p); p = parent.get(p); } return out; };
+  const PAD = 28, HEAD = 36; // group padding; the label chip sits 30px above the group
+  const before = countCrossings(edgeList(), centre);
+  // Centre of every card relative to its level's layout frame, and each level's content top-left.
+  const local = new Map<string, { x: number; y: number }>();
+  const origin = new Map<string | null, { x: number; y: number }>();
+  let pinnedKept = 0;
+  const layoutLevel = (pid: string | null): { w: number; h: number } | null => {
+    const kids = nodes.filter((n) => parent.get(n.id) === pid);
+    if (!kids.length) return null;
+    for (const k of kids) if (k.type === "group") {
+      const inner = layoutLevel(k.id);
+      if (inner && !(keep && isPinned(k))) { k.width = Math.round(inner.w + PAD * 2); k.height = Math.round(inner.h + PAD * 2); }
+    }
+    // Lift edges to this level: the ancestors of both ends that are children of `pid`.
+    const kidSet = new Set(kids.map((k) => k.id));
+    const lifted: LEdge[] = [];
+    for (const e of edges) {
+      const a = chain(e.fromNode).find((x) => kidSet.has(x)), b = chain(e.toNode).find((x) => kidSet.has(x));
+      if (a && b && a !== b) lifted.push([a, b]);
+    }
+    // A group's box includes its label chip above it.
+    const head = (k: CanvasNode) => (k.type === "group" ? HEAD : 0);
+    const ln: LNode[] = kids.map((k) => ({ id: k.id, w: k.width, h: k.height + head(k), x: k.x + k.width / 2, y: k.y + (k.height - head(k)) / 2, pinned: isPinned(k) }));
+    const r = tidy(ln, lifted, { mode: opts.mode ?? "layered", dir: opts.dir ?? "LR", layerGap: 90, nodeGap: 40, keepPinned: keep });
+    pinnedKept += r.pinned;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const k of kids) {
+      const p = r.pos.get(k.id)!;
+      const top = p.y - (k.height + head(k)) / 2; // top of the chip area
+      local.set(k.id, { x: p.x - k.width / 2, y: top + head(k) }); // card top-left in this frame
+      x0 = Math.min(x0, p.x - k.width / 2); x1 = Math.max(x1, p.x + k.width / 2);
+      y0 = Math.min(y0, top); y1 = Math.max(y1, top + k.height + head(k));
+    }
+    origin.set(pid, { x: x0, y: y0 });
+    return { w: x1 - x0, h: y1 - y0 };
+  };
+  if (!layoutLevel(null)) return { canvas: c, moved: 0, before, after: before, pinned: 0 };
+  // Top level is already in board coordinates (tidy() re-centres on where the cards were); a nested level is
+  // placed so its content box starts at the group's top-left + padding.
+  const done = new Set<string>();
+  const place = (n: CanvasNode): void => {
+    if (done.has(n.id)) return;
+    done.add(n.id);
+    const pid = parent.get(n.id) ?? null;
+    const p = local.get(n.id)!;
+    if (keep && isPinned(n) && !pid) return;
+    if (!pid) { n.x = Math.round(p.x); n.y = Math.round(p.y); return; }
+    const g = byId.get(pid)!;
+    place(g);
+    const o = origin.get(pid)!;
+    if (keep && isPinned(n)) return;
+    n.x = Math.round(g.x + PAD + (p.x - o.x));
+    n.y = Math.round(g.y + PAD + (p.y - o.y));
+  };
+  for (const n of nodes) place(n);
+  // Straighten edges: each edge leaves / enters on the sides facing each other.
+  for (const e of edges) {
+    const a = byId.get(e.fromNode), b = byId.get(e.toNode);
+    if (!a || !b) continue;
+    const dx = b.x + b.width / 2 - (a.x + a.width / 2), dy = b.y + b.height / 2 - (a.y + a.height / 2);
+    if (Math.abs(dx) >= Math.abs(dy)) { e.fromSide = dx >= 0 ? "right" : "left"; e.toSide = dx >= 0 ? "left" : "right"; }
+    else { e.fromSide = dy >= 0 ? "bottom" : "top"; e.toSide = dy >= 0 ? "top" : "bottom"; }
+  }
+  const old = new Map((c.nodes ?? []).map((n) => [n.id, n]));
+  const moved = nodes.filter((n) => { const o = old.get(n.id)!; return Math.abs(o.x - n.x) > 2 || Math.abs(o.y - n.y) > 2 || o.width !== n.width || o.height !== n.height; }).length;
+  return { canvas: { nodes, edges }, moved, before, after: countCrossings(edgeList(), centre), pinned: pinnedKept };
 }
 
 // ------------------------------------------------------------------ generators
@@ -200,9 +303,13 @@ export function previewSvg(c: JsonCanvas, w = 600, h = 280) {
   }).join("");
   const nodes = ns.map((n) => {
     const col = colorOf(n.color) ?? "var(--border)";
-    const label = n.type === "text" ? n.text.replace(/^#+\s*/, "").split("\n")[0] : n.type === "file" ? `📄 ${n.file}` : n.type === "link" ? `🔗 ${n.url}` : n.label ?? "";
+    // File / link cards get a small drawn mark (page / link) instead of an emoji.
+    const label = n.type === "text" ? n.text.replace(/^#+\s*/, "").split("\n")[0] : n.type === "file" ? n.file.replace(/\.md$/i, "") : n.type === "link" ? n.url.replace(/^https?:\/\/(www\.)?/, "") : n.label ?? "";
+    const mark = n.type === "file" ? `<path d="M${n.x + 16} ${n.y + 16}h11l6 6v14h-17z" fill="none" stroke="currentColor" stroke-opacity=".6" stroke-width="2"/>`
+      : n.type === "link" ? `<path d="M${n.x + 20} ${n.y + 27}h8 M${n.x + 21} ${n.y + 22}h-3a5 5 0 0 0 0 10h3 M${n.x + 27} ${n.y + 22}h3a5 5 0 0 1 0 10h-3" fill="none" stroke="currentColor" stroke-opacity=".6" stroke-width="2"/>` : "";
+    const tx = mark ? n.x + 42 : n.x + 16;
     const fill = n.type === "group" ? "transparent" : "var(--surface)";
-    return `<g><rect x="${n.x}" y="${n.y}" width="${n.width}" height="${n.height}" rx="12" fill="${fill}" stroke="${col}" stroke-width="3" ${n.type === "group" ? 'stroke-dasharray="10 8"' : ""}/><text x="${n.x + 16}" y="${n.y + 34}" font-size="22" fill="currentColor">${esc(label.slice(0, 32))}</text></g>`;
+    return `<g><rect x="${n.x}" y="${n.y}" width="${n.width}" height="${n.height}" rx="12" fill="${fill}" stroke="${col}" stroke-width="3" ${n.type === "group" ? 'stroke-dasharray="10 8"' : ""}/>${mark}<text x="${tx}" y="${n.y + 34}" font-size="22" fill="currentColor">${esc(label.slice(0, 32))}</text></g>`;
   }).join("");
   return `<svg viewBox="${vb}" width="100%" height="${h}" preserveAspectRatio="xMidYMid meet">${edges}${nodes}</svg>`;
 }

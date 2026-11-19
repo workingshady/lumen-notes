@@ -1,6 +1,8 @@
 import { Check, KeyRound, Loader2, Plus, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { accountLabel, forgetAccount, getAccount, getToken, login, savedAccounts, switchAccount, type SavedAccount } from "../lib/api";
+import { accountLabel, forgetAccount, getAccount, getToken, savedAccounts, switchAccount, type SavedAccount } from "../lib/api";
+import { unlockWithServer } from "../lib/home-lock";
+import { PasscodeHelp } from "../views/settings-devices";
 import { syncNow } from "../lib/sync";
 import { toast } from "../lib/store";
 import { Button, cx } from "./ui";
@@ -36,19 +38,33 @@ export function AccountSwitcher({ compact, onDone }: { compact?: boolean; onDone
   const [pass, setPass] = useState("");
   const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
+  // Lumen 20 · "Unlock · wrong passcode, lockout": tries left, then a lockout countdown (server: worker/ext/home.ts /unlock)
+  const [wrong, setWrong] = useState<{ left?: number; error: string } | null>(null);
+  const [lockedUntil, setLockedUntil] = useState(0);
+  const [now, setNow] = useState(Date.now());
+  const [help, setHelp] = useState(false);
+  useEffect(() => { if (lockedUntil <= Date.now()) return; const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, [lockedUntil]);
+  const lockLeft = Math.max(0, Math.ceil((lockedUntil - now) / 1000));
   const accounts = [...list].sort((a, b) => (a.id === cur ? -1 : b.id === cur ? 1 : b.lastUsed - a.lastUsed));
   if (!accounts.some((a) => a.id === cur)) accounts.unshift({ id: cur, token: "", savedAt: 0, lastUsed: 0 });
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (lockLeft) return;
     setBusy(true);
     try {
-      await login(pass, remember);
-      setPass(""); setAdding(false);
+      const r = await unlockWithServer(pass);
+      if (!r.ok) {
+        if (r.retryAfterSec) { setLockedUntil(Date.now() + r.retryAfterSec * 1000); setNow(Date.now()); setWrong(null); }
+        else setWrong({ left: r.attemptsLeft, error: r.error });
+        return;
+      }
+      if (!remember) forgetAccount(getAccount());
+      setPass(""); setAdding(false); setWrong(null);
       toast("Signed in");
       await syncNow();
       onDone?.();
-    } catch (err) { toast((err as Error).message); } finally { setBusy(false); }
+    } finally { setBusy(false); }
   };
 
   const row = cx("flex items-center gap-2.5 rounded-[8px]", compact ? "px-2 py-1.5" : "px-2.5 py-2");
@@ -82,13 +98,23 @@ export function AccountSwitcher({ compact, onDone }: { compact?: boolean; onDone
         <form onSubmit={(e) => void add(e)} className={cx("flex flex-col gap-2 rounded-[8px] border border-line", compact ? "p-2" : "p-3")}>
           <div className="flex items-center gap-2 text-[12.5px] text-muted"><KeyRound size={13} />Passcode of the account to add (or of this one, to unlock)</div>
           <div className="flex gap-2">
-            <input autoFocus type="password" autoComplete="current-password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Passcode" className="min-w-0 flex-1 rounded-[8px] border border-line bg-surface-2 px-2.5 py-1.5 text-[13px] outline-none focus:border-accent" />
-            <Button size="sm" variant="primary" disabled={!pass || busy}>{busy ? <Loader2 size={14} className="animate-spin" /> : "Sign in"}</Button>
+            <input autoFocus type="password" autoComplete="current-password" value={pass} onChange={(e) => { setPass(e.target.value); setWrong(null); }} placeholder="Passcode" aria-invalid={!!wrong}
+              className="min-w-0 flex-1 rounded-[8px] bg-surface px-3 py-1.5 text-[13px] outline-none focus:border-accent" style={{ border: wrong ? "1.5px solid var(--danger)" : "1px solid var(--border)", letterSpacing: pass ? ".3em" : undefined }} />
+            <Button size="sm" variant="primary" disabled={!pass || busy || !!lockLeft}>{busy ? <Loader2 size={14} className="animate-spin" /> : "Sign in"}</Button>
           </div>
+          {wrong && <span role="alert" className="text-[12.5px] text-bad">{wrong.left != null ? `Wrong passcode · ${wrong.left} ${wrong.left === 1 ? "try" : "tries"} left before a short lockout.` : wrong.error}</span>}
+          {lockLeft > 0 && (
+            <div role="alert" className="flex items-center gap-3 rounded-[10px] p-3" style={{ background: "color-mix(in srgb, var(--warning) 9%, transparent)", border: "1px solid color-mix(in srgb, var(--warning) 30%, transparent)" }}>
+              <b className="font-mono text-[22px] font-semibold tabular-nums">{String(Math.floor(lockLeft / 60)).padStart(2, "0")}:{String(lockLeft % 60).padStart(2, "0")}</b>
+              <span className="flex-1 text-[12.5px] leading-[18px]">Too many tries from this network. Try again when the timer ends. Next lockout doubles (max 24 h).</span>
+            </div>
+          )}
+          <button type="button" onClick={() => setHelp(true)} className="self-start text-[12.5px] text-link hover:underline">Forgot the passcode?</button>
+          <PasscodeHelp open={help} onClose={() => setHelp(false)} />
           <label className="flex items-center gap-2 text-[12px] text-muted"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="accent-[var(--accent)]" />Remember on this device (switch later without the passcode)</label>
         </form>
       ) : (
-        <button className={cx(row, "text-[13px] text-muted hover:bg-surface-2 hover:text-ink")} onClick={() => setAdding(true)}>
+        <button data-unlock-account className={cx(row, "text-[13px] text-muted hover:bg-surface-2 hover:text-ink")} onClick={() => setAdding(true)}>
           {compact ? <Plus size={15} /> : <span className="flex size-7 items-center justify-center rounded-full border border-dashed border-line"><UserRound size={14} /></span>}
           {signedIn ? "Add another account" : "Unlock or add an account"}
         </button>

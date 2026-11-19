@@ -8,6 +8,7 @@ import { colorOf } from "../lib/canvas";
 import { hlCanvasNode, pageOfSubpath, parseHighlights, pdfMeta, type Highlight } from "../lib/pdf-format";
 import { HL_MIME, setPdfJump } from "../lib/pdf-note";
 import { openNote, toast, useVault } from "../lib/store";
+import { Glyph } from "./Glyph";
 import { AttImg } from "./pdf-rail";
 
 const box = (n: CanvasNode, selected: boolean, edge?: string) => ({
@@ -27,15 +28,14 @@ export function PdfHighlightCard({ n, card, selected }: { n: CanvasNode; card: {
     setPdfJump(pdf.id, card.page, card.id);
     openNote(pdf.id, "read");
   };
-  const s = box(n, selected);
   return (
-    <div {...s}>
-      <div className="nowheel flex min-h-0 flex-1 flex-col gap-2 overflow-auto px-3.5 py-3">
-        {card.image ? <AttImg src={card.image} className="max-h-full w-full rounded-[4px] object-contain" /> : <span dir="auto" className="font-serif text-[14px] leading-[21px] text-ink">{card.quote}</span>}
-      </div>
-      <div className="flex h-[30px] shrink-0 items-center gap-1.5 border-t border-line px-2.5">
-        <button className="nodrag flex min-w-0 items-center gap-1.5 rounded-[6px] bg-surface-2 px-1.5 py-0.5 text-[11.5px] text-ink hover:text-accent" title="Open the PDF at this highlight" onClick={open}>
-          <span className="font-mono text-[9.5px] font-semibold text-bad">PDF</span><span className="truncate">{card.title}</span><span className="shrink-0 font-mono text-muted">p. {card.page || "?"}</span>
+    <div className="box-border flex h-full w-full flex-col overflow-hidden rounded-[10px] bg-surface"
+      style={{ border: selected ? "2px solid var(--accent)" : "1px solid var(--border)", boxShadow: selected ? "0 0 0 4px color-mix(in srgb,var(--accent) 16%,transparent)" : "none" }}>
+      <div className="h-1 shrink-0" style={{ background: colorOf(n.color) ?? "var(--border)" }} />
+      <div className="nowheel flex min-h-0 flex-1 flex-col gap-1.5 overflow-auto px-3 py-2.5">
+        {card.image ? <AttImg src={card.image} className="max-h-full w-full rounded-[4px] object-contain" /> : <span dir="auto" className="text-[14px] leading-5 text-ink" style={{ fontFamily: "'Source Serif 4', Georgia, serif" }}>“{card.quote}”</span>}
+        <button className="nodrag flex min-w-0 items-center gap-1.5 self-start text-[11.5px] text-muted hover:text-ink" title="Open the PDF at this highlight" onClick={open}>
+          <Glyph name="pdf" size={12} color="var(--danger)" /><span className="truncate">{card.title} · p. {card.page || "?"}</span>
         </button>
       </div>
     </div>

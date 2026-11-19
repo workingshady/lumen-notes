@@ -6,7 +6,8 @@ import { createRoot } from "react-dom/client";
 import { addFile, resolveAtt } from "../lib/attachments";
 import { attId, clampBox, nextBoxId, noteImages, occlusionCardCount, safeImageUrl, type Occlusion, type OcclusionBox, type OcclusionMode } from "../lib/occlusion";
 import { toast } from "../lib/store";
-import { Button, cx, IconButton, inputCls, Segmented } from "./ui";
+import { Glyph } from "./Glyph";
+import { Button, cx, IconButton, inputCls } from "./ui";
 
 /** Resolve `att:id` (local blob or server) or a safe URL to an <img> src. */
 export function useImageSrc(src: string) {
@@ -240,17 +241,17 @@ export function OcclusionEditor({ initial, noteBody = "", onSave, onClose }: Edi
 
   const selBox = o.boxes.find((b) => b.id === sel);
   const list = (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1">
       {!o.boxes.length && <p className="px-1 py-2 text-[13px] text-muted">Drag on the image to draw a box over each label. Each box becomes one card.</p>}
       {o.boxes.map((b, i) => (
-        <div key={b.id} onClick={() => setSel(b.id)} className={cx("flex flex-col gap-1.5 rounded-[10px] border p-2", sel === b.id ? "border-accent bg-surface-2" : "border-line")}>
-          <div className="flex items-center gap-1.5">
-            <span className="w-6 shrink-0 text-center font-mono text-[12px] text-muted">{i + 1}</span>
-            <input dir="auto" aria-label={`Label for box ${i + 1}`} placeholder="Label (the answer)" value={b.label ?? ""} onChange={(e) => setBox(b.id, (x) => ({ ...x, label: e.target.value || undefined }))} className={cx(inputCls, "h-9 min-w-0 flex-1")} />
-            <IconButton label="Delete box" className="size-9 md:size-8" onClick={(e) => { e.stopPropagation(); remove(b.id); }}><Trash2 size={15} /></IconButton>
+        <div key={b.id} onClick={() => setSel(b.id)} className={cx("group flex flex-col gap-1.5 rounded-[8px]", sel === b.id ? "bg-surface-2" : "hover:bg-[color-mix(in_srgb,var(--surface-2)_50%,transparent)]")}>
+          <div className="flex min-h-9 items-center gap-2.5 px-2">
+            <span className="occl-num static" style={{ background: sel === b.id ? "var(--accent)" : "var(--learn)" }}>{i + 1}</span>
+            <input dir="auto" aria-label={`Label for box ${i + 1}`} placeholder="Label (the answer)" value={b.label ?? ""} onChange={(e) => setBox(b.id, (x) => ({ ...x, label: e.target.value || undefined }))} className="h-8 min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-muted" />
+            <IconButton label="Delete box" className={cx("size-9 md:size-7", sel !== b.id && "md:opacity-0 md:group-hover:opacity-100")} onClick={(e) => { e.stopPropagation(); remove(b.id); }}><Trash2 size={14} /></IconButton>
           </div>
           {sel === b.id && (
-            <div className="flex items-center gap-1.5 ps-[30px]">
+            <div className="flex items-center gap-1.5 pb-1.5 pe-2 ps-9">
               <input dir="auto" aria-label="Group" placeholder="Group (optional)" value={b.group ?? ""} onChange={(e) => setBox(b.id, (x) => ({ ...x, group: e.target.value.trim() || undefined }))} className={cx(inputCls, "h-9 min-w-0 flex-1 text-[13px]")} />
               <IconButton label="Move up" className="size-9 md:size-8" disabled={i === 0} onClick={(e) => { e.stopPropagation(); reorder(b.id, -1); }}><ArrowUp size={15} /></IconButton>
               <IconButton label="Move down" className="size-9 md:size-8" disabled={i === o.boxes.length - 1} onClick={(e) => { e.stopPropagation(); reorder(b.id, 1); }}><ArrowDown size={15} /></IconButton>
@@ -262,20 +263,30 @@ export function OcclusionEditor({ initial, noteBody = "", onSave, onClose }: Edi
   );
 
   const modeCtl = (
-    <Segmented<OcclusionMode> value={o.mode} onChange={(m) => edit((x) => ({ ...x, mode: m }))}
-      options={[{ value: "hide-one", label: "Hide one", title: "Hide one, show others" }, { value: "hide-all", label: "Hide all", title: "Hide all, guess one" }]} />
+    <div role="radiogroup" aria-label="Card mode" className="flex gap-[2px] self-start rounded-[8px] border border-line bg-surface p-[3px] text-[12px]">
+      {([["hide-one", "Hide one", "Hide one, show others"], ["hide-all", "Hide all", "Hide all, guess one"]] as [OcclusionMode, string, string][]).map(([v, l, t]) => (
+        <button key={v} role="radio" aria-checked={o.mode === v} title={t} onClick={() => edit((x) => ({ ...x, mode: v }))}
+          className={cx("flex h-6 items-center rounded-[6px] px-[9px]", o.mode === v ? "bg-surface-2 font-semibold text-ink" : "text-muted hover:text-ink")}>{l}</button>
+      ))}
+    </div>
   );
 
   return (
     <div className="occl-editor fixed inset-0 z-[60] flex flex-col bg-bg text-ink fade-in" role="dialog" aria-modal="true" aria-label="Image occlusion">
-      <div className="safe-t flex h-14 shrink-0 items-center gap-2 border-b border-line px-2 md:px-4">
-        <IconButton label="Close" className="size-11 md:size-8" onClick={close}><X size={18} /></IconButton>
-        <span className="truncate text-[15px] font-semibold">Image occlusion</span>
-        <span className="hidden text-[13px] text-muted md:inline">· {cards} {cards === 1 ? "card" : "cards"}</span>
-        <span className="flex-1" />
+      <div className="safe-t flex h-14 shrink-0 items-center gap-2.5 border-b border-line px-2 text-[13px] md:h-12 md:px-4">
+        <IconButton label="Close" className="size-11 md:size-7" onClick={close}><X size={16} /></IconButton>
+        <Glyph name="occlusion" size={16} color="var(--learn)" />
+        <span className="min-w-0 flex-1 truncate font-semibold">Image occlusion{o.alt ? ` · ${o.alt}` : ""}</span>
         <div className="hidden md:block">{modeCtl}</div>
-        {!picking && <span className="hidden md:block"><Button size="sm" variant="ghost" onClick={() => setPicking(true)}><ImagePlus size={14} />Change image</Button></span>}
-        <Button variant="primary" onClick={save} disabled={!o.image} className="h-10 md:h-9">Save</Button>
+        {!picking && (
+          <span className="hidden items-center gap-1 text-muted md:flex">
+            <button aria-label="Zoom out" className="px-1 hover:text-ink" onClick={() => zoomBy(0.8)}>−</button>
+            <button title="Fit" className="tabular-nums hover:text-ink" onClick={() => setView({ s: 1, tx: 0, ty: 0 })}>{Math.round(view.s * 100)}%</button>
+            <button aria-label="Zoom in" className="px-1 hover:text-ink" onClick={() => zoomBy(1.25)}>+</button>
+          </span>
+        )}
+        {!picking && <button className="hidden text-muted hover:text-ink md:flex md:items-center md:gap-1" onClick={() => setPicking(true)}><ImagePlus size={14} />Image</button>}
+        <button onClick={save} disabled={!o.image} className="flex h-10 items-center whitespace-nowrap rounded-[8px] bg-accent px-3 font-semibold text-accent-fg disabled:opacity-50 md:h-[30px]">Done · {cards} {cards === 1 ? "card" : "cards"}</button>
       </div>
 
       {picking ? (
@@ -306,7 +317,7 @@ export function OcclusionEditor({ initial, noteBody = "", onSave, onClose }: Edi
           <div className="relative min-h-0 min-w-0 flex-1">
             <div
               ref={stageRef}
-              className={cx("occl-stage-ed absolute inset-0 overflow-hidden bg-surface", tool === "pan" ? "cursor-grab" : "cursor-crosshair")}
+              className={cx("occl-stage-ed absolute inset-0 overflow-hidden bg-[color-mix(in_srgb,var(--surface)_50%,var(--bg))]", tool === "pan" ? "cursor-grab" : "cursor-crosshair")}
               style={{ touchAction: "none" }}
               onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onWheel={wheel}
             >
@@ -316,7 +327,7 @@ export function OcclusionEditor({ initial, noteBody = "", onSave, onClose }: Edi
                     <img src={url} alt={o.alt ?? ""} draggable={false} onLoad={(e) => setNat({ w: e.currentTarget.naturalWidth || 800, h: e.currentTarget.naturalHeight || 600 })} className="pointer-events-none block size-full select-none" />
                     {o.boxes.map((b, i) => (
                       <div key={b.id} data-box={b.id} className={cx("occl-ed-box", sel === b.id && "on")} style={{ ...boxStyle(b), ["--k" as string]: 1 / view.s }}>
-                        <span className="occl-ed-num">{i + 1}</span>
+                        <span className="occl-num">{i + 1}</span>
                         {sel === b.id && ["nw", "ne", "sw", "se"].map((h) => <span key={h} data-handle={h} data-id={b.id} className={`occl-ed-h occl-ed-${h}`} />)}
                       </div>
                     ))}
@@ -329,18 +340,18 @@ export function OcclusionEditor({ initial, noteBody = "", onSave, onClose }: Edi
             <div className="absolute start-3 top-3 z-10 flex gap-1 rounded-[10px] border border-line bg-surface p-1 shadow-lg">
               <IconButton label="Draw boxes" active={tool === "draw"} className="size-10 md:size-8" onClick={() => setTool("draw")}><SquareDashed size={16} /></IconButton>
               <IconButton label="Pan" active={tool === "pan"} className="size-10 md:size-8" onClick={() => setTool("pan")}><Hand size={16} /></IconButton>
-              <span className="my-1 w-px bg-line" />
-              <IconButton label="Zoom out" className="size-10 md:size-8" onClick={() => zoomBy(0.8)}><Minus size={16} /></IconButton>
-              <IconButton label="Fit" className="size-10 md:size-8" onClick={() => setView({ s: 1, tx: 0, ty: 0 })}><Maximize size={15} /></IconButton>
-              <IconButton label="Zoom in" className="size-10 md:size-8" onClick={() => zoomBy(1.25)}><Plus size={16} /></IconButton>
+              <span className="my-1 w-px bg-line md:hidden" />
+              <IconButton label="Zoom out" className="size-10 md:hidden" onClick={() => zoomBy(0.8)}><Minus size={16} /></IconButton>
+              <IconButton label="Fit" className="size-10 md:hidden" onClick={() => setView({ s: 1, tx: 0, ty: 0 })}><Maximize size={15} /></IconButton>
+              <IconButton label="Zoom in" className="size-10 md:hidden" onClick={() => zoomBy(1.25)}><Plus size={16} /></IconButton>
               {selBox && <><span className="my-1 w-px bg-line" /><IconButton label="Delete box" className="size-10 md:size-8" onClick={() => remove(selBox.id)}><Trash2 size={15} /></IconButton></>}
             </div>
           </div>
           {/* desktop side panel */}
-          <aside className="hidden w-[300px] shrink-0 flex-col border-s border-line md:flex">
-            <div className="flex h-11 items-center justify-between px-3 text-[13px]"><span className="font-semibold">Boxes</span><span className="text-muted">{o.boxes.length}</span></div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">{list}</div>
-            <p className="border-t border-line px-3 py-2.5 text-[12px] text-muted">Same group = one card. Delete removes the selected box. Ctrl + wheel zooms.</p>
+          <aside className="hidden w-[260px] shrink-0 flex-col gap-2 border-s border-line bg-surface p-[14px] text-[13px] md:flex">
+            <span className="font-semibold">Boxes · {o.boxes.length}</span>
+            <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">{list}</div>
+            <p className="text-[12px] leading-[17px] text-muted">Drag to draw · drag a box to move · corners resize · Delete removes · labels are the answers. Same group = one card.</p>
           </aside>
           {/* phone bottom sheet */}
           <div className={cx("safe-b flex shrink-0 flex-col border-t border-line bg-surface md:hidden", sheet ? "h-[52dvh]" : "")}>

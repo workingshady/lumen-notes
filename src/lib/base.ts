@@ -280,6 +280,8 @@ export type Val = string | number | string[] | null;
 export interface Ctx {
   spaceName: (id: string) => string;
   folderPath: (id: string | null) => string; // "Parent/Child" or ""
+  /** Flashcards per note (the computed `cards` property); absent = no such property. */
+  cardCount?: (noteId: string) => number;
 }
 
 const ALIAS: Record<string, string> = {
@@ -299,7 +301,7 @@ export function label(p: string) {
   return L[k] ?? k.charAt(0).toUpperCase() + k.slice(1);
 }
 /** Which cells can be edited inline (and dragged to on a board / calendar). */
-export const editable = (p: string) => !["title", "folder", "created", "updated"].includes(canon(p));
+export const editable = (p: string) => !["title", "folder", "created", "updated", "cards"].includes(canon(p));
 export const isDateProp = (p: string, sample?: Val) => ["created", "updated"].includes(canon(p)) || /date|due|deadline|day|when|start|end|review/i.test(canon(p)) || (typeof sample === "string" && /^\d{4}-\d{2}-\d{2}/.test(sample));
 
 const fmOf = (n: Note): Record<string, string> => (["canvas", "whiteboard", "diagram"].includes(n.type) ? {} : splitFrontMatter(n.body).data);
@@ -320,6 +322,7 @@ export function getValue(n: Note, p: string, ctx: Ctx, props: Record<string, str
     case "created": return n.createdAt;
     case "updated": return n.updatedAt;
   }
+  if (k === "cards" && props.cards === undefined && ctx.cardCount) return ctx.cardCount(n.id);
   const raw = props[k] ?? (k === "course" ? ctx.spaceName(n.spaceId) : undefined);
   if (raw === undefined || raw === "") return null;
   return listy(raw) ?? raw;
@@ -622,3 +625,67 @@ export function impliedProps(cfg: BaseConfig, view: BaseViewDef): Record<string,
   }
   return out;
 }
+
+// ------------------------------------------------------------------ filter rows (the Filter popover's model)
+/** One row of the Filter popover. `any` = "is any of" (an `or:` of `==` on one property, written back the same way);
+ *  `group` = a nested "any of" group (one level); `raw` = anything else, kept untouched. */
+export type FilterRow =
+  | { kind: "cond"; c: Cond }
+  | { kind: "any"; prop: string; values: string[] }
+  | { kind: "group"; conds: Cond[] }
+  | { kind: "raw"; node: FilterNode };
+export interface FilterRows { mode: "and" | "or"; rows: FilterRow[] }
+
+export function filterRows(f: FilterNode | undefined): FilterRows {
+  if (!f) return { mode: "and", rows: [] };
+  const list: FilterNode[] = typeof f === "string" ? [f] : Array.isArray(f) ? (f as FilterNode[]) : f.and ?? f.or ?? [f];
+  const mode = typeof f !== "string" && !Array.isArray(f) && f.or ? "or" : "and";
+  const rows: FilterRow[] = list.map((x): FilterRow => {
+    if (typeof x === "string") { const c = parseCond(x); return c ? { kind: "cond", c } : { kind: "raw", node: x }; }
+    if (x && typeof x === "object" && !Array.isArray(x) && x.or && !x.and && !x.not) {
+      const cs = x.or.map((y) => (typeof y === "string" ? parseCond(y) : null));
+      if (cs.length && cs.every((c): c is Cond => !!c)) {
+        const p = canon(cs[0].prop);
+        if (cs.length > 1 && cs.every((c) => c.op === "==" && !c.neg && canon(c.prop) === p)) return { kind: "any", prop: cs[0].prop, values: cs.map((c) => String(c.args[0] ?? "")) };
+        return { kind: "group", conds: cs };
+      }
+    }
+    return { kind: "raw", node: x };
+  });
+  return { mode, rows };
+}
+export function rowsToFilter(fr: FilterRows): FilterNode | undefined {
+  const items: FilterNode[] = [];
+  for (const r of fr.rows) {
+    if (r.kind === "cond") items.push(condToExpr(r.c));
+    else if (r.kind === "raw") items.push(r.node);
+    else if (r.kind === "any") {
+      const vs = [...new Set(r.values.map((v) => v.trim()).filter(Boolean))];
+      if (vs.length === 1) items.push(condToExpr({ prop: r.prop, op: "==", neg: false, args: [vs[0]] }));
+      else if (vs.length) items.push({ or: vs.map((v) => condToExpr({ prop: r.prop, op: "==", neg: false, args: [v] })) });
+    } else if (r.conds.length) items.push({ or: r.conds.map(condToExpr) });
+  }
+  if (!items.length) return undefined;
+  return fr.mode === "or" ? { or: items } : { and: items };
+}
+/** Number of filter conditions (toolbar badge). */
+export const filterCount = (f: FilterNode | undefined) => filterRows(f).rows.reduce((a, r) => a + (r.kind === "group" ? r.conds.length : 1), 0);
+
+// ------------------------------------------------------------------ templates (New base · template picker)
+export interface BaseTemplate { id: string; glyph: string; name: string; desc: string; type: "base" | "dashboard"; title: string; yaml: string }
+export const BASE_TEMPLATES: BaseTemplate[] = [
+  { id: "all", glyph: "base", name: "Base (database view)", desc: "Empty table of all notes", type: "base", title: "New base",
+    yaml: "views:\n  - type: table\n    name: All notes\n    order:\n      - file.name\n      - type\n      - status\n      - space\n      - file.tags\n      - file.mtime\n    sort:\n      - property: file.mtime\n        direction: DESC\n" },
+  { id: "lessons", glyph: "v-board", name: "Lessons by status × course", desc: "Board grouped by status, filtered to lessons", type: "base", title: "Lessons by status × course",
+    yaml: "filters:\n  and:\n    - type == \"lesson\"\nviews:\n  - type: board\n    name: By status\n    groupBy:\n      property: status\n      direction: ASC\n    order:\n      - file.name\n      - course\n  - type: table\n    name: Table\n    order:\n      - file.name\n      - status\n      - course\n      - file.tags\n      - due\n      - cards\n    sort:\n      - property: due\n        direction: ASC\n  - type: cards\n    name: Gallery\n    order:\n      - file.name\n      - status\n      - course\n  - type: list\n    name: List\n    groupBy:\n      property: status\n      direction: ASC\n    order:\n      - file.name\n      - course\n      - due\n  - type: calendar\n    name: Calendar\n    date: due\n" },
+  { id: "due", glyph: "v-calendar", name: "Due this month", desc: "Calendar by due date", type: "base", title: "Due this month",
+    yaml: "filters:\n  and:\n    - '!due.isEmpty()'\nviews:\n  - type: calendar\n    name: Due\n    date: due\n    order:\n      - file.name\n      - course\n" },
+  { id: "cards", glyph: "flashcards", name: "Cards by deck", desc: "Table of flashcard notes", type: "base", title: "Cards by deck",
+    yaml: "filters:\n  and:\n    - type == \"flashcards\"\nviews:\n  - type: table\n    name: By deck\n    groupBy:\n      property: space\n      direction: ASC\n    order:\n      - file.name\n      - space\n      - cards\n      - file.mtime\n" },
+  { id: "reading", glyph: "pdf", name: "Reading list", desc: "PDFs with progress", type: "base", title: "Reading list",
+    yaml: "filters:\n  and:\n    - type == \"pdf\"\nviews:\n  - type: table\n    name: Reading list\n    order:\n      - file.name\n      - status\n      - progress\n      - space\n      - file.mtime\n    sort:\n      - property: file.mtime\n        direction: DESC\n" },
+  { id: "dashboard", glyph: "dashboard", name: "Dashboard", desc: "Tiles over sessions and cards", type: "dashboard", title: "Study dashboard",
+    yaml: "tiles:\n  - id: minutes\n    title: Minutes studied\n    type: number\n    source: sessions\n    y: minutes\n    aggregate: sum\n    range: 7d\n    layout: { x: 0, y: 0, w: 3, h: 2 }\n  - id: due\n    title: Cards due\n    type: number\n    source: cards\n    range: next 1d\n    layout: { x: 3, y: 0, w: 3, h: 2 }\n  - id: week\n    title: Minutes per week by course\n    type: stackedBar\n    source: sessions\n    x: at\n    bucket: week\n    y: minutes\n    aggregate: sum\n    series: course\n    range: 8w\n    layout: { x: 6, y: 0, w: 6, h: 4 }\n  - id: days\n    title: Study days\n    type: heatmap\n    source: sessions\n    y: minutes\n    aggregate: sum\n    range: 20w\n    layout: { x: 0, y: 2, w: 6, h: 4 }\n" },
+];
+/** Body for a note created from a template: an intro line + the fenced YAML block. */
+export const templateBody = (t: BaseTemplate) => `${t.desc}.\n\n\`\`\`${t.type}\n${t.yaml}\`\`\`\n`;

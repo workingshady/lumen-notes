@@ -31,8 +31,11 @@ function SpecialCard({ fc, note, flipped, md }: { fc: Flashcard; note: Note; fli
     );
   }
   if (!sides) return null;
+  const nums = new Set([...(fc.cloze?.block ?? "").matchAll(/\{\{c(\d+)::/g)].map((m) => m[1]));
+  const total = nums.size || ((fc.cloze?.block ?? "").match(/==[^=]+==/g) ?? []).length;
   return (
     <div key={flipped ? "back" : "front"} className="flex flex-1 flex-col fade-in">
+      {total > 1 && <div className="pt-2 text-center text-[12px] text-muted">{flipped ? "Answer shown" : `Card ${fc.cloze!.n} of ${total} from this sentence`}</div>}
       <div className="flex flex-1 items-center justify-center px-2 md:px-5">
         <Preview note={md(flipped ? sides.back : sides.front)} className="review-cloze !m-0 w-full !max-w-none text-center !text-[19px] !leading-[30px] md:!text-[23px] md:!leading-[36px]" />
       </div>

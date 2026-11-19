@@ -5,6 +5,14 @@ import { memo, useEffect, useRef, useState } from "react";
 import { rangesFor, renderPage, type PdfDoc } from "../lib/pdf-doc";
 import { hlHex, type Highlight, type Rect } from "../lib/pdf-format";
 import { dragRect, normRects, unionRect } from "../lib/pdf-geom";
+import { Glyph } from "./Glyph";
+
+/** Margin markers: one numbered square per highlight (a pen when it has a comment), pushed down so they never overlap. */
+function marks(hs: Highlight[], height: number) {
+  const list = hs.map((h) => ({ h, y: (unionRect(h.rects)?.[1] ?? 0) * height })).sort((a, b) => a.y - b.y);
+  let last = -Infinity;
+  return list.map(({ h, y }, i) => { const top = Math.max(y, last + 20); last = top; return { h, top, n: i + 1 }; });
+}
 
 export interface PageProps {
   doc: PdfDoc;
@@ -18,6 +26,10 @@ export interface PageProps {
   hitSpans: [number, number][];
   activeHit: number;
   area: boolean;
+  /** area selection waiting for a colour / action (dashed box) */
+  pending: Rect | null;
+  /** margin markers to the right of the page (desktop) */
+  markers: boolean;
   onArea: (n: number, r: Rect) => void;
   onText: (n: number, hasText: boolean) => void;
   onPickHl: (id: string, x: number, y: number) => void;
@@ -103,6 +115,7 @@ export const PdfPage = memo(function PdfPage(p: PageProps) {
   return (
     <div ref={box} className={"pdfr-page" + (p.invert ? " inverted" : "")} data-page={p.n} style={{ width: p.width, height: p.height }} onClick={onClick}>
       <div ref={host} className="pdfr-host" />
+      <div className="pdfr-tint" aria-hidden /><div className="pdfr-tint2" aria-hidden />
       {!rendered && <div className="pdfr-skel" aria-hidden><i /><i /><i /><i /><i /></div>}
       <div className="pdfr-hls" aria-hidden>
         {p.highlights.map((h) => (
@@ -112,10 +125,14 @@ export const PdfPage = memo(function PdfPage(p: PageProps) {
         ))}
         {hitRects.map((rs, k) => rs.map((r, i) => <div key={`${k}-${i}`} ref={k === p.activeHit && i === 0 ? activeRef : undefined} className={"pdfr-hit" + (k === p.activeHit ? " active" : "")} style={rectStyle(r)} />))}
       </div>
-      {p.highlights.map((h) => {
-        const u = unionRect(h.rects);
-        return u && <button key={h.id} type="button" className="pdfr-mark" title={h.quote || "Area highlight"} aria-label={`Highlight on page ${p.n}`} style={{ top: pct(u[1]), height: `max(8px, ${pct(u[3])})`, background: hlHex(h.color) }} onClick={(e) => { e.stopPropagation(); p.onPickHl(h.id, e.clientX, e.clientY); }} />;
-      })}
+      {p.markers && marks(p.highlights, p.height).map(({ h, top, n }) => (
+        <button key={h.id} type="button" className="pdfr-mark" title={h.comment || h.quote || "Area highlight"} aria-label={`Highlight ${n} on page ${p.n}`}
+          style={{ top, background: hlHex(h.color), color: h.color === "blue" || h.color === "purple" ? "#0F1115" : "#1F1D1A" }}
+          onClick={(e) => { e.stopPropagation(); p.onPickHl(h.id, e.clientX, e.clientY); }}>
+          {h.comment ? <Glyph name="d-draft" size={11} stroke={2.2} /> : n}
+        </button>
+      ))}
+      {p.pending && <div className="pdfr-draft" style={rectStyle(p.pending)} />}
       {p.area && <div className="pdfr-areaz" {...areaHandlers}>{draft && <div className="pdfr-draft" style={rectStyle(draft)} />}</div>}
     </div>
   );

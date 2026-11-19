@@ -3,7 +3,7 @@
 // insert and resumes on Enter on an empty line or after 4 s without typing. Registered from Editor.tsx.
 import { Prec } from "@codemirror/state";
 import { Decoration, EditorView, MatchDecorator, ViewPlugin, keymap, type DecorationSet, type ViewUpdate } from "@codemirror/view";
-import { flashcardInsert, timestampAt, timestampInsert, TypingPause } from "../lib/video-notes";
+import { flashcardInsert, formatTime, timestampAt, timestampInsert, TypingPause } from "../lib/video-notes";
 import { toast } from "../lib/store";
 import { currentPlayer, indexOf, PLAYER_SEL, seekNote, twinOf, videoRegistry, type VideoCtl } from "./video-players";
 
@@ -39,7 +39,31 @@ export function insertVideoMark(kind: "timestamp" | "card", ctl: VideoCtl | null
   v.dispatch({ changes: { from: r.at, insert: r.text }, selection: { anchor: r.caret }, scrollIntoView: true, userEvent: "input.video" });
   v.focus();
   if (pauseTyping.get()) { typing.inserted(ctl.playing()); pausedCtl = null; }
+  showInserted(v, r.caret, formatTime(t), kind);
   return true;
+}
+
+/** 20b: a short notice under the caret, "[41:07] Inserted from the playing video · Alt+T". */
+let notice: HTMLElement | null = null;
+let noticeT: ReturnType<typeof setTimeout> | undefined;
+function showInserted(v: EditorView, pos: number, label: string, kind: "timestamp" | "card") {
+  requestAnimationFrame(() => {
+    const c = v.coordsAtPos(pos);
+    if (!c) return;
+    notice?.remove();
+    clearTimeout(noticeT);
+    const el = document.createElement("div");
+    el.className = "vn-inserted";
+    el.setAttribute("role", "status");
+    const b = document.createElement("b"); b.textContent = label;
+    const i = document.createElement("i"); i.textContent = kind === "card" ? "· type the question" : "· Alt+T";
+    el.append(b, kind === "card" ? "Flashcard at this moment" : "Inserted from the playing video", i);
+    el.style.left = `${Math.max(8, Math.min(innerWidth - 340, c.left - 8))}px`;
+    el.style.top = `${Math.min(innerHeight - 48, c.bottom + 10)}px`;
+    document.body.append(el);
+    notice = el;
+    noticeT = setTimeout(() => { el.remove(); if (notice === el) notice = null; }, 2600);
+  });
 }
 
 const tsDeco = new MatchDecorator({

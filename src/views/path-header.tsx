@@ -1,6 +1,6 @@
 // Learning path header (PathDesk): collapsible summary, course chips, searchable course list, + Courses, Organize ▾,
 // overlaps panel (Merge / They're different / Review all in bulk). Phone: compact header row + ⋯ menu.
-import { Check, ChevronDown, ChevronUp, EllipsisVertical, Loader2, Plus, Search, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, ChevronUp, EllipsisVertical, Loader2, Plus, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Note } from "../../shared/types";
 import { Glyph } from "../components/Glyph";
@@ -8,7 +8,9 @@ import { cx } from "../components/ui";
 import { updateNote } from "../lib/actions";
 import type { GlyphName } from "../lib/glyphs";
 import { cellStatus, mergeConcepts, overlapReason, overlapSuggestions, serializePath, type BuiltConcept, type BuiltPath, type CourseRef } from "../lib/path";
-import { go, openNote, toast, useVault } from "../lib/store";
+import { back, go, openNote, toast, useVault } from "../lib/store";
+import { canGoBack } from "../lib/nav-history";
+import { NavButtons } from "../components/nav-buttons";
 import { MenuItem, Popover, Ring, useEscape } from "./path-ui";
 
 export const kindGlyph = (c: CourseRef): GlyphName => `k-${c.kind ?? "video"}` as GlyphName;
@@ -200,6 +202,7 @@ export function PathHeader({ note, path, stats, open, toggle, ov, ovOpen, setOvO
   return (
     <div className="relative flex flex-col gap-3.5 border-b border-line px-7 pt-4">
       <div className="flex items-center gap-3.5">
+        <NavButtons />
         <Glyph name="path" size={20} tile="#F2A93B" color="var(--accent)" />
         <div className="flex min-w-0 flex-col gap-0.5">
           <div className="flex items-center gap-2"><span className="truncate text-[20px] font-[650] tracking-[-.02em]" dir="auto">{note.title}</span><span className="rounded-[6px] border border-line px-[7px] text-[12px] leading-5 text-muted">Path</span></div>
@@ -243,8 +246,9 @@ export function PathHeaderPhone({ note, path, stats, ovCount, onOverlaps, onAuto
   const row = "flex min-h-[48px] w-full items-center gap-3 rounded-[10px] px-3 text-left text-[15px] active:bg-surface-2";
   return (
     <>
-      {/* the note header above already has Back; this row keeps the path summary */}
-      <div className="flex h-14 shrink-0 items-center gap-1 ps-4 pe-1">
+      {/* the path view's header is the only header on a path note (NoteView hides its toolbar), so it has Back */}
+      <div className="safe-t flex h-14 shrink-0 items-center gap-1 ps-1 pe-1">
+        <button aria-label="Back" onClick={() => (canGoBack() ? history.back() : back())} className="flex size-11 shrink-0 items-center justify-center"><ArrowLeft size={20} className="rtl:rotate-180" /></button>
         <Glyph name="path" size={16} tile="#F2A93B" color="var(--accent)" />
         <div className="ms-1.5 flex min-w-0 flex-1 flex-col">
           <span className="truncate text-[16px] font-[650]" dir="auto">{note.title}</span>

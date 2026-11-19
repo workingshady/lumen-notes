@@ -27,6 +27,8 @@ export interface VideoCtl {
   playing(): boolean;
   time(): number;
   rate(): number;
+  /** Length in seconds (0 while unknown). */
+  duration(): number;
   /** Seek; loads the player first when it is still a thumbnail. */
   seek(t: number, play?: boolean): void;
   play(): void;
@@ -94,6 +96,30 @@ function tick() {
     if (c.loaded()) c.snap = { t: c.time(), playing: p };
   }
   if (any) emit();
+  markChips();
+}
+
+/**
+ * Chip states (20b): the chip of the moment that is playing gets `.vts-on` (ring); chips that target a player the
+ * note doesn't have turn grey (`.vts-none`, "No video at this position in the note").
+ */
+export function markChips(scope: ParentNode = document) {
+  const cur = currentPlayer();
+  const idx = cur ? indexOf(cur) : 0;
+  const t = cur ? cur.time() : -1;
+  for (const root of scope.querySelectorAll<HTMLElement>("[data-vn-ts]")) {
+    const players = root.querySelectorAll(PLAYER_SEL).length;
+    let best: HTMLElement | null = null, bt = -1;
+    for (const b of root.querySelectorAll<HTMLElement>("button.vts")) {
+      const v = Number(b.dataset.v) || 1, bs = Number(b.dataset.t) || 0;
+      const none = v > players && !(videoRegistry.dock?.root() && Number(videoRegistry.dock.root()!.dataset.vnDock) === v);
+      b.classList.toggle("vts-none", none);
+      b.title = none ? "No video at this position in the note" : `Play from ${b.textContent}${v > 1 ? ` (video ${v})` : ""}`;
+      if (cur && v === idx && bs <= t + 0.5 && bs > bt) { best = b; bt = bs; }
+    }
+    root.querySelectorAll("button.vts.vts-on").forEach((b) => b !== best && b.classList.remove("vts-on"));
+    best?.classList.add("vts-on");
+  }
 }
 const startTicker = () => { ticker ??= setInterval(tick, 500); };
 
@@ -127,7 +153,7 @@ function add(c: VideoCtl) {
 }
 
 // ------------------------------------------------------------------ YouTube / Vimeo
-interface YTPlayer { seekTo(t: number, allow: boolean): void; playVideo(): void; pauseVideo(): void; getCurrentTime(): number; getPlayerState(): number; setPlaybackRate(r: number): void; getPlaybackRate(): number }
+interface YTPlayer { getDuration(): number; seekTo(t: number, allow: boolean): void; playVideo(): void; pauseVideo(): void; getCurrentTime(): number; getPlayerState(): number; setPlaybackRate(r: number): void; getPlaybackRate(): number }
 type YTNs = { Player: new (el: HTMLIFrameElement, o: { events: Record<string, (e: { target: YTPlayer; data?: number }) => void> }) => YTPlayer };
 declare global { interface Window { YT?: YTNs; onYouTubeIframeAPIReady?: () => void } }
 let ytApi: Promise<YTNs> | null = null;
@@ -155,6 +181,7 @@ export function remoteCtl(fig: HTMLElement, provider: "youtube" | "vimeo", id: s
   let playing = false;
   let t0 = start, at = 0; // time estimate: t0 at wall clock `at` (+ elapsed × rate while playing)
   let r = 1;
+  let dur = 0;
   const est = () => t0 + (playing && at ? ((Date.now() - at) / 1000) * r : 0);
   const mark = (t: number, p: boolean) => { t0 = t; at = Date.now(); playing = p; };
   const vimeo = provider === "vimeo";
@@ -169,13 +196,14 @@ export function remoteCtl(fig: HTMLElement, provider: "youtube" | "vimeo", id: s
     try { d = typeof e.data === "string" ? JSON.parse(e.data) : e.data; } catch { return; }
     if (vimeo) {
       if (d.event === "ready") { ["timeupdate", "play", "pause", "seeked"].forEach((v) => post({ method: "addEventListener", value: v })); flush(); }
-      else if (d.event === "timeupdate" && d.data?.seconds != null) mark(d.data.seconds, true);
+      else if (d.event === "timeupdate" && d.data?.seconds != null) { mark(d.data.seconds, true); const du = (d.data as { duration?: number }).duration; if (du) dur = du; }
       else if (d.event === "play") { mark(est(), true); touch(ctl); } else if (d.event === "pause") { mark(est(), false); emit(); }
     } else if (!yt && d.event === "infoDelivery" && d.info) {
       // postMessage fallback (API script blocked): the player streams its state
       if (d.info.playerState != null) playing = d.info.playerState === 1;
       if (d.info.currentTime != null) mark(d.info.currentTime, playing);
       if (d.info.playbackRate) r = d.info.playbackRate;
+      const du = (d.info as { duration?: number }).duration; if (du) dur = du;
     } else if (!yt && (d.event === "onReady" || d.event === "initialDelivery")) flush();
   };
 
@@ -224,6 +252,7 @@ export function remoteCtl(fig: HTMLElement, provider: "youtube" | "vimeo", id: s
     playing: () => (yt && ready ? yt.getPlayerState() === 1 : playing),
     time: () => (yt && ready ? yt.getCurrentTime() : est()),
     rate: () => r,
+    duration: () => (yt && ready ? yt.getDuration() || dur : dur),
     seek(t, play = true) {
       if (!frame) { load(t, play); return; }
       mark(t, play);
@@ -250,6 +279,7 @@ export function mediaCtl(el: HTMLElement, m: HTMLMediaElement): VideoCtl {
     playing: () => !m.paused && !m.ended,
     time: () => m.currentTime,
     rate: () => m.playbackRate,
+    duration: () => (isFinite(m.duration) ? m.duration : 0),
     seek(t, play = true) {
       const go = () => { m.currentTime = Math.max(0, t); if (play) void m.play().catch(() => {}); };
       if (m.readyState >= 1) go(); else { m.preload = "auto"; m.addEventListener("loadedmetadata", go, { once: true }); m.load(); }
@@ -318,6 +348,7 @@ export function hydrateTimestamps(root: HTMLElement) {
   if (!root.closest("[data-vn-root]")) root.dataset.vnRoot = "1";
   if (root.dataset.vnTs) return;
   root.dataset.vnTs = "1";
+  setTimeout(() => markChips(root.parentElement ?? root), 400);
   root.addEventListener("click", (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>("button.vts");
     if (!b || e.defaultPrevented) return;

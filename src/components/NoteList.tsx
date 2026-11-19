@@ -2,7 +2,7 @@ import { NewVisualChooser } from "./NewVisualChooser";
 import { NewPathDialog } from "./NewPathDialog";
 import { ArrowDownWideNarrow, FileText, Globe, LayoutTemplate, Table2, Link2, Pin, Plus, SquarePen, Star, X } from "lucide-react";
 import { PdfLibrary } from "./pdf-library";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import type { Note, Space } from "../../shared/types";
 import { createNote } from "../lib/actions";
 import { importFiles } from "../lib/io";
@@ -16,7 +16,8 @@ import { Glyph } from "./Glyph";
 import { SpaceIcon } from "./SpaceIcon";
 import { PhoneChips, PhoneListHeader, SwipeRow, type PhoneFilter } from "./ws-phone";
 import { num, tr, useRtl } from "./ws-dir";
-import { filterByQuery, glyphOf, NoteListQueryBar, smartListFor, useSmartFolders } from "./SmartFolders";
+import { filterByQuery, NoteListQueryBar, SmartListHeader, smartListFor, SmartRow, useSmartFolders } from "./SmartFolders";
+import { indexLabel, LIST_PAGE, useIndexStatus } from "../lib/big-vault";
 
 type Sort = "updated" | "created" | "title";
 /** Note type → glyph (Lumen 13 › B1 note types; the glyph name equals the type). Flashcards carry the violet "practice" colour. */
@@ -47,21 +48,27 @@ export function listTime(t: number) {
 const dropSyntax = (s: string) => s.replace(/\s*[\u{1F4C5}\u{1F6EB}\u{23F3}]️?\s*\d{4}-\d{2}-\d{2}/gu, "").replace(/^\s*[-*+]\s+\[[ xX/>?-]\]\s+/gm, "").replace(/\(needs:[^)]*\)/g, "");
 const preview = (n: Note) => (n.type === "canvas" ? "Canvas board" : n.type === "whiteboard" ? "Whiteboard" : noteDerived("listPreview", n, (x) => excerpt(dropSyntax(listBody(x.body.slice(0, 8000))), 160)) || "Empty");
 
-/** Big folders/tags (thousands of notes): render the list in pages; the next page mounts when its sentinel scrolls into view. */
-const PAGE = 150;
+/**
+ * Big vaults (design 20b A15): the list renders LIST_PAGE rows at a time; the footer says "Showing 200 of 738" and
+ * "Show 200 more" mounts the next page. The page count resets when the list scope changes.
+ */
 function usePaged<T>(items: T[], resetKey: unknown) {
-  const [count, setCount] = useState(PAGE);
-  const sentinel = useRef<HTMLDivElement>(null);
-  useEffect(() => setCount(PAGE), [resetKey]);
-  useEffect(() => {
-    const el = sentinel.current;
-    if (!el || count >= items.length) return;
-    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) setCount((c) => c + PAGE); }, { rootMargin: "600px" });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [count, items.length]);
-  const more = count < items.length ? <div ref={sentinel} className="h-6 shrink-0" aria-hidden /> : null;
-  return { shown: items.length > count ? items.slice(0, count) : items, more };
+  const [count, setCount] = useState(LIST_PAGE);
+  useEffect(() => setCount(LIST_PAGE), [resetKey]);
+  const left = items.length - count;
+  const more = left > 0 ? (
+    <div className="flex shrink-0 flex-col items-center gap-2 p-3.5 text-[12.5px] text-muted" data-list-more>
+      Showing {count} of {items.length}
+      <button onClick={() => setCount((c) => c + LIST_PAGE)} className="flex h-8 items-center rounded-[8px] border border-line px-3.5 text-ink hover:bg-surface-2">Show {Math.min(LIST_PAGE, left)} more</button>
+    </div>
+  ) : null;
+  return { shown: left > 0 ? items.slice(0, count) : items, more };
+}
+
+/** "Indexing 512 / 738" while the search index catches up (big vaults). */
+function IndexingBadge() {
+  const label = indexLabel(useIndexStatus());
+  return label ? <span className="flex min-w-0 shrink-0 items-center gap-1.5 whitespace-nowrap text-[12px] text-muted" data-indexing title={`${label} · search results fill in as the index catches up`}><span className="size-[7px] shrink-0 rounded-full bg-info" /><span className="max-2xl:sr-only">Indexing </span>{label.replace(/^Indexing /, "")}</span> : null;
 }
 
 export function NoteList() {
@@ -79,6 +86,7 @@ export function NoteList() {
   const [lq, setLq] = useState("");
   useEffect(() => setLq(""), [ui.filter, ui.folderId, ui.tag, ui.spaceId]);
   const smartSel = smartListFor(v, ui, smart);
+  const indexing = !!indexLabel(useIndexStatus()); // big vaults: "Indexing 512 / 738" replaces the count while it runs
   const notes = useMemo(() => {
     let list = smartListFor(v, ui, smart)?.notes ?? scoped(v, ui);
     if (wide && lq.trim()) list = filterByQuery(v, list, lq);
@@ -152,11 +160,13 @@ export function NoteList() {
 
   return (
     <div className="flex h-full min-h-0 flex-col" onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); setOver(true); } }} onDragLeave={() => setOver(false)} onDrop={onDrop}>
+      {smartSel?.sf ? <SmartListHeader sf={smartSel.sf} query={lq} setQuery={setLq} count={notes.length} /> : <>
       <div className="safe-t flex h-12 shrink-0 items-center gap-2 border-b border-line pe-3 ps-4">
-        {smartSel?.sf ? <span className="text-muted" style={smartSel.sf.color ? { color: PRESETS[smartSel.sf.color] ?? smartSel.sf.color } : undefined}>{glyphOf(smartSel.sf, 14)}</span> : folder ? <span className="size-2 shrink-0 rounded-[3px]" style={{ background: folder.color ? PRESETS[folder.color] ?? folder.color : "var(--muted)" }} /> : ui.filter ? null : space ? <SpaceIcon space={space} size={15} /> : null}
+        {folder ? <span className="size-2 shrink-0 rounded-[3px]" style={{ background: folder.color ? PRESETS[folder.color] ?? folder.color : "var(--muted)" }} /> : ui.filter ? null : space ? <SpaceIcon space={space} size={15} /> : null}
         <span dir="auto" className="truncate text-[14px] font-semibold">{title}</span>
-        <span className="text-muted">{num(notes.length, rtl)}</span>
+        {!indexing && <span className="text-muted">{num(notes.length, rtl)}</span>}
         {(ui.tag || folder || ui.filter) && <button aria-label="Clear filter" className="text-muted hover:text-ink" onClick={() => setUI({ tag: null, folderId: null, filter: null })}><X size={13} /></button>}
+        {indexing && <IndexingBadge />}
         <span className="flex-1" />
         {ui.filter === "published" && <a href="/blog" target="_blank" rel="noreferrer" className="text-[12px] text-link">View blog ↗</a>}
         <button title={`Sort: ${sort}`} aria-label="Sort" className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={cycleSort}><ArrowDownWideNarrow size={15} /></button>
@@ -165,9 +175,11 @@ export function NoteList() {
         <button title={ui.filter === "visual" ? "New canvas or whiteboard" : ui.filter === "paths" ? "New learning path" : "New note (right-click: from template)"} aria-label="New note" className="flex size-7 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={() => (ui.filter === "visual" ? setChooser(true) : ui.filter === "paths" ? setPathDlg(true) : newNote())} onContextMenu={(e) => { e.preventDefault(); setTpl(true); }}><SquarePen size={15} /></button>
       </div>
       <NoteListQueryBar query={lq} setQuery={setLq} count={notes.length} />
+      </>}
       {pdfs && <PdfLibrary spaceId={spaceId} folderId={ui.folderId} onClose={() => setPdfs(false)} />}
-      <div className={cx("flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-1.5", over && "bg-accent/5 ring-1 ring-inset ring-accent/40", pdfs && "hidden")}>
-        {shown.map((n) => <NoteRow key={n.id} n={n} active={n.id === ui.noteId} space={ui.spaceId === "all" ? v.spaceMap.get(n.spaceId) : undefined} />)}
+      <div className={cx("flex min-h-0 flex-1 flex-col overflow-y-auto", !smartSel?.sf && "gap-0.5 p-1.5", over && "bg-accent/5 ring-1 ring-inset ring-accent/40", pdfs && "hidden")}>
+        {smartSel?.sf ? shown.map((n) => <SmartRow key={n.id} n={n} active={n.id === ui.noteId} onOpen={() => openNote(n.id)} />)
+          : shown.map((n) => <NoteRow key={n.id} n={n} active={n.id === ui.noteId} space={ui.spaceId === "all" ? v.spaceMap.get(n.spaceId) : undefined} />)}
         {more}
         {empty}
       </div>

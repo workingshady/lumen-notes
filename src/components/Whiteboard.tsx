@@ -1,6 +1,6 @@
 import { Excalidraw, convertToExcalidrawElements, exportToBlob, exportToSvg, restore, restoreElements, serializeAsJSON } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
-import { Circle, Code2, Copy, Diamond, Download, Ellipsis, Eraser, Frame, GitFork, Hand, Image, Minus, MousePointer2, MoveUpRight, Pencil, Redo2, Shapes, Square, SquareTerminal, StickyNote, Trash2, Type, Undo2, Workflow, X } from "lucide-react";
+import { Check, Circle, Code2, Copy, Diamond, Download, Ellipsis, Eraser, Frame, GitFork, Hand, Image, Minus, MousePointer2, MoveUpRight, Pencil, Redo2, Shapes, Square, SquareTerminal, StickyNote, Trash2, Type, Undo2, Workflow, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Note } from "../../shared/types";
 import { updateNote } from "../lib/actions";
@@ -26,6 +26,8 @@ type El = Record<string, unknown> & { id: string; type: string; x: number; y: nu
 
 /** Dark-theme ink filter: near-black inks (#1e1e1e) turn light on the dark board, pure black (#000, sticky ink) and paper colours stay as they are. */
 const INK_TABLE = "0.100 0.105 0.110 0.115 0.120 0.125 0.130 0.135 0.140 0.393 0.900 0.900 0.900 0.900 0.900 0.657 0.413 0.170 0.180 0.190 0.200 0.210 0.220 0.230 0.240 0.250 0.260 0.270 0.280 0.290 0.300 0.310 0.320 0.330 0.340 0.350 0.360 0.370 0.380 0.390 0.400 0.410 0.420 0.430 0.440 0.450 0.460 0.470 0.480 0.490 0.500 0.510 0.520 0.530 0.540 0.550 0.560 0.570 0.580 0.590 0.600 0.610 0.620 0.630 0.640 0.650 0.660 0.670 0.680 0.690 0.700 0.710 0.720 0.730 0.740 0.750 0.760 0.770 0.780 0.790 0.800 0.810 0.820 0.830 0.840 0.850 0.860 0.870 0.880 0.890 0.900 0.910 0.920 0.930 0.940 0.950 0.960 0.970 0.980 0.990 1.000";
+/** Output-line markers OutputStrip (VisualCodePanel) turns into a check / x icon; the characters never render. */
+const LOG_OK = "\u2713", LOG_ERR = "\u2716";
 /** Sticky paper colours (WhiteboardBoard design); ink stays dark on every colour, in both themes. */
 const PAPER = ["#fff3bf", "#d3f9d8", "#d0ebff", "#ffd8a8", "#eebefa", "#ffc9c9"];
 const SIZES = [["S", 16], ["M", 20], ["L", 28]] as const;
@@ -275,9 +277,9 @@ export default function Whiteboard({ note }: { note: Note }) {
     const t0 = performance.now();
     try {
       await new Function("board", "sk", "log", `"use strict"; return (async () => { ${src}\n })();`)(board, sk, log);
-      setLogs([...out, `✓ done · ${Math.round(performance.now() - t0)} ms · restore from History`]);
+      setLogs([...out, `${LOG_OK} done · ${Math.round(performance.now() - t0)} ms · restore from History`]);
       setTimeout(save, 200);
-    } catch (e) { setLogs([...out, `✖ ${(e as Error).message}`]); }
+    } catch (e) { setLogs([...out, `${LOG_ERR} ${(e as Error).message}`]); }
   }
 
   async function fromMermaid(c: string, opts: { sketchy?: boolean; frame?: boolean } = {}) {
@@ -538,14 +540,14 @@ function MermaidDialog({ dark, onClose, onAdd }: { dark: boolean; onClose: () =>
         <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-line px-5">
           <Workflow size={17} className="hidden text-muted md:block" />
           <span className="flex-1 text-[17px] font-[650] md:text-[16px]">Mermaid → whiteboard</span>
-          <span className={cx("hidden h-[26px] items-center rounded-full px-2.5 text-[12px] font-semibold md:flex", err ? "bg-bad/14 text-bad" : "bg-ok/14 text-ok")}>{err ? "invalid ✖" : `${kind} · valid ✓`}</span>
+          <span className={cx("hidden h-[26px] items-center rounded-full px-2.5 text-[12px] font-semibold md:flex", err ? "bg-bad/14 text-bad" : "bg-ok/14 text-ok")}>{err ? <><X size={12} className="mr-1" />invalid</> : <><Check size={12} className="mr-1" />{kind} · valid</>}</span>
           <button aria-label="Close" onClick={onClose} className="-mr-4 ml-1.5 flex size-12 items-center justify-center rounded-[8px] text-ink hover:bg-surface-2 md:mr-0 md:size-9 md:text-muted md:hover:text-ink [&>svg]:size-5 md:[&>svg]:size-[18px]"><X size={18} /></button>
         </div>
         <div className="flex shrink-0 items-center gap-2.5 px-4 py-3 md:hidden">
           <div className="grid flex-1 grid-cols-2 rounded-[10px] border border-line bg-bg p-[3px]">
             {(["code", "preview"] as const).map((t) => <button key={t} onClick={() => setTab(t)} className={cx("h-[38px] rounded-[7px] text-[13px] capitalize", tab === t ? "bg-surface-2 font-semibold" : "text-muted")}>{t}</button>)}
           </div>
-          <span className={cx("flex h-7 items-center rounded-full px-2.5 text-[12px] font-semibold", err ? "bg-bad/14 text-bad" : "bg-ok/14 text-ok")}>{err ? "✖" : "valid ✓"}</span>
+          <span className={cx("flex h-7 items-center rounded-full px-2.5 text-[12px] font-semibold", err ? "bg-bad/14 text-bad" : "bg-ok/14 text-ok")}>{err ? <X size={12} /> : <><Check size={12} className="mr-1" />valid</>}</span>
         </div>
         <div className="grid min-h-0 flex-1 md:grid-cols-[400px_1fr]">
           <div className={cx("flex min-h-0 flex-col border-line bg-bg md:flex md:border-r", tab === "code" ? "flex" : "hidden")}>

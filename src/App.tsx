@@ -6,6 +6,7 @@ import { createNote } from "./lib/actions";
 import { DEMO, setDemo, setMeta } from "./lib/db";
 import { dismissToast, getUI, openNote, runLatestUndo, setUI, toast, useToasts, useUI, useVault, type Toast } from "./lib/store";
 import { currentIdx, installNavHistory, keepPlace, restoreFrom } from "./lib/nav-history";
+import { useDeviceHeartbeat } from "./lib/devices";
 import { Sidebar } from "./components/Sidebar";
 import { Skeleton } from "./components/Skeleton";
 import { NoteList } from "./components/NoteList";
@@ -136,7 +137,7 @@ function useBackGesture(wide: boolean) {
         // 5 · first page on a phone: swipe again to exit
         if (Date.now() - lastExit.current < 2000) { sessionStorage.removeItem("lumen.navGuard"); history.back(); return; }
         lastExit.current = Date.now();
-        toast("Swipe again to exit", undefined, { icon: "info", ms: 2000 });
+        toast("Swipe back again to close Lumen", undefined, { ms: 2000 });
         keepPlace();
       }
     };
@@ -154,6 +155,7 @@ function Workspace() {
   const note = ui.noteId ? v.byId.get(ui.noteId) : undefined;
   const due = useDueCards(v.notes)?.length ?? 0;
   useBackGesture(wide);
+  useDeviceHeartbeat(); // Settings › Sync › Devices (lib/devices.ts)
 
   useEffect(() => {
     const f = (e: KeyboardEvent) => {

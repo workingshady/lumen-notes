@@ -3,14 +3,17 @@ import {
   useEdgesState, useNodesState, useReactFlow, useViewport, type Connection, type Edge, type Node as RFNode, type NodeProps,
 } from "@xyflow/react";
 import {
-  ArrowRight, Code2, Copy, Download, Ellipsis, FilePlus, FileText, GitFork, Group, LayoutDashboard, LayoutGrid, Link2, ListTree, Minus, Network, Orbit, Pencil, Plus, Scan,
+  ArrowRight, Code2, CornerUpLeft, Copy, Download, Ellipsis, Pin, RotateCw, FilePlus, FileText, GitFork, Group, LayoutDashboard, LayoutGrid, Link2, ListTree, Minus, Network, Orbit, Pencil, Plus, Scan,
   Image as ImageIcon, Search, SquareTerminal, Trash2, Type, Waypoints, Workflow,
 } from "lucide-react";
 import { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { CanvasEdge, CanvasNode, JsonCanvas, Note, Side } from "../../shared/types";
 import { createNote, duplicateNote, findOrCreateByTitle, restoreNote, trashNote, updateNote } from "../lib/actions";
 import { unfurl, type Unfurl } from "../lib/api";
-import { colorOf, fromOutline, layout, parseCanvas, PRESETS, runScript, stringify, validate } from "../lib/canvas";
+import { colorOf, fromOutline, isPinned, layout, parseCanvas, PRESETS, runScript, setPinned, stringify, tidyCanvas, validate } from "../lib/canvas";
+import { checkNewEdge } from "../lib/graph-checks";
+import { EdgeSeg, isTidyKey, TidyBanner, type EdgeShape, type TidyStats } from "./graph-display";
+import { Glyph } from "./Glyph";
 import { diagramFocus, diagramFolderFor, diagramHash, diagramKind, diagramText, fenced, mermaidBlocks, metaOf, migrateDiagramCards, newDiagramFile, parseDiagramText, type DiagramNode } from "../lib/diagrams";
 import { getSettings } from "../lib/settings";
 import { download } from "../lib/io";
@@ -85,8 +88,14 @@ function fromFlow(nodes: FlowNode[], edges: Edge[]): JsonCanvas {
 }
 
 // ------------------------------------------------------------------ node renderers
-function Handles() {
-  return (<>{(Object.keys(SIDE_POS) as Side[]).map((s) => <Handle key={s} id={s} type="source" position={SIDE_POS[s]} />)}</>);
+function Handles({ n }: { n?: CanvasNode }) {
+  return (
+    <>
+      {(Object.keys(SIDE_POS) as Side[]).map((s) => <Handle key={s} id={s} type="source" position={SIDE_POS[s]} />)}
+      {/* Pinned card (Tidy up leaves it where it is): small amber pin on the corner. */}
+      {n && isPinned(n) && <span title="Pinned: Tidy up keeps it here" className="pointer-events-none absolute -right-2 -top-2 z-10 flex size-[18px] items-center justify-center rounded-full bg-accent text-accent-fg shadow-[0_0_0_2px_var(--bg)]"><Pin size={10} /></span>}
+    </>
+  );
 }
 /** Card shell: 10px radius, 1px border in the card colour; selected = 2px amber + soft amber ring. */
 function shell(n: CanvasNode, selected: boolean, base = "var(--surface)") {
@@ -110,7 +119,7 @@ function splitTitle(t: string) {
 
 /**
  * A diagram card (lib/diagrams.ts): `## name.mermaid` + one ```mermaid fence. Header = drag handle with the name,
- * "↩ note" back to the source diagram and "Update from note" when the note's copy changed; body = the zoomable
+ * a back-link to the note to the source diagram and "Update from note" when the note's copy changed; body = the zoomable
  * diagram (nodrag/nowheel so its own pan/zoom work). Double-click the header to edit the source.
  */
 function DiagramBody({ id, n, name, src, selected, onEdit }: { id: string; n: DiagramNode; name: string; src: string; selected: boolean; onEdit: () => void }) {
@@ -131,8 +140,8 @@ function DiagramBody({ id, n, name, src, selected, onEdit }: { id: string; n: Di
       <div className="flex h-[30px] shrink-0 cursor-grab items-center gap-1.5 border-b border-line px-2.5 text-[11.5px] text-muted" onDoubleClick={onEdit} title="Drag to move · double-click to edit the source">
         <Waypoints size={12} className="shrink-0 text-accent" />
         <span className="min-w-0 flex-1 truncate font-mono text-ink">{name}</span>
-        {stale && <button className="nodrag shrink-0 rounded-[6px] px-1.5 py-0.5 text-warn hover:bg-surface-2" title="The note's copy of this diagram changed" onClick={pull}>↻ Update from note</button>}
-        {source && <button className="nodrag max-w-[45%] shrink-0 truncate rounded-[6px] px-1.5 py-0.5 hover:bg-surface-2 hover:text-ink" title={`Open “${source.title}” at this diagram`} onClick={back}>↩ {source.title}</button>}
+        {stale && <button className="nodrag shrink-0 rounded-[6px] px-1.5 py-0.5 text-warn hover:bg-surface-2" title="The note's copy of this diagram changed" onClick={pull}><RotateCw size={11} className="mr-1 inline align-[-1px]" />Update from note</button>}
+        {source && <button className="nodrag max-w-[45%] shrink-0 truncate rounded-[6px] px-1.5 py-0.5 hover:bg-surface-2 hover:text-ink" title={`Open “${source.title}” at this diagram`} onClick={back}><CornerUpLeft size={11} className="mr-1 inline align-[-1px]" />{source.title}</button>}
         {ref && !source && <span className="shrink-0 text-[11px]" title="The source note was deleted or renamed">source missing</span>}
       </div>
       <div className="nodrag nowheel diagram-node min-h-0 flex-1 overflow-hidden"><Preview note={{ id, body, spaceId }} className="!m-0 !max-w-none" /></div>
@@ -149,7 +158,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
   if (diagram) return (
     <>
       <NodeResizer isVisible={!!selected} minWidth={240} minHeight={160} {...RESIZER} />
-      <Handles />
+      <Handles n={n} />
       <DiagramBody id={id} n={n as DiagramNode} name={diagram.name} src={diagram.src} selected={!!selected} onEdit={() => setEdit(true)} />
     </>
   );
@@ -158,7 +167,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
   if (hl) return (
     <>
       <NodeResizer isVisible={!!selected} minWidth={180} minHeight={90} {...RESIZER} />
-      <Handles />
+      <Handles n={n} />
       <div className="h-full w-full" onDoubleClick={() => setEdit(true)}><PdfHighlightCard n={n} card={hl} selected={!!selected} /></div>
     </>
   );
@@ -168,7 +177,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
   return (
     <>
       <NodeResizer isVisible={!!selected} minWidth={120} minHeight={50} {...RESIZER} />
-      <Handles />
+      <Handles n={n} />
       <div {...s} onDoubleClick={() => setEdit(true)}>
         {edit ? (
           <textarea
@@ -210,7 +219,7 @@ function DiagramFileCard({ n, note, selected }: { n: CanvasNode; note: Note; sel
       </div>
       <div className="nodrag nowheel diagram-node min-h-0 flex-1 overflow-hidden">{note.body.trim() ? <Preview note={{ id: note.id, body, spaceId: note.spaceId }} className="!m-0 !max-w-none" /> : <div className="p-4 text-[12px] text-muted">Empty diagram. Open it to write Mermaid.</div>}</div>
       <div className="flex h-[24px] shrink-0 items-center gap-1.5 border-t border-line px-2.5 text-[11px] text-muted">
-        {src && !src.deleted ? <button className="nodrag min-w-0 truncate hover:text-ink" title="Open the source note at this diagram" onClick={back}>↩ {src.title}{meta?.heading ? ` › ${meta.heading}` : ""}</button> : <span className="truncate">{meta ? `from “${meta.fromTitle}”` : "standalone diagram"}</span>}
+        {src && !src.deleted ? <button className="nodrag min-w-0 truncate hover:text-ink" title="Open the source note at this diagram" onClick={back}><CornerUpLeft size={11} className="mr-1 inline align-[-1px]" />{src.title}{meta?.heading ? ` › ${meta.heading}` : ""}</button> : <span className="truncate">{meta ? `from “${meta.fromTitle}”` : "standalone diagram"}</span>}
         <span className="ms-auto shrink-0">updated {relTime(note.updatedAt)}</span>
       </div>
     </div>
@@ -226,14 +235,14 @@ const FileNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
   if (note?.type === "diagram") return (
     <>
       <NodeResizer isVisible={!!selected} minWidth={240} minHeight={180} {...RESIZER} />
-      <Handles />
+      <Handles n={n} />
       <DiagramFileCard n={n} note={note} selected={!!selected} />
     </>
   );
   if (note?.type === "pdf") return (
     <>
       <NodeResizer isVisible={!!selected} minWidth={200} minHeight={110} {...RESIZER} />
-      <Handles />
+      <Handles n={n} />
       <PdfFileCard n={n} note={note} selected={!!selected} />
     </>
   );
@@ -242,7 +251,7 @@ const FileNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
   return (
     <>
       <NodeResizer isVisible={!!selected} minWidth={140} minHeight={60} {...RESIZER} />
-      <Handles />
+      <Handles n={n} />
       <div {...s}>
         <div className="flex h-[30px] shrink-0 items-center gap-1.5 border-b border-line px-2.5 text-[11.5px] text-muted">
           <FileText size={12} className="shrink-0" /><span className="flex-1 truncate">{folder ?? "Note"}</span>
@@ -271,7 +280,7 @@ const LinkNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
   return (
     <>
       <NodeResizer isVisible={!!selected} minWidth={140} minHeight={50} {...RESIZER} />
-      <Handles />
+      <Handles n={n} />
       <div {...s}>
         <a href={n.url} target="_blank" rel="noopener noreferrer" className="nodrag flex h-full items-center gap-3 p-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-[8px] text-[13px] font-bold text-white" style={{ background: BADGE }}>{badge}</span>
@@ -292,7 +301,7 @@ const GroupNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
   return (
     <>
       <NodeResizer isVisible={!!selected} minWidth={160} minHeight={100} {...RESIZER} />
-      <Handles />
+      <Handles n={n} />
       <div className="relative h-full w-full rounded-[14px]" style={{ border: `1.5px solid ${selected ? "var(--accent)" : c}`, background: `color-mix(in srgb, ${c} 8%, transparent)` }}>
         <input
           className="group-handle absolute -top-[30px] left-0 h-6 cursor-move rounded-[6px] px-2.5 text-[12.5px] font-semibold text-[#0F1115] outline-none"
@@ -339,6 +348,9 @@ log(hits.length, "notes tagged #" + tag);` },
   { icon: <Network size={15} />, title: "Concept tree", desc: "A root card with typed children", code: SCRIPT_EXAMPLE },
 ];
 
+/** Output-line markers OutputStrip (VisualCodePanel) turns into a check / x icon; the characters themselves never render. */
+const LOG_OK = "\u2713", LOG_ERR = "\u2716";
+const EDGE_RF: Record<EdgeShape, string> = { curved: "default", elbow: "smoothstep", straight: "straight" };
 const TOOL = "flex h-8 items-center justify-center gap-[5px] rounded-[8px] text-ink hover:bg-surface-2 disabled:opacity-40 disabled:hover:bg-transparent";
 const CAPTION = "hidden pl-1 pr-1.5 text-[10.5px] font-semibold uppercase tracking-[.06em] text-muted xl:inline";
 const SEP = <span className="mx-1.5 h-[22px] w-px shrink-0 bg-line" />;
@@ -385,6 +397,13 @@ function Inner({ note }: { note: Note }) {
   const [logs, setLogs] = useState<string[]>([]);
   const [menu, setMenu] = useState<null | "main" | "outline">(null);
   const [connecting, setConnecting] = useState(false);
+  // Tidy up preview (14b): the board shows the tidied layout; Cancel restores, Apply keeps it with an Undo toast.
+  const [tidyPrev, setTidyPrev] = useState<null | { prev: JsonCanvas; stats: TidyStats }>(null);
+  // Edge shape is a view choice per canvas (not stored in the JSON Canvas file).
+  const edgeKey = `lumen.canvasEdges.${note.id}`;
+  const [edgeShape, setEdgeShapeRaw] = useState<EdgeShape>(() => { try { const v = localStorage.getItem(edgeKey); return v === "curved" || v === "elbow" ? v : "straight"; } catch { return "straight"; } });
+  const setEdgeShape = (e: EdgeShape) => { setEdgeShapeRaw(e); try { localStorage.setItem(edgeKey, e); } catch { /* ignore */ } };
+  const shownEdges = useMemo(() => edges.map((e) => (e.type === EDGE_RF[edgeShape] ? e : { ...e, type: EDGE_RF[edgeShape] })), [edges, edgeShape]);
   const lastSaved = useRef(stringify(initial.canvas));
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const parseT = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -467,6 +486,28 @@ function Inner({ note }: { note: Note }) {
   const delSelected = () => { const ids = new Set(selected.map((n) => n.id)); setNodes((ns) => ns.filter((n) => !n.selected)); setEdges((es) => es.filter((e) => !e.selected && !ids.has(e.source) && !ids.has(e.target))); };
   const doLayout = (k: "grid" | "tree" | "force") => { load(layout(fromFlow(nodes, edges), k)); setTimeout(() => rf.fitView({ padding: 0.2, duration: 300 }), 50); };
   const fit = () => rf.fitView({ padding: 0.2, duration: 300 });
+  const startTidy = () => {
+    if (tidyPrev || !nodes.length) return;
+    const cur = fromFlow(nodes, edges);
+    const r = tidyCanvas(cur, { keepPinned: true });
+    load(r.canvas);
+    setTidyPrev({ prev: cur, stats: { moved: r.moved, before: r.before, after: r.after, pinned: r.pinned } });
+    setTimeout(() => rf.fitView({ padding: 0.2, duration: 300 }), 50);
+  };
+  const cancelTidy = () => { if (!tidyPrev) return; load(tidyPrev.prev); setTidyPrev(null); setTimeout(() => rf.fitView({ padding: 0.2, duration: 300 }), 50); };
+  const applyTidy = () => {
+    if (!tidyPrev) return;
+    const { prev, stats } = tidyPrev;
+    setTidyPrev(null);
+    toast(`Tidied up · ${stats.moved} card${stats.moved === 1 ? "" : "s"} moved`, { label: "Undo", run: () => { load(prev); setTimeout(() => rf.fitView({ padding: 0.2, duration: 300 }), 50); } });
+  };
+  const selPinned = selected.length > 0 && selected.every((n) => isPinned(n.data.node));
+  const togglePin = () => {
+    if (!selected.length) return toast("Select the cards to pin first");
+    const on = !selPinned;
+    setNodes((ns) => ns.map((n) => (n.selected ? { ...n, data: { node: setPinned(n.data.node, on) } } : n)));
+    toast(on ? `Pinned ${selected.length} card${selected.length === 1 ? "" : "s"} · Tidy up leaves them` : "Unpinned");
+  };
   // Canvases from the first diagram version (text cards) are upgraded to .mermaid file cards once, on open.
   useEffect(() => { if (note.body.includes("lumenDiagram")) void migrateDiagramCards(note, v.notes, v.folders).then((c) => c && toast("Diagram cards upgraded to .mermaid files")); }, [note.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // Arrived from a note's diagram ("Open in canvas"): select that card and centre it, once it exists (a just-saved
@@ -478,7 +519,13 @@ function Inner({ note }: { note: Note }) {
     setNodes((ns) => ns.map((n) => (n.selected !== (n.id === f.nodeId) ? { ...n, selected: n.id === f.nodeId } : n)));
     setTimeout(() => rf.fitView({ nodes: [{ id: f.nodeId }], padding: 0.25, maxZoom: 1, duration: 400 }), 80);
   }, [nodes, note.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  const onConnect = (c: Connection) => setEdges((es) => addEdge({ ...c, id: crypto.randomUUID().slice(0, 12), type: "straight", markerEnd: { type: MarkerType.ArrowClosed, color: "var(--muted)", width: 18, height: 18 }, style: { stroke: "var(--muted)", strokeWidth: 2 }, labelBgPadding: [8, 3], labelBgBorderRadius: 6 }, es));
+  const onConnect = (c: Connection) => {
+    // Connection check (14b-K): no self links, no second edge between the same two cards.
+    const name = (id: string) => { const n = nodes.find((x) => x.id === id)?.data.node; return !n ? id : n.type === "text" ? (splitTitle(n.text).title || n.text.split("\n")[0] || "Card").slice(0, 40) : n.type === "file" ? n.file.replace(/\.md$/i, "") : n.type === "link" ? n.url : n.label ?? "Group"; };
+    const chk = checkNewEdge(edges.map((e) => ({ from: e.source, to: e.target })), c.source, c.target, name);
+    if (!chk.ok) { toast(chk.title, undefined, { sub: chk.body }); return; }
+    setEdges((es) => addEdge({ ...c, id: crypto.randomUUID().slice(0, 12), type: "straight", markerEnd: { type: MarkerType.ArrowClosed, color: "var(--muted)", width: 18, height: 18 }, style: { stroke: "var(--muted)", strokeWidth: 2 }, labelBgPadding: [8, 3], labelBgBorderRadius: 6 }, es));
+  };
   const refit = () => setTimeout(() => rf.fitView({ padding: 0.12, maxZoom: 1, duration: 200 }), 60);
   const togglePanel = (t: CodeTab) => { if (t === "json") setCodeText(stringify(fromFlow(nodes, edges))); setPanel((p) => (p === t ? null : t)); refit(); };
   const switchTab = (t: CodeTab) => { if (t === "json") setCodeText(stringify(fromFlow(nodes, edges))); setPanel(t); };
@@ -490,6 +537,16 @@ function Inner({ note }: { note: Note }) {
     addEventListener("keydown", k);
     return () => removeEventListener("keydown", k);
   }, []);
+  // Shift+T = Tidy up; Esc / Enter answer the preview.
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      if (isTidyKey(e)) { e.preventDefault(); startTidy(); }
+      else if (tidyPrev && e.key === "Escape") cancelTidy();
+      else if (tidyPrev && e.key === "Enter" && !(e.target as HTMLElement)?.closest?.("input,textarea,.cm-editor")) { e.preventDefault(); applyTidy(); }
+    };
+    addEventListener("keydown", k);
+    return () => removeEventListener("keydown", k);
+  });
 
   // The swatch that matches the selection (or the default colour for new cards).
   const curColor = anySel ? (selected[0]?.data.node.color ?? null) : defColor ?? null;
@@ -499,7 +556,7 @@ function Inner({ note }: { note: Note }) {
     const helpers = { notes: v.notes.map((n) => ({ id: n.id, title: n.title, tags: n.tags, type: n.type, status: n.status })), outline: fromOutline };
     const t0 = performance.now();
     const r = await runScript(src, fromFlow(nodes, edges), helpers);
-    setLogs([...r.logs, ...(r.error ? [`✖ ${r.error}`] : [`✓ done · ${r.canvas.nodes?.length ?? 0} nodes · ${Math.round(performance.now() - t0)} ms · restore from History`])]);
+    setLogs([...r.logs, ...(r.error ? [`${LOG_ERR} ${r.error}`] : [`${LOG_OK} done · ${r.canvas.nodes?.length ?? 0} nodes · ${Math.round(performance.now() - t0)} ms · restore from History`])]);
     if (!r.error) { load(r.canvas); setTimeout(() => rf.fitView({ padding: 0.2, duration: 300 }), 50); }
   }
 
@@ -547,6 +604,8 @@ function Inner({ note }: { note: Note }) {
     ["Group", <Group size={15} />, "Add group", () => addNode({ type: "group", label: "Group", width: 600, height: 400 })],
   ];
   const arrangeTools: Tool[] = [
+    ["Tidy up", <Glyph name="wide" size={15} color="var(--accent)" />, "Tidy up: lay out by links, keep groups and pinned cards (Shift T)", startTidy],
+    ["Pin", <Pin size={15} />, selPinned ? "Unpin selected cards" : "Pin selected cards (Tidy up leaves them)", togglePin, selPinned],
     ["Tree", <Network size={15} />, "Tree layout", () => doLayout("tree")],
     ["Grid", <LayoutGrid size={15} />, "Grid layout", () => doLayout("grid")],
     ["Force", <Orbit size={15} />, "Force layout", () => doLayout("force")],
@@ -586,6 +645,9 @@ function Inner({ note }: { note: Note }) {
               </button>
             ))}
             <div className="m-1 h-px bg-line" />
+            <span className="px-2.5 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Edges</span>
+            <div className="px-1.5 pb-1.5 text-[12px]"><EdgeSeg value={edgeShape} onChange={setEdgeShape} /></div>
+            <div className="m-1 h-px bg-line" />
             <button onClick={() => { setMenu(null); exportCanvas(); }} className="flex h-[34px] items-center gap-2.5 rounded-[8px] px-2.5 text-left hover:bg-bg"><Download size={14} className="text-muted" />Export .canvas</button>
             <button onClick={() => { setMenu(null); void duplicate(); }} className="flex h-[34px] items-center gap-2.5 rounded-[8px] px-2.5 text-left hover:bg-bg"><Copy size={14} className="text-muted" />Duplicate</button>
             <button onClick={() => { setMenu(null); void del(); }} className="flex h-[34px] items-center gap-2.5 rounded-[8px] px-2.5 text-left text-bad hover:bg-bg"><Trash2 size={14} />Delete canvas</button>
@@ -609,7 +671,7 @@ function Inner({ note }: { note: Note }) {
           addNode({ type: "text", text: "" }, { x: Math.round(p.x / 20) * 20, y: Math.round(p.y / 20) * 20 });
         }}>
         <ReactFlow
-          nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={nodeTypes}
+          nodes={nodes} edges={shownEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={nodeTypes}
           onConnectStart={() => setConnecting(true)} onConnectEnd={() => setConnecting(false)}
           connectionMode={ConnectionMode.Loose} fitView fitViewOptions={{ padding: 0.15, maxZoom: 1, ...(typeof innerWidth === "number" && innerWidth < 768 ? { minZoom: 0.62 } : {}) }} minZoom={0.05} maxZoom={3} snapToGrid snapGrid={[20, 20]} zoomOnDoubleClick={false}
           deleteKeyCode={["Delete", "Backspace"]} multiSelectionKeyCode={["Shift", "Meta", "Control"]} proOptions={{ hideAttribution: true }}
@@ -629,7 +691,7 @@ function Inner({ note }: { note: Note }) {
           {addTools.map(([, icon, label, fn]) => <button key={label} title={label} aria-label={label} onClick={fn} className={cx(TOOL, "w-8 shrink-0")}>{icon}</button>)}
           {SEP}
           <span className={CAPTION}>Arrange</span>
-          {arrangeTools.map(([name, icon, label, fn]) => <button key={label} title={label} aria-label={label} onClick={fn} className={cx(TOOL, "shrink-0 px-2 text-[12px]")}>{icon}<span className="hidden lg:inline">{name}</span></button>)}
+          {arrangeTools.map(([name, icon, label, fn, on]) => <button key={name} title={label} aria-label={label} onClick={fn} className={cx(TOOL, "shrink-0 px-2 text-[12px]", on && "bg-surface-2 text-accent", name === "Tidy up" && "font-semibold")}>{icon}<span className={name === "Tidy up" ? "hidden md:inline" : "hidden lg:inline"}>{name}</span></button>)}
           {SEP}
           <span className={CAPTION}>Style</span>
           {swatches("size-4")}
@@ -640,6 +702,7 @@ function Inner({ note }: { note: Note }) {
           <button title="More: convert, export, duplicate" aria-label="Canvas menu" onClick={() => setMenu((m) => (m ? null : "main"))} className={cx(TOOL, "w-8 shrink-0", menu && "bg-surface-2")}><Ellipsis size={16} /></button>
         </div>
         {menuEl}
+        {tidyPrev && <TidyBanner stats={tidyPrev.stats} onCancel={cancelTidy} onApply={applyTidy} top={64} />}
 
         {/* Phone: one bottom tool card, groups as tabs */}
         {!panel && (
@@ -649,12 +712,12 @@ function Inner({ note }: { note: Note }) {
                 <button key={t} onClick={() => setPhoneTab(t)} className={cx("capitalize", phoneTab === t && "text-ink shadow-[inset_0_-2px_0_var(--accent)]")}>{t}</button>
               ))}
             </div>
-            <div className="grid h-[60px] grid-cols-4 items-center">
+            <div className="grid h-[60px] items-center" style={{ gridTemplateColumns: `repeat(${phoneTab === "arrange" ? arrangeTools.length + 1 : phoneTab === "add" ? addTools.length : 4},minmax(0,1fr))` }}>
               {phoneTab === "style" ? (
                 <div className="col-span-4 flex items-center justify-center gap-2">{swatches("size-7")}{anySel && <button aria-label="Delete selected" onClick={delSelected} className="flex size-11 items-center justify-center text-bad"><Trash2 size={20} /></button>}</div>
               ) : (
-                (phoneTab === "add" ? addTools : phoneTab === "arrange" ? [...arrangeTools, ["Fit", <Scan size={15} />, "Fit to screen", fit] as Tool] : [...codeTools, ["More", <Ellipsis size={15} />, "Convert, duplicate, delete", () => setMenu("main")] as Tool]).map(([name, icon, label, fn]) => (
-                  <button key={label} aria-label={label} onClick={fn} className="flex h-full flex-col items-center justify-center gap-0.5 text-[10.5px] [&>svg]:size-5">{icon}{name}</button>
+                (phoneTab === "add" ? addTools : phoneTab === "arrange" ? [...arrangeTools, ["Fit", <Scan size={15} />, "Fit to screen", fit] as Tool] : [...codeTools, ["More", <Ellipsis size={15} />, "Convert, duplicate, delete", () => setMenu("main")] as Tool]).map(([name, icon, label, fn, on]) => (
+                  <button key={name} aria-label={label} onClick={fn} className={cx("flex h-full flex-col items-center justify-center gap-0.5 text-[10.5px] [&>svg]:size-5", on && "text-accent")}>{icon}{name}</button>
                 ))
               )}
             </div>
@@ -720,7 +783,7 @@ function OutlinePicker({ exclude, onPick, onBack }: { exclude: string; onPick: (
   return (
     <>
       <div className="flex items-center gap-2 px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">
-        <button onClick={onBack} className="normal-case tracking-normal hover:text-ink">← Convert</button><span className="flex-1" />Note outline → Canvas
+        <button onClick={onBack} className="flex items-center gap-1 normal-case tracking-normal hover:text-ink"><ArrowRight size={11} className="rotate-180" />Convert</button><span className="flex-1" />Note outline → Canvas
       </div>
       <label className="mx-1 mb-1 flex h-8 items-center gap-2 rounded-[8px] border border-line bg-bg px-2.5 text-muted focus-within:border-accent">
         <Search size={13} /><input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Which note? (headings become cards)" className="min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-muted"

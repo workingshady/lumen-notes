@@ -24,7 +24,7 @@ export async function addFile(file: File): Promise<string> {
   await save("attachment", { id, name: file.name || "file", mime: blob.type || file.type, size: blob.size });
   const name = (file.name || "file").replace(/[[\]]/g, "");
   // Images, video, audio and PDFs render inline (players / viewer); other files become download links.
-  return /^(image|video|audio)\/|^application\/pdf$/.test(blob.type) ? `![${name}](att:${id})` : `[📎 ${name}](att:${id})`;
+  return /^(image|video|audio)\/|^application\/pdf$/.test(blob.type) ? `![${name}](att:${id})` : `[${name}](att:${id})`;
 }
 
 const CHUNK = 1_500_000; // must match worker CHUNK

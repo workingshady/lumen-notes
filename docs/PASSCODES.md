@@ -20,3 +20,16 @@ Lumen is single-owner. There are no accounts: one **passcode** unlocks sync on e
 ## Recover
 - Forgot the passcode → set a new one with `wrangler secret put APP_PASSCODE`. No notes are lost.
 - Locked out → wait, or clear `unlock_attempts` in D1 (`npx wrangler d1 execute lumen-notes --remote --command "DELETE FROM unlock_attempts"`).
+
+## Devices (Settings › Sync › Devices)
+- Every unlocked device reports itself after a sync (`POST /api/access/seen`, at most every 10 min) with a random
+  device id (`localStorage lumen.deviceId`) and a name (guessed from the browser, rename by clicking it). Worker:
+  `worker/ext/access.ts`, D1 table `devices` (created on first use): `id, name, platform, first_seen, unlocked_at,
+  last_seen, gen, revoked`.
+- `gen` is a short HMAC derived from the passcode (never the passcode). After `wrangler secret put APP_PASSCODE`,
+  devices still holding the old token show **Token expired** (amber) and can be **Removed**.
+- **Sign out** marks another device; on its next contact it drops its token and locks (all devices share one owner
+  token, so this is cooperative: rotate the passcode to cut off a lost device for sure).
+- **Change passcode** / **Forgot the passcode?** open the help sheet: `wrangler secret put APP_PASSCODE`.
+- Unlock form (Settings › Sync, "Unlock or add an account") uses `/api/unlock`: "Wrong passcode · N tries left",
+  then the lockout countdown (doubles, max 24 h).

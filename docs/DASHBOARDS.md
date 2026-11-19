@@ -42,7 +42,9 @@ tiles:
 The YAML can also be the whole body after the front-matter and H1 (it must start with `tiles:`). Keys Lumen doesn't
 know (on the dashboard or on a tile) are kept when Lumen rewrites the block. Lumen rewrites the block (normalized YAML,
 comments dropped) when you move, resize, add, edit, duplicate or delete a tile. Tiles without `layout` are placed at
-the first free spot.
+the first free spot. A top-level `range:` (e.g. `range: 8w`, set by the range picker in the top bar) replaces the
+range of every chart over time (bar / stacked / line / area on a date axis); numbers, rings, heatmaps and tables keep
+their own. Layout units: a row is 68 px with 14 px gaps, so `h: 2` = a 150 px tile and `h: 4` = 314 px.
 
 ### Tile keys
 | Key | Meaning |
@@ -58,7 +60,9 @@ the first free spot.
 | `range` | `Nd`, `Nw`, `Nm`, `Ny` = the last N days/weeks/months/years ending today; `next Nd` = the future; empty = all |
 | `cumulative` | `true`: running total (line / area). Starts from everything before the range. |
 | `part`, `target` | ring: the filled share is the records matching `part` (a filter), out of `target` or of all records |
-| `delta` | number: `false` hides the "+8 vs last week" line (shown when a past `range` is set) |
+| `delta` | number: `false` hides the "+8 vs last week" delta (shown when a past `range` is set); `percent` shows it as "−18%" |
+| `better` | number: `down` when a lower value is good (cards due); the delta is green when it moves the good way, red otherwise |
+| `caption` | number: the line under the value (default "of 101 in AI Engineer" for a filtered count, else the range: "this week") |
 | `fields`, `sort`, `limit` | table / list: record fields to show, sort field (`-field` = descending), row count |
 | `unit` | value unit shown in labels (`min` formats as `1h 20m`; sessions minutes default to `min`) |
 | `colors` | series / slice colors: `{ CS231n: 5, review: "#E3B341" }` (canvas preset 1–6 or a hex) |
@@ -77,15 +81,24 @@ the first free spot.
 course roadmap that finished it.
 
 ## Using it
-- **Add tile** (toolbar): 1. source (sessions, flashcards, a learning path, a base view, notes), 2. chart type,
-  3. fields (title, x, bucket, value, series, range, filter, running total, ring part, table fields), with a live
-  preview of the tile. Edit a tile from its ⋯ menu (Edit, Duplicate, Delete).
-- **Move**: drag a tile by its grip (top-left); **resize**: drag its bottom corner. Other tiles move down out of the
-  way and everything floats up. Keyboard: focus the grip, arrows move, Shift+arrows resize.
-- **Data table**: the table icon on each chart tile swaps the chart for an accessible table with exact values.
+Layout: `design/handoffs/2026-11-19-round-4/DashDesk.dc.html` (Lumen 18, R4-18K..Q).
+- **Top bar**: dashboard glyph + title, the range picker ("Tile ranges" = each tile's own, or Last 7 days … Last
+  year, stored as `range:`), **Edit layout** / Done, **YAML** (switches to the editor), **Add tile**.
+- **Add tile** (a dialog with steps 1 Source · 2 Chart · 3 Fields and a live preview on desktop): 1. what the tile
+  counts (Study sessions, Flashcards, A learning path, A base view, Notes; path / base pickers appear on the chosen
+  card), 2. chart type (Number, Bar, Stacked, Line, Area, Donut, Ring, Table, Heatmap, List as glyph tiles),
+  3. fields: Title, X axis, Bucket, Value, Series, Range, Filter, Filled part (ring), Delta + Up/Down is good and
+  Caption (number), Running total (line / area), Columns (table / list). Back / Next / *Add to dashboard*. Edit a
+  tile from its ⋯ menu (Edit tile, Show as table, Duplicate, Move or resize, Delete); editing opens on step 3.
+- **Edit layout** shows the 12 columns as faint stripes. Drag a tile to move it, its amber corner to resize it; the
+  selected tile gets the amber outline. Other tiles move down out of the way and everything floats up. Keyboard:
+  focus a tile, arrows move, Shift+arrows resize.
+- **Data table**: the *Table* toggle in each chart tile's header (also in ⋯) swaps the chart for a table with exact
+  values ("· as table" is added to the title).
 - **Charts**: hover or focus a column / slice / day for exact values; Tab reaches each chart, arrows move between
-  points (Home / End jump). Lines label their ends directly (up to 4 series); bars and stacked bars get a legend.
-- **Phone**: tiles stack in one column (top to bottom, then left to right); moving and resizing is desktop-only.
+  points (Home / End jump). Multi-series charts get a legend under the chart.
+- **Phone**: two columns: number tiles (up to 4 columns wide) take one, everything else spans both; moving and
+  resizing is desktop-only.
 - **YAML**: the toolbar's YAML button switches to the editor (Read mode switches back).
 
 ## Chart style
@@ -93,9 +106,13 @@ course roadmap that finished it.
   as CSS variables `--chart-c1..6` (darker steps on light themes). Course series use their space's canvas color.
   Statuses use the status tokens (todo muted, learning info, review warning, mastered success).
   The presets are not fully colorblind-safe past four series (green / orange / red), so charts always carry
-  a legend or direct labels, 2 px gaps between stacked fills, exact tooltips and the data table.
-- Quiet horizontal gridlines, one y axis from zero, whole-number ticks for counts, thinned x labels.
-- Heatmap: one hue (cyan), five steps from the surface; empty days stay surface-2.
+  a legend (multi-series), exact tooltips and the data table.
+- Chart tiles (design Lumen 18 / 21): no y axis (exact values are in tooltips and the data table); bars sit on one
+  baseline with 6 px gaps and 3 px top corners, stacked fills touch; lines are 2 px with three quiet gridlines, the
+  first series filled at 18 % (area) and comparison series dashed (5 4); thinned x labels at 10.5 px.
+- Numbers: 34 px value, delta in 12.5 px semibold (green good / red bad), caption muted. Ring: the share and
+  "41 / 101" inside, filled in the success colour. Donut: total inside, legend with values.
+- Heatmap: weeks as columns filling the tile, one hue (purple, `--chart-c6`), steps 35 / 65 / 100 % over surface-2.
 - Text in charts uses ink / muted tokens, never the series color.
 
 ## Limits

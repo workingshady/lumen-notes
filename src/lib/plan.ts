@@ -1,7 +1,7 @@
 // Today: the rule-based daily study planner (no AI). Pure: every input is passed in, "today" included, so the same
 // data always gives the same plan. Rules are documented in docs/TODAY.md.
 //
-// Inputs: course roadmaps (topics with status, needs, 📅 due dates, linked lesson notes), learning paths (concept
+// Inputs: course roadmaps (topics with status, needs, due dates (calendar marker), linked lesson notes), learning paths (concept
 // locks, unlocks, `review:` dates), due flashcard count, lesson durations, the last studied note, and the plan log
 // (what you did / skipped / moved today, weekly goals) which is stored in a synced Markdown note.
 import type { BuiltConcept, BuiltPath } from "./path";
@@ -148,6 +148,8 @@ export interface PlanCourse {
   target: string | null;
   /** Natural order (space sort). */
   order: number;
+  /** Course medium (glyph k-*), for the Today item glyph. */
+  kind?: string;
 }
 export interface PlanLesson { id: string; title: string; updatedAt: number; minutes: number | null }
 export interface PlanPath { noteId: string; title: string; built: BuiltPath }
@@ -223,7 +225,7 @@ function conceptIndex(paths: PlanPath[]) {
   return m;
 }
 
-/** Topics of every course that are overdue (open, 📅 before today). */
+/** Topics of every course that are overdue (open, due before today). */
 export function overdueTopics(today: string, courses: PlanCourse[]) {
   const out: { course: PlanCourse; topic: Topic }[] = [];
   for (const c of courses) for (const m of roadmap(c.body)) for (const t of m.topics) if ((t.status === "todo" || t.status === "learning") && t.due && t.due < today) out.push({ course: c, topic: t });
@@ -459,7 +461,7 @@ export function proposeReschedule(today: string, s: PlanSettings, courses: PlanC
   }
   return { overdue: order.length, days, moves, window, before, after, beforeOverdue };
 }
-/** Write the moves of one course into its roadmap body (📅 dates via parse.ts setTopicDue). */
+/** Write the moves of one course into its roadmap body (due dates via parse.ts setTopicDue). */
 export function applyMoves(body: string, moves: Move[]): string {
   let out = body;
   for (const m of moves) out = setTopicDue(out, m.line, m.to);

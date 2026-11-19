@@ -27,8 +27,15 @@ export interface SmartFolder {
 
 export const SMART_SPACE = "inbox";
 export const SMART_PROP = "lumenSmartFolders";
-export const GLYPHS = ["search", "star", "book", "flag", "clock", "file", "tag", "bolt", "inbox", "layers"] as const;
+/** Glyph picker (LumenGlyph names, src/lib/glyphs.ts). */
+export const GLYPHS = ["smart-folder", "due", "s-learning", "s-revise", "s-todo", "pdf", "flashcards", "lesson", "k-video", "tag", "query", "inbox", "flame", "clock", "highlight", "p1"] as const;
 export type Glyph = (typeof GLYPHS)[number];
+/** Glyph keys stored before round 4 (Lucide icons) → their LumenGlyph equivalent. */
+const LEGACY_GLYPH: Record<string, Glyph> = { search: "smart-folder", star: "flame", book: "lesson", flag: "p1", clock: "clock", file: "pdf", tag: "tag", bolt: "flame", inbox: "inbox", layers: "flashcards" };
+/** The LumenGlyph name to draw for a stored glyph key (old keys map, unknown ones fall back to the folder glyph). */
+export const glyphName = (g?: string | null): Glyph => (g && (GLYPHS as readonly string[]).includes(g) ? (g as Glyph) : (g && LEGACY_GLYPH[g]) || "smart-folder");
+/** Operators offered as chips in the editor (click inserts one). */
+export const OPERATOR_CHIPS = ["tag:#x", "type:lesson", "status:learning", "in:folder", "space:", "due:this-week", "has:pdf", "-has:links", "course:", '"exact words"'] as const;
 
 // ------------------------------------------------------------------ storage
 export function readSmart(raw: string | undefined | null): SmartFolder[] {
@@ -58,21 +65,57 @@ export function moveSmart(list: SmartFolder[], id: string, dir: -1 | 1): SmartFo
   [o[i], o[j]] = [o[j], o[i]];
   return o.map((x, k) => ({ ...x, sort: k }));
 }
+/**
+ * Drag reorder: move `id` to display position `to` (0-based, in the list without the dragged folder). Dropping into
+ * the pinned group pins it, below it unpins it. Renumbers `sort` 0..n.
+ */
+export function reorderSmart(list: SmartFolder[], id: string, to: number): SmartFolder[] {
+  const o = orderSmart(list);
+  const sf = o.find((x) => x.id === id);
+  if (!sf) return list;
+  const rest = o.filter((x) => x.id !== id);
+  to = Math.max(0, Math.min(rest.length, to));
+  const above = rest[to - 1], below = rest[to];
+  const pinned = above?.pinned && below?.pinned ? true : !above?.pinned && !below?.pinned ? false : above?.pinned ? !!sf.pinned : !!sf.pinned;
+  rest.splice(to, 0, { ...sf, pinned: pinned || undefined });
+  return orderSmart(rest.map((x, k) => ({ ...x, sort: k })));
+}
 /** A default name from a query: `tag:#llm status:learning` → "#llm · learning". */
 export function suggestName(q: string) {
-  const s = q.trim().replace(/\b(tag|type|status|in|space|is|due|has|no|updated|created):"?([^"\s]*)"?/g, (_m, k: string, v: string) => (k === "tag" ? "#" + v.replace(/^#/, "") : v)).replace(/\s+/g, " · ");
+  const words = smartTokens(q.trim()).map((tok) => {
+    const m = /^(-?)(tag|type|status|in|space|is|due|has|no|updated|created|course):"?([^"]*)"?$/.exec(tok);
+    if (!m) return tok.replace(/^"|"$/g, "");
+    const v = m[2] === "tag" ? "#" + m[3].replace(/^#/, "") : m[3].replace(/^this-/, "");
+    return (m[1] ? "not " : "") + v;
+  });
+  const s = words.filter(Boolean).join(" · ");
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : "Smart folder";
 }
 
 // ------------------------------------------------------------------ query
-export interface SmartQuery { base: Query; due: string[]; has: string[]; no: string[]; updated: string[]; created: string[] }
-const EXTRA = /^(due|has|no|updated|created):"?([^"]*)"?$/i;
+export interface SmartQuery {
+  base: Query; due: string[]; has: string[]; no: string[]; updated: string[]; created: string[];
+  /** `course:CS231n`: the note's `course` property contains the text. */
+  course: string[];
+  /** `"exact words"`: the phrase appears (normalized) in the title or body. */
+  phrases: string[];
+  /** Negated operators (`-status:done`, `-has:links`, `-tag:#x`, `-#x`), each kept as its own query without the `-`. */
+  not: string[];
+}
+const EXTRA = /^(due|has|no|updated|created|course):"?([^"]*)"?$/i;
+/** `due:this-week` (the designed spelling) → `week`; `this-month` → `month`. */
+const DUE_ALIAS: Record<string, string> = { "this-week": "week", "next-7-days": "week", "this-month": "month", "next-30-days": "month" };
+/** Query tokens: `op:"quoted value"`, `"exact phrase"`, or a run of non-spaces. */
+export const smartTokens = (q: string) => q.match(/(-?\w+:"[^"]*"|"[^"]*"|\S+)/g) ?? [];
 export function parseSmartQuery(q: string): SmartQuery {
-  const out: SmartQuery = { base: parseQuery(""), due: [], has: [], no: [], updated: [], created: [] };
+  const out: SmartQuery = { base: parseQuery(""), due: [], has: [], no: [], updated: [], created: [], course: [], phrases: [], not: [] };
   const rest: string[] = [];
-  for (const tok of q.match(/(\w+:"[^"]*"|\S+)/g) ?? []) {
+  for (const tok of smartTokens(q)) {
+    if (/^-(\w+:\S|#\S)/.test(tok)) { out.not.push(tok.slice(1)); continue; }
+    const ph = /^"([^"]+)"$/.exec(tok);
+    if (ph) { if (ph[1].trim()) out.phrases.push(normalize(ph[1].trim()).replace(/\s+/g, " ")); continue; }
     const m = EXTRA.exec(tok);
-    if (m && m[2]) out[m[1].toLowerCase() as "due"].push(m[2].toLowerCase()); else rest.push(tok);
+    if (m && m[2]) { const k = m[1].toLowerCase() as "due"; let v = m[2].toLowerCase(); if (k === "due") v = DUE_ALIAS[v] ?? v; out[k].push(v); } else rest.push(tok);
   }
   out.base = parseQuery(rest.join(" "));
   return out;
@@ -127,6 +170,9 @@ function hasOk(key: string, n: Note, c: SmartCtx): boolean {
   if (key === "tasks") return hasTasks(n.body);
   if (key === "tags") return n.tags.length > 0;
   if (key === "status") return !!n.status;
+  // has:pdf = a PDF note or a note that embeds/links a PDF; has:video = the note has a player (video-notes.ts rules)
+  if (key === "pdf") return n.type === "pdf" || /\.pdf(\)|\]|\s|$|\?|#)/im.test(n.body) || !!c.props(n).pdf;
+  if (key === "video") return /^\s*(https?:\/\/(www\.|m\.)?(youtube\.com|youtu\.be|vimeo\.com)\S*|!\[[^\]]*\.(mp4|webm|mov|m4v)\]\([^)]*\)|\S+\.(mp4|webm|mov|m4v))\s*$/im.test(n.body);
   const v = c.props(n)[key];
   return v !== undefined && v.trim() !== "" && v.trim() !== "[]";
 }
@@ -138,8 +184,13 @@ export function smartMatcher(sf: Pick<SmartFolder, "query" | "filters" | "match"
   const terms = normalize(q.base.text).split(/\s+/).filter(Boolean);
   const now = c.now ?? Date.now();
   const filters: FilterNode | undefined = sf.filters?.length ? (sf.match === "or" ? { or: sf.filters } : { and: sf.filters }) : undefined;
+  const nots = q.not.map((tok) => smartMatcher({ query: tok }, c));
+  const courses = q.course.map(normalize);
   return (n) => {
     if (n.deleted || !base(n)) return false;
+    if (nots.some((f) => f(n))) return false;
+    if (courses.length) { const cv = normalize(c.props(n).course ?? ""); if (!courses.every((x) => cv.includes(x))) return false; }
+    if (q.phrases.length) { const t = c.text(n).replace(/\s+/g, " "); if (!q.phrases.every((x) => t.includes(x))) return false; }
     if (q.due.length) { const p = c.props(n); if (!q.due.every((op) => dueOk(op, p.due ?? p.deadline, now))) return false; }
     if (!q.has.every((k) => hasOk(k, n, c)) || !q.no.every((k) => !hasOk(k, n, c))) return false;
     if (!q.updated.every((op) => ageOk(op, n.updatedAt, now)) || !q.created.every((op) => ageOk(op, n.createdAt, now))) return false;
@@ -182,7 +233,7 @@ export function toBaseFilters(sf: Pick<SmartFolder, "query" | "filters" | "match
     else if (op === "any") and.push("!due.isEmpty()");
     else { const m = /^(<=|>=|<|>|=)?(\d{4}-\d{2}-\d{2})$/.exec(op); if (m) and.push(`due ${m[1] === "=" || !m[1] ? "==" : m[1]} date(${js(m[2])})`); else dropped.push(`due:${op}`); }
   }
-  const special = ["links", "backlinks", "tasks"];
+  const special = ["links", "backlinks", "tasks", "pdf", "video"];
   for (const k of q.has) { if (special.includes(k)) dropped.push(`has:${k}`); else and.push(k === "tags" ? "!file.tags.isEmpty()" : `!${k}.isEmpty()`); }
   for (const k of q.no) { if (special.includes(k)) dropped.push(`no:${k}`); else and.push(k === "tags" ? "file.tags.isEmpty()" : `${k}.isEmpty()`); }
   for (const [key, ops] of [["file.mtime", q.updated], ["file.ctime", q.created]] as const) {
@@ -192,6 +243,19 @@ export function toBaseFilters(sf: Pick<SmartFolder, "query" | "filters" | "match
       if (!m || ms === null) { dropped.push(op); continue; }
       and.push(`${key} ${m[1] === ">" ? "<" : ">="} date(${js(ymd(now - ms))})`);
     }
+  }
+  for (const c of q.course) and.push(`course.contains(${js(c)})`);
+  for (const ph of q.phrases) and.push(`file.name.contains(${js(ph)})`);
+  for (const tok of q.not) {
+    const m = /^(tag|type|status|has|no):"?#?([^"]*)"?$/.exec(tok) ?? (tok.startsWith("#") ? ["", "tag", tok.slice(1)] : null);
+    const v = m?.[2].toLowerCase() ?? "";
+    if (!m || !v) { dropped.push("-" + tok); continue; }
+    if (m[1] === "tag") and.push(`!file.hasTag(${js(v)})`);
+    else if (m[1] === "type") and.push(`type != ${js(v)}`);
+    else if (m[1] === "status") and.push(v === "none" ? "!status.isEmpty()" : `status != ${js(v)}`);
+    else if (special.includes(v) || v === "pdf" || v === "video") dropped.push("-" + tok);
+    else if (m[1] === "has") and.push(v === "tags" ? "file.tags.isEmpty()" : `${v}.isEmpty()`);
+    else and.push(v === "tags" ? "!file.tags.isEmpty()" : `!${v}.isEmpty()`);
   }
   if (sf.filters?.length) and.push(sf.match === "or" ? { or: sf.filters } : { and: sf.filters });
   return { filters: and.length ? { and } : undefined, dropped };

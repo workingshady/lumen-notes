@@ -72,3 +72,17 @@ No format change. Everything is standard JSON Canvas 1.0:
 
 - **Highlight card:** a `text` node whose text is `> quote` (or `![…](att:…)`), a blank line, then the back-link. `color` is the highlight's preset. `CanvasEditor` recognises this shape (`parseHlCard`) and draws a colored left edge and a page chip. Create one by dragging a highlight from the reader's panel onto a canvas (drag type `application/x-lumen-pdf-highlight`), or with **Add to canvas** on a highlight.
 - **PDF card:** a `file` node pointing at the PDF note, with an optional `subpath: "#page=4"`. It shows pages, progress and the highlight count, and opens the reader at that page.
+
+## Reader (round 4, Lumen 19 · PdfDesk)
+
+- **Toolbar:** PDF glyph + title, furthest-read bar + %, Scroll / Single, Fit width ▾ (fit width = page up to 640 px on desktop, fit page, 50–300 %, zoom in/out), page field `4 / 15` (click to type), Area, Find, ⋯ (pages sidebar, Highlights panel, dark pages, make a note from all highlights, export). Phone: glyph, title, page, Area, ⋯ (highlights sheet, pages and outline, find, layout, zoom, dark pages, export).
+- **Single page:** one page at a time; arrows, page field, thumbnails and wheel past the page edge turn pages. Stored per device (`lumen.pdf.single`).
+- **Continue:** reopening a paper no longer jumps; a pill offers "Continue where you left off · p. N (P%)". The saved page is only overwritten after the reader has been moved.
+- **Area:** dragging a box no longer saves at once: the dashed box waits for a colour, Note, Card, Copy or Link, like a text selection.
+- **Margin markers:** one numbered square per highlight to the right of the page (a pen when it has a comment); click to edit.
+- **Highlights panel** (right, 320 px): by page / newest, filter by colour and tag, kind (text / area), make a note from all, export as Markdown. Phone: sheet from ⋯.
+- **Page colours:** Lamplight tints pages to `#F4F1EA` (multiply), Paper keeps white, dark pages invert to `#16191F` with `#D8D5CE` ink (images kept).
+- **States:** skeleton with "Loading part 2 of 3 · 1.4 of 2.1 MB" (1.5 MB D1 parts), password card (never stored), scanned pill pointing to Area.
+- Blue highlights draw as `#7AA2F7` (canvas preset stays `5`).
+
+Demo vault: `lib/demo-pdf.ts` builds a real 15-page PDF (original text, outline, figures) for `dm-att-vaswani`; the note `dm-pdf-attention` carries 9 highlights whose rects come from the generator's layout.

@@ -30,7 +30,7 @@ export type HlColor = "yellow" | "green" | "blue" | "red" | "purple";
 export const HL_COLORS: { name: HlColor; preset: string; hex: string }[] = [
   { name: "yellow", preset: "3", hex: "#E3B341" },
   { name: "green", preset: "4", hex: "#57AB5A" },
-  { name: "blue", preset: "5", hex: "#39C5CF" },
+  { name: "blue", preset: "5", hex: "#7AA2F7" },
   { name: "red", preset: "1", hex: "#E5534B" },
   { name: "purple", preset: "6", hex: "#A371F7" },
 ];

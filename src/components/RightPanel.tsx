@@ -1,7 +1,7 @@
 import { diffLines } from "diff";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
-  AlignLeft, ArrowDownToLine, ArrowRight, ArrowUpRight, BookOpen, Bookmark, Calendar, ChevronDown, ChevronRight, CircleDot, Clock, Copy, CornerUpLeft, FileText, Gauge, Hash,
+  AlignLeft, ArrowDownToLine, ArrowRight, BookOpen, Bookmark, Calendar, ChevronDown, ChevronRight, CircleDot, Clock, Copy, Gauge, Hash,
   History, Layers, Link, Link2, ListTree, Loader2, MessageCircleQuestion, Plus, RefreshCw, SlidersHorizontal, Sparkles, Tag, Text, Timer, Trash2, X,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -85,21 +85,17 @@ function Backlinks({ note }: { note: Note }) {
   const v = useVault();
   const back = (v.backlinks.get(note.id) ?? []).map((id) => v.byId.get(id)!).filter(Boolean);
   const out = (v.outlinks.get(note.id) ?? []).map((id) => v.byId.get(id)!).filter(Boolean);
-  const List = ({ title, items, icon }: { title: string; items: Note[]; icon: ReactNode }) => (
-    <div className="mb-3">
-      <div className={SECTION}>{title} · {items.length}</div>
+  // 20b D6: section label, then plain titles (folder / space in the tooltip)
+  const List = ({ title, items, top }: { title: string; items: Note[]; top?: boolean }) => (
+    <div className={cx("flex flex-col gap-2 px-0.5 py-2.5", top && "border-t border-line")} data-links={title}>
+      <div className="text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{title} · {items.length}</div>
       {items.length ? items.map((n) => (
-        <button key={n.id} onClick={() => openNote(n.id)} className="flex w-full items-start gap-2.5 rounded-[8px] px-2.5 py-2 text-left hover:bg-surface-2">
-          <span className="mt-0.5 shrink-0 text-muted">{icon}</span>
-          <span className="min-w-0 flex-1">
-            <span dir="auto" className="block truncate text-[13px] font-medium">{n.title}</span>
-            <span className="block truncate text-[12px] text-muted">{v.folderMap.get(n.folderId ?? "")?.name ?? v.spaceMap.get(n.spaceId)?.name ?? ""}</span>
-          </span>
-        </button>
-      )) : <div className="px-2.5 text-[12.5px] text-muted">None</div>}
+        <button key={n.id} dir="auto" onClick={() => openNote(n.id)} title={v.folderMap.get(n.folderId ?? "")?.name ?? v.spaceMap.get(n.spaceId)?.name ?? ""}
+          className="-mx-1.5 truncate rounded-[6px] px-1.5 text-start text-[13px] font-medium hover:bg-surface-2">{n.title}</button>
+      )) : <div className="text-[12.5px] text-muted">None</div>}
     </div>
   );
-  return (<><List title="Linked mentions" items={back} icon={<CornerUpLeft size={14} />} /><UnlinkedMentions note={note} /><List title="Links out" items={out} icon={<ArrowUpRight size={14} />} /></>);
+  return (<div className="-mt-2.5"><List title="Linked mentions" items={back} /><UnlinkedMentions note={note} /><List title="Links out" items={out} top /></div>);
 }
 
 // ------------------------------------------------------------------ unlinked mentions (design 04 §D6; logic in lib/mentions.ts)
@@ -167,32 +163,30 @@ function UnlinkedMentions({ note }: { note: Note }) {
     await updateNote(note.id, { body: setFrontMatter(cur, { "mentions-ignore": list.length ? list : null }) });
   }
 
+  // 20b D6: source title, then the sentence in the reading serif with the mention underlined (dashed, link colour) and "Link"
   const Group = ({ g, muted }: { g: MentionGroup; muted?: boolean }) => (
-    <div className={cx("mb-1.5 rounded-[8px] px-1 py-1", muted && "opacity-60")}>
-      <div className="flex items-center gap-1.5 px-1.5">
-        <FileText size={13} className="shrink-0 text-muted" />
-        <button dir="auto" onClick={() => openNote(g.src.id)} className="min-w-0 flex-1 truncate text-left text-[13px] font-medium hover:underline">{g.src.title}</button>
-        <button onClick={() => void setIgnored(g.src.title, !muted)} title={muted ? "Show this note's mentions again" : "Hide this note's mentions"} className="h-7 shrink-0 rounded-[6px] px-1.5 text-[11.5px] text-muted hover:bg-surface-2 hover:text-ink">{muted ? "Unignore" : "Ignore"}</button>
+    <div className={cx("group/m flex flex-col gap-1", muted && "opacity-60")}>
+      <div className="flex items-center gap-1.5">
+        <button dir="auto" onClick={() => openNote(g.src.id)} className="min-w-0 flex-1 truncate text-start text-[13px] font-medium hover:underline">{g.src.title}</button>
+        <button onClick={() => void setIgnored(g.src.title, !muted)} title={muted ? "Show this note's mentions again" : "Hide this note's mentions"} className={cx("shrink-0 text-[11.5px] text-muted hover:text-ink", !muted && "opacity-0 focus:opacity-100 group-hover/m:opacity-100 max-md:opacity-100")}>{muted ? "Unignore" : "Ignore"}</button>
       </div>
       {!muted && g.ms.map((m, i) => (
-        <div key={i} className="flex items-start gap-2 rounded-[6px] py-1 pl-[26px] pr-1 hover:bg-surface-2">
-          <span dir="auto" className="min-w-0 flex-1 break-words text-[12.5px] leading-[18px] text-muted">
-            {m.before}<mark className="rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_22%,transparent)] px-0.5 text-ink">{m.match}</mark>{m.after}
-          </span>
-          <button onClick={() => void link([{ src: g.src, ms: [m] }])} title={`Link to “${note.title}”`} className="flex h-7 shrink-0 items-center gap-1 rounded-[6px] border border-line px-2 text-[11.5px] text-ink hover:border-accent"><Link size={11} />Link</button>
-        </div>
+        <span key={i} dir="auto" className="break-words text-[14px] leading-5 text-muted" style={{ fontFamily: "'Source Serif 4', Georgia, serif" }}>
+          {m.before}<mark className="bg-transparent text-ink" style={{ borderBottom: "1.5px dashed var(--link)" }}>{m.match}</mark>{m.after}
+          <button onClick={() => void link([{ src: g.src, ms: [m] }])} title={`Link to “${note.title}”`} className="ms-1.5 font-sans text-[12px] text-link hover:underline">Link</button>
+        </span>
       ))}
     </div>
   );
 
   return (
-    <div className="mb-3" data-mentions>
-      <div className="flex items-center gap-2 pr-1">
-        <div className={cx(SECTION, "flex-1")}>Unlinked mentions · {total}</div>
-        {total > 0 && !confirm && <button onClick={() => setConfirm(true)} className="h-7 rounded-[6px] px-2 text-[12px] text-link hover:bg-surface-2">Link all ({total})</button>}
+    <div className="flex flex-col gap-2.5 border-t border-line px-0.5 py-2.5" data-mentions>
+      <div className="flex items-center">
+        <div className="flex-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">Unlinked mentions · {total}</div>
+        {total > 0 && !confirm && <button onClick={() => setConfirm(true)} className="flex h-[26px] items-center rounded-[7px] border border-line px-2.5 text-[12px] hover:bg-surface-2">Link all</button>}
       </div>
       {confirm && (
-        <div className="mx-1 mb-2 flex flex-col gap-2 rounded-[10px] border border-line bg-surface-2 p-2.5 text-[12.5px]">
+        <div className="flex flex-col gap-2 rounded-[10px] border border-line bg-surface-2 p-2.5 text-[12.5px]">
           <span>Link {total} mention{total === 1 ? "" : "s"} in {shown.length} note{shown.length === 1 ? "" : "s"} to “<span dir="auto">{note.title}</span>”? You can undo it.</span>
           <div className="flex gap-2">
             <Button variant="primary" onClick={() => { setConfirm(false); void link(shown); }}>Link all</Button>
@@ -200,11 +194,11 @@ function UnlinkedMentions({ note }: { note: Note }) {
           </div>
         </div>
       )}
-      {!terms.length ? <div className="px-2.5 text-[12.5px] text-muted">Give this note a title to find mentions.</div>
-        : shown.length ? shown.map((g) => <Group key={g.src.id} g={g} />) : <div className="px-2.5 text-[12.5px] text-muted">None</div>}
+      {!terms.length ? <div className="text-[12.5px] text-muted">Give this note a title to find mentions.</div>
+        : shown.length ? shown.map((g) => <Group key={g.src.id} g={g} />) : <div className="text-[12.5px] text-muted">None</div>}
       {hidden.length > 0 && (
-        <div className="mt-1 px-1">
-          <button onClick={() => setShowIgnored((s) => !s)} className="flex h-7 items-center gap-1 px-1.5 text-[12px] text-muted hover:text-ink">
+        <div className="flex flex-col gap-2">
+          <button onClick={() => setShowIgnored((s) => !s)} className="flex h-7 items-center gap-1 text-[12px] text-muted hover:text-ink">
             {showIgnored ? <ChevronDown size={12} /> : <ChevronRight size={12} />}{hidden.length} ignored note{hidden.length === 1 ? "" : "s"}
           </button>
           {showIgnored && hidden.map((g) => <Group key={g.src.id} g={g} muted />)}

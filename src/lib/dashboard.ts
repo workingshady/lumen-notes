@@ -35,10 +35,15 @@ export interface Tile {
   /** "12w", "30d", "6m", "1y", "next 14d", "all" */
   range?: string;
   cumulative?: boolean;
-  /** ring: the part (filter) and/or a fixed target; number: show the delta (default true when a past range is set) */
+  /** ring: the part (filter) and/or a fixed target; number: show the delta (default true when a past range is set;
+   *  "percent" shows it as a percentage) */
   part?: FilterNode;
   target?: number;
-  delta?: boolean;
+  delta?: boolean | "percent";
+  /** number: which direction is good (delta colour: green / red). Default up. */
+  better?: "up" | "down";
+  /** number: the line under the value (default: "of N in <source>" for filtered counts, else the range). */
+  caption?: string;
   /** table / list: record fields to show, sort ("-field" = descending), row limit */
   fields?: string[];
   sort?: string;
@@ -49,7 +54,20 @@ export interface Tile {
   layout: TileLayout;
   [k: string]: unknown;
 }
-export interface DashboardConfig { columns: number; tiles: Tile[]; [k: string]: unknown }
+/** `range` (optional) = the dashboard-wide range picker ("8w", "30d"…): it replaces the range of every chart over
+ *  time (bar / stacked / line / area with a date x axis); numbers, rings, heatmaps and tables keep their own. */
+export interface DashboardConfig { columns: number; tiles: Tile[]; range?: string; [k: string]: unknown }
+
+/** The tile as run under the dashboard range (see DashboardConfig.range). */
+export function withDashRange(t: Tile, range: string | undefined): Tile {
+  if (!range || !["bar", "stackedBar", "line", "area"].includes(t.type) || /^\s*next/i.test(t.range ?? "")) return t;
+  const x = t.x ?? defaultDateField(t.source);
+  const dateX = SOURCE_FIELDS[sourceKind(t.source) === "base" ? "notes" : (sourceKind(t.source) as "notes")]?.find((f) => f.name === x)?.kind === "date" || /date|due|at$|on$|created|updated/i.test(x);
+  return dateX ? { ...t, range } : t;
+}
+/** Default caption under a number: its range in words ("this week", "last 30 days", "today"). */
+export const rangeCaption = (r: string | undefined, now: number) => parseRange(r, now)?.label.replace(/^last 7 days$/, "this week").replace(/^next 1 day$/, "today");
+export const DASH_RANGES: [string, string][] = [["7d", "Last 7 days"], ["30d", "Last 30 days"], ["8w", "Last 8 weeks"], ["12w", "Last 12 weeks"], ["6m", "Last 6 months"], ["1y", "Last year"]];
 
 export const COLS = 12;
 const FENCE = /^([ \t]*)(`{3,}|~{3,})[ \t]*dashboard[ \t]*\r?\n([\s\S]*?)\r?\n[ \t]*\2[ \t]*$/m;
@@ -95,7 +113,9 @@ function tileOf(o: YMap, i: number): Tile {
     cumulative: o.cumulative === true || undefined,
     part: (o.part ?? undefined) as FilterNode | undefined,
     target: o.target !== undefined && o.target !== null ? num(o.target, 0) || undefined : undefined,
-    delta: o.delta === false ? false : undefined,
+    delta: o.delta === false ? false : o.delta === "percent" ? "percent" : undefined,
+    better: o.better === "down" ? "down" : undefined,
+    caption: str(o.caption),
     fields: Array.isArray(o.fields) ? o.fields.map(str).filter((x): x is string => !!x) : undefined,
     sort: str(o.sort),
     limit: Number(o.limit) > 0 ? Number(o.limit) : undefined,
@@ -392,7 +412,7 @@ export interface Category { key: string; label: string; long: string; start?: nu
 export interface Series { key: string; label: string; color: string; values: number[] }
 export type Dataset =
   | { kind: "series"; categories: Category[]; series: Series[]; dateX: boolean; xLabel: string; yLabel: string; unit?: string; total: number }
-  | { kind: "number"; value: number; prev: number | null; vs: string | null; yLabel: string; unit?: string }
+  | { kind: "number"; value: number; prev: number | null; vs: string | null; yLabel: string; unit?: string; sub?: string; better?: "up" | "down"; pct?: boolean }
   | { kind: "ring"; value: number; total: number; yLabel: string; unit?: string }
   | { kind: "rows"; columns: string[]; rows: { id?: string; cells: string[] }[]; total: number };
 export interface TileResult { data: Dataset; error: string | null; records: number }
@@ -479,7 +499,15 @@ export function runTile(tile: Tile, d: DashData): TileResult {
       prev = value(all.filter((r) => inRange(r, { start: range.start - len, end: range.start })));
       vs = range.n === 1 || (range.unit === "d" && range.n === 7) ? `vs last ${range.unit === "d" && range.n === 7 ? "week" : { d: "day", w: "week", m: "month", y: "year" }[range.unit]}` : `vs previous ${range.label.replace(/^last /, "")}`;
     }
-    return { data: { kind: "number", value: value(cur), prev, vs, yLabel, unit }, error, records: cur.length };
+    let sub = t.caption;
+    if (sub === undefined && t.filter && agg === "count") {
+      // "of 101 in AI Engineer": the filtered count out of the whole source
+      const whole = sourceRecords({ source: t.source, view: t.view }, d).recs.length;
+      const k = sourceKind(t.source);
+      const name = k === "path" ? (sourceArg(t.source).replace(/^path$/i, "") || d.notes.filter((n) => n.type === "path").sort((a, b) => b.updatedAt - a.updatedAt)[0]?.title || "") : k === "base" ? sourceArg(t.source) : k === "cards" ? "cards" : k === "sessions" ? "sessions" : "notes";
+      sub = `of ${whole}${name ? ` in ${name}` : ""}`;
+    }
+    return { data: { kind: "number", value: value(cur), prev, vs, yLabel, unit, ...(sub !== undefined ? { sub } : {}), ...(t.better ? { better: t.better } : {}), ...(t.delta === "percent" ? { pct: true } : {}) }, error, records: cur.length };
   }
   if (t.type === "ring") {
     const cur = range ? all.filter((r) => inRange(r, range)) : all;

@@ -1,5 +1,5 @@
 import { SpaceIcon } from "./SpaceIcon";
-import { BookmarkPlus, MessagesSquare, Route, ArrowLeft, CornerDownLeft, FileText, Hash, LayoutDashboard, Search, Sparkles, Waypoints, X, Zap } from "lucide-react";
+import { MessagesSquare, Route, ArrowLeft, CornerDownLeft, FileText, Hash, LayoutDashboard, Search, Sparkles, Waypoints, X, Zap } from "lucide-react";
 import { Fragment, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Note } from "../../shared/types";
 import { createNote, dailyNote } from "../lib/actions";
@@ -13,7 +13,9 @@ import { openAsk } from "../lib/ask";
 import { NewPathDialog } from "./NewPathDialog";
 import { NewVisualChooser } from "./NewVisualChooser";
 import { cx } from "./ui";
-import { glyphOf, openSmart, openSmartEditor, SmartEditorHost, useSmartFolders } from "./SmartFolders";
+import { Glyph } from "./Glyph";
+import { glyphOf, openSmart, openSmartEditor, saveSmartAsBase, SmartEditorHost, useSmartFolders } from "./SmartFolders";
+import { suggestName } from "../lib/smart";
 
 interface Cmd { id: string; label: ReactNode; text: string; hint?: string; icon?: ReactNode; run: () => void | Promise<void> }
 
@@ -152,7 +154,13 @@ export function Palette() {
   // Save the current search (operators + text, plus the space scope when not searching everywhere) as a smart folder.
   const scopeSp = !allScope ? v.spaceMap.get(ui.spaceId) : null;
   const smartQuery = [q.replace(/(^|\s)in:all(?=\s|$)/g, " ").trim(), scopeSp ? `space:${/\s/.test(scopeSp.name) ? `"${scopeSp.name.toLowerCase()}"` : scopeSp.name.toLowerCase()}` : ""].filter(Boolean).join(" ");
-  const saveRow: Cmd[] = !isCmd && q.trim() && q.trim() !== "#" ? [{ id: "save-smart", text: "save smart folder", label: <>Save search as smart folder</>, hint: "also as a base", icon: <BookmarkPlus size={16} />, run: () => openSmartEditor({ query: smartQuery }) }] : [];
+  const canSave = !isCmd && !!q.trim() && q.trim() !== "#";
+  const saveSmart = () => openSmartEditor({ query: smartQuery });
+  // 20b: "Save search as smart folder" (⌘S) + "Save as base" (a base note with the same filters).
+  const saveRow: Cmd[] = canSave ? [
+    { id: "save-smart", text: "save smart folder", label: <>Save search as smart folder</>, hint: `${MOD}S`, icon: <Glyph name="smart-folder" size={16} color="var(--accent)" />, run: saveSmart },
+    { id: "save-base", text: "save as base", label: <>Save as base</>, icon: <Glyph name="base" size={16} />, run: () => void saveSmartAsBase({ name: suggestName(smartQuery), query: smartQuery }) },
+  ] : [];
   const noteCmds: Cmd[] = target && query.text.trim() && !isCmd && !isTag ? [
     { id: "ai-cards", text: "flashcards", label: <>Generate flashcards from “{hl(short, terms)}”</>, hint: `${MOD}⇧G`, icon: <Sparkles size={16} />, run: () => aiCmd(target) },
     { id: "local-graph", text: "graph", label: <><span className="md:hidden">Open local graph</span><span className="hidden md:inline">Open local graph for “{hl(short, terms)}”</span></>, hint: `${MOD}⇧L`, icon: <Waypoints size={16} />, run: () => graphCmd(target) },
@@ -229,6 +237,7 @@ export function Palette() {
                     else if (e.key === "Escape") close();
                     else if (e.key === "Backspace" && parts.length && (e.currentTarget.selectionStart ?? 0) === 0 && (e.currentTarget.selectionEnd ?? 0) === 0) { e.preventDefault(); editPart(parts.length - 1); }
                     else if (mod && e.key === "0") { e.preventDefault(); setWide((w) => !w); }
+                    else if (mod && !e.shiftKey && e.key.toLowerCase() === "s") { e.preventDefault(); if (canSave) { close(); saveSmart(); } }
                     else if (mod && e.shiftKey && e.key.toLowerCase() === "g" && target) { e.preventDefault(); close(); aiCmd(target); }
                     else if (mod && e.shiftKey && e.key.toLowerCase() === "a" && askText) { e.preventDefault(); close(); askCmd(askText); }
                     else if (mod && e.shiftKey && e.key.toLowerCase() === "l" && target) { e.preventDefault(); close(); graphCmd(target); }

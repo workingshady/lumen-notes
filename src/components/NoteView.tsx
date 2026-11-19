@@ -1,4 +1,4 @@
-import { LayoutTemplate, Waypoints, Share2, Link2, ChevronRight, Layers, ArrowLeft, BookOpen, Columns2, Copy, Download, FileCode2, Globe, ImagePlus, Info, ListTree, Map as MapIcon, Maximize2, Mic, MoreHorizontal, EllipsisVertical, Network, PanelRight, PanelLeft, PenLine, Pin, Presentation, Printer, Star, Trash2 } from "lucide-react";
+import { LayoutTemplate, Waypoints, Share2, Link2, Layers, ArrowLeft, BookOpen, Columns2, Copy, Download, FileCode2, Globe, ImagePlus, Info, ListTree, Map as MapIcon, Maximize2, Mic, MoreHorizontal, EllipsisVertical, Network, PanelRight, PanelLeft, PenLine, Pin, Presentation, Printer, Star, Trash2 } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { canvasToSkeleton } from "../lib/whiteboard";
 import { parseCanvas } from "../lib/canvas";
@@ -7,6 +7,7 @@ import { createNote, duplicateNote, restoreNote, snapshot, trashNote, updateNote
 import { exportNoteHtml, exportNoteMd, printNote } from "../lib/io";
 import { back, openNote, setUI, toast, useUI, useVault, type Mode } from "../lib/store";
 import { canGoBack } from "../lib/nav-history";
+import { NavButtons } from "./nav-buttons";
 import { openInsertGallery } from "./InsertGallery";
 import { Glyph } from "./Glyph";
 import { SpaceIcon } from "./SpaceIcon";
@@ -80,11 +81,11 @@ export function NoteView({ note }: { note: Note }) {
       // Focus handles its own Esc (it may ask to save highlights first).
       if (e.key === "Escape" && (mode === "slides" || mode === "review")) setUI({ mode: wide ? "split" : "edit" });
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); void snapshot(note, "Manual save").then(() => toast("Version saved")); }
-      if ((e.ctrlKey || e.metaKey) && e.key === "e") { e.preventDefault(); setUI({ mode: mode === "edit" ? "read" : "edit" }); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "e") { e.preventDefault(); if (isRoadmap) setRmEdit((x) => !x); else setUI({ mode: mode === "edit" ? "read" : "edit" }); }
     };
     addEventListener("keydown", k);
     return () => removeEventListener("keydown", k);
-  }, [mode, note, wide]);
+  }, [mode, note, wide, isRoadmap]);
 
   if (note.deleted) {
     return (
@@ -189,12 +190,12 @@ export function NoteView({ note }: { note: Note }) {
       <button title={`Open ${space?.name ?? "Inbox"}`} className={cx("hover:text-ink hover:underline", twoRows ? "truncate" : "line-clamp-2 max-w-[110px] text-start")}
         onClick={() => (note.spaceId === "inbox" ? setUI({ view: "notes", spaceId: "inbox", folderId: null, filter: null, tag: null, noteId: null }) : setUI({ view: "space", spaceId: note.spaceId, folderId: null, noteId: null }))}><span className="inline-flex items-center gap-1.5 align-middle"><SpaceIcon space={space} size={15} />{space?.name ?? "Inbox"}</span></button>
       {crumbs.map((c) => (
-        <span key={c.id} className="flex min-w-0 items-center gap-1.5"><ChevronRight size={12} className="shrink-0 rtl:rotate-180" />
+        <span key={c.id} className="flex min-w-0 items-center gap-1.5"><span aria-hidden className="shrink-0">›</span>
           <button title={`Open folder ${c.name}`} onClick={() => setUI({ view: "notes", spaceId: note.spaceId, folderId: c.id, filter: null, tag: null, noteId: null, list: true })}
             className={cx("hover:text-ink hover:underline", twoRows ? "truncate" : "line-clamp-2 max-w-[100px] text-start")}>{c.name}</button>
         </span>
       ))}
-      <ChevronRight size={12} className="shrink-0 rtl:rotate-180" /><span dir="auto" className={cx("font-medium text-ink", twoRows ? "truncate" : "line-clamp-2 max-w-[180px]")}>{note.title}</span>
+      <span aria-hidden className="shrink-0">›</span><span dir="auto" className={cx("font-medium text-ink", twoRows ? "truncate" : "line-clamp-2 max-w-[180px]")}>{note.title}</span>
     </div>
   );
   const switcher = (list: typeof modes) => (
@@ -227,10 +228,11 @@ export function NoteView({ note }: { note: Note }) {
   return (
     <div className="flex h-full min-h-0">
       <div className="flex min-w-0 flex-1 flex-col">
-        {wide ? (
+        {isPath && !rmEdit ? null : wide ? (
           twoRows ? (
             <header className="bg-bg text-[13px]">
               <div className="flex h-11 items-center gap-2.5 pe-3 ps-5">
+                <NavButtons />
                 {crumbsEl}
                 <span className="flex-1" />
                 <HeaderSync />
@@ -253,6 +255,7 @@ export function NoteView({ note }: { note: Note }) {
             </header>
           ) : (
             <header className="flex h-12 shrink-0 items-center gap-2.5 border-b border-line bg-bg pe-3 ps-5 text-[13px]">
+              <NavButtons />
               {crumbsEl}
               <span className="flex-1" />
               {markdownNote && switcher(modes)}
@@ -271,8 +274,8 @@ export function NoteView({ note }: { note: Note }) {
           <header className="safe-t flex h-14 shrink-0 items-center gap-0.5 border-b border-line bg-bg px-1">
             <button aria-label="Back" className="flex size-12 items-center justify-center" onClick={() => (canGoBack() ? history.back() : back())}><ArrowLeft size={20} className="rtl:rotate-180" /></button>
             <div className="flex min-w-0 flex-1 flex-col">
+              {saving ? <PhoneSyncLine saving /> : <span dir="auto" className="truncate text-[11.5px] leading-4 text-muted">{[space?.name ?? "Inbox", ...crumbs.map((c) => c.name)].join(" › ")}</span>}
               <span dir="auto" className="truncate text-[14px] font-semibold leading-5" style={{ textAlign: rtl ? "right" : "left" }}>{note.title}</span>
-              <PhoneSyncLine saving={saving} />
             </div>
             {markdownNote && effMode === "edit" ? (
               <div className="me-1 flex rounded-[10px] border border-line bg-surface p-[3px]">

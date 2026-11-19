@@ -29,6 +29,7 @@ import { AccountSwitcher } from "../components/AccountSwitcher";
 import { ReadingSection } from "./settings-reading";
 import { ReviewSettings } from "./settings-review";
 import { StudyPlanSettings } from "./settings-plan";
+import { DevicesPanel } from "./settings-devices";
 
 type SecId = "appearance" | "branding" | "reading" | "plan" | "diagrams" | "sync" | "sharing" | "blog" | "storage" | "ai" | "developer" | "about";
 // Round-3 settings nav (Lumen 09 / 11): Appearance · Branding · Sync · Sharing · Blog · Storage · AI · Developer · About.
@@ -435,6 +436,7 @@ function SyncSection() {
       ) : (
         <div className="rounded-[12px] border border-line bg-surface p-4 text-[13px] text-muted">Sync is locked on this device for <b className="text-ink">{accountName(getAccount())}</b>. Switch to a saved account below, or sign in again (“Unlock or add an account”).</div>
       )}
+      <DevicesPanel />
       <div className="flex flex-col gap-2">
         <div className="text-[12px] font-semibold uppercase tracking-[.06em] text-muted">Accounts on this device</div>
         <div className="text-[12.5px] text-muted">Each passcode opens its own account with its own notes. Sign in once and switch here (or from the space menu) without typing the passcode again. Only the sign-in token is kept on this device, never the passcode.</div>

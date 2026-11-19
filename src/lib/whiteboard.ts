@@ -56,7 +56,7 @@ export function canvasToSkeleton(c: JsonCanvas): Skeleton[] {
   const nodes = c.nodes ?? [];
   for (const n of nodes) {
     if (n.type === "group") continue;
-    const label = n.type === "text" ? n.text.replace(/^#+\s*/gm, "").slice(0, 300) : n.type === "file" ? `📄 ${n.file}` : `🔗 ${n.url}`;
+    const label = n.type === "text" ? n.text.replace(/^#+\s*/gm, "").slice(0, 300) : n.type === "file" ? `Note: ${n.file.replace(/\.md$/i, "")}` : `Link: ${n.url}`;
     const col = colorOf(n.color);
     out.push({ type: "rectangle", id: n.id, x: n.x, y: n.y, width: n.width, height: n.height, roundness: { type: 3 }, ...(col ? { strokeColor: col, backgroundColor: col + "33", fillStyle: "solid" } : {}), label: { text: label, fontSize: 16 } });
   }

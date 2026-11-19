@@ -223,6 +223,7 @@ export function FolderSheet({ open, onClose }: { open: boolean; onClose: () => v
           <button onClick={async () => { const f = await createFolder(spaceId, null); setMenuF(f); setRename(f.name); }} className="flex h-9 items-center gap-1.5 rounded-[10px] border border-line px-3 text-[13px]"><FolderPlus size={15} />{tr("New folder")}</button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-2">
+          <PhoneSmartRows onPick={onClose} />
           <button onClick={() => pick(null)} className={cx("flex h-12 w-full items-center gap-2.5 rounded-[10px] pe-3 ps-3", !ui.folderId && "bg-surface-2")}>
             <span className="w-3.5" /><span className="size-2.5 rounded-[3px] bg-muted" /><span className={cx("flex-1 text-start", !ui.folderId && "font-semibold")}>{tr("All notes")}</span><span className="text-[13px] text-muted">{total}</span>{!ui.folderId && <Check size={18} className="text-accent" />}
           </button>
@@ -244,7 +245,6 @@ export function FolderSheet({ open, onClose }: { open: boolean; onClose: () => v
               </div>
             );
           })}
-          <PhoneSmartRows onPick={onClose} />
         </div>
         <div className="flex gap-4 border-t border-line px-5 py-3 text-[13px] text-muted">
           <button className="flex items-center gap-1.5" onClick={() => { go("notes", { spaceId: "inbox", folderId: null, tag: null, filter: null }); onClose(); }}><Inbox size={15} />Inbox {inbox}</button>

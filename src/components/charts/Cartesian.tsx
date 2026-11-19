@@ -3,7 +3,7 @@
 // a crosshair column per category that is hoverable and keyboard focusable (arrows move), exact values in a tooltip.
 import { useMemo, useRef, useState } from "react";
 import { niceTicks, type Dataset } from "../../lib/dashboard";
-import { ChartEmpty, fmt, Legend, rovingKeys, short, textW, Tooltip, useSize, type Tip } from "./common";
+import { ChartEmpty, fmt, rovingKeys, textW, Tooltip, useSize, type Tip } from "./common";
 
 type SeriesData = Extract<Dataset, { kind: "series" }>;
 export type CartesianType = "bar" | "stackedBar" | "line" | "area";
@@ -36,15 +36,17 @@ export function CartesianChart({ data, type, label }: { data: SeriesData; type: 
   const empty = !n || data.total === 0 && !series.some((s) => s.values.some((v) => v !== 0));
   const ticks = niceTicks(max || 1, H < 150 ? 2 : 4, series.every((s) => s.values.every((v) => Number.isInteger(v))));
   const top = ticks[ticks.length - 1] || 1;
-  const directLabels = isLine && series.length > 1 && series.length <= 4 && W > 360;
-  const m = { l: Math.max(...ticks.map((t) => textW(short(t)))) + 10, r: directLabels ? Math.min(96, Math.max(...series.map((s) => textW(s.label))) + 14) : 10, t: 8, b: 20 };
+  // Design (Lumen 18 · chart tiles): no y axis; bars sit on one baseline with 6px gaps and 3px top radius; lines get
+  // three quiet gridlines, the first series filled (area), later series dashed. Exact values: tooltip + data table.
+  const m = { l: 0, r: 0, t: 6, b: 18 };
   const pw = Math.max(10, W - m.l - m.r), ph = Math.max(10, H - m.t - m.b);
-  const band = pw / Math.max(1, n);
+  const band = isLine ? pw / Math.max(1, n - 1) : (pw + 6) / Math.max(1, n);
   const yOf = (v: number) => m.t + ph - (v / top) * ph;
-  const cx = (i: number) => m.l + band * i + band / 2;
+  const cx = (i: number) => (isLine ? m.l + (n === 1 ? pw / 2 : band * i) : m.l + band * i + (band - 6) / 2);
+  const hitX = (i: number) => (isLine ? cx(i) - band / 2 : m.l + band * i);
   // x labels: thin so they never collide
   const lw = Math.max(...cats.map((c) => textW(c.label)), 10) + 8;
-  const stride = Math.max(1, Math.ceil(lw / band));
+  const stride = Math.max(1, Math.ceil(lw / Math.max(band, 1)));
   const tipFor = (i: number): Tip => {
     const rows: Tip["rows"] = series.map((s) => ({ color: s.color, label: s.label, value: fmt(s.values[i] ?? 0, data.unit) }));
     if (stacked && series.length > 1) rows.push({ label: "Total", value: fmt(series.reduce((a, s) => a + (s.values[i] ?? 0), 0), data.unit) });
@@ -56,73 +58,69 @@ export function CartesianChart({ data, type, label }: { data: SeriesData; type: 
   let marks: React.ReactNode = null;
   if (W > 0 && !empty) {
     if (isLine) {
-      marks = series.map((s) => {
+      marks = series.map((s, si) => {
         const pts = s.values.map((v, i) => [cx(i), yOf(v)] as const);
         const d = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join("");
         return (
           <g key={s.key}>
-            {type === "area" && <path d={`${d}L${pts[pts.length - 1][0]},${yOf(0)}L${pts[0][0]},${yOf(0)}Z`} fill={s.color} fillOpacity={series.length > 1 ? 0.12 : 0.18} stroke="none" />}
-            <path d={d} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-            {n <= 16 && pts.map(([x, y], i) => <circle key={i} cx={x} cy={y} r={2.5} fill={s.color} />)}
-            {active !== null && <circle cx={pts[active][0]} cy={pts[active][1]} r={4.5} fill={s.color} stroke="var(--surface)" strokeWidth={2} />}
-          </g>
-        );
-      });
-    } else if (stacked) {
-      const bw = Math.max(2, Math.min(band * 0.7, 40));
-      marks = cats.map((_, i) => {
-        let acc = 0;
-        const segs = series.map((s) => ({ s, v: Math.max(0, s.values[i] ?? 0) })).filter((x) => x.v > 0);
-        return (
-          <g key={i} opacity={active !== null && active !== i ? 0.55 : 1}>
-            {segs.map(({ s, v }, j) => {
-              const y0 = yOf(acc), y1 = yOf(acc + v);
-              acc += v;
-              const gap = j > 0 ? 2 : 0; // 2px surface gap between stacked fills
-              const h = Math.max(0, y0 - y1 - gap);
-              return j === segs.length - 1
-                ? <path key={s.key} d={barPath(cx(i) - bw / 2, y1, bw, h)} fill={s.color} />
-                : <rect key={s.key} x={cx(i) - bw / 2} y={y1} width={bw} height={h} fill={s.color} />;
-            })}
+            {type === "area" && si === 0 && <path d={`${d}L${pts[pts.length - 1][0]},${yOf(0)}L${pts[0][0]},${yOf(0)}Z`} fill={`color-mix(in srgb, ${s.color} 18%, transparent)`} stroke="none" />}
+            <path d={d} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray={si > 0 ? "5 4" : undefined} />
+            {active !== null && <circle cx={pts[active][0]} cy={pts[active][1]} r={4} fill={s.color} stroke="var(--surface)" strokeWidth={2} />}
           </g>
         );
       });
     } else {
+      const bw = Math.max(2, band - 6);
       const k = series.length;
-      const gw = Math.min(band * 0.75, 44 * k);
-      const bw = Math.max(2, (gw - 2 * (k - 1)) / k);
-      marks = cats.map((_, i) => (
-        <g key={i} opacity={active !== null && active !== i ? 0.55 : 1}>
-          {series.map((s, j) => { const v = Math.max(0, s.values[i] ?? 0); const y = yOf(v); return <path key={s.key} d={barPath(cx(i) - gw / 2 + j * (bw + 2), y, bw, yOf(0) - y)} fill={s.color} />; })}
-        </g>
-      ));
+      marks = cats.map((_, i) => {
+        let acc = 0;
+        if (stacked || k === 1) {
+          const segs = series.map((s) => ({ s, v: Math.max(0, s.values[i] ?? 0) })).filter((x) => x.v > 0);
+          return (
+            <g key={i} opacity={active !== null && active !== i ? 0.55 : 1}>
+              {segs.map(({ s, v }, j) => {
+                const y0 = yOf(acc), y1 = yOf(acc + v);
+                acc += v;
+                const h = Math.max(0, y0 - y1);
+                const x = m.l + band * i;
+                return j === segs.length - 1 ? <path key={s.key} d={barPath(x, y1, bw, h, 3)} fill={s.color} /> : <rect key={s.key} x={x} y={y1} width={bw} height={h} fill={s.color} />;
+              })}
+            </g>
+          );
+        }
+        const sw = Math.max(2, (bw - 2 * (k - 1)) / k);
+        return (
+          <g key={i} opacity={active !== null && active !== i ? 0.55 : 1}>
+            {series.map((s, j) => { const v = Math.max(0, s.values[i] ?? 0); const y = yOf(v); return <path key={s.key} d={barPath(m.l + band * i + j * (sw + 2), y, sw, yOf(0) - y, 3)} fill={s.color} />; })}
+          </g>
+        );
+      });
     }
   }
-  // direct labels at the line ends, nudged apart
-  let ends: { y: number; label: string; color: string }[] = [];
-  if (directLabels && W > 0 && !empty) {
-    ends = series.map((s) => ({ y: yOf(s.values[n - 1] ?? 0), label: s.label, color: s.color })).sort((a, b) => a.y - b.y);
-    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 12) ends[i].y = ends[i - 1].y + 12;
-  }
+  const legend = series.length > 1 && (
+    <div className="chart-legend" role="list">
+      {series.map((s, i) => (
+        <span key={s.key} role="listitem" className="inline-flex min-w-0 items-center gap-[5px]">
+          <span style={{ width: 10, height: isLine ? 2 : 8, borderRadius: isLine ? 0 : 2, background: isLine && i > 0 ? `repeating-linear-gradient(90deg, ${s.color} 0 4px, transparent 4px 6px)` : s.color, flexShrink: 0 }} />
+          <span dir="auto" className="truncate">{s.label}</span>
+        </span>
+      ))}
+    </div>
+  );
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      {!directLabels && <Legend items={series.map((s) => ({ label: s.label, color: s.color }))} />}
+    <div className="flex h-full min-h-0 flex-col gap-1.5">
       <div ref={box.ref} className="relative min-h-0 flex-1" dir="ltr" onMouseLeave={() => setActive(null)}>
         {empty ? <ChartEmpty /> : W > 0 && (
           <svg width={W} height={H} role="group" aria-label={label} className="block overflow-visible">
-            {ticks.map((t) => (
-              <g key={t}>
-                <line x1={m.l} x2={m.l + pw} y1={yOf(t)} y2={yOf(t)} stroke="var(--border)" strokeOpacity={t === 0 ? 1 : 0.6} />
-                <text x={m.l - 6} y={yOf(t)} dy="0.32em" textAnchor="end" className="chart-axis">{short(t)}</text>
-              </g>
-            ))}
-            {cats.map((c, i) => ((n - 1 - i) % stride === 0 ? <text key={c.key} x={cx(i)} y={m.t + ph + 14} textAnchor="middle" className="chart-axis">{c.label}</text> : null))}
+            {isLine
+              ? [0.25, 0.57, 0.9].map((f) => <line key={f} x1={m.l} x2={m.l + pw} y1={m.t + ph * f} y2={m.t + ph * f} stroke="var(--border)" />)
+              : <line x1={m.l} x2={m.l + pw} y1={yOf(0) + 0.5} y2={yOf(0) + 0.5} stroke="var(--border)" />}
+            {cats.map((c, i) => ((n - 1 - i) % stride === 0 ? <text key={c.key} x={isLine ? Math.max(m.l + 12, Math.min(m.l + pw - 12, cx(i))) : cx(i)} y={m.t + ph + 14} textAnchor="middle" className="chart-axis">{c.label}</text> : null))}
             {active !== null && isLine && <line x1={cx(active)} x2={cx(active)} y1={m.t} y2={m.t + ph} stroke="var(--muted)" strokeOpacity={0.5} strokeDasharray="3 3" />}
             {marks}
-            {ends.map((e) => <text key={e.label} x={m.l + pw + 6} y={e.y} dy="0.32em" className="chart-direct">{e.label.length > 14 ? e.label.slice(0, 13) + "…" : e.label}</text>)}
             {cats.map((c, i) => (
-              <rect key={c.key} ref={(el) => { hits.current[i] = el; }} x={m.l + band * i} y={m.t} width={band} height={ph} fill="transparent" className="chart-hit"
+              <rect key={c.key} ref={(el) => { hits.current[i] = el; }} x={hitX(i)} y={m.t} width={band} height={ph} fill="transparent" className="chart-hit"
                 tabIndex={i === focusIdx ? 0 : -1} role="img"
                 aria-label={`${c.long}: ${series.map((s) => `${s.label} ${fmt(s.values[i] ?? 0, data.unit)}`).join(", ")}`}
                 onMouseEnter={() => setActive(i)} onFocus={() => { setActive(i); setFocusIdx(i); }} onBlur={() => setActive(null)}
@@ -132,6 +130,7 @@ export function CartesianChart({ data, type, label }: { data: SeriesData; type: 
         )}
         <Tooltip tip={active !== null && !empty ? tipFor(active) : null} w={W} />
       </div>
+      {legend}
     </div>
   );
 }

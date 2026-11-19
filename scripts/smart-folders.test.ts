@@ -45,6 +45,16 @@ ok(titles("", { filters: ['status == "mastered"'] }) === "Tokenizers", "Bases fi
 ok(titles("type:lesson", { filters: ['status == "mastered"', "file.hasTag(\"cv\")"], match: "or" }) === "Old lesson|Tokenizers", "filter rows with or");
 ok(parseSmartQuery('due:week tag:x hello').due[0] === "week" && parseSmartQuery("due:week tag:x hello").base.text === "hello", "parseSmartQuery splits");
 ok(suggestName("tag:#llm status:learning") === "#llm · learning", "suggestName: " + suggestName("tag:#llm status:learning"));
+// round 4 operators: due:this-week, negation, course:, "exact words", has:pdf
+ok(titles("type:lesson due:this-week -status:done") === "Attention", "due:this-week + -status:done");
+ok(titles("type:lesson -status:mastered") === "Attention|Old lesson", "-status:");
+ok(titles("#llm -tag:nlp") === "Attention|الشبكات العصبية" && titles("#llm -#nlp") === "Attention|الشبكات العصبية", "-tag: and -#tag");
+ok(titles("-has:links type:note") === "الشبكات العصبية", "-has:links: " + titles("-has:links type:note"));
+ok(titles('"queries and keys"') === "Attention" && titles('"keys and queries"') === "", "exact phrase");
+ok(titles("has:pdf") === "Notes on paper|Paper.pdf", "has:pdf: " + titles("has:pdf"));
+ok(suggestName("type:lesson due:this-week -status:done") === "Lesson · week · not done", "suggestName negation: " + suggestName("type:lesson due:this-week -status:done"));
+{ const c2 = { ...ctx, props: (n: Note) => (n.title === "Tokenizers" ? { ...propsOf(n), course: "CS231n" } : propsOf(n)) }; ok(smartNotes(notes, { query: "course:cs231n" }, c2).map((n) => n.title).join() === "Tokenizers", "course:"); }
+ok(toBaseNote({ name: "X", query: "-status:done course:CS231n" }).body.includes('status != "done"') && toBaseNote({ name: "X", query: "course:CS231n" }).body.includes("course.contains"), "base export of new operators");
 
 // storage round-trip + ordering
 let list = upsertSmart([], { id: "a", name: "A", query: "tag:x" });
