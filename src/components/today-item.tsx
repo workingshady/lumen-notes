@@ -61,7 +61,8 @@ export function PlanRow({ it, h, compact, current, kind }: { it: PlanItem; h: It
     >
       <Glyph name={d.glyph} size={18} color={d.color} tile={d.color} />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span dir="auto" className={cx("truncate font-semibold", done && "line-through")}>{d.title}</span>
+        {/* <bdi>: an Arabic title keeps its own direction but stays at the row's start, next to the glyph */}
+        <span className={cx("truncate font-semibold", done && "line-through")}><bdi>{d.title}</bdi></span>
         <span dir="auto" className="truncate text-[12px] text-muted">{d.why}</span>
       </div>
       <span className="whitespace-nowrap text-[12px] text-muted tabular-nums">{it.minutes} min</span>

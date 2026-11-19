@@ -12,6 +12,7 @@ import { AskSheet } from "./AskVault";
 import { openAsk } from "../lib/ask";
 import { NewPathDialog } from "./NewPathDialog";
 import { NewVisualChooser } from "./NewVisualChooser";
+import { runNew } from "./NewMenu";
 import { cx } from "./ui";
 import { Glyph } from "./Glyph";
 import { glyphOf, openSmart, openSmartEditor, saveSmartAsBase, SmartEditorHost, useSmartFolders } from "./SmartFolders";
@@ -98,6 +99,11 @@ export function Palette() {
       c("new", "New note", async () => openNote((await createNote({ spaceId, folderId: ui.folderId })).id, "edit"), { hint: `${MOD}Alt N` }),
       c("new-visual", "New visual…", () => setChooser(true), { hint: "canvas · whiteboard · graph", icon: <LayoutDashboard size={16} /> }),
       c("new-path", "New learning path…", () => setPathDlg(true), { hint: "combine several courses into one roadmap", icon: <Route size={16} /> }),
+      c("new-dashboard", "New dashboard", () => runNew("dashboard"), { hint: "charts over sessions, cards and paths", icon: <Glyph name="dashboard" size={16} /> }),
+      c("new-base", "New base", () => runNew("base"), { hint: "table, board, gallery, calendar of notes", icon: <Glyph name="base" size={16} /> }),
+      c("new-pdf", "New PDF note", () => runNew("pdf"), { hint: "pick a PDF to read and highlight", icon: <Glyph name="pdf" size={16} /> }),
+      c("new-smart", "New smart folder", () => openSmartEditor({ query: "" }), { hint: "a saved search with a live count", icon: <Glyph name="smart-folder" size={16} /> }),
+      c("today", "Open Today", () => go("today"), { hint: "today's study plan", icon: <Glyph name="date" size={16} /> }),
       c("paths", "Go to Learning paths", () => go("notes", { spaceId: "all", folderId: null, tag: null, filter: "paths" }), { icon: <Route size={16} /> }),
       c("new-lesson", "New lesson", async () => openNote((await createNote({ template: "lesson", spaceId })).id, "edit")),
       c("new-canvas", "New canvas", async () => openNote((await createNote({ template: "canvas", spaceId })).id)),

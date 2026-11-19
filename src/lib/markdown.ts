@@ -140,12 +140,12 @@ function layoutBlocks(md: MD) {
       }
       case "tabs": return `<div ${cls("md-tabs")}${line}>`;
       case "wide": case "full": return `<div ${cls("md-" + s.name)}${line}>`;
-      case "aside": return `<aside ${cls("md-aside")}${line}>`;
+      case "aside": return `<aside ${cls("md-aside")}${line}><div class="md-aside-box">`;
       case "center": return `<div ${cls("md-center")}${line}>`;
       case "expand": return `<details ${cls("md-expand")}${line}${s.attrs.open != null || s.classes.includes("open") ? " open" : ""}><summary dir="auto">${md.renderInline(s.title || "Details")}</summary><div class="md-expand-body">`;
       case "panel": {
         const fold = s.attrs.collapse === "true" ? "-" : s.attrs.collapse === "false" ? "+" : "";
-        return calloutOpen(md, s.attrs.callout ?? "note", s.title || s.attrs.title || "", fold, line, "auto");
+        return calloutOpen(md, s.attrs.callout ?? "note", s.title || s.attrs.title || "", fold, line, strongDir(s.title || s.attrs.title || ""));
       }
       case "box": {
         const v = (k: string, d: number) => Math.max(-100, Math.min(200, num(s.attrs[k], d)));
@@ -159,7 +159,7 @@ function layoutBlocks(md: MD) {
     const s = tokens[idx].meta as BlockSpec;
     if (s.name === "expand") return "</div></details>";
     if (s.name === "panel") return s.attrs.collapse === "true" || s.attrs.collapse === "false" ? "</div></details>" : "</div></div>";
-    if (s.name === "aside") return "</aside>";
+    if (s.name === "aside") return "</div></aside>";
     return "</div>";
   };
 
@@ -171,16 +171,24 @@ function layoutBlocks(md: MD) {
       if (toks[i].type !== "table_close") continue;
       const p = toks[i + 1], inl = toks[i + 2];
       let open = i; while (open >= 0 && toks[open].type !== "table_open") open--;
-      // Written right under the table (no blank line), GFM reads `{.wide}` as a last row: take it back out.
-      let tr = i; while (tr > open && toks[tr].type !== "tr_open") tr--;
-      const cells = toks.slice(tr, i).filter((t) => t.type === "inline");
-      if (tr > open && cells.length && /^\{(\s*\.[\w-]+)+\s*\}$/.test(cells[0].content.trim()) && cells.slice(1).every((c) => !c.content.trim())) {
-        toks[open].meta = { classes: [...cells[0].content.matchAll(/\.([\w-]+)/g)].map((x) => x[1]) };
+      // Written right under the table (no blank line), GFM reads `{.wide}` and `Table: caption` as last rows (in
+      // either order): take them back out.
+      let pulled = false;
+      for (;;) {
+        let tr = i; while (tr > open && toks[tr].type !== "tr_open") tr--;
+        const cells = toks.slice(tr, i).filter((t) => t.type === "inline");
+        const first = cells[0]?.content.trim() ?? "";
+        if (!(tr > open && cells.length && cells.slice(1).every((c) => !c.content.trim()))) break;
+        const capRow = /^Table:\s+(\S.*)$/.exec(first);
+        if (/^\{(\s*\.[\w-]+)+\s*\}$/.test(first)) toks[open].meta = { ...(toks[open].meta ?? {}), classes: [...first.matchAll(/\.([\w-]+)/g)].map((x) => x[1]) };
+        else if (capRow) toks[open].meta = { ...(toks[open].meta ?? {}), caption: capRow[1] };
+        else break;
         let end = tr; while (toks[end].type !== "tr_close") end++;
         toks.splice(tr, end - tr + 1);
-        i = tr;
-        continue;
+        i = tr; while (toks[i].type !== "table_close") i++;
+        pulled = true;
       }
+      if (pulled) { i--; continue; }
       if (p?.type === "paragraph_open" && inl?.type === "inline" && /^\{(\s*\.[\w-]+)+\s*\}$/.test(inl.content.trim())) {
         toks[open].meta = { ...(toks[open].meta ?? {}), classes: [...inl.content.matchAll(/\.([\w-]+)/g)].map((x) => x[1]) };
         toks.splice(i + 1, 3);
@@ -201,6 +209,9 @@ function layoutBlocks(md: MD) {
     const meta = t.meta as { classes?: string[]; caption?: string } | null;
     const cls = (meta?.classes ?? []).map((c) => " tbl-" + esc(c)).join("");
     const cap = meta?.caption ? ` data-caption="${esc(meta.caption)}"` : "";
+    // An Arabic header row makes the whole table right-to-left (columns start on the right).
+    let head = ""; for (let j = idx + 1; j < tokens.length && tokens[j].type !== "thead_close"; j++) if (tokens[j].type === "inline") head += tokens[j].content + " ";
+    if (strongDir(head) === "rtl") t.attrSet("dir", "rtl");
     return `<div class="tbl${cls}"${cap}${line != null ? ` data-line="${line}"` : ""}><div class="tbl-scroll">` + self.renderToken(tokens, idx, opts);
   };
   md.renderer.rules.table_close = (tokens, idx, opts, _env, self) => self.renderToken(tokens, idx, opts) + "</div></div>";
@@ -289,7 +300,8 @@ function build() {
       const [target, alias] = inner.replace(/\\\|/g, "|").split("|");
       const [title, heading] = target.split("#");
       const tok = state.push("wikilink", "", 0);
-      tok.meta = { title: title.trim(), heading: heading?.trim() ?? "", label: (alias ?? target).trim(), embed };
+      // No alias: `[[Note#Heading]]` / `[[Note#^id]]` read as "Note › Heading" (like the include chip), not raw `#`.
+      tok.meta = { title: title.trim(), heading: heading?.trim() ?? "", label: alias !== undefined ? alias.trim() : heading?.trim() && title.trim() ? `${title.trim()} › ${heading.trim()}` : target.trim(), embed };
     }
     state.pos = end + 2;
     return true;
@@ -848,7 +860,9 @@ function hydrateToc(root: HTMLElement) {
   const tocs = root.querySelectorAll<HTMLElement>(".md-toc");
   if (!tocs.length) return;
   const hs = [...root.querySelectorAll<HTMLElement>("h2, h3")].filter((h) => !h.closest(".transclusion, .md-toc, .md-tabs"));
+  const rtlToc = strongDir(hs.map((h) => h.textContent ?? "").join(" ")) === "rtl"; // Arabic headings: the box reads right-to-left
   for (const toc of tocs) {
+    if (rtlToc) toc.dir = "rtl";
     toc.innerHTML = `<div class="md-toc-t">Contents</div>` + (hs.length ? `<ol>${hs.map((h, i) => `<li class="toc-${h.tagName.toLowerCase()}"><a href="#" data-i="${i}" dir="auto">${esc(h.textContent ?? "")}</a></li>`).join("")}</ol>` : `<div class="muted">No headings yet.</div>`);
     toc.onclick = (e) => { const a = (e.target as HTMLElement).closest<HTMLAnchorElement>("a[data-i]"); if (!a) return; e.preventDefault(); e.stopPropagation(); hs[Number(a.dataset.i)]?.scrollIntoView({ behavior: "smooth", block: "start" }); };
   }

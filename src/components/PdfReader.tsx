@@ -54,7 +54,9 @@ export function PdfReader({ note }: { note: Note }) {
     setLoad({ kind: "loading", loaded: 0, total: 0 });
     openPdf(meta.file, {
       onProgress: (loaded, total) => { const t = Date.now(); if (!dead && (t - last > 120 || loaded === total)) { last = t; setLoad({ kind: "loading", loaded, total }); } },
-      askPassword: (retry) => new Promise((res) => { pwResolve.current = res; if (!dead) setLoad({ kind: "password", retry }); }),
+      // A superseded open (StrictMode's double effect, a reload) must not grab the prompt: its resolver would get
+      // the password and the live open would wait forever on "Opening…".
+      askPassword: (retry) => new Promise((res) => { if (dead) { res(null); return; } pwResolve.current = res; setLoad({ kind: "password", retry }); }),
     }).then((x) => {
       if (dead) { void x.destroy(); return; }
       d = x; setDoc(x); setLoad({ kind: "ready" });

@@ -5,7 +5,7 @@
  * links ([[wiki]], [md](url), embeds), bare URLs, HTML tags, #tags and the note's own H1 are masked out first.
  * Matching is case-insensitive and Arabic-normalized (same rules as search.ts `normalize`), and word-boundary aware:
  * the letters around a match must not be letters/digits. For Arabic terms a leading proclitic (و ف ب ل ك ال وال بال
- * لل فال كال) is allowed and becomes part of the linked text: "والشبكة" → `[[شبكة|والشبكة]]`.
+ * لل فال كال, and stacked وبال فبال وكال ولل وب ول …) is allowed and becomes part of the linked text: "والشبكة" → `[[شبكة|والشبكة]]`.
  *
  * Ignored mentions live in the target note's front-matter: `mentions-ignore: [Source title, Other title]`.
  */
@@ -68,7 +68,8 @@ export function maskBody(body: string): string {
 
 const WORD = /[\p{L}\p{N}_]/u;
 const ARABIC = /[؀-ۿ]/;
-const PROCLITICS = ["وال", "فال", "بال", "كال", "لل", "ال", "و", "ف", "ب", "ل", "ك"];
+// Longest first. A conjunction (و ف) can stack on a preposition (ب ك ل) and the article: "وبالانتباه" = و + ب + ال.
+const PROCLITICS = ["وبال", "فبال", "وكال", "فكال", "ولل", "فلل", "وال", "فال", "بال", "كال", "لل", "ال", "وب", "فب", "وك", "فك", "ول", "فل", "و", "ف", "ب", "ل", "ك"];
 
 /** Find all unlinked mentions of `terms` (title + aliases) in `body`. Longest term wins where matches overlap. */
 export function findMentions(body: string, terms: string[]): Mention[] {

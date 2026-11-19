@@ -33,6 +33,7 @@ Research basis: Obsidian (plain Markdown files, `[[links]]`, backlinks, graph vi
 | Query blocks (Dataview-lite): ```` ```query tag:#ml type:lesson ```` ```` renders a live list/table | ✅ | |
 | Word count, reading time, outline (table of contents); in Read the title opens the page (R4-16J…L, P4) and the "Type · status · N min read · Updated" row closes the note | ✅ | |
 | New visual workspace chooser (R4-17 A5): desktop dialog with previews; phone "New…" sheet opened by the tab bar + on the Canvases & whiteboards list (+ on Learning paths opens New learning path) | ✅ | |
+| **"New…" entry points** (`components/NewMenu.tsx`): the note list **+** (desktop popover in the round-4 menu style, glyph per row) and the phone tab bar **+** (bottom sheet "New…", 56 px rows with glyph tiles) offer New note · New dashboard · New base · New PDF note (file picker → `addPdfFile`) · New canvas or whiteboard (R4-17 A5 chooser) · New learning path · From template; on the Canvases / Learning paths lists the + still opens their own dialog. Ctrl/⌘K commands "New dashboard", "New base", "New PDF note", "New smart folder", "Open Today" | ✅ | |
 
 ## 2. View modes (progressive disclosure)
 | Mode | Status | What it shows |

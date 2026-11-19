@@ -1,6 +1,6 @@
 // Dev simulator: shared builders for scenario seeds. Every record is written with `dirty: 0`
 // (demo data never syncs) straight into the demo database by writeVault().
-import type { AttachmentMeta, Card, Folder, Note, NoteType, Session, Space, SpaceKind, Status, Version } from "../../../shared/types";
+import type { AttachmentMeta, Card, Folder, Note, NoteType, ReviewLog, Session, Space, SpaceKind, Status, Version } from "../../../shared/types";
 import type { AttachmentBlob, LumenDB } from "../db";
 import { flashcards, inlineTags, splitFrontMatter } from "../parse";
 import { seeding } from "./faults";
@@ -54,6 +54,8 @@ export type Clock = ReturnType<typeof clock>;
 export interface Vault {
   spaces: Space[]; folders: Folder[]; notes: Note[]; versions: Version[]; cards: Card[]; sessions: Session[];
   attachments: AttachmentMeta[]; blobs: AttachmentBlob[];
+  /** FSRS review log rows (optional; the Dexie `reviews` table). */
+  reviews?: ReviewLog[];
   /** Extra meta rows (e.g. sync cursor) written alongside. */
   meta?: { k: string; v: unknown }[];
 }
@@ -204,6 +206,7 @@ export async function writeVault(db: LumenDB, v: Vault) {
     await db.sessions.bulkPut(v.sessions);
     await db.attachments.bulkPut(v.attachments);
     await db.blobs.bulkPut(v.blobs);
+    if (v.reviews?.length) await db.reviews.bulkPut(v.reviews);
     if (v.meta?.length) await db.meta.bulkPut(v.meta);
   }); }
 }

@@ -28,6 +28,8 @@ export function DonutChart({ data, colors, label }: { data: SeriesData; colors: 
   const paths = slices.map((s) => { const a0 = a, a1 = a + (s.v / total) * Math.PI * 2; a = a1; return { ...s, d: arc(cxy, cxy, r0, r1, a0, Math.max(a0 + 0.001, a1)) }; });
   const pct = (v: number) => `${Math.round((v / total) * 100)}%`;
   const act = active !== null ? paths[active] : null;
+  // 10 h and more of study time reads in whole hours ("41 h", legend "14 h": design 18K); "83h 30m" overflowed the ring.
+  const val = (v: number) => (data.unit === "min" && total >= 600 ? `${Math.round(v / 60)} h` : fmt(v, data.unit));
   return (
     <div ref={box.ref} className={side ? "relative flex h-full min-h-0 items-center gap-4" : "relative flex h-full min-h-0 flex-col items-center gap-2"} onMouseLeave={() => setActive(null)}>
       <div className="relative shrink-0" style={{ width: size, height: size }}>
@@ -40,7 +42,7 @@ export function DonutChart({ data, colors, label }: { data: SeriesData; colors: 
           ))}
         </svg>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <b className="text-[17px] font-bold leading-[21px] tabular-nums">{fmt(act ? act.v : total, data.unit)}</b>
+          <b className="text-[17px] font-bold leading-[21px] tabular-nums">{val(act ? act.v : total)}</b>
           <span className="max-w-[64px] truncate text-[10.5px] text-muted">{act ? pct(act.v) : data.unit === "min" ? "studied" : "total"}</span>
         </div>
       </div>
@@ -49,7 +51,7 @@ export function DonutChart({ data, colors, label }: { data: SeriesData; colors: 
           <li key={p.c.key} className={active === i ? "is-on" : undefined} onMouseEnter={() => setActive(i)}>
             <span className="chart-swatch" style={{ background: p.color }} />
             <span dir="auto" className="min-w-0 truncate text-ink">{legendLabel(p.c.label)}</span>
-            <span className="shrink-0 tabular-nums">{fmt(p.v, data.unit)}</span>
+            <span className="shrink-0 tabular-nums">{val(p.v)}</span>
           </li>
         ))}
       </ul>

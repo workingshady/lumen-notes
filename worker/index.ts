@@ -374,7 +374,7 @@ async function posts(db: D1Database) {
   return results.map((r) => JSON.parse(r.data) as Note).sort((a, b) => (Number(b.props?.date ? Date.parse(b.props.date) : b.createdAt)) - Number(a.props?.date ? Date.parse(a.props.date) : a.createdAt));
 }
 const excerpt = (md: string) =>
-  md.replace(/^---[\s\S]*?---/, "").replace(/^\s*#\s.*$/m, "").replace(/^\s*(---|\*\*\*)\s*$/gm, "").replace(/\[![\w-]+\][+-]?/g, "").replace(/^\s*[-*+]\s+\[[ xX/>?-]\]\s+/gm, "").replace(/\s*\p{Extended_Pictographic}\uFE0F?\s*\d{4}-\d{2}-\d{2}/gu, "").replace(/```[\s\S]*?```/g, "").replace(/\$\$[\s\S]*?\$\$/g, "").replace(/\$[^$\n]+\$/g, "…").replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/[#>*_`\[\]!]|\(.*?\)/g, "").replace(/\s+/g, " ").trim().slice(0, 220);
+  md.replace(/^---[\s\S]*?---/, "").replace(/^\s*#\s.*$/m, "").replace(/^\s*(---|\*\*\*)\s*$/gm, "").replace(/\[![\w-]+\][+-]?/g, "").replace(/^\s*[-*+]\s+\[[ xX/>?-]\]\s+/gm, "").replace(/\s*\p{Extended_Pictographic}\uFE0F?\s*\d{4}-\d{2}-\d{2}/gu, "").replace(/<!--[\s\S]*?-->/g, "").replace(/^\s*:{2,3}.*$/gm, "").replace(/:status\[([^\]]*)\](\{[^}]*\})?/g, "$1").replace(/\s\^[\w-]+$/gm, "").replace(/\s::\s/g, " — ").replace(/```[\s\S]*?```/g, "").replace(/\$\$[\s\S]*?\$\$/g, "").replace(/\$[^$\n]+\$/g, "…").replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/[#>*_`\[\]!]|\(.*?\)/g, "").replace(/\s+/g, " ").trim().slice(0, 220);
 const toPost = (n: Note, full = false): Post => ({
   id: n.id, title: n.title, slug: n.slug || n.id, tags: n.tags, createdAt: n.createdAt, updatedAt: n.updatedAt, props: n.props ?? {},
   excerpt: n.props?.excerpt || excerpt(n.body), words: n.body.split(/\s+/).filter(Boolean).length, ...(full ? { body: n.body } : {}),

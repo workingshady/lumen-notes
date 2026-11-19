@@ -5,7 +5,6 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Note } from "../../shared/types";
 import { Glyph } from "../components/Glyph";
-import { usePathMoments } from "../components/Moments";
 import { createNote, updateNote } from "../lib/actions";
 import { aiRun, getToken } from "../lib/api";
 import {
@@ -40,7 +39,7 @@ export function PathView({ note }: { note: Note }) {
   const courses = useMemo(() => resolveCourses(courseNames, v.notes, v.spaces), [courseNames, v.notes, v.spaces]);
   const path = useMemo(() => buildPath(note.body, courses), [note.body, courses]);
   const prog = pathProgress(path);
-  usePathMoments(note.id, path); // Lumen 21 · moments: unlock + mastered
+  // unlock + mastered moments: useAllPathMoments() in App.tsx (fires from every view, not only here)
   const save = (body: string) => void updateNote(note.id, { body });
   const ov = useOverlaps(path, note.id);
   const [confirmNode, confirm] = usePathConfirm();

@@ -9,6 +9,10 @@ import { db } from "../lib/db";
 import { Glyph } from "../components/Glyph";
 import { setSettings, useSettings } from "../lib/settings";
 import { average, cardStates, estimateWorkload } from "../lib/workload";
+import { flashcards } from "../lib/parse";
+import { newCard } from "../lib/srs";
+import { noteDerived, useVault } from "../lib/store";
+import type { Card } from "../../shared/types";
 
 const MIN = 0.8, MAX = 0.97;
 const STATES = [["new", "New", "var(--info)"], ["learning", "Learning", "var(--warning)"], ["review", "Review", "var(--success)"], ["relearning", "Relearning", "var(--danger)"], ["suspended", "Suspended", "var(--muted)"]] as const;
@@ -20,7 +24,19 @@ export function ReviewSettings() {
   const value = draft ?? ret;
   const shown = useDeferredValue(value);
   const [adv, setAdv] = useState(false);
-  const cards = useLiveQuery(() => db.cards.toArray(), []);
+  const stored = useLiveQuery(() => db.cards.toArray(), []);
+  const v = useVault();
+  // Never-reviewed flashcards have no Card record yet (Review creates it on the first grade): count them as new.
+  const cards = useMemo(() => {
+    if (!stored) return stored;
+    const ids = new Set(stored.map((c) => c.id));
+    const extra: Card[] = [];
+    for (const n of v.notes) {
+      if (n.type === "canvas" || n.deleted) continue;
+      for (const fc of noteDerived("flashcards", n, (x) => flashcards(x.body))) { const id = `${n.id}:${fc.key}`; if (!ids.has(id)) extra.push(newCard(id, n.id)); }
+    }
+    return extra.length ? [...stored, ...extra] : stored;
+  }, [stored, v.notes]);
   const now = useMemo(() => Date.now(), [cards]); // eslint-disable-line react-hooks/exhaustive-deps
   const cmp = shown >= 0.95 ? 0.9 : 0.95;
   const work = useMemo(() => (cards ? estimateWorkload(cards, userParams(s, shown), 30, now) : []), [cards, shown, now, s]);
@@ -31,7 +47,7 @@ export function ReviewSettings() {
   const commit = (v: number) => { setDraft(null); setSettings({ retention: Math.round(v * 100) / 100 }); };
   const total = states ? Object.values(states).reduce((a, b) => a + b, 0) : 0;
   return (
-    <div className="mt-6 flex max-w-[640px] flex-col gap-3 text-[13px]">
+    <div className="mt-6 flex max-w-[620px] flex-col gap-3 text-[13px]">
       <div>
         <div className="text-[17px] font-[650]">Review</div>
         <div className="mt-1 text-muted">Flashcards use FSRS scheduling. Target retention is the chance you still remember a card when it comes due.</div>

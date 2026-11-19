@@ -389,7 +389,9 @@ function useTemplateOffer(note: Note, found: boolean) {
   const [gone, setGone] = useState(() => { try { return localStorage.getItem(key) === "1"; } catch { return false; } });
   // the default "Base (database view)" template, created in the last 10 minutes and never changed from the toolbar
   const fresh = note.body.includes("Notes shown as a database. Change views with the toolbar") && note.body.includes("name: All notes") && !/^filters:/m.test(note.body) && Date.now() - note.createdAt < 10 * 60_000;
-  return { show: !gone && (!found && !note.body.trim() || fresh), dismiss: () => { setGone(true); try { localStorage.setItem(key, "1"); } catch { /* ignore */ } } };
+  // "empty" = nothing but front-matter and the title H1 (what typing `type: base` into a new note leaves)
+  const empty = !splitFrontMatter(note.body).body.replace(/^\s*#\s.*$/m, "").trim();
+  return { show: !gone && (!found && empty || fresh), dismiss: () => { setGone(true); try { localStorage.setItem(key, "1"); } catch { /* ignore */ } } };
 }
 export function TemplatePicker({ note, onCancel }: { note: Note; onCancel: () => void }) {
   const [sel, setSel] = useState<BaseTemplate>(BASE_TEMPLATES[0]);
@@ -664,8 +666,15 @@ function BoardView({ groups, copies, cols, groupBy, ctx, spaces, colorOf, wide, 
 }
 
 // ------------------------------------------------------------------ gallery (R4-18D) + list (R4-18E)
-const IMG = /!\[[^\]]*\]\((https?:\/\/[^)\s]+|data:image\/[^)\s]+)/;
-const COVER = /^(https?:\/\/\S+\.(png|jpe?g|gif|webp|avif|svg))(\?\S*)?$/i;
+const IMG = /!\[[^\]]*\]\((https?:\/\/[^)\s]+|data:image\/[^)\s]+|att:[\w-]+)/;
+// Uploaded images (`att:<id>`, what paste / drop write) count as covers too, not only web URLs.
+const COVER = /^((https?:\/\/\S+\.(png|jpe?g|gif|webp|avif|svg))(\?\S*)?|att:[\w-]+)$/i;
+/** Gallery cover image; `att:` ids resolve to the stored blob (or the Worker URL). */
+function CoverImg({ src }: { src: string }) {
+  const [url, setUrl] = useState<string | null>(src.startsWith("att:") ? null : src);
+  useEffect(() => { if (src.startsWith("att:")) void import("../lib/attachments").then((m) => m.resolveAtt(src.slice(4))).then(setUrl, () => setUrl(null)); else setUrl(src); }, [src]);
+  return url ? <img src={url} alt="" loading="lazy" className="h-[110px] w-full object-cover" /> : <div className="base-cover" />;
+}
 /** Cover = a cover/image property, else the first image in the note. */
 const coverOf = (r: Row) => noteDerived("baseCover", r.n, (n) => Object.entries(r.props).find(([k, val]) => /^(cover|image|banner|thumbnail)$/i.test(k) && COVER.test(val))?.[1] ?? (isMd(n) ? IMG.exec(n.body.slice(0, 20000))?.[1] ?? "" : ""));
 function GroupHead({ g, by }: { g: RowGroup; by: SortRule }) {
@@ -691,7 +700,7 @@ function GalleryView({ rows, groups, by, cols, ctx, colorOf, wide, more }: { row
               const m = r.n.status ? STATUS_META[r.n.status] : null;
               return (
                 <button key={r.n.id} onClick={() => openNote(r.n.id)} className="base-gcard">
-                  {cover ? <img src={cover} alt="" loading="lazy" className="h-[110px] w-full object-cover" /> : <div className="base-cover"><span>cover</span></div>}
+                  {cover ? <CoverImg src={cover} /> : <div className="base-cover"><span>cover</span></div>}
                   <div className="flex flex-col gap-1.5 px-3 py-2.5">
                     <span dir="auto" className="line-clamp-2 font-semibold">{r.n.title || "Untitled"}</span>
                     <span className="flex min-w-0 items-center gap-1.5 text-[12px]" style={{ color: m?.c ?? "var(--muted)" }}>
@@ -848,7 +857,7 @@ function FilterPanel({ cfg, view, props, notes, ctx, edit }: { cfg: BaseConfig; 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <span className="flex-1 font-semibold">Filter</span>
+        <span className="flex-1 font-semibold max-md:invisible">Filter</span>{/* phones: the sheet already says "Filter" */}
         <span className="flex rounded-[7px] border border-line p-0.5 text-[11.5px]">
           {(["view", "all"] as const).map((s) => <button key={s} onClick={() => setScope(s)} className={cx("rounded-[5px] px-2 leading-5", scope === s ? "bg-bg text-ink" : "text-muted")}>{s === "view" ? "This view" : "All views"}</button>)}
         </span>
@@ -897,7 +906,8 @@ function CondRow({ row, c: c0, lead, props, values, onChange }: { row?: FilterRo
   };
   const status = canon(prop) === "status";
   return (
-    <div className="flex items-center gap-1.5">
+    // phones: the value wraps to its own line when the property + operator leave it too little room
+    <div className="flex flex-wrap items-center gap-1.5">
       {lead}
       {o.op === "hasTag" || o.op === "inFolder" ? <span className={cx(ctl, "flex min-w-[90px] items-center text-muted")}>{o.op === "hasTag" ? "tags" : "folder"}</span>
         : <PropSelect value={prop} props={props} className="w-[110px] shrink-0" onChange={(p) => onChange(r.kind === "any" ? { ...r, prop: p } : { kind: "cond", c: { ...c!, prop: p } })} />}
@@ -905,7 +915,7 @@ function CondRow({ row, c: c0, lead, props, values, onChange }: { row?: FilterRo
         {OPS.filter((x) => x.op !== "any" || row).map((x) => <option key={x.id} value={x.id}>{x.l}</option>)}
       </select>
       {r.kind === "any" ? (
-        <span className={cx(ctl, "flex min-h-[30px] flex-1 flex-wrap items-center gap-1 py-0.5")}>
+        <span className={cx(ctl.replace("h-[30px] ", ""), "flex min-h-[30px] min-w-[140px] flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5 py-1")}>
           {r.values.map((x) => <span key={x} className="inline-flex items-center gap-1">{status && isStatus(x) ? STATUS_META[x].l.toLowerCase() : x}<button aria-label={`Remove ${x}`} className="text-muted hover:text-ink" onClick={() => onChange({ ...r, values: r.values.filter((y) => y !== x) })}>×</button></span>)}
           {status ? (
             <select aria-label="Add value" value="" onChange={(e) => e.target.value && onChange({ ...r, values: [...r.values, e.target.value] })} className="min-w-0 flex-1 bg-transparent text-muted outline-none">
@@ -919,14 +929,14 @@ function CondRow({ row, c: c0, lead, props, values, onChange }: { row?: FilterRo
           <datalist id={listId}>{values(prop).map((x) => <option key={x} value={x} />)}</datalist>
         </span>
       ) : o.noValue ? <span className="flex-1" /> : status && (o.op === "==" || o.op === "!=") ? (
-        <select aria-label="Value" value={String(c!.args[0] ?? "")} onChange={(e) => onChange({ kind: "cond", c: { ...c!, args: [e.target.value] } })} className={cx(ctl, "flex-1 cursor-pointer")}>
+        <select aria-label="Value" value={String(c!.args[0] ?? "")} onChange={(e) => onChange({ kind: "cond", c: { ...c!, args: [e.target.value] } })} className={cx(ctl, "min-w-[96px] flex-1 cursor-pointer")}>
           <option value="">—</option>{STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       ) : (
         <>
           <input aria-label="Value" defaultValue={String(c!.args[0] ?? "")} list={listId} dir="auto" placeholder={isDateProp(prop) ? "2026-11-13 or today()" : "value"} key={String(c!.args[0] ?? "")}
             onBlur={(e) => { const raw = e.target.value.trim(); if (raw === String(c!.args[0] ?? "")) return; onChange({ kind: "cond", c: { ...c!, args: [/^-?\d+(\.\d+)?$/.test(raw) && !isDateProp(prop) ? Number(raw) : raw] } }); }}
-            onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()} className={cx(ctl, "flex-1")} />
+            onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()} className={cx(ctl, "min-w-[96px] flex-1")} />
           <datalist id={listId}>{(o.op === "hasTag" ? values("tags") : values(prop)).map((x) => <option key={x} value={x} />)}</datalist>
         </>
       )}

@@ -116,7 +116,7 @@ function RailHls({ highlights, title, onHl }: { highlights: Highlight[]; title: 
 
 function HlBody({ h, size, lh }: { h: Highlight; size: number; lh: number }) {
   if (h.image && !h.quote) return <AttImg src={h.image} className="max-h-28 w-full rounded-[4px] object-contain" />;
-  return <span dir="auto" className="line-clamp-5 text-ink" style={{ fontFamily: SERIF, fontSize: size, lineHeight: `${lh}px` }}>{h.quote}</span>;
+  return <span dir="auto" className="line-clamp-5 font-normal text-ink" style={{ fontFamily: SERIF, fontSize: size, lineHeight: `${lh}px` }}>{h.quote}</span>;
 }
 
 function DragHl({ h, title, onClick, className, style, children }: { h: Highlight; title: string; onClick: () => void; className: string; style?: React.CSSProperties; children: React.ReactNode }) {

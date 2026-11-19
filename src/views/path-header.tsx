@@ -204,12 +204,12 @@ export function PathHeader({ note, path, stats, open, toggle, ov, ovOpen, setOvO
       <div className="flex items-center gap-3.5">
         <NavButtons />
         <Glyph name="path" size={20} tile="#F2A93B" color="var(--accent)" />
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <div className="flex items-center gap-2"><span className="truncate text-[20px] font-[650] tracking-[-.02em]" dir="auto">{note.title}</span><span className="rounded-[6px] border border-line px-[7px] text-[12px] leading-5 text-muted">Path</span></div>
-          <span className="whitespace-nowrap text-[12px] text-muted">{path.courses.length} {path.courses.length === 1 ? "course" : "courses"} · {stats.total} concepts · {stageCount} {stageCount === 1 ? "stage" : "stages"}</span>
+        <div className="flex min-w-0 max-w-[45%] shrink-0 flex-col gap-0.5">
+          <div className="flex min-w-0 items-center gap-2"><span className="truncate text-[20px] font-[650] tracking-[-.02em]" dir="auto">{note.title}</span><span className="shrink-0 rounded-[6px] border border-line px-[7px] text-[12px] leading-5 text-muted">Path</span></div>
+          <span className="truncate text-[12px] text-muted">{path.courses.length} {path.courses.length === 1 ? "course" : "courses"} · {stats.total} concepts · {stageCount} {stageCount === 1 ? "stage" : "stages"}</span>
         </div>
-        <span className="ms-2"><Ring pct={stats.pct} /></span>
-        <StatsLine s={stats} />
+        <span className="ms-2 shrink-0"><Ring pct={stats.pct} /></span>
+        <span className="min-w-0 overflow-hidden"><StatsLine s={stats} /></span>
         <span className="flex-1" />
         <button onClick={() => setOvOpen(!ovOpen)} aria-expanded={ovOpen} className="flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 font-medium"
           style={{ border: `1px solid ${ovOpen ? "var(--accent)" : "var(--border)"}`, background: ovOpen ? "color-mix(in srgb,var(--accent) 12%,transparent)" : "transparent" }}>

@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import type { Note, Space } from "../../shared/types";
 import { updateNote } from "../lib/actions";
 import { API_BASE, getToken } from "../lib/api";
-import { patch } from "../lib/db";
+import { DEMO, patch } from "../lib/db";
 import { slugify } from "../lib/parse";
 import { getSettings } from "../lib/settings";
 import { setUI, toast } from "../lib/store";
@@ -60,12 +60,13 @@ export function ShareSheet({ target, open, onClose }: { target: ShareTarget; ope
   const title = isNote ? target.note.title : target.space.name;
   const shareId = isNote ? target.note.shareId : target.space.shareId;
   const published = isNote && !!target.note.published;
-  const synced = !!getToken();
+  // Demo mode serves /s/… and /blog from the local demo database (views/settings-public-demo), so links work unsynced.
+  const synced = !!getToken() || DEMO;
   const [copied, setCopied] = useState(false);
   useEffect(() => setCopied(false), [shareId]);
   // OG image (Lumen 21): render the 1200×630 card from local data and upload its PNG for link previews.
   useEffect(() => {
-    if (!open || !synced) return;
+    if (!open || !getToken()) return;
     const t = setTimeout(() => void localOgCard(target).then((card) => Promise.all([
       shareId ? publishOgImage("s", shareId, card) : null,
       isNote && target.note.published ? publishOgImage("post", target.note.slug || target.note.id, card) : null,

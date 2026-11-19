@@ -268,7 +268,7 @@ function AddTile({ initial, data, phone, onSave, onCancel }: { initial: Tile | n
                 ] as const).map(([k, g, n, d]) => (
                   <div key={k} className={choice(kind === k)} role="button" tabIndex={0} aria-pressed={kind === k}
                     onClick={() => kind !== k && pickSource(k === "path" ? (paths[0] ? `path:${paths[0].title}` : "path") : k === "base" ? (bases[0] ? `base:${bases[0].title}` : "base:") : k)}
-                    onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && kind !== k && (e.preventDefault(), pickSource(k === "path" ? "path" : k === "base" ? (bases[0] ? `base:${bases[0].title}` : "base:") : k))}>
+                    onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && kind !== k && (e.preventDefault(), pickSource(k === "path" ? (paths[0] ? `path:${paths[0].title}` : "path") : k === "base" ? (bases[0] ? `base:${bases[0].title}` : "base:") : k))}>
                     <Glyph name={g} size={18} />
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span className="font-semibold">{n}</span>
@@ -297,7 +297,9 @@ function AddTile({ initial, data, phone, onSave, onCancel }: { initial: Tile | n
                 <span className="text-muted">Chart type</span>
                 <div className="grid grid-cols-4 gap-2">
                   {TYPE_ORDER.map((ty) => (
-                    <button key={ty} aria-pressed={t.type === ty} onClick={() => set({ type: ty, ...(ty === "heatmap" ? { x: dateFields[0]?.name, bucket: "day" as Bucket, range: "20w", series: undefined } : {}) })}
+                    <button key={ty} aria-pressed={t.type === ty} onClick={() => set({ type: ty, ...(ty === "heatmap" ? { x: dateFields[0]?.name, bucket: "day" as Bucket, range: "20w", series: undefined }
+                      // a donut slices categories: a date x from the previous chart becomes the series field (or the first category); no second split
+                      : ty === "donut" ? { ...(xIsDate ? { x: t.series ?? catFields[0]?.name, bucket: undefined } : {}), series: undefined } : {}) })}
                       className={cx("dash-type", t.type === ty && "is-on")}>
                       <Glyph name={TILE_GLYPH[ty]} size={20} />{TILE_LABEL[ty]}
                     </button>

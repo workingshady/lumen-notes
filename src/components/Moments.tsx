@@ -5,7 +5,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { db } from "../lib/db";
-import { REVIEW_LADDER, type BuiltPath } from "../lib/path";
+import { buildPath, resolveCourses, REVIEW_LADDER, type BuiltPath } from "../lib/path";
 import { useVault } from "../lib/store";
 import { Glyph } from "./Glyph";
 
@@ -105,23 +105,48 @@ function MomentHost() {
  * mastery ("Gradient descent · mastered"). Compares each new build of the path with the previous one, so any
  * action (sheet, Stages, Revise tab, a course lesson finished elsewhere) fires it; the first build never does.
  */
+type PathState = Map<string, { locked: boolean; mastered: boolean }>;
 export function usePathMoments(pathId: string, path: BuiltPath) {
-  const prev = useRef<{ id: string; state: Map<string, { locked: boolean; mastered: boolean }> } | null>(null);
+  const prev = useRef<{ id: string; state: PathState } | null>(null);
   useEffect(() => {
-    const state = new Map(path.concepts.map((c) => [c.key, { locked: c.status === "locked", mastered: c.mastered }]));
+    const state: PathState = new Map(path.concepts.map((c) => [c.key, { locked: c.status === "locked", mastered: c.mastered }]));
     const before = prev.current?.id === pathId ? prev.current.state : null;
     prev.current = { id: pathId, state };
-    if (!before) return;
-    const mastered = path.concepts.find((c) => c.mastered && before.get(c.key) && !before.get(c.key)!.mastered);
-    if (mastered) {
-      const streak = Math.max(1, REVIEW_LADDER.indexOf(mastered.def.interval));
-      const days = mastered.def.review ? Math.max(0, Math.round((new Date(mastered.def.review + "T12:00:00").getTime() - Date.now()) / 86_400_000)) : mastered.def.interval;
-      showMoment({ kind: "mastered", title: `${mastered.def.name} · mastered`, sub: `${streak} ${streak === 1 ? "revision" : "revisions"} in a row · next in ${days} ${days === 1 ? "day" : "days"}` });
-      return;
-    }
-    const opened = path.concepts.filter((c) => c.status !== "locked" && before.get(c.key)?.locked);
-    if (opened.length) showMoment({ kind: "unlock", label: opened.length === 1 ? `${opened[0].def.name} is open` : `${opened[0].def.name} and ${opened.length - 1} more are open` });
+    if (before) pathMoment(path, before);
   }, [pathId, path]);
+}
+/**
+ * App-wide version (mounted once in App.tsx): watches every learning path, so a revision graded in Today, a lesson
+ * ticked in a course roadmap or a test-out anywhere fires the unlock / mastered moment too, not only on the path page.
+ */
+export function useAllPathMoments() {
+  const v = useVault();
+  const prev = useRef(new Map<string, PathState>());
+  useEffect(() => {
+    if (!v.ready) return;
+    let shown = false;
+    for (const n of v.notes) {
+      if (n.type !== "path" || n.deleted) continue;
+      const path = buildPath(n.body, resolveCourses(buildPath(n.body, []).doc.courses, v.notes, v.spaces));
+      const state: PathState = new Map(path.concepts.map((c) => [c.key, { locked: c.status === "locked", mastered: c.mastered }]));
+      const before = prev.current.get(n.id);
+      prev.current.set(n.id, state);
+      if (before && !shown) shown = pathMoment(path, before);
+    }
+  }, [v]);
+}
+/** Shows the mastered or unlock moment for what changed since `before`; true when one was shown. */
+function pathMoment(path: BuiltPath, before: PathState): boolean {
+  const mastered = path.concepts.find((c) => c.mastered && before.get(c.key) && !before.get(c.key)!.mastered);
+  if (mastered) {
+    const streak = Math.max(1, REVIEW_LADDER.indexOf(mastered.def.interval));
+    const days = mastered.def.review ? Math.max(0, Math.round((new Date(mastered.def.review + "T12:00:00").getTime() - Date.now()) / 86_400_000)) : mastered.def.interval;
+    showMoment({ kind: "mastered", title: `${mastered.def.name} · mastered`, sub: `${streak} ${streak === 1 ? "revision" : "revisions"} in a row · next in ${days} ${days === 1 ? "day" : "days"}` });
+    return true;
+  }
+  const opened = path.concepts.filter((c) => c.status !== "locked" && before.get(c.key)?.locked);
+  if (opened.length) showMoment({ kind: "unlock", label: opened.length === 1 ? `${opened[0].def.name} is open` : `${opened[0].def.name} and ${opened.length - 1} more are open` });
+  return opened.length > 0;
 }
 
 const DAY = 86_400_000;

@@ -23,6 +23,8 @@ ok(linkFor({ text: "Gradient descent" }, "Gradient descent") === "[[Gradient des
 ok(findMentions("Transformers are big.", ["Transformer"]).length === 0, "no match inside a longer word");
 ok(findMentions("A subtransformer.", ["transformer"]).length === 0, "no match with a prefix");
 ok(findMentions("Use a transformer, then stop.", ["Transformer"]).length === 1, "punctuation is a boundary");
+// stacked Arabic proclitics: conjunction + preposition (+ article)
+{ const m = findMentions("وبالانتباه نبني الكتلة، ولانتباه آخر.", ["انتباه"]); ok(m.length === 2 && m[0].text === "وبالانتباه" && m[1].text === "ولانتباه", "و + ب + ال and و + ل proclitics"); }
 ok(findMentions("A tag #transformer here", ["transformer"]).length === 0, "#tags are not mentions");
 ok(findMentions("See https://x.com/transformer now", ["transformer"]).length === 0, "URL is not a mention");
 ok(findMentions("```\ntransformer\n```\n", ["transformer"]).length === 0, "fenced code is not a mention");

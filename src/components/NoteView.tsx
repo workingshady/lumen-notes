@@ -88,6 +88,31 @@ export function NoteView({ note }: { note: Note }) {
     return () => removeEventListener("keydown", k);
   }, [mode, note, wide, isRoadmap]);
 
+  // One-row header (list hidden) falls back to two rows when the breadcrumb gets clipped (many mode tabs, e.g.
+  // Diagrams, cut "Writing studio" to "Writin"); `tight` keeps the pane width where that happened so it can return
+  // to one row when wider again.
+  const hdrRef = useRef<HTMLElement>(null);
+  const crumbRef = useRef<HTMLDivElement>(null);
+  const [tight, setTight] = useState(0);
+  useEffect(() => { setTight(0); }, [note.id]);
+  useEffect(() => {
+    const h = hdrRef.current;
+    if (!h || !wide) return;
+    const check = () => {
+      const w = h.clientWidth;
+      if (!tight) {
+        const c = crumbRef.current;
+        const clipped = !!c && (c.clientWidth < 90 || [...c.querySelectorAll<HTMLElement>("button, span[dir]")].some((e) => e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1));
+        if (clipped) setTight(w);
+      }
+      else if (w > tight + 80) setTight(0);
+    };
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(h);
+    return () => ro.disconnect();
+  });
+
   if (note.deleted) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
@@ -128,7 +153,7 @@ export function NoteView({ note }: { note: Note }) {
     published: { cls: "font-semibold text-ok border-[color-mix(in_srgb,var(--success)_40%,transparent)] bg-[color-mix(in_srgb,var(--success)_14%,transparent)]", icon: <Globe size={13} />, t: tr("Published", rtl) },
   }[share];
   // With the note list visible: two header rows (ScreenWorkspace). List hidden / rail: one row (5A, 08 R2-3A).
-  const twoRows = wide && ui.list;
+  const twoRows = wide && (ui.list || tight > 0);
   const markdownNote = !isCanvas && !isRoadmap;
 
   const item = "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-start text-[13px] hover:bg-surface-2";
@@ -186,7 +211,7 @@ export function NoteView({ note }: { note: Note }) {
 
   // Single-row header lets crumbs wrap to two lines when space is short (design 5A: "ML / Foundations").
   const crumbsEl = (
-    <div className={cx("flex min-w-0 items-center gap-1.5 text-muted", twoRows ? "whitespace-nowrap" : "shrink leading-[14px]")}>
+    <div ref={crumbRef} className={cx("flex min-w-0 items-center gap-1.5 text-muted", twoRows ? "whitespace-nowrap" : "shrink leading-[14px]")}>
       {/* space → its page (course hub / project hub / space home); folder → that folder's note list */}
       <button title={`Open ${space?.name ?? "Inbox"}`} className={cx("hover:text-ink hover:underline", twoRows ? "truncate" : "line-clamp-2 max-w-[110px] text-start")}
         onClick={() => (note.spaceId === "inbox" ? setUI({ view: "notes", spaceId: "inbox", folderId: null, filter: null, tag: null, noteId: null }) : setUI({ view: "space", spaceId: note.spaceId, folderId: null, noteId: null }))}><span className="inline-flex items-center gap-1.5 align-middle"><SpaceIcon space={space} size={15} />{space?.name ?? "Inbox"}</span></button>
@@ -232,7 +257,7 @@ export function NoteView({ note }: { note: Note }) {
         {/* full-height readers bring their own bar (Back · title · Edit): path map, PDF (PdfDesk), base (BaseDesk), dashboard (DashDesk) */}
         {(isPath && !rmEdit) || (ownBar && effMode !== "edit") ? null : wide ? (
           twoRows ? (
-            <header className="bg-bg text-[13px]">
+            <header ref={hdrRef} className="bg-bg text-[13px]">
               <div className="flex h-11 items-center gap-2.5 pe-3 ps-5">
                 <NavButtons />
                 {crumbsEl}
@@ -256,7 +281,7 @@ export function NoteView({ note }: { note: Note }) {
               {!markdownNote && <div className="border-b border-line" />}
             </header>
           ) : (
-            <header className="flex h-12 shrink-0 items-center gap-2.5 border-b border-line bg-bg pe-3 ps-5 text-[13px]">
+            <header ref={hdrRef} className="flex h-12 shrink-0 items-center gap-2.5 border-b border-line bg-bg pe-3 ps-5 text-[13px]">
               <NavButtons />
               {crumbsEl}
               <span className="flex-1" />

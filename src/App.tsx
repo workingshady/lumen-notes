@@ -8,12 +8,13 @@ import { dismissToast, getUI, openNote, runLatestUndo, setRailAuto, setUI, sideb
 import { currentIdx, installNavHistory, keepPlace, restoreFrom } from "./lib/nav-history";
 import { useDeviceHeartbeat } from "./lib/devices";
 import { useFaviconBadge } from "./lib/favicon";
-import { useStreakMoment } from "./components/Moments";
+import { useAllPathMoments, useStreakMoment } from "./components/Moments";
 import { Sidebar } from "./components/Sidebar";
 import { Skeleton } from "./components/Skeleton";
 import { NoteList } from "./components/NoteList";
 import { NoteView } from "./components/NoteView";
 import { Palette } from "./components/Palette";
+import { NewMenuHost, openNewMenu } from "./components/NewMenu";
 import { ImportExportDialog, NewSpaceDialog } from "./components/Dialogs";
 import { DiagramExport } from "./components/DiagramExport";
 import { useDueCards } from "./components/Review";
@@ -169,6 +170,7 @@ function Workspace() {
   useDeviceHeartbeat(); // Settings › Sync › Devices (lib/devices.ts)
   useFaviconBadge(due); // Lumen 21 · favicon review-due badge (here, not in Sidebar: phones have no docked sidebar)
   useStreakMoment(); // Lumen 21 · moments: streak
+  useAllPathMoments(); // Lumen 21 · moments: unlock + mastered on any learning path change (Today, roadmaps, path page)
 
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
@@ -199,7 +201,6 @@ function Workspace() {
   else if (ui.view === "settings") main = <SettingsView />;
   else if (ui.view === "trash") main = <TrashView />;
 
-  const spaceId = ui.spaceId === "all" ? "inbox" : ui.spaceId;
   const inNote = notesView && !!note && !wide;
   setRailAuto(autoRail(ui, note, ui.view === "space" ? v.spaceMap.get(ui.spaceId) : undefined));
 
@@ -235,10 +236,11 @@ function Workspace() {
         </div>
 
         {/* phone tab bar (design: LumenTabBar) */}
-        {!wide && !inNote && <TabBar due={due} rtl={rtl} onNew={async () => { /* phone: + on the Visual list opens the "New…" sheet (R4-17 A5), on Learning paths the new-path dialog */ if (ui.view === "notes" && (ui.filter === "visual" || ui.filter === "paths")) { dispatchEvent(new Event(ui.filter === "visual" ? "lumen:new-visual" : "lumen:new-path")); return; } openNote((await createNote({ spaceId, folderId: ui.folderId })).id, "edit"); }} />}
+        {!wide && !inNote && <TabBar due={due} rtl={rtl} onNew={async () => { /* phone: + on the Visual list opens the "New…" sheet (R4-17 A5), on Learning paths the new-path dialog */ if (ui.view === "notes" && (ui.filter === "visual" || ui.filter === "paths")) { dispatchEvent(new Event(ui.filter === "visual" ? "lumen:new-visual" : "lumen:new-path")); return; } openNewMenu(); }} />}
       </div>
 
       <Palette />
+      <NewMenuHost />
       <NewSpaceDialog />
       <ImportExportDialog />
       <DiagramExport />
@@ -342,7 +344,7 @@ function TabBar({ due, onNew, rtl }: { due: number; onNew: () => void; rtl: bool
         {tab("home", <House size={20} />, "Home", () => setUI({ view: "home", sidebar: false }))}
         {tab("notes", <FileText size={20} />, "Notes", () => setUI({ view: "notes", noteId: null, sidebar: false }))}
         <div className="flex justify-center">
-          <button aria-label="New note" onClick={onNew} className="-mt-[26px] flex size-14 items-center justify-center rounded-[18px] bg-accent text-accent-fg" style={{ boxShadow: "0 0 0 5px var(--bg)" }}><Plus size={26} /></button>
+          <button aria-label="New…" onClick={onNew} className="-mt-[26px] flex size-14 items-center justify-center rounded-[18px] bg-accent text-accent-fg" style={{ boxShadow: "0 0 0 5px var(--bg)" }}><Plus size={26} /></button>
         </div>
         {tab("review", <Layers size={20} />, "Review", () => setUI({ view: "review", sidebar: false }), due)}
         {tab("more", <LayoutGrid size={20} />, "More", () => setUI({ view: "settings", sidebar: false }))}

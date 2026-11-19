@@ -3,19 +3,22 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { fmtNum } from "../../lib/dashboard";
 
+/**
+ * Observed element size. A callback ref, so a chart that first renders its empty state (no element yet: the vault was
+ * still loading) starts measuring once the element mounts; a plain ref + mount-only effect stayed at 0 × 0 forever.
+ */
 export function useSize<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
+  const [el, ref] = useState<T | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   useLayoutEffect(() => {
-    const el = ref.current;
     if (!el) return;
     const set = () => setSize((s) => (s.w === el.clientWidth && s.h === el.clientHeight ? s : { w: el.clientWidth, h: el.clientHeight }));
     set();
     const ro = new ResizeObserver(set);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
-  return { ref, ...size };
+  }, [el]);
+  return { ref, el, ...size };
 }
 
 export interface Tip { x: number; y: number; title: string; rows: { color?: string; label: string; value: string }[] }

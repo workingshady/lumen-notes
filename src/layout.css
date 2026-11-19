@@ -794,3 +794,18 @@ div.callout.callout-inline > .callout-body { grid-row: 1; }
 .lm-flow .react-flow__edge.prq-edge { cursor: pointer; }
 .lm-flow .react-flow__edge.prq-edge:hover .react-flow__edge-path { stroke: var(--accent) !important; stroke-width: 2.6px !important; opacity: 1 !important; }
 /* end R4 audit B */
+
+/* R4 features · write (Read blocks): `::: center` wins over the per-paragraph `text-align: start` of dir="auto";
+   `::: aside` is a muted box (LayoutThumb "aside"); in a Fixed page with room in the margin it sits beside the
+   text that follows it (a margin note), elsewhere it stays in the flow */
+.prose .md-center, .prose .md-center [dir="auto"] { text-align: center; }
+.prose .md-center img { margin-inline: auto; }
+.md-aside { border-inline-start: 0; padding: 0; }
+.md-aside-box { border-radius: 8px; background: color-mix(in srgb, var(--muted) 10%, transparent); padding: 10px 12px; font-size: 14px; line-height: 21px; }
+.md-aside-box > :first-child { margin-top: 0; }
+.md-aside-box > :last-child { margin-bottom: 0; }
+@container (min-width: 1270px) {
+  .read-pane[data-pw="fixed"] .reading > .md-aside { position: relative; height: 0; margin: 0 0 -18px; overflow: visible; }
+  .read-pane[data-pw="fixed"] .reading > .md-aside > .md-aside-box { position: absolute; top: 4px; inset-inline-start: calc(100% + 32px); width: 220px; }
+}
+/* end R4 features · write */

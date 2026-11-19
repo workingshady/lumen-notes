@@ -165,7 +165,7 @@ export function CanvasPickSheet({ open, onClose, spaceId, onPick }: { open: bool
 export function PasswordPrompt({ retry, onSubmit, onCancel }: { retry: boolean; onSubmit: (pw: string) => void; onCancel: () => void }) {
   const [pw, setPw] = useState("");
   return (
-    <form className="flex w-[380px] max-w-[calc(100%-32px)] flex-col gap-3 rounded-[14px] border border-line bg-surface p-[22px]" onSubmit={(e) => { e.preventDefault(); if (pw) onSubmit(pw); }}
+    <form className="flex w-[424px] max-w-[calc(100%-32px)] flex-col gap-3 rounded-[14px] border border-line bg-surface p-[22px]" onSubmit={(e) => { e.preventDefault(); if (pw) onSubmit(pw); }}
       onKeyDown={(e) => { if (e.key === "Escape") onCancel(); }}>
       <Glyph name="s-locked" size={24} color="var(--muted)" />
       <span className="text-[16px] font-[650]">This PDF has a password</span>

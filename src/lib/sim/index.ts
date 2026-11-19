@@ -3,11 +3,14 @@
 import type { UI } from "../store";
 import type { LumenDB } from "../db";
 import { seeding } from "./faults";
-import { writeVault, type Vault } from "./kit";
+import { emptyVault, writeVault, type Vault } from "./kit";
 import { seedEmpty, seedShowcase, seedSpaces, seedStarter, seedStudy } from "./scenarios-a";
 import { seedPaths } from "./scenarios-paths";
 import { seedProject } from "./scenarios-project";
 import { seedSlides } from "./scenarios-slides";
+import { seedR4Organize } from "./scenarios-r4-organize";
+import { seedR4Write } from "./scenarios-r4-write";
+import { seedR4Study } from "./scenarios-r4-study";
 import { CONFLICT_NOTE, seedBig, seedConflicts, seedEdge, seedSharing } from "./scenarios-b";
 
 export interface Scenario {
@@ -37,7 +40,30 @@ export const SCENARIOS: Scenario[] = [
   { id: "sharing", name: "Sharing & blog", description: "Shared course + project spaces, shared note/canvas/deck, published posts (slugs, excerpts, tags, Arabic, long title, duplicate slug), unpublished drafts.", build: seedSharing, ui: { view: "home", spaceId: "sh-s-course" } },
   { id: "edge", name: "Edge cases & broken data", description: "Invalid/odd JSON Canvas, edges to missing nodes, broken whiteboards, invalid Mermaid, malformed front-matter, empty/duplicate/very long/zero-width/RTL titles, notes in deleted/missing folders and spaces, trash, tombstones of every kind, missing attachments, XSS strings, bad dates, cyclic roadmap.", build: seedEdge, ui: { view: "notes", spaceId: "ed-s" } },
   { id: "conflicts", name: "Conflicts & history", description: "A note with 60 versions (incl. conflict copies), a note with pending dirty edits, a remote tombstone. Use “Simulate incoming conflict” to fire the live conflict toast.", build: seedConflicts, ui: { view: "notes", spaceId: "cf-s", noteId: CONFLICT_NOTE, panel: "versions" } },
+  { id: "r4-organize", name: "Organize & connect (round 4)", description: "Check: base “Lessons by status × course” (Table/Board/Gallery/List/Calendar + By tag / By courses multi-group, filter rows + groups, sort, cell editors, board drag + Undo) and an empty “New base” (template picker); “AI Engineer dashboard” with every tile type (range bar, Edit layout drag/resize, Add tile, Table toggle); 14 smart folders (pinned, coloured, every operator, one empty); unlinked mentions of Attention (English + Arabic prefixes, one ignored: Link / Link all + Undo / Ignore); shared tags, orphans, broken links for the graph (Display, Tidy up, tag nodes); CS231n / CS224n / Karpathy roadmaps with branching + implied prerequisites and the “AI Engineer path” over them; canvas “Transformer study map” (groups, pinned cards, PDF highlight cards, PDF card, .mermaid card); whiteboard; transformer-forward.mermaid; Ask (offline / passages / AI mock citations).", build: () => seedR4Organize(), ui: { view: "notes", spaceId: "all", noteId: "r4o-base", folderId: null, tag: null, filter: null } },
+  { id: "r4-write", name: "Write, present & share (round 4)", description: "Check: “Read mode showcase” (every Read block: columns/cards/divided, tabs, expand, panels, callouts, aside/center/wide/full, tables with caption/filter/sort/full screen, includes + Go to source, block refs, status pills, [[toc]], highlights, Arabic) + wide/full page notes; “Every / block” (the whole slash catalog); “Editor playground” (handles, drag, Turn into, multi-select, [[Note#^ autocomplete, paste menu); Focus Read/Write note; “Talks & decks”: one deck per slide layout (12), every layout in one deck, Arrange, doc → deck, Arabic deck; shared course page + shared lesson/deck/cards/canvas, 3 published posts (one Arabic) for the blog + OG previews; project hub with every doc state / card marker / MoSCoW level; icon spaces (glyph, shape, initials incl. Arabic), an empty course; due cards for the favicon badge; a 3-day streak without today (streak moment).", build: () => seedR4Write(), ui: { view: "notes", spaceId: "r4w-s-write", noteId: "r4w-showcase", folderId: null, tag: null, filter: null, mode: "read" } },
+  { id: "r4-study", name: "Study features (round 4)", description: "Check: Today (Reviews / Continue / New lessons / Revise & practice / If you have time, missed Wed + Thu → spread 7 overdue topics with Before/After + Adjust + Accept, week view + 4 goals, Skip / Tomorrow / Done + Undo); Review (cards in new / learning / review / relearning / suspended, grade previews, S suspend, U undo, Practice anyway); Settings › Review › Advanced (workload chart, ~300-row review log, Optimize from history, Use defaults); path “Transformers from zero” (mastered, revisions due, Gradient descent masters on Got it, Mini-batch test-out practice, locked concepts unlock); cloze ({{c1::}} in lessons, ==x== in flashcard / cloze: true notes, Arabic); image occlusion (hide-one with a group, hide-all, Make image cards); PDF reader “Transformers study edition” (outline, find, text + area highlights, Continue pill, highlight → note / card / canvas, back-links in “Attention notes”), locked PDF (password lumen), scanned PDF, PDF library; “Backprop video lecture” (YouTube chips, a real 10 s MP4 with a clock: seek, speed, dock, grey chip); streak moment on today's first review. Seeding records the video (~10 s).", build: () => seedR4Study(), ui: { view: "today", spaceId: "all", noteId: null, folderId: null, tag: null, filter: null } },
+  { id: "r4-all", name: "Everything (round 4)", description: "One click for every round-4 feature: Study (r4-study) + Organize & connect (r4-organize, incl. the AI Engineer learning path) + Write, present & share (r4-write) + the Software project hub, merged into one vault (ids r4s- / r4o- / r4w- / pj-). Lands on Home.", build: seedR4All, ui: { view: "home", spaceId: "all", noteId: null, folderId: null, tag: null, filter: null } },
 ];
+
+/**
+ * "Everything (round 4)": the three round-4 builders add to one vault, then the project-hub scenario is merged in
+ * (first record with an id wins, so the Inbox keeps the Organize smart folders). The older "Learning paths" scenario is
+ * left out on purpose: Organize reuses its course and lesson titles (CS231n, Backpropagation, …) and links, bases and
+ * path courses resolve by title, so only one copy may exist; Organize's "AI Engineer path" covers learning paths.
+ */
+async function seedR4All(): Promise<Vault> {
+  const v = emptyVault();
+  await seedR4Study(v);
+  await seedR4Organize(v);
+  await seedR4Write(v);
+  const extra = await seedProject();
+  for (const k of ["spaces", "folders", "notes", "versions", "cards", "sessions", "attachments", "blobs"] as const) {
+    const have = new Set((v[k] as { id: string }[]).map((r) => r.id));
+    for (const r of extra[k] as { id: string }[]) if (!have.has(r.id)) { (v[k] as { id: string }[]).push(r); have.add(r.id); }
+  }
+  return v;
+}
 
 const KEY = "lumen.sim.scenario";
 export function currentScenario(): Scenario {

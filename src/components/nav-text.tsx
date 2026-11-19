@@ -12,6 +12,7 @@ export function plainText(md: string) {
     .replace(/\$([^$\n]+)\$/g, (_, m: string) => m.replace(/\\([a-zA-Z]+)/g, (_x, c: string) => TEX[c] ?? c).replace(/[{}]/g, ""))
     .replace(/^>\s*\[![^\]]*\][+-]?\s*/gm, "")
     .replace(/!?\[\[([^\]|]+)(\|[^\]]+)?\]\]/g, "$1")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ") // images: no "!alt" left in the snippet
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/^.*\s::\s.*$/gm, "")
     // task dates (calendar / hourglass / plane + 2026-11-20, @due(…)) and other pictographs: no emoji in UI snippets

@@ -365,7 +365,7 @@ export function Home() {
 
         {/* tablet + desktop */}
         {rows.map((r) => (
-          <div key={r.join("+")} className={cx("hidden gap-4 sm:grid xl:gap-5", r.length === 2 && (r.includes("continue") ? "xl:grid-cols-[7fr_5fr]" : "sm:grid-cols-2 xl:grid-cols-[7fr_5fr]"))}>
+          <div key={r.join("+")} className={cx("hidden gap-4 sm:grid xl:gap-5", r.length === 2 && (r.includes("continue") ? "xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]" : "sm:grid-cols-2 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]"))}>
             {r.map((id) => <div key={id} className="contents">{wideCard[id]}</div>)}
           </div>
         ))}

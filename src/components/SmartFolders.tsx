@@ -362,7 +362,7 @@ export function SmartListHeader({ sf, query, setQuery, count }: { sf: SmartFolde
         {query.trim() && <button className="text-muted hover:text-ink" title="Save the narrowed search as a new smart folder" onClick={() => openSmartEditor({ query: `${sf.query} ${query.trim()}`.trim(), filters: sf.filters, match: sf.match })}>Save as new</button>}
         <button className="text-muted hover:text-ink" onClick={() => openSmartEditor(sf)}>Edit</button>
       </div>
-      <div className="flex h-8 cursor-text items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-[7px] border border-line bg-bg px-2 font-mono text-[12px] focus-within:border-accent" onClick={() => input.current?.focus()} title={sf.query}>
+      <div className="flex h-8 cursor-text items-center gap-1.5 overflow-x-auto whitespace-nowrap rounded-[7px] [scrollbar-width:none] border border-line bg-bg px-2 font-mono text-[12px] focus-within:border-accent" onClick={() => input.current?.focus()} title={sf.query}>
         {smartTokens(sf.query).map((t, i) => <span key={i} className={CHIP}>{t}</span>)}
         {sf.filters?.map((f, i) => <span key={"f" + i} className={CHIP}>{f}</span>)}
         <input ref={input} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") setQuery(""); }} aria-label={`Narrow “${sf.name}”`} spellCheck={false}
