@@ -456,3 +456,7 @@ mark.hl-live { color: inherit; border-radius: 3px; padding: 0 .08em; box-shadow:
 .hl-erasing mark.hl-live { cursor: not-allowed; outline: 1.5px dashed var(--danger); outline-offset: 1px; }
 .focus-read .prose { font-size: var(--read-size); }
 .tts-reading { background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 6px; box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 12%, transparent); transition: background .3s; }
+
+/* R8-56 Ask: step spinner */
+@keyframes ask-spin { to { transform: rotate(360deg); } }
+.ask-spin { animation: ask-spin .8s linear infinite; }
