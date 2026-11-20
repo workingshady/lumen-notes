@@ -5,7 +5,7 @@ Owner's bar for every item:
 - **Logic:** real logic and backend.
 - **Process:** web research for best practice at every stage, then verification.
 
-Tick the boxes as work lands. The newest status sits at the top of `docs/CHECKPOINT.md`.
+**Owner rule: deploy + commit + push after every stage that changes code.** Tick the boxes as work lands. The newest status sits at the top of `docs/CHECKPOINT.md`.
 
 ## Stage 0: finish wave 3 and deploy
 - [x] **W3-A whiteboard (Opus):** done (deploy 1d9c7dda)
