@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+</helmet>
+<div style="display:flex;flex-direction:column;font-family:Inter,system-ui,sans-serif;font-size:{{ fs }};color:var(--tx)">
+  <div style="padding:{{ pad }} {{ pad }} 4px;display:flex;align-items:center;gap:10px"><div style="flex:1;display:flex;flex-direction:column;gap:4px"><span style="font-size:{{ h }};font-weight:650">{{ title }}</span><span style="display:flex;align-items:center;gap:8px;color:var(--mu);font-size:12.5px">Visibility<span style="display:{{ badgeShow }};align-items:center;gap:5px;padding:0 8px;border-radius:999px;line-height:20px;font-weight:600;font-size:11.5px;background:color-mix(in srgb,{{ badgeC }} 14%,transparent);color:{{ badgeC }}"><i class="{{ badgeI }}" style="font-size:11px"></i>{{ badgeT }}</span><span style="display:{{ privShow }}">Private</span></span></div><i class="icon-x" style="font-size:18px;color:var(--mu);display:{{ xShow }}"></i></div>
+  <div style="padding:12px {{ pad }} 0;display:flex;flex-direction:column;gap:12px">
+    <sc-if value="{{ nosync }}">
+      <div style="border-radius:10px;background:color-mix(in srgb,var(--wa) 10%,transparent);border:1px solid color-mix(in srgb,var(--wa) 32%,transparent);padding:12px 14px;display:flex;gap:10px;align-items:flex-start;line-height:19px"><i class="icon-cloud-off" style="font-size:16px;color:var(--wa);margin-top:2px"></i><div style="flex:1;display:flex;flex-direction:column;gap:8px"><span><b style="font-weight:600">Sharing needs sync on.</b> Links are served from your Cloudflare, so this device has to sync first.</span><span style="align-self:flex-start;height:32px;padding:0 12px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600;font-size:13px">Turn on sync</span></div></div>
+    </sc-if>
+    <div style="border-radius:12px;border:1px solid var(--bd);background:var(--sf);opacity:{{ op }}">
+      <div style="padding:14px;display:flex;gap:12px;align-items:flex-start">
+        <span style="width:34px;height:34px;border-radius:9px;background:color-mix(in srgb,var(--in) 14%,transparent);color:var(--in);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="icon-link-2" style="font-size:16px"></i></span>
+        <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">Share link</span><span style="color:var(--mu);font-size:12.5px;line-height:18px">Anyone with the link can view. Read-only, not listed anywhere.</span></div>
+        <span style="width:{{ tw }};height:{{ th }};border-radius:999px;background:{{ linkTrack }};position:relative;flex-shrink:0;margin-top:4px"><span style="position:absolute;top:3px;left:{{ linkKnob }};width:{{ kn }};height:{{ kn }};border-radius:50%;background:{{ linkKnobC }}"></span></span>
+      </div>
+      <sc-if value="{{ linkOn }}">
+        <div style="padding:0 14px 14px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:8px;flex-wrap:{{ wrap }}">
+            <div style="flex:1;min-width:220px;height:{{ ih }};border-radius:6px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;padding:0 10px;font:400 12.5px 'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden"><span style="color:var(--mu)">nightshift.pages.dev/s/</span>{{ token }}</div>
+            <span style="height:{{ ih }};padding:0 12px;border-radius:10px;border:1px solid {{ copyBd }};color:{{ copyC }};display:flex;align-items:center;gap:6px;font-weight:600;flex:{{ btnFlex }};justify-content:center"><i class="{{ copyI }}" style="font-size:14px"></i>{{ copyT }}</span>
+            <span style="display:{{ shareShow }};height:{{ ih }};padding:0 12px;border-radius:10px;border:1px solid var(--bd);align-items:center;gap:6px;flex:1;justify-content:center"><i class="icon-share-2" style="font-size:14px"></i>Share…</span>
+            <span style="height:{{ ih }};padding:0 12px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;flex:{{ btnFlex }};justify-content:center"><i class="icon-arrow-up-right" style="font-size:14px"></i>Open</span>
+          </div>
+          <span style="font-size:12.5px;color:var(--mu)"><span style="color:var(--ln);text-decoration:underline;text-underline-offset:3px">Make a new link</span> (old one stops working)</span>
+        </div>
+      </sc-if>
+    </div>
+    <sc-if value="{{ isSpace }}">
+      <div style="border-radius:10px;background:var(--sf2);padding:12px 14px;display:flex;gap:10px;line-height:19px;font-size:13px;opacity:{{ op }}"><i class="icon-info" style="font-size:15px;color:var(--in);margin-top:2px"></i><span>Everything in this space is visible through the link, <b style="font-weight:600">including notes you add later.</b> Only safe properties (goal, dates, course URL) are shown.</span></div>
+    </sc-if>
+    <sc-if value="{{ isNote }}">
+      <div style="border-radius:12px;border:1px solid var(--bd);background:var(--sf);opacity:{{ op }}">
+        <div style="padding:14px;display:flex;gap:12px;align-items:flex-start">
+          <span style="width:34px;height:34px;border-radius:9px;background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="icon-globe" style="font-size:16px"></i></span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">Publish to blog</span><span style="color:var(--mu);font-size:12.5px;line-height:18px">On /blog and in RSS, with a readable URL. Markdown notes only.</span></div>
+          <span style="width:{{ tw }};height:{{ th }};border-radius:999px;background:{{ pubTrack }};position:relative;flex-shrink:0;margin-top:4px"><span style="position:absolute;top:3px;left:{{ pubKnob }};width:{{ kn }};height:{{ kn }};border-radius:50%;background:{{ pubKnobC }}"></span></span>
+        </div>
+        <sc-if value="{{ pubOn }}">
+          <div style="padding:0 14px 14px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:var(--mu);font-weight:500">Slug</span><div style="height:{{ ih }};border-radius:6px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;padding:0 10px;font:400 12.5px 'JetBrains Mono',monospace"><span style="color:var(--mu)">/blog/</span>gradient-descent-gently</div></div>
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:var(--mu);font-weight:500">Excerpt</span><div style="border-radius:6px;background:var(--bg);border:1px solid var(--bd);padding:8px 10px;line-height:19px;font-size:13px">A walk downhill with a blindfold: learning rates, momentum, and why my first model diverged.</div></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12.5px"><i class="icon-circle-check" style="font-size:14px;color:var(--ok)"></i><span style="font-family:'JetBrains Mono',monospace;color:var(--ln)">nightshift.pages.dev/blog/gradient-descent-gently</span><span style="flex:1"></span><i class="icon-copy" style="font-size:14px;color:var(--mu)"></i></div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+  </div>
+  <div style="padding:{{ pad }};display:flex;align-items:center;gap:10px"><span style="flex:1;font-size:12.5px;color:var(--mu)">All links: <span style="color:var(--ln)">Settings › Sharing</span></span><span style="height:{{ dh }};padding:0 18px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd);display:flex;align-items:center;font-weight:600">Done</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:560,&quot;height&quot;:620},&quot;kind&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;note&quot;,&quot;space&quot;],&quot;default&quot;:&quot;note&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;on&quot;,&quot;off&quot;,&quot;nosync&quot;],&quot;default&quot;:&quot;on&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;publish&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;copied&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const kind = this.props.kind ?? 'note', st = this.props.state ?? 'on', phone = !!this.props.phone, pub = !!this.props.publish;
+    const nosync = st === 'nosync', linkOn = st === 'on';
+    const tog = on => ({ track: on ? 'var(--ac)' : 'var(--bd)', knob: on ? (phone ? '23px' : '19px') : '3px', knobC: on ? 'var(--af)' : 'var(--mu)' });
+    const L = tog(linkOn), P = tog(pub && !nosync);
+    const copied = !!this.props.copied;
+    const badge = pub ? ['var(--ok)','icon-globe','Published'] : linkOn ? ['var(--in)','icon-link-2','Shared'] : null;
+    return {
+      title: kind === 'space' ? 'Share space “ML Foundations”' : 'Share “Gradient descent”',
+      nosync, linkOn, isSpace: kind === 'space', isNote: kind === 'note', pubOn: pub && !nosync, op: nosync ? .45 : 1,
+      linkTrack: L.track, linkKnob: L.knob, linkKnobC: L.knobC, pubTrack: P.track, pubKnob: P.knob, pubKnobC: P.knobC,
+      badgeShow: badge ? 'inline-flex' : 'none', privShow: badge ? 'none' : 'inline', badgeC: badge ? badge[0] : '', badgeI: badge ? badge[1] : '', badgeT: badge ? badge[2] : '',
+      token: kind === 'space' ? 'm8Lq2Vd' : 'k3f9Xq2', copyI: copied ? 'icon-check' : 'icon-copy', copyT: copied ? 'Copied' : 'Copy', copyC: copied ? 'var(--ok)' : 'var(--tx)', copyBd: copied ? 'color-mix(in srgb,var(--ok) 45%,transparent)' : 'var(--bd)',
+      shareShow: phone ? 'flex' : 'none', wrap: phone ? 'wrap' : 'nowrap', btnFlex: phone ? '1' : '0 0 auto',
+      fs: phone ? '14px' : '13px', h: phone ? '18px' : '17px', pad: phone ? '20px' : '22px', ih: phone ? '44px' : '36px', dh: phone ? '48px' : '36px',
+      tw: phone ? '46px' : '38px', th: phone ? '26px' : '22px', kn: phone ? '20px' : '16px', xShow: phone ? 'none' : 'block'
+    };
+  }
+}
+</script>
+</body>
+</html>

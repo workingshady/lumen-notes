@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 09 Sharing</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 3</span></div><div style="font-size:14px;color:#9A9890">Three levels of visibility, one badge, one sheet.</div></div>
+  </div>
+
+  <section style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R3 · 1</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Visibility levels</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Shown the same way in note headers, list items, the tree, the database and space pages. Private has no badge — it's the default and needs no noise.</p></div>
+    <div style="display:grid;grid-template-columns:repeat(3,400px);gap:20px">
+      <sc-for list="{{ levels }}" as="l" hint-placeholder-count="3">
+        <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:20px;display:flex;flex-direction:column;gap:14px;font-size:13px">
+          <div style="display:flex;align-items:center;gap:10px;height:28px"><span style="font-weight:650;font-size:16px;flex:1">{{ l.n }}</span><span style="display:{{ l.bs }};align-items:center;gap:5px;padding:0 9px;border-radius:999px;line-height:22px;font-weight:600;font-size:12px;background:{{ l.bg }};color:{{ l.c }}"><i class="{{ l.i }}" style="font-size:12px"></i>{{ l.b }}</span><span style="display:{{ l.ns }};color:var(--mu);font-size:12px">no badge</span></div>
+          <span style="color:var(--mu);line-height:19px">{{ l.d }}</span>
+          <div style="display:flex;align-items:center;gap:8px;padding-top:12px;border-top:1px solid var(--bd)"><span style="color:var(--mu);font-size:12px;flex:1">Header button</span><span style="height:28px;padding:0 10px;border-radius:8px;border:1px solid {{ l.hb }};background:{{ l.hbg }};color:{{ l.hc }};display:flex;align-items:center;gap:6px;font-weight:600"><i class="{{ l.hi }}" style="font-size:13px"></i>{{ l.ht }}</span><span style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-panel-right" style="font-size:16px"></i></span></div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R3 · 1</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Share sheet</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Dialog on desktop, bottom sheet on phone. Two rows: Share link (unlisted) and Publish to blog. Each reveals its details only when switched on.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+      <sc-for list="{{ desk }}" as="d" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px;white-space:nowrap"><span style="color:#F25C9A">{{ d.id }}</span><span>{{ d.l }}</span></div>
+          <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg)">
+            <dc-import name="ScreenWorkspace" mode="Read" share="{{ d.sh }}" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+            <div style="position:absolute;inset:0;background:rgba(5,6,8,.6)"></div>
+            <div style="position:absolute;right:70px;top:52px;width:560px;border-radius:14px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 24px 64px rgba(0,0,0,.5)"><dc-import name="ShareSheet" kind="{{ d.kind }}" state="{{ d.st }}" publish="{{ d.pub }}" copied="{{ d.cp }}" hint-size="560px,420px"></dc-import></div>
+          </div>
+          <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>{{ d.note }}</span></div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+      <sc-for list="{{ phones }}" as="p" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px;white-space:nowrap"><span style="color:#F25C9A">{{ p.id }}</span><span>{{ p.l }}</span></div>
+          <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx)">
+            <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+            <div style="height:56px;padding:0 4px;display:flex;align-items:center;gap:2px;border-bottom:1px solid var(--bd)"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-arrow-left" style="font-size:20px"></i></span><span style="flex:1;font-weight:600">{{ p.t }}</span><span style="width:44px;height:48px;display:flex;align-items:center;justify-content:center;color:{{ p.ic }}"><i class="icon-share" style="font-size:19px"></i></span><span style="width:44px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-ellipsis-vertical" style="font-size:20px"></i></span></div>
+            <div style="padding:20px;display:flex;flex-direction:column;gap:12px;opacity:.5"><span style="height:24px;width:70%;border-radius:6px;background:var(--sf2)"></span><span style="height:10px;width:100%;border-radius:4px;background:var(--sf)"></span><span style="height:10px;width:90%;border-radius:4px;background:var(--sf)"></span></div>
+            <div style="position:absolute;inset:0;background:rgba(5,6,8,.6)"></div>
+            <div style="position:absolute;left:0;right:0;bottom:0;background:var(--sf2);border-radius:14px 14px 0 0">
+              <div style="display:flex;justify-content:center;padding:10px 0 0"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+              <dc-import name="ShareSheet" kind="{{ p.kind }}" state="{{ p.st }}" publish="{{ p.pub }}" phone="{{ true }}" hint-size="412px,480px"></dc-import>
+              <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R3 · 1</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Settings › Sharing · toasts</h2></div>
+    <div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">R3-1G</span> Shared with link · Desktop</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+          <div style="width:220px;flex-shrink:0;border-right:1px solid var(--bd);padding:20px 10px;display:flex;flex-direction:column;gap:2px">
+            <span style="padding:0 10px 12px;font-size:18px;font-weight:650">Settings</span>
+            <sc-for list="{{ setNav }}" as="n" hint-placeholder-count="9"><div style="height:34px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:10px;background:{{ n.bg }};color:{{ n.c }};font-weight:{{ n.fw }}"><i class="{{ n.i }}" style="font-size:15px;color:{{ n.ic }}"></i>{{ n.l }}</div></sc-for>
+          </div>
+          <div style="flex:1;padding:28px 40px;display:flex;flex-direction:column;gap:18px;max-width:960px">
+            <div style="display:flex;align-items:flex-end;gap:16px"><div style="flex:1;display:flex;flex-direction:column;gap:4px"><span style="font-size:22px;font-weight:650;letter-spacing:-.02em">Sharing</span><span style="color:var(--mu)">Everything reachable without your passcode. 5 links · 12 published posts.</span></div><span style="height:34px;padding:0 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--da) 40%,transparent);color:var(--da);display:flex;align-items:center;gap:6px;font-weight:500"><i class="icon-link-2-off" style="font-size:14px"></i>Turn off all links</span></div>
+            <div style="display:flex;gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd);align-self:flex-start"><span style="height:28px;padding:0 12px;border-radius:7px;background:var(--sf2);display:flex;align-items:center;gap:6px;font-weight:600"><i class="icon-link-2" style="font-size:13px;color:var(--in)"></i>Shared links 5</span><span style="height:28px;padding:0 12px;display:flex;align-items:center;gap:6px;color:var(--mu)"><i class="icon-globe" style="font-size:13px"></i>Published 12</span></div>
+            <div style="border:1px solid var(--bd);border-radius:12px;overflow:hidden">
+              <div style="display:grid;grid-template-columns:2.2fr 2.4fr 1fr 120px;height:36px;align-items:center;background:var(--sf);font-size:12px;font-weight:600;color:var(--mu)"><span style="padding:0 14px">Item</span><span style="padding:0 14px">Link</span><span style="padding:0 14px">Updated</span><span></span></div>
+              <sc-for list="{{ links }}" as="r" hint-placeholder-count="5">
+                <div style="display:grid;grid-template-columns:2.2fr 2.4fr 1fr 120px;min-height:52px;align-items:center;border-top:1px solid var(--bd)">
+                  <span style="padding:0 14px;display:flex;align-items:center;gap:10px"><span style="width:28px;height:28px;border-radius:7px;background:var(--sf2);display:flex;align-items:center;justify-content:center"><i class="{{ r.i }}" style="font-size:14px;color:var(--mu)"></i></span><span style="display:flex;flex-direction:column;gap:1px"><span style="font-weight:500">{{ r.t }}</span><span style="font-size:11.5px;color:var(--mu)">{{ r.k }}</span></span></span>
+                  <span style="padding:0 14px;display:flex;align-items:center;gap:8px;font:400 12px 'JetBrains Mono',monospace;color:var(--ln)">{{ r.u }}<i class="icon-copy" style="font-size:13px;color:var(--mu)"></i></span>
+                  <span style="padding:0 14px;color:var(--mu)">{{ r.d }}</span>
+                  <span style="padding:0 14px"><span style="height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:inline-flex;align-items:center">Turn off</span></span>
+                </div>
+              </sc-for>
+            </div>
+            <span style="color:var(--mu);font-size:12.5px;display:flex;align-items:center;gap:8px"><i class="icon-clock" style="font-size:13px"></i>Link expiry dates and passwords are coming later.</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">R3-1H</span> Sharing · Phone</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ln:#5CC8C2;--da:#EF6B6B;--in:#7AA2F7;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 4px;display:flex;align-items:center;gap:4px"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-arrow-left" style="font-size:20px"></i></span><span style="font-weight:650;font-size:17px">Sharing</span></div>
+          <div style="padding:0 16px 12px;color:var(--mu);font-size:13px">5 shared links · 12 published</div>
+          <div style="margin:0 16px;border-radius:14px;background:var(--sf);overflow:hidden">
+            <sc-for list="{{ links }}" as="r" hint-placeholder-count="5"><div style="min-height:64px;padding:10px 14px;display:flex;align-items:center;gap:12px;border-top:{{ r.bt }}"><i class="{{ r.i }}" style="font-size:18px;color:var(--mu)"></i><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-weight:500">{{ r.t }}</span><span style="font:400 11.5px 'JetBrains Mono',monospace;color:var(--ln);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.u }}</span></div><span style="height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;font-size:13px">Turn off</span></div></sc-for>
+          </div>
+          <div style="flex:1"></div>
+          <div style="padding:16px"><span style="height:52px;border-radius:12px;border:1px solid color-mix(in srgb,var(--da) 40%,transparent);color:var(--da);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600">Turn off all links</span></div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+        </div>
+      </div>
+      <div style="--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ln:#5CC8C2;--ok:#6BCB8B;--in:#7AA2F7;display:flex;flex-direction:column;gap:16px;width:440px;font-size:13px;color:var(--tx)">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">R3-1I</span> Toasts</div>
+        <div style="border-radius:10px;background:var(--sf2);border:1px solid var(--bd);padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 12px 32px rgba(0,0,0,.35)"><i class="icon-link-2" style="font-size:16px;color:var(--in)"></i><span style="flex:1;font-weight:600">Link is live</span><span style="color:var(--ln);font-weight:500">Copy</span></div>
+        <div style="border-radius:10px;background:var(--sf2);border:1px solid var(--bd);padding:12px 14px;display:flex;align-items:flex-start;gap:12px;box-shadow:0 12px 32px rgba(0,0,0,.35);line-height:19px"><i class="icon-link-2-off" style="font-size:16px;color:var(--mu);margin-top:2px"></i><span style="flex:1"><b style="font-weight:600">Link turned off.</b> Anyone who had it can no longer open it.</span><span style="color:var(--ln);font-weight:500">Undo</span></div>
+        <div style="border-radius:10px;background:var(--sf2);border:1px solid var(--bd);padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 12px 32px rgba(0,0,0,.35)"><i class="icon-globe" style="font-size:16px;color:var(--ok)"></i><span style="flex:1;font-weight:600">Published to Night Shift Notes</span><span style="color:var(--ln);font-weight:500">View</span></div>
+        <span style="font-size:12.5px;color:#CFCBC3;line-height:19px">Bottom-centre on desktop, above the tab bar on phone. 5 s, pause on hover. Undo on “turned off” restores the same URL for 8 s; after that a new link is needed.</span>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const levels = [
+      ['Private','', '', '', 'Only on your devices and your own Cloudflare. Nobody else can open it.', 'var(--bd)','transparent','var(--tx)','icon-share','Share'],
+      ['Shared link','Shared','var(--in)','icon-link-2','Anyone with the link can view, read-only. Not listed, not in RSS, not indexed.','color-mix(in srgb,var(--in) 40%,transparent)','color-mix(in srgb,var(--in) 14%,transparent)','var(--in)','icon-link-2','Shared'],
+      ['Published','Published','var(--ok)','icon-globe','On your public blog at /blog/slug, in RSS, with a readable URL.','color-mix(in srgb,var(--ok) 40%,transparent)','color-mix(in srgb,var(--ok) 14%,transparent)','var(--ok)','icon-globe','Published']
+    ].map(([n,b,c,i,d,hb,hbg,hc,hi,ht]) => ({ n, b, c, i, d, hb, hbg, hc, hi, ht, bs:b?'inline-flex':'none', ns:b?'none':'inline', bg:c?`color-mix(in srgb, ${c} 14%, transparent)`:'' }));
+    const desk = [
+      ['R3-1A','Share sheet · note · link on, just copied','note','on',false,true,'shared','Copy turns into ✓ Copied for 2 s. Publish stays folded until switched on; it asks for slug + excerpt and shows the final URL.'],
+      ['R3-1B','Share sheet · space / course','space','on',false,false,'shared','Spaces have no Publish row. The calm info card states the consequence plainly: future notes are included too.'],
+      ['R3-1C','Share sheet · sync off','note','nosync',false,false,'private','With sync off, both toggles are disabled and one warning card explains why, with the single action that fixes it.']
+    ].map(([id,l,kind,st,pub,cp,sh,note]) => ({ id, l, kind, st, pub, cp, sh, note }));
+    const phones = [
+      ['R3-1D','Share · note · phone (published)','note','on',true,'Gradient descent','var(--ok)'],
+      ['R3-1E','Share · space · phone','space','on',false,'ML Foundations','var(--in)'],
+      ['R3-1F','Share · sync off · phone','note','nosync',false,'Gradient descent','var(--tx)']
+    ].map(([id,l,kind,st,pub,t,ic]) => ({ id, l, kind, st, pub, t, ic }));
+    const setNav = [['palette','Appearance'],['pen-tool','Branding'],['refresh-cw','Sync'],['share','Sharing',1],['rss','Blog'],['hard-drive','Storage'],['sparkles','AI'],['code','Developer'],['info','About']]
+      .map(([i,l,a]) => ({ i:'icon-'+i, l, bg:a?'var(--sf2)':'transparent', c:a?'var(--tx)':'var(--mu)', ic:a?'var(--ac)':'var(--mu)', fw:a?600:450 }));
+    const links = [['graduation-cap','ML Foundations','Course space · 94 notes','/s/m8Lq2Vd','2 h ago'],['file-text','Gradient descent','Note','/s/k3f9Xq2','12 min ago'],['presentation','Backprop — study group deck','Slides','/s/p2Wn7Ra','Mon'],['layers','Arabic: verb forms I–X','Flashcards','/s/f6Hc1Tz','7 Nov'],['pencil','Study plan — November','Whiteboard','/s/w4Kd8Ys','3 Nov']]
+      .map(([i,t,k,u,d],ix) => ({ i:'icon-'+i, t, k, u:'nightshift.pages.dev'+u, d, bt:ix?'1px solid var(--bd)':'none' }));
+    return { levels, desk, phones, setNav, links };
+  }
+}
+</script>
+</body>
+</html>

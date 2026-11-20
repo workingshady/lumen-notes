@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./lumen-glyphs.js"></script><link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&display=swap" rel="stylesheet"></helmet>
+<div dir="{{ dir }}" style="position:absolute;inset:0;overflow:hidden;background-color:{{ boardBg }};background-image:{{ patImg }};background-size:{{ patSize }};font-family:Inter,'IBM Plex Sans Arabic',system-ui,sans-serif;font-size:13px;color:var(--tx)">
+  <div style="position:absolute;left:{{ bX }};top:{{ bY }};width:1300px;height:760px;transform:{{ bTf }};transform-origin:0 0;direction:ltr;opacity:{{ boardOp }}">
+    <sc-for list="{{ frames }}" as="fr" hint-placeholder-count="2">
+      <div style="position:absolute;left:{{ fr.x }};top:{{ fr.y }};width:{{ fr.w }};height:{{ fr.h }};border:1.5px solid color-mix(in srgb,var(--mu) 55%,transparent);border-radius:6px"><span style="position:absolute;left:0;top:-22px;font-size:12px;font-weight:500;color:var(--mu);white-space:nowrap">{{ fr.n }}</span></div>
+    </sc-for>
+    <div style="position:absolute;display:{{ hlS }};left:66px;top:136px;width:200px;height:28px;background:rgba(255,212,59,.38);border-radius:3px;transform:rotate(-1deg)"></div>
+    <sc-for list="{{ inkText }}" as="t" hint-placeholder-count="4">
+      <span style="position:absolute;left:{{ t.x }};top:{{ t.y }};font-family:Caveat,cursive;font-size:{{ t.s }};font-weight:600;color:{{ t.c }};white-space:nowrap;transform:rotate({{ t.r }})">{{ t.t }}</span>
+    </sc-for>
+    <svg width="1300" height="760" style="position:absolute;left:0;top:0;overflow:visible;pointer-events:none">
+      <sc-for list="{{ inkPaths }}" as="p" hint-placeholder-count="6"><path d="{{ p.d }}" style="fill:none;stroke:{{ p.c }};stroke-width:{{ p.w }};stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:{{ p.da }}"></path></sc-for>
+    </svg>
+    <sc-for list="{{ shapes }}" as="s" hint-placeholder-count="3">
+      <div style="position:absolute;left:{{ s.x }};top:{{ s.y }};width:{{ s.w }};height:{{ s.h }};border:2px solid var(--tx);border-radius:{{ s.r }};background:{{ s.bg }};display:flex;align-items:center;justify-content:center;text-align:center;font-family:Caveat,cursive;font-size:22px;font-weight:600;box-sizing:border-box;padding:4px;outline:{{ s.sel }};outline-offset:6px">{{ s.t }}</div>
+    </sc-for>
+    <sc-for list="{{ stickies }}" as="s" hint-placeholder-count="3">
+      <div style="position:absolute;left:{{ s.x }};top:{{ s.y }};width:150px;height:120px;box-sizing:border-box;background:{{ s.c }};border-radius:3px;transform:rotate({{ s.r }});box-shadow:0 2px 0 rgba(0,0,0,.06),0 8px 18px rgba(0,0,0,.18);padding:12px;font-family:Caveat,cursive;font-size:21px;line-height:23px;color:#1F1D1A;font-weight:600;display:flex;flex-direction:column;justify-content:space-between">{{ s.t }}<span style="font:500 10px Inter;color:#6A655C;display:{{ s.byS }}">{{ s.by }}</span></div>
+    </sc-for>
+    <sc-for list="{{ cards }}" as="c" hint-placeholder-count="0">
+      <div style="position:absolute;left:{{ c.x }};top:{{ c.y }};width:{{ c.w }};min-height:{{ c.h }};box-sizing:border-box;background:var(--sf);border:1px solid {{ c.bd }};border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.18);display:flex;flex-direction:column;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px 0;color:var(--mu);font-size:11.5px"><svg width="14" height="14" viewBox="0 0 24 24" style="flex-shrink:0;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ c.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.kind }}</span><span style="color:var(--mu)">{{ c.act }}</span></div>
+        <div style="padding:6px 12px 0;font-size:14px;font-weight:600;color:var(--tx);line-height:20px">{{ c.t }}</div>
+        <div style="padding:4px 12px 0;font-size:12px;line-height:18px;color:var(--mu);display:{{ c.exS }}">{{ c.ex }}</div>
+        <div style="margin:8px 12px 0;height:{{ c.mh }};border-radius:6px;background:repeating-linear-gradient(135deg,var(--sf2) 0 8px,var(--bg) 8px 16px);display:{{ c.mS }};align-items:center;justify-content:center;font:500 11px 'JetBrains Mono',monospace;color:var(--mu)">{{ c.media }}</div>
+        <div style="display:flex;gap:6px;padding:8px 12px 10px;flex-wrap:wrap"><sc-for list="{{ c.tags }}" as="tg"><span style="font-size:11px;color:var(--ln);background:color-mix(in srgb,var(--ln) 12%,transparent);padding:1px 7px;border-radius:999px">{{ tg }}</span></sc-for></div>
+      </div>
+    </sc-for>
+  </div>
+
+  <sc-if value="{{ desk }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;left:0;right:0;top:0;height:48px;display:flex;align-items:center;gap:12px;padding:0 14px;background:color-mix(in srgb,var(--bg) 88%,transparent);border-bottom:1px solid var(--bd);box-sizing:border-box">
+      <span style="color:var(--mu);font-size:12.5px;white-space:nowrap">{{ crumb }}</span><span style="color:var(--mu)">/</span><span style="font-weight:600;font-size:13.5px;white-space:nowrap">{{ title }}</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:{{ saveC }};white-space:nowrap"><span style="width:6px;height:6px;border-radius:50%;background:{{ saveC }}"></span>{{ saved }}</span>
+      <span style="display:{{ badgeS }};font-size:11px;color:var(--mu);border:1px solid var(--bd);padding:2px 8px;border-radius:999px;white-space:nowrap">{{ badge }}</span>
+      <span style="flex:1"></span>
+      <sc-for list="{{ hdrBtns }}" as="b" hint-placeholder-count="4">
+        <span style="height:32px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:6px;background:{{ b.bg }};color:{{ b.c }};border:1px solid {{ b.bd }};font-size:12.5px;font-weight:{{ b.fw }};white-space:nowrap"><svg width="16" height="16" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ b.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ b.l }}</span>
+      </sc-for>
+    </div>
+    <sc-if value="{{ showTools }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;left:50%;top:60px;transform:translateX(-50%);display:flex;align-items:center;gap:2px;padding:4px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);box-shadow:0 8px 24px rgba(0,0,0,.18)">
+        <sc-for list="{{ tools }}" as="t" hint-placeholder-count="18">
+          <span style="display:{{ t.sepS }};width:1px;height:22px;background:var(--bd);margin:0 4px"></span>
+          <span title="{{ t.tip }}" style="display:{{ t.btnS }};position:relative;height:34px;min-width:34px;padding:0 {{ t.px }};border-radius:8px;align-items:center;justify-content:center;gap:3px;background:{{ t.bg }};color:{{ t.c }};outline:{{ t.ring }};outline-offset:1px;opacity:{{ t.op }}"><svg width="18" height="18" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ t.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg><span style="display:{{ t.dotS }};width:7px;height:7px;border-radius:50%;background:{{ t.dot }};position:absolute;left:5px;bottom:5px;box-shadow:0 0 0 1.5px var(--sf)"></span><svg width="8" height="8" viewBox="0 0 24 24" style="display:{{ t.caretS }};stroke-width:3;stroke-linecap:round;fill:none;stroke:currentColor"><path d="M6 9l6 6 6-6"></path></svg><span style="position:absolute;right:3px;bottom:1px;font-size:8.5px;color:var(--mu);font-weight:500">{{ t.k }}</span></span>
+        </sc-for>
+      </div>
+    </sc-if>
+    <div style="position:absolute;inset-inline-start:14px;bottom:14px;display:flex;gap:8px">
+      <div style="display:flex;align-items:center;gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:16px">−</span><span style="font-size:12px;width:44px;text-align:center">{{ zoom }}</span><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:16px">+</span><span style="width:1px;height:18px;background:var(--bd)"></span><span style="height:28px;padding:0 8px;display:flex;align-items:center;font-size:12px;color:var(--mu)">Fit</span></div>
+      <div style="display:flex;align-items:center;gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><sc-for list="{{ ur }}" as="u"><span title="{{ u.tip }}" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:{{ u.c }};border-radius:7px;background:{{ u.bg }}"><svg width="16" height="16" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ u.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg></span></sc-for></div>
+    </div>
+    <sc-if value="{{ minimap }}"><div style="position:absolute;inset-inline-start:14px;bottom:58px;width:180px;height:110px;border-radius:10px;background:var(--sf);border:1px solid var(--bd);overflow:hidden"><div style="position:absolute;left:20px;top:18px;width:60px;height:40px;border:1px solid var(--mu);border-radius:3px"></div><div style="position:absolute;left:96px;top:30px;width:56px;height:50px;border:1px solid var(--mu);border-radius:3px"></div><div style="position:absolute;left:12px;top:10px;width:110px;height:70px;border:1.5px solid var(--ac);border-radius:4px;background:color-mix(in srgb,var(--ac) 8%,transparent)"></div></div></sc-if>
+    <div style="position:absolute;inset-inline-end:14px;bottom:14px;display:{{ frameChipS }};align-items:center;gap:6px;height:36px;padding:0 6px 0 12px;border-radius:999px;background:var(--sf);border:1px solid var(--bd);font-size:12.5px;white-space:nowrap"><span style="color:var(--mu)">‹</span>{{ frameChip }}<span style="color:var(--mu)">›</span><span style="width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--mu)">⋯</span></div>
+  </sc-if>
+
+  <sc-if value="{{ phone }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:0;right:0;top:0;height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:13px;font-weight:600;background:var(--bg)"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:9px;border:1.5px solid var(--tx);border-radius:2px"></span></span></div>
+    <div style="position:absolute;left:0;right:0;top:40px;height:52px;display:flex;align-items:center;gap:10px;padding:0 10px;background:var(--bg);border-bottom:1px solid var(--bd);box-sizing:border-box"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px">‹</span><div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ title }}</span><span style="font-size:11px;color:{{ saveC }}">{{ saved }}</span></div><span style="height:36px;padding:0 12px;border-radius:999px;display:flex;align-items:center;font-size:13px;border:1px solid var(--bd)">{{ phRight }}</span><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:18px">⋯</span></div>
+    <div style="position:absolute;inset-inline-start:12px;top:104px;display:{{ phUrS }};gap:6px"><sc-for list="{{ ur }}" as="u"><span style="width:44px;height:44px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;color:{{ u.c }}"><svg width="20" height="20" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ u.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg></span></sc-for></div>
+    <div style="position:absolute;inset-inline-end:12px;top:104px;display:{{ phModeS }};align-items:center;gap:6px;height:32px;padding:0 10px;border-radius:999px;background:var(--sf);border:1px solid var(--bd);font-size:11.5px;color:var(--mu)">Stylus draws · finger pans</div>
+    <div style="position:absolute;left:10px;right:10px;bottom:30px;height:64px;display:{{ dockS }};align-items:center;justify-content:space-around;border-radius:20px;background:var(--sf);border:1px solid var(--bd);box-shadow:0 10px 28px rgba(0,0,0,.25)">
+      <sc-for list="{{ dock }}" as="t" hint-placeholder-count="7"><span style="position:relative;width:48px;height:48px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:{{ t.bg }};color:{{ t.c }}"><svg width="22" height="22" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ t.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg><span style="font-size:9.5px">{{ t.l }}</span><span style="display:{{ t.dotS }};position:absolute;top:7px;inset-inline-end:9px;width:8px;height:8px;border-radius:50%;background:{{ t.dot }};box-shadow:0 0 0 1.5px var(--sf)"></span></span></sc-for>
+    </div>
+    <div style="position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:120px;height:4px;border-radius:2px;background:var(--tx);opacity:.5"></div>
+  </sc-if>
+
+  <sc-if value="{{ hasProp }}">
+    <div style="position:absolute;left:{{ propX }};top:{{ propY }};bottom:{{ propB }};max-width:{{ propMax }};flex-wrap:wrap;display:flex;align-items:center;gap:2px;padding:4px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 10px 28px rgba(0,0,0,.3);white-space:nowrap">
+      <sc-for list="{{ prop }}" as="t" hint-placeholder-count="8">
+        <span style="display:{{ t.sepS }};width:1px;height:20px;background:var(--bd);margin:0 3px"></span>
+        <span title="{{ t.tip }}" style="display:{{ t.btnS }};height:30px;min-width:30px;padding:0 6px;box-sizing:border-box;border-radius:7px;align-items:center;justify-content:center;gap:5px;background:{{ t.bg }};color:{{ t.c }};font-size:12px"><span style="display:{{ t.swS }};width:18px;height:18px;border-radius:5px;background:{{ t.sw }};box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)"></span><svg width="17" height="17" viewBox="0 0 24 24" style="display:{{ t.gS }};stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ t.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ t.l }}</span>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasSnap }}"><div style="position:absolute;left:{{ snapX }};top:{{ snapY }};display:flex;align-items:center;gap:8px;height:32px;padding:0 6px 0 12px;border-radius:999px;background:var(--sf2);border:1px solid var(--bd);font-size:12px;white-space:nowrap;box-shadow:0 8px 20px rgba(0,0,0,.25)">Snapped to circle<span style="height:24px;padding:0 10px;border-radius:999px;display:flex;align-items:center;background:var(--ac);color:var(--af);font-weight:600">Undo snap</span><span style="width:16px;height:16px;border-radius:50%;border:2px solid var(--mu);border-top-color:transparent"></span></div></sc-if>
+
+  <sc-if value="{{ hasWheel }}">
+    <div style="position:absolute;left:{{ wheelX }};top:{{ wheelY }};width:240px;height:240px;border-radius:50%;background:var(--sf);border:1px solid var(--bd);box-shadow:0 18px 50px rgba(0,0,0,.35)">
+      <sc-for list="{{ wheel }}" as="w" hint-placeholder-count="6"><span style="position:absolute;left:{{ w.x }};top:{{ w.y }};width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:{{ w.bg }};color:{{ w.c }};font-size:9.5px"><svg width="20" height="20" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ w.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ w.l }}<span style="display:{{ w.dotS }};width:6px;height:6px;border-radius:50%;background:{{ w.dot }}"></span></span></sc-for>
+      <div style="position:absolute;left:50%;top:50%;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;background:var(--sf2);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;gap:2px"><sc-for list="{{ ur }}" as="u"><span style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:{{ u.c }}"><svg width="18" height="18" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ u.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg></span></sc-for></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasLasso }}">
+    <svg style="position:absolute;left:{{ lassoX }};top:{{ lassoY }};overflow:visible;transform:{{ lassoTf }};transform-origin:0 0" width="10" height="10"><path d="M0 40 C 10 -20, 280 -30, 300 40 S 250 170, 140 165 S -10 120, 0 40z" style="fill:color-mix(in srgb,var(--ac) 7%,transparent);stroke:var(--ac);stroke-width:1.5;stroke-dasharray:6 5"></path></svg>
+  </sc-if>
+
+  <sc-if value="{{ hasPanel }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:{{ pnL }};right:{{ pnR }};top:{{ pnT }};bottom:{{ pnB }};width:{{ pnW }};max-height:{{ pnMax }};box-sizing:border-box;background:var(--sf);border:1px solid var(--bd);border-radius:{{ pnRad }};box-shadow:0 18px 48px rgba(0,0,0,.32);display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:{{ grabS }};justify-content:center;padding-top:8px"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+      <div style="display:flex;align-items:center;gap:8px;padding:12px 14px 10px;border-bottom:1px solid var(--bd)"><svg width="16" height="16" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;color:var(--mu)"><sc-for list="{{ pnG }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg><span style="font-weight:600;font-size:13.5px;flex:1">{{ pnTitle }}</span><span style="font-size:11.5px;color:var(--mu)">{{ pnSub }}</span><span style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--mu);font-size:15px">×</span></div>
+      <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:14px;padding:12px 14px 14px">
+        <sc-for list="{{ blocks }}" as="bk" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:{{ bk.hS }};align-items:center;justify-content:space-between;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)"><span>{{ bk.h }}</span><span style="text-transform:none;letter-spacing:0;font-weight:500;color:{{ bk.hrC }}">{{ bk.hr }}</span></div>
+            <div style="display:{{ bk.segS }};padding:2px;border-radius:8px;background:var(--sf2);gap:2px"><sc-for list="{{ bk.seg }}" as="s"><span style="flex:1;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px;background:{{ s.bg }};color:{{ s.c }};font-weight:{{ s.fw }};white-space:nowrap;box-shadow:{{ s.sh }}">{{ s.l }}</span></sc-for></div>
+            <div style="display:{{ bk.gridS }};grid-template-columns:{{ bk.cols }};gap:{{ bk.gap }}"><sc-for list="{{ bk.items }}" as="it">
+              <div title="{{ it.tip }}" style="position:relative;display:flex;flex-direction:{{ it.dir }};align-items:center;justify-content:{{ it.jc }};gap:{{ it.gap }};min-height:{{ it.mh }};padding:{{ it.pad }};border-radius:{{ it.rad }};background:{{ it.bg }};border:1px solid {{ it.bd }};color:{{ it.c }};box-shadow:{{ it.ring }};opacity:{{ it.op }};font-size:{{ it.fs }};box-sizing:border-box;min-width:0">
+                <span style="display:{{ it.gripS }};color:var(--mu);font-size:11px;letter-spacing:-2px">⋮⋮</span>
+                <span style="display:{{ it.thS }};width:{{ it.thW }};height:{{ it.thH }};flex-shrink:0;border-radius:4px;background:{{ it.th }};border:1px solid var(--bd)"></span>
+                <svg width="{{ it.gs }}" height="{{ it.gs }}" viewBox="0 0 24 24" style="display:{{ it.gS }};flex-shrink:0;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;color:{{ it.gc }}"><sc-for list="{{ it.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>
+                <svg width="{{ it.pvW }}" height="20" viewBox="0 0 120 20" preserveAspectRatio="none" style="display:{{ it.pvS }};flex-shrink:0;overflow:visible"><path d="{{ it.pv }}" style="fill:{{ it.pvF }};stroke:{{ it.pvC }};stroke-width:{{ it.pvW2 }};opacity:{{ it.pvO }};stroke-linecap:{{ it.pvCap }};stroke-dasharray:{{ it.pvDa }}"></path></svg>
+                <span style="display:{{ it.lS }};flex:{{ it.lFlex }};min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:{{ it.fw }};text-align:{{ it.ta }}">{{ it.l }}</span>
+                <span style="display:{{ it.subS }};font-size:11px;color:{{ it.subC }};white-space:nowrap">{{ it.sub }}</span>
+                <span style="display:{{ it.togS }};width:30px;height:18px;border-radius:999px;background:{{ it.togBg }};position:relative;flex-shrink:0"><span style="position:absolute;top:2px;left:{{ it.togX }};width:14px;height:14px;border-radius:50%;background:{{ it.togK }}"></span></span>
+                <span style="display:{{ it.slS }};flex:1;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--ac) {{ it.slV }},var(--bd) {{ it.slV }});position:relative;min-width:60px"><span style="position:absolute;left:{{ it.slV }};top:-6px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.4)"></span></span>
+                <span style="display:{{ it.tagS }};font-size:10px;font-weight:600;color:{{ it.tagC }};border:1px solid {{ it.tagC }};padding:0 5px;border-radius:999px;white-space:nowrap">{{ it.tag }}</span>
+                <span style="display:{{ it.icS }};gap:2px;color:var(--mu)"><sc-for list="{{ it.ic }}" as="ic"><svg width="15" height="15" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;color:{{ ic.c }}"><sc-for list="{{ ic.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg></sc-for></span>
+              </div>
+            </sc-for></div>
+            <div style="display:{{ bk.noteS }};font-size:11.5px;line-height:17px;color:{{ bk.noteC }};background:{{ bk.noteBg }};padding:{{ bk.notePad }};border-radius:8px">{{ bk.note }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:{{ pnFootS }};gap:8px;padding:10px 14px;border-top:1px solid var(--bd);justify-content:flex-end"><sc-for list="{{ pnFoot }}" as="f"><span style="height:32px;padding:0 12px;border-radius:8px;display:flex;align-items:center;font-size:12.5px;font-weight:{{ f.fw }};background:{{ f.bg }};color:{{ f.c }};border:1px solid {{ f.bd }};white-space:nowrap">{{ f.l }}</span></sc-for></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasReview }}">
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,.45)"></div>
+    <div style="position:absolute;left:{{ rvL }};top:{{ rvT }};right:{{ rvR }};bottom:{{ rvB }};background:var(--sf);border:1px solid var(--bd);border-radius:{{ rvRad }};display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.45)">
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--bd)"><svg width="18" height="18" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ rvG }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg><span style="font-weight:600;font-size:15px;flex:1">{{ rvTitle }}</span><span style="font-size:11.5px;color:var(--mu);white-space:nowrap">{{ rvModel }}</span><span style="font-size:16px;color:var(--mu)">×</span></div>
+      <div style="display:flex;flex-direction:{{ rvDir }};flex:1;min-height:0">
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px;padding:16px 18px;border-inline-end:{{ rvSep }};border-bottom:{{ rvSepB }}"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--mu)">YOUR INK</span><div style="flex:1;min-height:150px;border-radius:10px;background:var(--bg);border:1px solid var(--bd);position:relative;overflow:hidden"><sc-for list="{{ rvInk }}" as="t"><span style="position:absolute;left:{{ t.x }};top:{{ t.y }};font-family:Caveat,cursive;font-size:{{ t.s }};font-weight:600;color:var(--tx);white-space:nowrap;background:{{ t.hl }};border-radius:3px">{{ t.t }}</span></sc-for></div></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:10px;padding:16px 18px;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--mu);flex:1">RESULT</span><div style="display:flex;padding:2px;border-radius:8px;background:var(--sf2);gap:2px"><sc-for list="{{ rvTabs }}" as="s"><span style="height:26px;padding:0 10px;border-radius:6px;display:flex;align-items:center;font-size:12px;background:{{ s.bg }};color:{{ s.c }}">{{ s.l }}</span></sc-for></div></div>
+          <div style="display:{{ rvBannerS }};align-items:center;gap:8px;padding:8px 10px;border-radius:8px;font-size:12px;background:{{ rvBannerBg }};color:{{ rvBannerC }}">{{ rvBanner }}</div>
+          <div style="flex:1;min-height:150px;border-radius:10px;border:1px solid {{ rvBoxBd }};background:var(--bg);padding:14px;font-size:{{ rvFs }};line-height:1.6;font-family:{{ rvFont }};color:var(--tx);white-space:pre-wrap;position:relative;overflow:hidden"><sc-for list="{{ rvOut }}" as="w"><span style="background:{{ w.hl }};border-bottom:{{ w.ul }};border-radius:2px;color:{{ w.c }}">{{ w.t }}</span></sc-for><div style="display:{{ rvLoadS }};position:absolute;inset:0;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--mu);font-family:Inter;font-size:12.5px"><span style="width:22px;height:22px;border-radius:50%;border:2.5px solid var(--bd);border-top-color:var(--ac)"></span>{{ rvLoad }}</div></div>
+          <div style="display:{{ rvPrevS }};border-radius:10px;border:1px solid var(--bd);padding:12px;align-items:center;justify-content:center;gap:10px;font-size:20px;font-family:'Source Serif 4',serif;font-style:italic">{{ rvPrev }}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:12px 18px;border-top:1px solid var(--bd);flex-wrap:wrap"><span style="font-size:11.5px;color:var(--mu);flex:1;min-width:140px">{{ rvFootNote }}</span><sc-for list="{{ rvBtns }}" as="f"><span style="height:34px;padding:0 14px;border-radius:9px;display:flex;align-items:center;font-size:13px;font-weight:{{ f.fw }};background:{{ f.bg }};color:{{ f.c }};border:1px solid {{ f.bd }};opacity:{{ f.op }};white-space:nowrap">{{ f.l }}</span></sc-for></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasEmpty }}">
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;width:{{ emptyW }}">
+      <svg width="40" height="40" viewBox="0 0 24 24" style="stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;color:var(--mu)"><sc-for list="{{ emptyG }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>
+      <span style="font-size:15px;color:var(--tx)">A blank board. Start anywhere.</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><sc-for list="{{ emptyActs }}" as="a"><span style="height:38px;padding:0 14px;border-radius:10px;display:flex;align-items:center;gap:8px;font-size:13px;background:{{ a.bg }};color:{{ a.c }};border:1px solid {{ a.bd }};font-weight:{{ a.fw }}"><svg width="16" height="16" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ a.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ a.l }}</span></sc-for></div>
+      <span style="font-size:12px;color:var(--mu)">or drop files, notes and links here</span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasBanner }}"><div style="position:absolute;left:50%;top:{{ banY }};transform:translateX(-50%);display:flex;align-items:center;gap:10px;height:36px;padding:0 8px 0 14px;border-radius:999px;background:var(--sf2);border:1px solid var(--bd);font-size:12.5px;white-space:nowrap;box-shadow:0 8px 22px rgba(0,0,0,.25)"><span style="width:8px;height:8px;border-radius:50%;background:{{ banDot }}"></span>{{ banText }}<span style="display:{{ banActS }};height:26px;padding:0 10px;border-radius:999px;align-items:center;border:1px solid var(--bd);font-weight:500">{{ banAct }}</span></div></sc-if>
+
+  <sc-if value="{{ present }}">
+    <div style="position:absolute;inset:0;background:#08090B;display:flex;flex-direction:column">
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:24px;padding:{{ prPad }};min-height:0">
+        <div style="position:relative;aspect-ratio:16/9;height:{{ prH }};max-width:100%;border-radius:8px;background:{{ boardBg }};background-image:{{ patImg }};background-size:{{ patSize }};overflow:hidden;box-shadow:0 0 0 1px #2A303B">
+          <span style="position:absolute;left:6%;top:8%;font-family:Caveat,cursive;font-size:{{ prT }};font-weight:700;color:var(--tx)">Refraction</span>
+          <svg viewBox="0 0 400 225" style="position:absolute;inset:0;width:100%;height:100%"><path d="M30 120 H370" style="stroke:var(--mu);stroke-width:1.5;stroke-dasharray:5 5"></path><path d="M80 40 L200 120 L280 210" style="fill:none;stroke:var(--tx);stroke-width:2.5;stroke-linecap:round"></path><path d="M200 30 V215" style="stroke:var(--mu);stroke-width:1"></path><path d="M300 60 C 320 50, 345 58, 352 74" style="fill:none;stroke:#EF6B6B;stroke-width:3;stroke-linecap:round;opacity:.9"></path><path d="M260 70 C 280 60, 295 62, 300 60" style="fill:none;stroke:#EF6B6B;stroke-width:3;stroke-linecap:round;opacity:.35"></path></svg>
+          <span style="position:absolute;left:58%;top:30%;font-family:Caveat,cursive;font-size:{{ prS }};font-weight:600;color:var(--tx)">n₁ sin θ₁ = n₂ sin θ₂</span>
+        </div>
+        <div style="display:{{ prNotesS }};flex-direction:column;gap:10px;width:300px;align-self:stretch;padding:18px;border-radius:12px;background:#12151A;color:#C9C6BF;font-size:14px;line-height:22px"><span style="font:600 11px Inter;letter-spacing:.08em;color:#7D7A73">PRESENTER NOTES · FRAME 2</span>Light bends toward the normal entering a denser medium. Ask: what happens at the critical angle?<span style="margin-top:auto;font-size:12px;color:#7D7A73">Next: Total internal reflection</span></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:{{ prBarPad }}">
+        <sc-for list="{{ prBar }}" as="b"><span style="height:40px;min-width:40px;padding:0 {{ b.px }};border-radius:10px;display:flex;align-items:center;justify-content:center;gap:6px;background:{{ b.bg }};color:{{ b.c }};font-size:13px;white-space:nowrap"><svg width="18" height="18" viewBox="0 0 24 24" style="display:{{ b.gS }};stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ b.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ b.l }}</span></sc-for>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;overlay&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;select&quot;,&quot;pen&quot;,&quot;palette&quot;,&quot;shapes&quot;,&quot;layers&quot;,&quot;frames&quot;,&quot;settings&quot;,&quot;menu&quot;,&quot;convert&quot;,&quot;wheel&quot;,&quot;lasso&quot;,&quot;review&quot;,&quot;snap&quot;,&quot;empty&quot;,&quot;viewonly&quot;,&quot;offline&quot;,&quot;perf&quot;,&quot;present&quot;,&quot;none&quot;],&quot;default&quot;:&quot;select&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;kind&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;whiteboard&quot;,&quot;board&quot;],&quot;default&quot;:&quot;whiteboard&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;bgColor&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;theme&quot;,&quot;white&quot;,&quot;warm&quot;,&quot;chalk&quot;,&quot;blueprint&quot;,&quot;transparent&quot;],&quot;default&quot;:&quot;theme&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;pattern&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;dots&quot;,&quot;grid&quot;,&quot;lines&quot;,&quot;iso&quot;,&quot;cornell&quot;,&quot;graph&quot;],&quot;default&quot;:&quot;dots&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;review&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;ok&quot;,&quot;working&quot;,&quot;low&quot;,&quot;error&quot;,&quot;offline&quot;],&quot;default&quot;:&quot;ok&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;rvTab&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Text&quot;,&quot;LaTeX&quot;,&quot;Mermaid&quot;],&quot;default&quot;:&quot;Text&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;rtl&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;light&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { window.__wb = this; if (!window.LUMEN_GLYPHS) { const t = setInterval(() => { if (window.LUMEN_GLYPHS) { clearInterval(t); this.forceUpdate(); } }, 50); setTimeout(() => clearInterval(t), 5000); } }
+  renderVals() {
+    const GL0 = 0;
+    const GL = window.LUMEN_GLYPHS || {};
+    const g = n => (GL[n] || []).map(p => typeof p === 'string' ? { d: p, f: 'none', s: 'currentColor' } : { d: p.d, f: p.fill ? 'currentColor' : 'none', s: p.stroke || (p.fill ? 'none' : 'currentColor') });
+    const P = Object.assign({}, this.props, window.__wbOv || {}), ph = !!P.phone, ov = P.overlay || 'select', kind = P.kind || 'whiteboard', rtl = !!P.rtl, light = !!P.light;
+    const AC = 'color-mix(in srgb,var(--ac) 18%,transparent)';
+    const on = (x, y) => x === y;
+    // background & pattern
+    const BGS = { theme: 'var(--bg)', white: '#FFFFFF', warm: '#F4ECD8', chalk: '#1F3A2E', blueprint: '#173A63', transparent: 'var(--bg)' };
+    const bgk = P.bgColor || 'theme', pat = P.pattern || 'dots';
+    const lineC = bgk === 'chalk' || bgk === 'blueprint' ? 'rgba(255,255,255,.14)' : 'color-mix(in srgb,var(--mu) 16%,transparent)';
+    const PAT = { none: ['none', 'auto'], dots: [`radial-gradient(${lineC} 1.2px, transparent 1.4px)`, '22px 22px'], grid: [`linear-gradient(${lineC} 1px,transparent 1px),linear-gradient(90deg,${lineC} 1px,transparent 1px)`, '24px 24px'], lines: [`linear-gradient(${lineC} 1px,transparent 1px)`, '100% 28px'], iso: [`repeating-linear-gradient(30deg,${lineC} 0 1px,transparent 1px 24px),repeating-linear-gradient(150deg,${lineC} 0 1px,transparent 1px 24px)`, 'auto'], graph: [`linear-gradient(${lineC} 1px,transparent 1px),linear-gradient(90deg,${lineC} 1px,transparent 1px)`, '12px 12px'], cornell: [`linear-gradient(90deg,transparent 260px,${lineC} 260px,${lineC} 262px,transparent 262px),linear-gradient(${lineC} 1px,transparent 1px)`, '100% 100%, 100% 28px'] };
+    let boardBg = BGS[bgk] || bgk; if (bgk === 'transparent') boardBg = 'var(--bg)';
+    const [patImg, patSize] = bgk === 'transparent' ? ['conic-gradient(var(--sf2) 25%,var(--bg) 0 50%,var(--sf2) 0 75%,var(--bg) 0)', '20px 20px'] : (PAT[pat] || PAT.dots);
+    const inkC = bgk === 'chalk' || bgk === 'blueprint' ? '#F2F0EA' : (bgk === 'white' || bgk === 'warm') ? '#1F1D1A' : 'var(--tx)';
+    // board content
+    const empty = ov === 'empty';
+    const frames = empty ? [] : [{ x: '40px', y: '96px', w: '600px', h: '420px', n: 'Frame 1 · Refraction' }, { x: '680px', y: '96px', w: '580px', h: '420px', n: 'Frame 2 · Lenses' }];
+    const inkText = empty ? [] : [[70, 118, '34px', '-1deg', 'Refraction'], [76, 196, '22px', '0deg', 'light bends toward the normal'], [96, 236, '22px', '0deg', 'entering a denser medium'], [380, 420, '24px', '-2deg', 'n₁ sin θ₁ = n₂ sin θ₂'], [720, 118, '30px', '-1deg', 'Thin lens'], [980, 460, '22px', '2deg', 'real image!']].map(([x, y, s, r, t]) => ({ x: x + 'px', y: y + 'px', s, r, t, c: inkC }));
+    const inkPaths = empty ? [] : [
+      { d: 'M80 330 H560', c: 'var(--mu)', w: 1.5, da: '6 6' }, { d: 'M150 270 L300 330 L380 470', c: inkC, w: 2.6, da: 'none' }, { d: 'M300 250 V500', c: 'var(--mu)', w: 1.2, da: 'none' },
+      { d: 'M720 330 H1220', c: 'var(--mu)', w: 1.5, da: '6 6' }, { d: 'M940 200 C 970 260, 970 400, 940 460 C 910 400, 910 260, 940 200z', c: '#5CC8C2', w: 2.4, da: 'none' }, { d: 'M760 240 L940 260 L1120 420', c: inkC, w: 2.4, da: 'none' }, { d: 'M760 420 L940 400 L1120 250', c: '#E8893A', w: 2.4, da: 'none' }, { d: 'M1110 470 C 1060 500, 1020 486, 1000 478', c: inkC, w: 2, da: 'none' }];
+    const selKind = P.sel || (ov === 'select' ? 'shape' : '');
+    const shapes = empty ? [] : [{ x: 420, y: 150, w: 180, h: 64, r: '8px', t: 'Snell’s law', bg: 'color-mix(in srgb,#E3B341 22%,transparent)', k: 'shape' }, { x: 470, y: 300 - 30, w: 0, h: 0 }].filter(s => s.w).map(s => ({ ...s, x: s.x + 'px', y: s.y + 'px', w: s.w + 'px', h: s.h + 'px', sel: selKind === 'shape' && !ph ? '1.5px solid var(--ac)' : 'none' }));
+    const SC = ['#fff3bf', '#d3f9d8', '#d0ebff', '#ffd8a8', '#eebefa', '#ffc9c9'];
+    const stickies = empty ? [] : (kind === 'board' ? [[700, 540, '-2deg', 0, 'Ask Dr. Lim about sign convention', 'Pixel 8 · Sara'], [870, 556, '1.5deg', 2, 'Lab Fri: bring lens set', '']] : [[440, 540, '-2deg', 0, 'Ask Dr. Lim about sign convention', 'Pixel 8 · Sara'], [610, 552, '1.5deg', 1, 'Lab Fri: bring lens set', ''], [780, 544, '-1deg', 2, 'Re-do Q4 with ray diagram', '']]).map(([x, y, r, c, t, by]) => ({ x: x + 'px', y: y + 'px', r, c: SC[c], t, by, byS: by ? 'block' : 'none' }));
+    const cards = kind !== 'board' || empty ? [] : [
+      { x: 60, y: 540, w: 250, h: 140, kind: 'Note · Optics', act: 'Open', t: 'Snell’s law, derived', ex: 'From Fermat’s principle: light takes the path of least time…', tags: ['#physics', '#optics'], g: g('note-card'), bd: P.cardSel ? 'var(--ac)' : 'var(--bd)' },
+      { x: 330, y: 540, w: 330, h: 180, kind: 'refraction-flow.mermaid', act: 'Edit', t: 'Ray tracing steps', ex: '', media: 'live diagram · flowchart LR', mh: '80px', tags: [], g: g('mermaid') },
+      { x: 1060, y: 540, w: 220, h: 170, kind: 'youtube.com', act: '▶', t: 'Why light bends (3Blue1Brown)', ex: '', media: 'video · 17:32', mh: '70px', tags: [], g: g('media') }]
+      .map(c => ({ ...c, x: c.x + 'px', y: c.y + 'px', w: c.w + 'px', h: c.h + 'px', exS: c.ex ? 'block' : 'none', mS: c.media ? 'flex' : 'none', mh: c.mh || '0', media: c.media || '', bd: c.bd || 'var(--bd)' }));
+    // toolbar
+    const penColor = P.penColor || '#5CC8C2';
+    const tool = P.tool || (ov === 'lasso' ? 'lasso' : ov === 'pen' ? 'pen' : 'select');
+    const T = (gl, id, k, tip, o = {}) => ({ g: g(gl), k, tip: tip + (k ? ' · ' + k : ''), sepS: 'none', btnS: 'flex', bg: on(tool, id) ? AC : 'transparent', c: on(tool, id) ? 'var(--ac)' : 'var(--tx)', ring: 'none', op: o.dis ? .4 : 1, dotS: o.dot ? 'block' : 'none', dot: o.dot || '', caretS: o.split ? 'block' : 'none', px: o.split ? '6px' : '0' });
+    const S = { sepS: 'block', btnS: 'none', g: [], k: '', tip: '', bg: '', c: '', ring: '', op: 1, dotS: 'none', dot: '', caretS: 'none', px: '0' };
+    const tools = [T('lock', 'lock', '', 'Keep tool active'), S, T('select', 'select', '1', 'Select'), T('lasso', 'lasso', '2', 'Lasso'), T('hand', 'hand', 'H', 'Hand'), S,
+      T(P.penGlyph || 'pen-fountain', 'pen', '3', 'Pen', { dot: penColor, split: 1 }), T('highlighter', 'hl', '4', 'Highlighter'), T('eraser-stroke', 'eraser', '5', 'Eraser'), T('laser', 'laser', 'K', 'Laser'), S,
+      T(P.lastShape || 'rect', 'shape', '6', 'Shapes', { split: 1 }), T('arrow', 'arrow', '7', 'Arrow and connector', { split: 1 }), S,
+      T('text', 'text', '8', 'Text'), T('sticky', 'sticky', '9', 'Sticky'), S,
+      T('image', 'image', '0', 'Image'), T('media', 'media', '', 'GIF or video'), T('web-embed', 'web', '', 'Web page'), T('note-card', 'note', 'N', 'Note card'), S,
+      T('frame', 'frame', 'F', 'Frame'), S, T('more', 'more', '', 'Mermaid, code, script, board settings')];
+    const ur = [{ g: g('undo'), c: 'var(--tx)', tip: 'Undo · ⌘Z', bg: 'transparent' }, { g: g('redo'), c: 'var(--mu)', tip: 'Redo · ⇧⌘Z', bg: 'transparent' }];
+    const hdrBtns = [['history', '', 0], ['layers', '', 0], ['present', 'Present', 0], ['link', 'Share', 0], ['more', '', 0]].map(([gl, l]) => ({ g: g(gl), l, bg: 'transparent', c: 'var(--tx)', bd: l ? 'var(--bd)' : 'transparent', fw: 500 }));
+    if (ov === 'viewonly') { hdrBtns.splice(0, hdrBtns.length, { g: g('eye'), l: 'View only', bg: 'transparent', c: 'var(--mu)', bd: 'var(--bd)', fw: 500 }, { g: g('copy'), l: 'Duplicate to my vault', bg: 'var(--ac)', c: 'var(--af)', bd: 'transparent', fw: 600 }); }
+    // phone dock
+    const dk = (gl, l, id, dot) => ({ g: g(gl), l, bg: on(tool, id) ? AC : 'transparent', c: on(tool, id) ? 'var(--ac)' : 'var(--tx)', dotS: dot ? 'block' : 'none', dot: dot || '' });
+    const dock = [dk('hand', 'Hand', 'hand'), dk(P.penGlyph || 'pen-fountain', 'Pen', 'pen', penColor), dk('highlighter', 'Mark', 'hl'), dk('eraser-stroke', 'Erase', 'eraser'), dk('shape-library', 'Shapes', 'shape'), dk('text', 'Text', 'text'), dk('more', 'More', 'more')];
+    // property bar
+    const pb = (o) => ({ sepS: 'none', btnS: 'flex', swS: o.sw ? 'block' : 'none', sw: o.sw || '', gS: o.g ? 'block' : 'none', g: o.g ? g(o.g) : [], l: o.l || '', tip: o.tip || '', bg: o.on ? AC : 'transparent', c: o.on ? 'var(--ac)' : 'var(--tx)' });
+    const pS = { sepS: 'block', btnS: 'none', swS: 'none', sw: '', gS: 'none', g: [], l: '', tip: '', bg: '', c: '' };
+    const PROPS = {
+      shape: [pb({ sw: 'var(--tx)', tip: 'Stroke colour', on: ov === 'palette' }), pb({ sw: '#E3B341', tip: 'Fill colour' }), pb({ g: 'fill-hachure', tip: 'Fill style' }), pS, pb({ g: 'stroke-solid', tip: 'Stroke width and style' }), pb({ g: 'sloppiness-1', tip: 'Sloppiness' }), pb({ g: 'edges-round', tip: 'Edges' }), pS, pb({ g: 'font', l: 'Hand', tip: 'Font' }), pb({ g: 'opacity', tip: 'Opacity' }), pS, pb({ g: 'bring-front', tip: 'Arrange' }), pb({ g: 'link', tip: 'Link' }), pb({ g: 'more', tip: 'More' })],
+      ink: [pb({ sw: penColor, tip: 'Colour' }), pb({ g: 'pen-fountain', l: 'Fountain', tip: 'Change pen' }), pb({ g: 'stroke-solid', l: '2.5', tip: 'Thickness' }), pb({ g: 'opacity', tip: 'Opacity' }), pS, pb({ g: 'bring-front', tip: 'Arrange' }), pb({ g: 'more', tip: 'More' })],
+      sticky: [pb({ sw: SC[0], tip: 'Paper colour' }), pb({ g: 'rect', l: 'M', tip: 'Size' }), pb({ g: 'font', l: 'Hand', tip: 'Font' }), pS, pb({ g: 'layers', l: 'Stack', tip: 'Stack' }), pb({ g: 'duplicate', tip: 'Duplicate' }), pb({ g: 'trash', tip: 'Delete' })],
+      lasso: [pb({ g: 'select', l: 'Move' }), pb({ sw: penColor, l: 'Recolour' }), pb({ g: 'pen-fountain', l: 'Pen' }), pb({ g: 'duplicate' }), pb({ g: 'copy-image' }), pb({ g: 'group' }), pS, pb({ g: 'to-shapes', l: 'Shapes' }), pb({ g: 'to-text', l: 'Text', on: true }), pb({ g: 'to-math', l: 'Math' }), pb({ g: 'to-mermaid', l: 'Mermaid' })],
+      tool: [pb({ sw: penColor, tip: 'Colour' }), pb({ g: 'stroke-solid', l: '2.5 px' }), pb({ g: 'opacity', l: '100%' }), pb({ g: 'smoothing', l: 'Low' }), pb({ g: 'pressure', l: 'On', on: true }), pS, pb({ g: 'auto-shape', l: 'Auto-shape' })]
+    };
+    const propK = ov === 'lasso' || ov === 'review' ? 'lasso' : ov === 'pen' || ov === 'snap' ? 'tool' : selKind;
+    const hasProp = !!PROPS[propK] && !['empty', 'present', 'viewonly', 'wheel'].includes(ov) && !(ph && ['shapes', 'layers', 'frames', 'settings', 'menu', 'convert', 'pen', 'palette', 'review'].includes(ov));
+    const propPos = { shape: [ph ? 20 : 470, ph ? 120 : 140], ink: [400, 140], sticky: [400, 140], lasso: [ph ? 10 : 360, ph ? 112 : 120], tool: [ph ? 10 : 470, ph ? 112 : 112] }[propK] || [0, 0];
+    // panels
+    const it = (o) => ({ tip: o.tip || o.l || '', dir: o.col ? 'column' : 'row', jc: o.col ? 'center' : 'flex-start', gap: o.col ? '4px' : '8px', mh: o.mh || (o.col ? '62px' : '34px'), pad: o.pad || (o.col ? '6px 4px' : '0 8px'), rad: o.rad || '8px', bg: o.on ? AC : (o.bg || 'transparent'), bd: o.on ? 'var(--ac)' : (o.bd || 'transparent'), c: o.c || 'var(--tx)', ring: o.ring || 'none', op: o.op ?? 1, fs: o.fs || (o.col ? '10.5px' : '12.5px'),
+      gripS: o.grip ? 'block' : 'none', thS: o.th ? 'block' : 'none', th: o.th || '', thW: o.thW || '18px', thH: o.thH || '18px', gS: o.g ? 'block' : 'none', g: o.g ? g(o.g) : [], gs: o.gs || 18, gc: o.gc || 'currentColor',
+      pvS: o.pv ? 'block' : 'none', pv: o.pv || '', pvW: o.pvW || 90, pvF: o.pvF || 'none', pvC: o.pvC || 'var(--tx)', pvW2: o.pvW2 || 2, pvO: o.pvO ?? 1, pvCap: o.pvCap || 'round', pvDa: o.pvDa || 'none',
+      lS: o.l ? 'block' : 'none', l: o.l || '', lFlex: o.col ? '0 0 auto' : '1', fw: o.fw || 400, ta: o.col ? 'center' : 'start', subS: o.sub ? 'block' : 'none', sub: o.sub || '', subC: o.subC || 'var(--mu)',
+      togS: o.tog !== undefined ? 'block' : 'none', togBg: o.tog ? 'var(--ac)' : 'var(--bd)', togX: o.tog ? '14px' : '2px', togK: o.tog ? 'var(--af)' : 'var(--mu)', slS: o.sl ? 'block' : 'none', slV: o.sl || '0%',
+      tagS: o.tag ? 'block' : 'none', tag: o.tag || '', tagC: o.tagC || 'var(--mu)', icS: o.ic ? 'flex' : 'none', ic: (o.ic || []).map(x => typeof x === 'string' ? { g: g(x), c: 'var(--mu)' } : { g: g(x[0]), c: x[1] }) });
+    const B = (o) => ({ h: o.h || '', hS: o.h ? 'flex' : 'none', hr: o.hr || '', hrC: o.hrC || 'var(--mu)', segS: o.seg ? 'flex' : 'none', seg: (o.seg || []).map((l, i) => ({ l, bg: i === (o.segOn || 0) ? 'var(--sf)' : 'transparent', c: i === (o.segOn || 0) ? 'var(--tx)' : 'var(--mu)', fw: i === (o.segOn || 0) ? 600 : 400, sh: i === (o.segOn || 0) ? '0 1px 2px rgba(0,0,0,.2)' : 'none' })),
+      gridS: o.items ? 'grid' : 'none', cols: o.cols || '1fr', gap: o.gap || '4px', items: (o.items || []).map(it), noteS: o.note ? 'block' : 'none', note: o.note || '', noteC: o.noteC || 'var(--mu)', noteBg: o.noteBg || 'transparent', notePad: o.noteBg ? '8px 10px' : '0' });
+    const PEN_PV = 'M4 14 C 30 2, 50 22, 70 10 S 100 6, 116 12';
+    const pens = [['pen-ballpoint', 'Ballpoint', { pvW2: 2 }], ['pen-fountain', 'Fountain', { pvW2: 2.6, on: 1 }], ['pen-brush', 'Brush', { pv: 'M4 15 C 30 0, 55 22, 116 9 C 55 26, 30 6, 4 15z', pvF: 'var(--tx)', pvW2: .5 }], ['pen-marker', 'Marker', { pvW2: 7, pvO: .8, pvCap: 'butt' }], ['pen-highlighter', 'Highlighter', { pvW2: 11, pvO: .4, pvC: '#FFD43B', pvCap: 'butt', pv: 'M4 11 H116' }], ['pen-pencil', 'Pencil', { pvW2: 1.6, pvDa: '2 1.2', tag: 'Later' }], ['pen-calligraphy', 'Calligraphy', { pv: 'M4 14 C 30 2, 50 22, 70 10 S 100 6, 116 12 L 113 15 C 98 9, 74 13, 66 14 S 28 6, 6 17z', pvF: 'var(--tx)', pvW2: .4, tag: 'Later' }], ['laser', 'Laser', { pvC: '#EF6B6B', pvW2: 3, pvO: .7 }]]
+      .map(([gl, l, o]) => ({ g: gl, l, pv: o.pv || PEN_PV, pvW: ph ? 40 : 96, ...o, tagC: 'var(--le)' }));
+    const PAL = {
+      'Lumen ink': light ? ['#1F1D1A', '#6A655C', '#C42B2B', '#B45F0E', '#A86A00', '#1F8A4C', '#0F7C78', '#2F5BD3', '#7A4BD1', '#B0306A'] : ['#E8E6E1', '#9AA0AA', '#EF6B6B', '#F2A93B', '#E3B341', '#6BCB8B', '#5CC8C2', '#7AA2F7', '#B48EF0', '#F25C9A'],
+      'Paper stickies': SC, 'Highlighters': ['rgba(255,212,59,.45)', 'rgba(105,219,124,.45)', 'rgba(116,192,252,.45)', 'rgba(250,162,193,.45)', 'rgba(255,169,77,.45)'],
+      'Colour-blind safe': ['#E69F00', '#56B4E9', '#009E73', '#F0E442', '#0072B2', '#D55E00', '#CC79A7', '#000000'], 'Greys': ['#F2F0EA', '#C9C6BF', '#9AA0AA', '#6A655C', '#3A3E46', '#1F1D1A'],
+      'Vivid': ['#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#00C7BE', '#30B0C7', '#007AFF', '#5856D6', '#AF52DE', '#FF2D55'], 'This board': ['#E8E6E1', '#5CC8C2', '#E8893A', '#E3B341', '#fff3bf', '#d3f9d8'], 'Exam revision': ['#C42B2B', '#1F8A4C', '#2F5BD3', '#E3B341']
+    };
+    const NAMES = { '#E69F00': 'Okabe orange', '#56B4E9': 'Sky blue', '#009E73': 'Bluish green', '#F0E442': 'Yellow', '#0072B2': 'Blue', '#D55E00': 'Vermillion', '#CC79A7': 'Reddish purple', '#000000': 'Black' };
+    const palName = P.palette || 'Lumen ink', palSel = P.palSel ?? 6;
+    const swatch = (c, i, sel) => ({ th: c, thW: '100%', thH: '28px', mh: '28px', pad: '0', ring: sel ? '0 0 0 2px var(--sf), 0 0 0 4px var(--tx)' : 'none', tip: NAMES[c] || c, rad: '7px' });
+    let blocks = [], pnTitle = '', pnG = [], pnSub = '', pnFoot = [], side = 'end', pnW = '320px';
+    if (ov === 'pen') {
+      pnTitle = 'Pens'; pnG = g('pen-fountain'); pnSub = 'Fountain · 2.5 px'; side = 'top'; pnW = '600px';
+      blocks = [B({ h: 'Saved pens', hr: 'Synced · drag to reorder', items: [['pen-fountain', '#5CC8C2', 1], ['pen-ballpoint', '#E8E6E1'], ['pen-brush', '#EF6B6B'], ['pen-marker', '#E8893A'], ['pen-highlighter', '#E3B341'], ['pen-ballpoint', '#7AA2F7'], ['pen-fountain', '#B48EF0'], ['plus', 'var(--mu)']].map(([gl, c, s]) => ({ g: gl, gc: c, col: 1, mh: '40px', on: !!s, bd: 'var(--bd)', gs: 20 })), cols: 'repeat(8,1fr)' }),
+        B({ h: 'Pen type', items: pens.map(p => ({ ...p, mh: '34px', fw: p.on ? 600 : 400 })), cols: '1fr 1fr', gap: '2px 8px' }),
+        B({ h: 'Thickness', hr: '2.5 px', items: [{ sl: '22%', pad: '0 8px', mh: '24px' }, ...[1, 2.5, 5, 10, 18].map((w, i) => ({ th: 'var(--tx)', thW: Math.max(4, w) + 'px', thH: Math.max(4, w) + 'px', rad: '999px', mh: '26px', jc: 'center', on: i === 1, pad: '0', tip: w + ' px' }))], cols: '2.4fr repeat(5,1fr)' }),
+        B({ h: 'Colour', hr: palName + ' ▾', hrC: 'var(--tx)', items: PAL['Lumen ink'].slice(0, 10).map((c, i) => swatch(c, i, c === penColor || (i === 6 && !light))), cols: 'repeat(10,1fr)' }),
+        B({ h: 'Feel', items: [{ l: 'Opacity', sl: '100%', sub: '100%' }, { l: 'Pressure', tog: true, sub: 'stylus only' }], cols: '1fr 1fr', gap: '6px 16px' }),
+        B({ seg: ['Smoothing: Off', 'Low', 'High'], segOn: 1 }), B({ seg: ['Pressure curve: Soft', 'Linear', 'Firm'], segOn: 1 }),
+        B({ items: [{ l: 'Draw straight when I pause', tog: true, g: 'line' }, { l: 'Stylus draws, finger pans', tog: true, g: 'pen-mode', sub: 'auto-detected' }], cols: '1fr 1fr', gap: '6px 16px', note: 'Palm rejection is on while pen mode is on. Your hand can rest on the screen.' })];
+    } else if (ov === 'palette') {
+      pnTitle = 'Colour'; pnG = g('palette'); pnSub = 'Stroke'; side = 'prop'; pnW = '300px';
+      const pal = PAL[palName] || PAL['Lumen ink'];
+      blocks = [B({ items: [{ g: 'palette', l: palName, sub: P.palOpen ? '▴' : '▾', bd: 'var(--bd)', fw: 600 }] }),
+        ...(P.palOpen ? [B({ items: Object.keys(PAL).map(n => ({ l: n, th: `linear-gradient(90deg,${PAL[n].slice(0, 5).map((c, i, a) => `${c} ${i * 100 / a.length}% ${(i + 1) * 100 / a.length}%`).join(',')})`, thW: '54px', thH: '14px', on: n === palName, sub: n === 'Exam revision' ? 'custom' : n === 'Lumen ink' ? 'theme-aware' : '' })).concat([{ g: 'swatch-add', l: 'New palette…', c: 'var(--mu)' }]) })] :
+        [B({ h: palName === 'Colour-blind safe' ? 'Okabe-Ito' : 'Swatches', items: pal.map((c, i) => swatch(c, i, i === palSel)), cols: 'repeat(' + Math.min(pal.length, 6) + ',1fr)' }),
+          B({ h: 'Shades', hr: NAMES[pal[palSel]] || 'Teal', items: [0.35, .55, .75, 1, 1.2, 1.4].map((k, i) => swatch(`color-mix(in oklab, ${pal[palSel] || pal[0]} ${Math.min(100, k * 100)}%, ${k > 1 ? '#000' : '#fff'})`, i, i === 3)), cols: 'repeat(6,1fr)' }),
+          B({ h: 'Recent', items: ['#5CC8C2', '#E8893A', '#E8E6E1', '#fff3bf', '#B48EF0', '#E69F00', '#EF6B6B', '#9AA0AA'].map((c, i) => swatch(c, i, false)), cols: 'repeat(8,1fr)' }),
+          B({ items: [{ l: '#5CC8C2', bd: 'var(--bd)', fw: 500, th: '#5CC8C2', thW: '16px', thH: '16px' }, { g: 'eyedropper', bd: 'var(--bd)', tip: 'Eyedropper' }], cols: '1fr 36px' }),
+          B({ items: [{ l: 'Opacity', sl: '100%', sub: '100%' }, { l: 'Keep exact colour in dark theme', tog: false }], gap: '6px' }),
+          ...(P.contrast ? [B({ note: 'Text on this fill is 2.9 : 1, below AA (4.5 : 1). Try a darker shade.', noteC: 'var(--wa)', noteBg: 'color-mix(in srgb,var(--wa) 12%,transparent)' })] : [])])];
+    } else if (ov === 'shapes') {
+      pnTitle = 'Library'; pnG = g('shape-library'); pnSub = kind === 'board' ? 'All' : 'Drawing first'; side = 'start'; pnW = '320px';
+      const tile = (gl, l, o = {}) => ({ g: gl, l, col: 1, bd: 'var(--bd)', mh: '58px', ...o });
+      blocks = [B({ items: [{ g: 'search', l: 'Search shapes, stamps, icons…', c: 'var(--mu)', bd: 'var(--bd)' }] }),
+        B({ seg: ['Drawing', 'Stamps', 'Icons', 'Architecture'], segOn: 0 }),
+        B({ h: 'Recent', items: [tile('rounded-rect', 'Rounded'), tile('decision', 'Decision'), tile('sticky', 'Sticky'), tile('cylinder', 'Cylinder')], cols: 'repeat(4,1fr)' }),
+        B({ h: 'Basic', hr: '14', items: [['rect', 'Rectangle'], ['rounded-rect', 'Rounded'], ['ellipse', 'Ellipse'], ['decision', 'Diamond'], ['triangle', 'Triangle'], ['hexagon', 'Hexagon'], ['star', 'Star'], ['parallelogram', 'Parallel.'], ['trapezoid', 'Trapezoid'], ['cylinder', 'Cylinder'], ['cloud', 'Cloud'], ['heart', 'Heart'], ['speech-bubble', 'Speech'], ['callout', 'Callout']].map(([a, b]) => tile(a, b, { on: a === (P.lastShape || 'rect') })), cols: 'repeat(4,1fr)' }),
+        B({ h: 'Flowchart', hr: '11', items: [['process', 'Process'], ['decision', 'Decision'], ['terminator', 'Terminator'], ['data', 'Data'], ['document', 'Document'], ['multi-document', 'Multi-doc'], ['database', 'Database'], ['manual-input', 'Manual']].map(([a, b]) => tile(a, b)), cols: 'repeat(4,1fr)' }),
+        B({ h: 'UML · Mind map · Containers · Math & study', items: [['uml-class', 'Class'], ['actor', 'Actor'], ['package', 'Package'], ['mind-map', 'Mind map'], ['frame', 'Frame'], ['section', 'Section'], ['axes', 'Axes'], ['venn', 'Venn']].map(([a, b]) => tile(a, b)), cols: 'repeat(4,1fr)', note: 'Click to place in the centre, or drag onto the board.' })];
+    } else if (ov === 'layers') {
+      pnTitle = 'Layers'; pnG = g('layers'); pnSub = '4 layers';
+      const L = (n, c, o = {}) => ({ grip: 1, l: n, sub: c + ' items', on: o.on, ic: [o.hid ? 'layer-hidden' : 'eye', o.lock ? ['lock', 'var(--tx)'] : 'unlock'], op: o.hid ? .55 : 1, mh: '40px', tag: o.op || '', tagC: 'var(--mu)' });
+      blocks = [B({ note: 'Layers are a Lumen feature saved inside the .excalidraw file. Other apps see one flat drawing.', noteBg: 'var(--sf2)' }),
+        B({ h: 'Layers', hr: '+ Add', hrC: 'var(--ac)', items: [L('Notes', 6, { on: 1 }), L('Sketch', 18), L('Diagram', 5, { op: '70%' }), L('Background', 2, { lock: 1 }), L('Answers', 4, { hid: 1 })] }),
+        B({ items: [{ g: 'move-to-group', l: 'Move selection to “Notes”', bd: 'var(--bd)' }] }),
+        B({ h: 'Arrange', items: ['bring-front', 'bring-forward', 'send-backward', 'send-back', 'group', 'ungroup', 'align-left', 'align-center', 'align-right', 'align-top', 'align-middle', 'align-bottom', 'distribute-h', 'distribute-v', 'flip-h', 'flip-v', 'lock', 'unlock'].map(x => ({ g: x, col: 1, mh: '36px', bd: 'var(--bd)', tip: x.replace(/-/g, ' ') })), cols: 'repeat(6,1fr)' })];
+    } else if (ov === 'frames') {
+      pnTitle = 'Frames'; pnG = g('frame'); pnSub = 'Slide order';
+      const Fr = (n, i, o = {}) => ({ grip: 1, th: 'repeating-linear-gradient(135deg,var(--sf2) 0 5px,var(--bg) 5px 10px)', thW: '64px', thH: '36px', l: i + '  ' + n, on: o.on, ic: [o.hid ? 'eye-off' : 'eye', 'fit'], op: o.hid ? .55 : 1, mh: '50px', pad: '4px 8px' });
+      blocks = [B({ items: [Fr('Refraction', 1), Fr('Lenses', 2, { on: 1 }), Fr('Mirrors', 3), Fr('Worked answers', 4, { hid: 1 }), Fr('Summary', 5)], gap: '4px', note: 'Order here is slide order. The eye hides a frame from the presentation only. Double-click to rename; click the target to zoom to it.' })];
+      pnFoot = [{ l: 'Export frames…' }, { l: 'Present', pri: 1 }];
+    } else if (ov === 'settings') {
+      pnTitle = 'Board settings'; pnG = g('gear');
+      const bgI = (k, l, c) => ({ th: c, thW: '100%', thH: '30px', l, col: 1, mh: '58px', on: k === bgk, pad: '4px' });
+      const patI = (k, gl, l, o = {}) => ({ g: gl, l, col: 1, mh: '54px', on: k === pat, bd: 'var(--bd)', ...o });
+      blocks = [B({ h: 'Background', items: [bgI('theme', 'Theme', 'var(--bg)'), bgI('white', 'Paper white', '#FFFFFF'), bgI('warm', 'Warm paper', '#F4ECD8'), bgI('chalk', 'Chalkboard', '#1F3A2E'), bgI('blueprint', 'Blueprint', '#173A63'), bgI('custom', 'Custom', 'conic-gradient(#EF6B6B,#E3B341,#6BCB8B,#7AA2F7,#B48EF0,#EF6B6B)'), bgI('transparent', 'Transparent', 'conic-gradient(#888 25%,#ccc 0 50%,#888 0 75%,#ccc 0) 0 0/10px 10px')], cols: 'repeat(4,1fr)' }),
+        B({ h: 'Pattern', items: [patI('none', 'fill-none', 'None'), patI('dots', 'pattern-dots', 'Dots'), patI('grid', 'pattern-grid', 'Grid'), patI('lines', 'pattern-lines', 'Ruled'), patI('iso', 'pattern-isometric', 'Isometric'), patI('cornell', 'pattern-cornell', 'Cornell'), patI('graph', 'pattern-graph', 'Graph 5mm'), patI('staff', 'pattern-staff', 'Music', { op: .5 })], cols: 'repeat(4,1fr)' }),
+        B({ items: [{ l: 'Density', sl: '45%', sub: '22 px' }] }),
+        B({ h: 'Mode', seg: ['Infinite', 'Pages · A4', 'Letter', '16:9'], segOn: P.pages ? 1 : 0 }),
+        B({ h: 'Snapping & view', items: [{ g: 'snap', l: 'Snap to grid', tog: true }, { g: 'snap', l: 'Snap to objects', tog: true }, { g: 'arrow', l: 'Angle snap · 15°', tog: false }, { g: 'minimap', l: 'Minimap', tog: true }, { g: 'zen', l: 'Zen mode', sub: '⌥Z', tog: false }, { g: 'eye', l: 'View only', tog: false }], cols: '1fr', gap: '0', note: 'Defaults for new boards live in Settings › Diagrams.' })];
+    } else if (ov === 'menu' || ov === 'convert') {
+      side = 'menu'; pnW = ov === 'convert' ? '400px' : '260px';
+      if (ov === 'menu') { pnTitle = 'Board'; pnG = g('board'); blocks = [B({ items: [['gear', 'Board settings', ''], ['layers', 'Layers', 'L'], ['frame', 'Frames', ''], ['present', 'Present', '⌥P'], ['export', 'Export…', '⇧⌘E'], ['switch', 'Convert to…', '›'], ['history', 'History', ''], ['searchable', 'Handwriting search', 'On'], ['zen', 'Zen mode', '⌥Z']].map(([a, b, c]) => ({ g: a, l: b, sub: c, on: b === 'Convert to…' && 0 })), gap: '0' })]; }
+      else { pnTitle = 'Convert to'; pnG = g('switch'); pnSub = 'Makes a copy'; blocks = [B({ items: [['board', 'Board', 'Everything kept'], ['canvas', 'Canvas', 'Shapes with text → cards · arrows → edges · ink becomes an image card'], ['diagram', 'Architecture diagram', 'Ink → reviewed by AI · shapes → nodes'], ['mermaid', 'Mermaid file', 'Flowchart-like parts only, best effort'], ['note', 'Note (Markdown)', 'Text and images as an outline · drawings dropped']].map(([a, b, c], i) => ({ g: a, l: b, sub: '', mh: '52px', on: i === 1, tip: c, fw: 600 })), gap: '2px', note: 'Canvas: Shapes with text become cards, arrows become edges. Ink becomes one image card. The original whiteboard stays.' })]; pnFoot = [{ l: 'Cancel' }, { l: 'Convert a copy', pri: 1 }]; }
+    }
+    if (ph && ['pen', 'palette', 'shapes', 'layers', 'frames', 'settings', 'menu', 'convert'].includes(ov)) side = 'sheet';
+    const pnPos = { end: ['auto', '14px', '60px', '60px'], start: ['14px', 'auto', '108px', '60px'], top: ['calc(50% - 300px)', 'auto', '108px', 'auto'], prop: ['470px', 'auto', '186px', 'auto'], menu: ['auto', '14px', '52px', 'auto'], sheet: ['0', '0', 'auto', '0'] }[side] || ['auto', '14px', '60px', '60px'];
+    if (rtl && side === 'end') { pnPos[0] = '14px'; pnPos[1] = 'auto'; }
+    const hasPanel = blocks.length > 0;
+    pnFoot = pnFoot.map(f => ({ l: f.l, fw: f.pri ? 600 : 500, bg: f.pri ? 'var(--ac)' : 'transparent', c: f.pri ? 'var(--af)' : 'var(--tx)', bd: f.pri ? 'transparent' : 'var(--bd)' }));
+    // AI review
+    const rs = P.review || 'ok', rtab = P.rvTab || 'Text';
+    const rvOutMap = {
+      Text: [['Refraction: light bends toward the normal when it enters a ', 0], ['denser', rs === 'low'], [' medium. ', 0], ['n₁ sin θ₁ = n₂ sin θ₂', 0]],
+      LaTeX: [['n_1 \\sin\\theta_1 = n_2 \\sin\\theta_2', 0]],
+      Mermaid: [['flowchart LR\n  A[Incident ray] --> B{Boundary}\n  B --> C[Refracted ray]\n  B -.-> D[Reflected ray]', 0]]
+    };
+    const rvOut = (rs === 'ok' || rs === 'low' ? rvOutMap[rtab] : []).map(([t, u]) => ({ t, hl: u ? 'color-mix(in srgb,var(--wa) 22%,transparent)' : 'transparent', ul: u ? '1.5px dashed var(--wa)' : 'none', c: 'var(--tx)' }));
+    const rvBanner = { low: 'Not sure about 1 word. Highlighted words are guesses; click one to fix it.', error: 'Couldn’t read this ink. Try a smaller selection or write more clearly.', offline: 'You’re offline. Converting needs your Cloudflare account; your ink is safe.' }[rs] || '';
+    const rvBannerC = rs === 'low' ? 'var(--wa)' : rs === 'error' ? 'var(--da)' : 'var(--mu)';
+    const rvTitle = { Text: 'Convert to text', LaTeX: 'Convert to math', Mermaid: 'Convert to Mermaid' }[rtab];
+    const btn = (l, pri, dis) => ({ l, fw: pri ? 600 : 500, bg: pri ? 'var(--ac)' : 'transparent', c: pri ? 'var(--af)' : 'var(--tx)', bd: pri ? 'transparent' : 'var(--bd)', op: dis ? .4 : 1 });
+    const okRes = rs === 'ok' || rs === 'low';
+    const rvBtns = [btn('Try again', 0, rs === 'working'), btn('Copy', 0, !okRes), btn(rtab === 'Mermaid' ? 'Open as architecture' : 'Add next to it', 0, !okRes), btn('Replace ink', 1, !okRes)];
+    if (rtab !== 'Mermaid') rvBtns.splice(2, 0);
+    // banners
+    const BAN = { viewonly: ['var(--ln)', 'Shared by Sara · view only', 'Ask to edit'], offline: ['var(--wa)', 'Offline · changes save on this device and sync later', ''], perf: ['var(--mu)', 'Large board · 4,812 elements · Performance mode: shadows off', 'Turn off'], snap: null };
+    const ban = BAN[ov];
+    // wheel
+    const wl = [['pen-fountain', 'Fountain', '#5CC8C2'], ['highlighter', 'Highlight', '#E3B341'], ['eraser-stroke', 'Eraser'], ['lasso', 'Lasso'], ['pen-brush', 'Brush', '#EF6B6B'], ['rect', 'Rectangle']];
+    const wheel = wl.map(([gl, l, dot], i) => { const a = -Math.PI / 2 + i * Math.PI / 3; return { g: g(gl), l, x: (120 + 88 * Math.cos(a)) + 'px', y: (120 + 88 * Math.sin(a)) + 'px', bg: i === 0 ? AC : 'transparent', c: i === 0 ? 'var(--ac)' : 'var(--tx)', dotS: dot ? 'block' : 'none', dot: dot || '' }; });
+    // present
+    const pr = (gl, l, o = {}) => ({ g: g(gl || 'more'), gS: gl ? 'block' : 'none', l: l || '', px: l ? '12px' : '0', bg: o.on ? '#2A2416' : '#16191E', c: o.on ? '#F2A93B' : '#E8E6E1' });
+    const prBar = ph ? [pr('slide-prev'), pr('', '2 / 5'), pr('slide-next'), pr('laser', '', { on: 1 }), pr('pen-fountain'), pr('x')] : [pr('slide-prev', 'Prev'), pr('', 'Frame 2 of 5'), pr('slide-next', 'Next'), pr('laser', 'Laser', { on: 1 }), pr('pen-fountain', 'Pen'), pr('presenter-notes', 'Notes', { on: P.notes }), pr('remote', 'Phone remote'), pr('x', 'Exit · Esc')];
+    const scale = ph ? .62 : 1;
+    const out = {
+      dir: rtl ? 'rtl' : 'ltr', hlS: empty ? 'none' : 'block', boardBg, patImg, patSize, boardOp: ov === 'present' ? 0 : 1,
+      bX: ph ? '-16px' : '40px', bY: ph ? '120px' : '70px', bTf: `scale(${scale})`,
+      frames, inkText, inkPaths, shapes, stickies, cards,
+      desk: !ph && ov !== 'present', phone: ph && ov !== 'present', showTools: ov !== 'viewonly' && !P.zen,
+      crumb: P.crumb || 'Physics 101', title: P.title || (kind === 'board' ? 'Optics board' : 'Week 3 · Optics'), saved: ov === 'offline' ? 'Saved on device' : 'Saved · Synced', saveC: ov === 'offline' ? 'var(--wa)' : 'var(--ok)',
+      badgeS: P.searchable ? 'block' : 'none', badge: 'Searchable', hdrBtns, tools, ur, zoom: ph ? '42%' : '100%', minimap: !!P.minimap && !ph, frameChipS: empty ? 'none' : 'flex', frameChip: 'Frame 2 of 5',
+      phRight: kind === 'board' ? 'Board' : 'Pen', phUrS: ['pen', 'snap', 'select', 'tool'].includes(ov) || ov === 'lasso' ? 'flex' : 'none', phModeS: ov === 'pen' || P.penMode ? 'flex' : 'none', dockS: 'flex', dock,
+      hasProp, prop: PROPS[propK] || [], propX: propPos[0] + 'px', propY: ph ? 'auto' : propPos[1] + 'px', propB: ph ? '108px' : 'auto', propMax: ph ? '392px' : 'none', lassoTf: ph ? 'scale(.62)' : 'none',
+      hasSnap: ov === 'snap', snapX: ph ? '90px' : '580px', snapY: ph ? '420px' : '560px',
+      hasWheel: ov === 'wheel', wheel, wheelX: ph ? '86px' : '600px', wheelY: ph ? '360px' : '330px',
+      hasLasso: ov === 'lasso' || ov === 'review', lassoX: ph ? '14px' : '96px', lassoY: ph ? '196px' : '196px',
+      hasPanel, blocks, pnTitle, pnG, pnSub, pnFoot, pnFootS: pnFoot.length ? 'flex' : 'none',
+      pnL: pnPos[0], pnR: pnPos[1], pnT: pnPos[2], pnB: pnPos[3], pnW: side === 'sheet' ? 'auto' : pnW, pnMax: side === 'sheet' ? '74%' : 'none', pnRad: side === 'sheet' ? '20px 20px 0 0' : '14px', grabS: side === 'sheet' ? 'flex' : 'none',
+      hasReview: ov === 'review', rvL: ph ? '0' : '200px', rvR: ph ? '0' : '200px', rvT: ph ? '40px' : '110px', rvB: ph ? '0' : '110px', rvRad: ph ? '0' : '14px', rvDir: ph ? 'column' : 'row', rvSep: ph ? 'none' : '1px solid var(--bd)', rvSepB: ph ? '1px solid var(--bd)' : 'none',
+      rvG: g({ Text: 'to-text', LaTeX: 'to-math', Mermaid: 'to-mermaid' }[rtab]), rvTitle, rvModel: 'Workers AI · vision · 1 neuron', rvInk: [[18, 18, '26px', 'Refraction: light bends toward'], [18, 54, '26px', 'the normal when it enters a'], [18, 90, '26px', 'denser medium.'], [30, 130, '26px', 'n₁ sin θ₁ = n₂ sin θ₂']].map(([x, y, s, t], i) => ({ x: x + 'px', y: y + 'px', s: ph ? '22px' : s, t, hl: rs === 'low' && i === 2 ? 'color-mix(in srgb,var(--wa) 22%,transparent)' : 'transparent' })),
+      rvTabs: ['Text', 'LaTeX', 'Mermaid'].map(l => ({ l, bg: l === rtab ? 'var(--sf)' : 'transparent', c: l === rtab ? 'var(--tx)' : 'var(--mu)' })),
+      rvBannerS: rvBanner ? 'flex' : 'none', rvBanner, rvBannerC, rvBannerBg: `color-mix(in srgb,${rvBannerC} 12%,transparent)`, rvBoxBd: rs === 'error' ? 'var(--da)' : 'var(--bd)',
+      rvOut, rvFs: rtab === 'Text' ? '15px' : '13px', rvFont: rtab === 'Text' ? "'Source Serif 4',serif" : "'JetBrains Mono',monospace",
+      rvLoadS: rs === 'working' ? 'flex' : 'none', rvLoad: 'Reading your handwriting…', rvPrevS: rtab === 'LaTeX' && okRes ? 'flex' : 'none', rvPrev: 'n₁ sin θ₁ = n₂ sin θ₂',
+      rvFootNote: rs === 'offline' ? 'Will retry when you’re back online.' : 'Nothing changes until you choose. One step to undo.', rvBtns,
+      hasEmpty: empty, emptyW: ph ? '320px' : '460px', emptyG: g(kind === 'board' ? 'board' : 'whiteboard'), emptyActs: [['pen-fountain', 'Draw', 1], ['note-card', 'Add a note card'], ['image', 'Paste an image']].map(([a, l, p]) => ({ g: g(a), l, bg: p ? 'var(--ac)' : 'var(--sf)', c: p ? 'var(--af)' : 'var(--tx)', bd: p ? 'transparent' : 'var(--bd)', fw: p ? 600 : 500 })),
+      hasBanner: !!ban, banY: ph ? '104px' : '112px', banDot: ban ? ban[0] : '', banText: ban ? ban[1] : '', banActS: ban && ban[2] ? 'flex' : 'none', banAct: ban ? ban[2] : '',
+      present: ov === 'present', prPad: ph ? '60px 8px 0' : '40px 40px 0', prH: ph ? 'auto' : (P.notes ? '560px' : '700px'), prT: ph ? '22px' : '56px', prS: ph ? '15px' : '34px', prNotesS: P.notes && !ph ? 'flex' : 'none', prBarPad: ph ? '18px 8px 40px' : '18px', prBar
+    };
+    if (ph && ov === 'present') { out.prH = 'auto'; }
+    return out;
+  }
+}
+</script>
+</body>
+</html>

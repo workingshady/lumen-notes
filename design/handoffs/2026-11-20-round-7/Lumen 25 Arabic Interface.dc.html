@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 25 Arabic interface</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 5</span></div><div style="font-size:14px;color:#9A9890">The whole chrome in Arabic. IBM Plex Sans Arabic 14/22 for UI, Noto Naskh Arabic for reading. Mirrored layout; English titles, formulas and code stay LTR.</div></div>
+  </div>
+
+  <section style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;display:flex;flex-direction:column;gap:24px;color:var(--tx)">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R5 · 3 · RULES</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">What mirrors and what doesn't</h2></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+      <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:12px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Mirrored</span><sc-for list="{{ mirror }}" as="m" hint-placeholder-count="6"><div style="display:flex;align-items:center;gap:10px"><span style="width:84px;display:flex;gap:10px;font-size:18px;justify-content:center"><span style="color:var(--mu)">{{ m.a }}</span><span>{{ m.b }}</span></span><span>{{ m.l }}</span></div></sc-for></div>
+      <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:12px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Not mirrored</span><sc-for list="{{ keep }}" as="m" hint-placeholder-count="6"><div style="display:flex;align-items:center;gap:10px"><span style="width:28px;display:flex;justify-content:center"><dc-import name="LumenGlyph" glyph="{{ m.g }}" size="{{ 18 }}" hint-size="18px,18px"></dc-import></span><span>{{ m.l }}</span></div></sc-for></div>
+      <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:12px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Type &amp; numbers</span>
+        <div dir="rtl" style="font-family:'IBM Plex Sans Arabic';font-size:14px;line-height:22px">واجهة ١٤/٢٢ — IBM Plex Sans Arabic</div>
+        <div dir="rtl" style="font-family:'Noto Naskh Arabic';font-size:19px;line-height:34px">قراءة ١٩/٣٤ — نوتو نسخ</div>
+        <div style="display:flex;gap:10px"><span style="flex:1;border-radius:8px;background:var(--sf);padding:8px;text-align:center">Western<br><b dir="ltr">41 / 101</b></span><span style="flex:1;border-radius:8px;background:var(--sf);padding:8px;text-align:center">Arabic-Indic<br><b>٤١ / ١٠١</b></span></div>
+        <span dir="rtl" style="font-family:'IBM Plex Sans Arabic'">الأربعاء ١٩ نوفمبر ٢٠٢٦ · ٩:٤١ م</span></div>
+      <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:10px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Mixed content inside RTL</span>
+        <sc-for list="{{ mixed }}" as="m" hint-placeholder-count="5"><div dir="rtl" style="border-radius:8px;background:var(--sf);padding:8px 10px;display:flex;flex-direction:column;gap:2px;font-family:'IBM Plex Sans Arabic'"><span style="font-size:11.5px;color:var(--mu)">{{ m.k }}</span><span style="unicode-bidi:plaintext;text-align:start" dir="auto">{{ m.t }}</span></div></sc-for></div>
+    </div>
+  </section>
+
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="3">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ sec.k }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ sec.t }}</h2></div>
+      <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+        <sc-for list="{{ sec.frames }}" as="f" hint-placeholder-count="5">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)">
+              <dc-import name="ArabicDesk" screen="{{ f.s }}" phone="{{ f.ph }}" hindi="{{ f.hi }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+            </div>
+            <div style="max-width:{{ f.w }};font-size:13px;line-height:20px;color:#CFCBC3;display:{{ f.nS }};gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', inn:'#7AA2F7', le:'#B48EF0' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', inn:'#2F5BD3', le:'#7A4BD1' };
+    const F = (id,l,s,t,n,ph=false,hi=false) => ({ id, l, s, t, n, nS: n?'flex':'none', ph, hi, w: ph?'412px':'1440px', h: ph?'915px':'900px', r: ph?'28px':'12px' });
+    const sections = [
+      { k:'R5 · 3 · DESKTOP', t:'Desktop · Lamplight and Paper', frames:[
+        F('R5-25A','Home · Lamplight','home',L,'Sidebar on the right; progress fills from the right. Mixed recent list: Arabic titles RTL, English titles LTR, each aligned to its start.'),
+        F('R5-25B','Home · Paper · Arabic-Indic digits','home',P,'Digits toggle in Settings swaps every number, including dates and counts.',false,true),
+        F('R5-25C','Today','today',L,'Section labels, “why” lines and durations in Arabic; English course and concept names unchanged.'),
+        F('R5-25D','Notes workspace · English note in Split','workspace',P,'Breadcrumb chevrons point left. The English note body and code stay LTR inside the RTL shell.'),
+        F('R5-25E','Note in Read · «الانتشار العكسي»','read',L,'Naskh at 19/34; formula LTR and centred; table columns run right to left, numeric cells stay LTR.'),
+        F('R5-25F','Path · Stages · Paper','path',P,'Stage columns run right to left; done stages fold to strips on the right side.'),
+        F('R5-25G','Review','review',L,'Grade order is Again → Easy from right to left.'),
+        F('R5-25H','Settings › Appearance › Language · Paper','settings',P,'English / العربية / تلقائي. Direction follows the language. Digit style and date format sit right under it.'),
+        F('R5-25I','Command palette','palette',L,'Matches highlight inside Arabic words without breaking letter joins (highlight colour only, no weight change in connected letters).')
+      ]},
+      { k:'R5 · 3 · PHONE', t:'Phone · tab bar and More', frames:[
+        F('R5-25J','Home','home',L,'Tab order reversed: الرئيسية on the right.',true),
+        F('R5-25K','More page · Paper','more',P,'',true),
+        F('R5-25L','Today','today',L,'',true),
+        F('R5-25M','Read · Paper','read',P,'',true),
+        F('R5-25N','Review','review',L,'',true),
+        F('R5-25O','Path stages','path',P,'',true)
+      ]}
+    ];
+    const mirror = [['←','→','Back arrow'],['›','‹','Chevrons & breadcrumbs'],['▸','◂','Disclosure / tree'],['⟶','⟵','Timelines & progress fill'],['⇥','⇤','Tab order, sidebar side'],['↩︎','↪︎','Undo / redo']].map(([a,b,l]) => ({ a, b, l }));
+    const keep = [['timestamp','Play / pause / media controls'],['s-done','Check marks'],['query','Search'],['code','Code, math, formulas'],['graph','Graphs (layout runs by stage, not reading order)'],['c-question','Question mark glyph']].map(([g,l]) => ({ g, l }));
+    const mixed = [['Breadcrumb','مهندس ذكاء اصطناعي ‹ ٠٣ ‹ Backprop, by hand'],['Note list','Tokenization (BPE) · أمس'],['Palette result','تعلّم «Attention» مع المدرّس'],['Table cell','ReLU · [0, ∞)'],['Code inline','استخدم torch.no_grad() عند التقييم']].map(([k,t]) => ({ k, t }));
+    return { sections, mirror, keep, mixed };
+  }
+}
+</script>
+</body>
+</html>

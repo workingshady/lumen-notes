@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:100px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 30b Sidebar · best practice &amp; accessible</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 6</span></div><div style="font-size:14px;color:#9A9890">Supersedes the sidebar on 30. Everything from the brief is back, the rare items live in More, and every row works by keyboard and screen reader.</div></div>
+  </div>
+
+  <section style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;display:flex;flex-direction:column;gap:24px;color:var(--tx)">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">30b · CHECKLIST</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">What changed and why</h2></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+      <sc-for list="{{ checks }}" as="c" hint-placeholder-count="3"><div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:10px"><span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">{{ c.h }}</span><sc-for list="{{ c.items }}" as="i" hint-placeholder-count="6"><div style="display:flex;gap:10px;line-height:19px"><dc-import name="LumenGlyph" glyph="s-done" size="{{ 15 }}" color="var(--ok)" hint-size="15px,15px"></dc-import><span>{{ i }}</span></div></sc-for></div></sc-for>
+    </div>
+  </section>
+
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="4">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ sec.k }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ sec.t }}</h2></div>
+      <div style="display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start">
+        <sc-for list="{{ sec.frames }}" as="f" hint-placeholder-count="5">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)">
+              <dc-import name="SideNav2" state="{{ f.s }}" tablet="{{ f.tab }}" phone="{{ f.ph }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+            </div>
+            <div style="max-width:{{ f.w }};font-size:13px;line-height:20px;color:#CFCBC3;display:{{ f.nS }};gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', inn:'#7AA2F7', le:'#B48EF0' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', inn:'#2F5BD3', le:'#7A4BD1' };
+    const F = (id,l,s,t,n,o={}) => ({ id, l, s, t, n, nS:n?'flex':'none', tab:!!o.tab, ph:!!o.ph, w:o.ph?'412px':o.tab?'1024px':'760px', h:o.ph?'915px':o.tab?'768px':'900px', r:o.ph?'28px':'12px' });
+    const checks = [
+      { h:'Complete', items:['All brief items back: Daily note, Tasks, Calendar, Graph, Canvases, Blog','Rare items fold into More (count shown), not deleted','New note button + ⌘N at the top, search ⌘K beside it','Favourites section for pinned notes and boards','Tasks gets an amber badge when anything is due','Customise: reorder, hide, show counts, row height'] },
+      { h:'Best practice', items:['One active item: amber bar + tinted row, never colour alone','Counts only where action is needed (Review, Tasks); others muted','Long sections scroll inside; soft fade shows more below','Resizable 200–360 px, double-click to reset; width remembered','Collapse ⌘\\ to a 56 px rail with badges and tooltips','Offline and waiting changes shown in the footer, not hidden'] },
+      { h:'Accessible', items:['nav landmark + tree role; ↑↓ move, ←→ fold, ↵ open, F2 rename','Visible 2 px focus ring on every row, header and button','Rail icons have names (tooltip = accessible label)','Text ≥ 4.5:1 in both themes; dots are never the only cue','Targets 32 px desktop, 36 tablet, 44 phone','Reorder by keyboard (Alt+↑/↓), not only drag'] }
+    ];
+    const sections = [
+      { k:'30b · DESKTOP', t:'Desktop · Lamplight and Paper', frames:[
+        F('30b-A','Default · Today selected','default',L,'Top: space, New note, Search. Six core items, More (6), then Favourites, Paths, Folders, Smart folders and Tags (folded). Footer: sync, settings, avatar, collapse hint.'),
+        F('30b-B','More opened · Paper','more',P,'Daily note, Calendar, Graph, Canvases, Blog, Trash. Choice is remembered.'),
+        F('30b-C','Keyboard focus · shortcut hints','focus',L,'Focus ring on More; shortcuts appear next to items while the keyboard is in use.'),
+        F('30b-D','Resizing','resize',P,'Handle highlights on hover; tooltip shows width and how to reset.'),
+        F('30b-E','Offline · 3 changes waiting','offline',L,''),
+        F('30b-F','Collapsed rail','rail',L,'Badges for Review and Tasks only.'),
+        F('30b-G','Rail · hover tooltip with shortcut · Paper','railhover',P,'The tooltip is also the accessible name.')
+      ]},
+      { k:'30b · CUSTOMISE & KEYS', t:'Customise sheet and keyboard map', frames:[
+        F('30b-H','Customise sidebar','custom',L,'Opened from the sidebar ⋯ or Settings › Appearance. Tasks shown mid-drag with its amber outline.'),
+        F('30b-I','Customise · Paper','custom',P,''),
+        F('30b-J','Keyboard map (press ?)','keys',L,'')
+      ]},
+      { k:'30b · TABLET & PHONE', t:'Tablet 1024 and phone', frames:[
+        F('30b-K','Tablet · 232 px, 36 px rows','default',L,'Smart folders folded by default to save height.',{tab:1}),
+        F('30b-L','Tablet · Paper','more',P,'',{tab:1}),
+        F('30b-M','Phone drawer · 44 px rows','default',L,'',{ph:1}),
+        F('30b-N','Phone · customise sheet · Paper','custom',P,'',{ph:1})
+      ]}
+    ];
+    return { checks, sections };
+  }
+}
+</script>
+</body>
+</html>

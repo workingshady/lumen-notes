@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:absolute;inset:0;display:flex;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:13px;overflow:hidden">
+  <div style="display:{{ deskOnly }};height:100%"><dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,100%" style="height:100%"></dc-import></div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+    <div style="padding:{{ hp }};display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px"><dc-import name="LumenGlyph" glyph="base" size="{{ 20 }}" hint-size="20px,20px"></dc-import><span style="font-size:{{ h1 }};font-weight:650;letter-spacing:-.02em;flex:1;white-space:nowrap">Lessons by status × course</span><span style="display:{{ deskOnly }};height:32px;padding:0 12px;border-radius:9px;background:var(--ac);color:var(--af);align-items:center;font-weight:600">New lesson</span></div>
+      <div style="display:flex;gap:14px;border-bottom:1px solid var(--bd);overflow:hidden;white-space:nowrap"><sc-for list="{{ vtabs }}" as="t" hint-placeholder-count="5"><span style="padding:0 2px 10px;display:flex;align-items:center;gap:6px;box-shadow:{{ t.sh }};color:{{ t.c }};font-weight:{{ t.w }}"><dc-import name="LumenGlyph" glyph="{{ t.g }}" size="{{ 15 }}" hint-size="15px,15px"></dc-import>{{ t.l }}</span></sc-for><span style="padding-bottom:10px;color:var(--mu)">+</span></div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><sc-for list="{{ tools }}" as="t" hint-placeholder-count="5"><span style="height:28px;padding:0 10px;border-radius:7px;border:1px solid {{ t.b }};background:{{ t.bg }};display:flex;align-items:center;gap:6px;color:{{ t.c }}">{{ t.l }}<span style="display:{{ t.ks }};padding:0 5px;border-radius:4px;background:var(--sf2);font-size:11px;color:var(--tx)">{{ t.k }}</span></span></sc-for><span style="flex:1"></span><span style="color:var(--mu);font-size:12px">{{ count }}</span></div>
+    </div>
+
+    <sc-if value="{{ isTable }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;padding:12px {{ px }};overflow:hidden">
+        <div style="border:1px solid var(--bd);border-radius:10px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:{{ tcols }};height:34px;align-items:center;background:var(--sf);font-size:12px;font-weight:600;color:var(--mu)"><sc-for list="{{ th }}" as="h" hint-placeholder-count="7"><span style="padding:0 12px;white-space:nowrap;color:{{ h.c }}">{{ h.t }}</span></sc-for></div>
+          <sc-for list="{{ trows }}" as="r" hint-placeholder-count="10">
+            <div style="display:grid;grid-template-columns:{{ tcols }};min-height:40px;align-items:center;border-top:1px solid var(--bd);position:relative;background:{{ r.bg }}">
+              <span style="padding:0 12px;display:flex;align-items:center;gap:8px;min-width:0"><dc-import name="LumenGlyph" glyph="lesson" size="{{ 14 }}" color="var(--mu)" hint-size="14px,14px"></dc-import><span style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.t }}</span><span style="display:{{ r.alsoS }};padding:0 6px;line-height:18px;border-radius:5px;background:var(--sf2);color:var(--mu);font-size:11px;white-space:nowrap">also in {{ r.also }}</span></span>
+              <span style="padding:0 12px"><span style="display:inline-flex;align-items:center;gap:5px;padding:0 8px;border-radius:999px;line-height:21px;font-size:12px;font-weight:500;background:{{ r.sbg }};color:{{ r.sc }};box-shadow:{{ r.sring }}"><dc-import name="LumenGlyph" glyph="{{ r.sg }}" size="{{ 12 }}" hint-size="12px,12px"></dc-import>{{ r.s }}</span></span>
+              <span style="padding:0 12px;display:flex;align-items:center;gap:6px;white-space:nowrap"><span style="width:4px;height:14px;border-radius:2px;background:{{ r.cc }}"></span>{{ r.c }}</span>
+              <span style="display:{{ deskOnly }};padding:0 12px;gap:4px"><sc-for list="{{ r.tags }}" as="g" hint-placeholder-count="2"><span style="padding:0 6px;line-height:19px;border-radius:5px;background:var(--sf2);color:var(--mu);font-size:11.5px">{{ g }}</span></sc-for></span>
+              <span style="display:{{ deskOnly }};padding:0 12px;color:var(--mu)">{{ r.d }}</span>
+              <span style="display:{{ deskOnly }};padding:0 12px;color:var(--mu);text-align:right">{{ r.cards }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isBoard }}">
+      <div style="flex:1;padding:12px {{ px }};display:grid;grid-template-columns:{{ bcols }};gap:12px;overflow:hidden">
+        <sc-for list="{{ board }}" as="c" hint-placeholder-count="4"><div style="border-radius:12px;background:var(--sf);padding:8px;display:flex;flex-direction:column;gap:8px;box-shadow:{{ c.ring }}">
+          <div style="display:flex;align-items:center;gap:6px;padding:4px;font-weight:600"><dc-import name="LumenGlyph" glyph="{{ c.g }}" size="{{ 15 }}" color="{{ c.gc }}" hint-size="15px,15px"></dc-import>{{ c.n }}<span style="color:var(--mu);font-weight:400">{{ c.k }}</span></div>
+          <sc-for list="{{ c.cards }}" as="t" hint-placeholder-count="3"><div style="border-radius:10px;background:var(--sf2);border:{{ t.b }};padding:10px;display:flex;flex-direction:column;gap:6px;transform:{{ t.tf }};box-shadow:{{ t.sh }};opacity:{{ t.op }}"><span style="font-weight:500">{{ t.t }}</span><div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mu)"><span style="width:4px;height:12px;border-radius:2px;background:{{ t.cc }}"></span>{{ t.c }}<span style="flex:1"></span><span style="display:{{ t.alsoS }};padding:0 5px;border-radius:4px;background:var(--bg)">also in {{ t.also }}</span></div></div></sc-for>
+          <span style="display:{{ c.dropS }};height:46px;border-radius:10px;border:1.5px dashed var(--ac);background:color-mix(in srgb,var(--ac) 8%,transparent)"></span>
+        </div></sc-for>
+        <div style="display:{{ moveToastS }};position:absolute;left:50%;bottom:24px;transform:translateX(-50%);height:40px;padding:0 8px 0 14px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 12px 28px rgba(0,0,0,.4);align-items:center;gap:12px;white-space:nowrap">Moved from <b style="font-weight:600">#cv</b> to <b style="font-weight:600">#nlp</b>, still in <b style="font-weight:600">#llm</b><span style="height:28px;padding:0 10px;border-radius:7px;border:1px solid var(--bd);display:flex;align-items:center">Undo</span></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isGallery }}">
+      <div style="flex:1;padding:12px {{ px }};display:grid;grid-template-columns:{{ gcols }};gap:14px;align-content:start;overflow:hidden">
+        <sc-for list="{{ gallery }}" as="g" hint-placeholder-count="8"><div style="border-radius:12px;background:var(--sf);border:1px solid var(--bd);overflow:hidden;display:flex;flex-direction:column"><div style="height:110px;background:repeating-linear-gradient(135deg,var(--sf2) 0 10px,var(--bg) 10px 20px);display:flex;align-items:flex-end;padding:8px"><span style="padding:0 6px;line-height:18px;border-radius:5px;background:var(--bg);font:500 10.5px 'JetBrains Mono',monospace;color:var(--mu)">cover</span></div><div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px"><span style="font-weight:600">{{ g.t }}</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;color:{{ g.sc }}"><dc-import name="LumenGlyph" glyph="{{ g.sg }}" size="{{ 12 }}" hint-size="12px,12px"></dc-import>{{ g.s }}<span style="color:var(--mu)">· {{ g.c }}</span></span></div></div></sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isList }}">
+      <div style="flex:1;padding:6px {{ px }};display:flex;flex-direction:column;overflow:hidden">
+        <sc-for list="{{ listRows }}" as="r" hint-placeholder-count="10"><div style="display:{{ r.hS }};padding:14px 4px 6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">{{ r.h }}</div><div style="display:{{ r.rS }};min-height:44px;align-items:center;gap:10px;padding:0 4px;border-bottom:1px solid var(--bd)"><dc-import name="LumenGlyph" glyph="{{ r.sg }}" size="{{ 15 }}" color="{{ r.sc }}" hint-size="15px,15px"></dc-import><span style="flex:1;font-weight:500">{{ r.t }}</span><span style="color:var(--mu);font-size:12px">{{ r.c }}</span><span style="color:var(--mu);font-size:12px;width:56px;text-align:right">{{ r.d }}</span></div></sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isCal }}">
+      <div style="flex:1;padding:12px {{ px }};display:flex;flex-direction:column;min-height:0">
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);font-size:12px;color:var(--mu);padding-bottom:6px"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+        <div style="flex:1;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(5,1fr);border:1px solid var(--bd);border-radius:10px;overflow:hidden">
+          <sc-for list="{{ cal }}" as="d" hint-placeholder-count="35"><div style="border-right:1px solid var(--bd);border-bottom:1px solid var(--bd);padding:6px;display:flex;flex-direction:column;gap:4px;background:{{ d.bg }};min-height:0;overflow:hidden"><span style="font-size:12px;color:{{ d.nc }};font-weight:{{ d.fw }}">{{ d.n }}</span><sc-for list="{{ d.items }}" as="i" hint-placeholder-count="1"><span style="padding:0 6px;line-height:20px;border-radius:5px;font-size:11.5px;background:{{ i.bg }};border-left:3px solid {{ i.cc }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.t }}</span></sc-for></div></sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ popFilter }}">
+      <div style="position:absolute;left:{{ px }};top:150px;width:520px;border-radius:12px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 18px 44px rgba(0,0,0,.45);padding:12px;display:flex;flex-direction:column;gap:8px">
+        <span style="font-weight:600">Filter</span>
+        <sc-for list="{{ frows }}" as="f" hint-placeholder-count="3"><div style="display:flex;gap:6px;align-items:center"><span style="width:44px;color:var(--mu);font-size:12px">{{ f.j }}</span><span style="height:30px;padding:0 10px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);display:flex;align-items:center;min-width:90px">{{ f.p }}</span><span style="height:30px;padding:0 10px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);display:flex;align-items:center">{{ f.o }}</span><span style="flex:1;height:30px;padding:0 10px;border-radius:7px;border:1px solid {{ f.vb }};background:var(--bg);display:flex;align-items:center;gap:4px">{{ f.v }}</span><span style="color:var(--mu);padding:0 4px">×</span></div></sc-for>
+        <div style="display:flex;gap:10px;color:var(--mu);font-size:12.5px;padding-top:4px"><span>+ Add filter</span><span>+ Add group (any of)</span><span style="flex:1"></span><span>Writes to the base YAML</span></div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ popCell }}">
+      <div style="position:absolute;left:calc({{ px }} + 360px);top:232px;width:230px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 14px 34px rgba(0,0,0,.45);padding:4px;display:flex;flex-direction:column">
+        <sc-for list="{{ statusOpts }}" as="s" hint-placeholder-count="5"><div style="height:32px;padding:0 8px;border-radius:6px;display:flex;align-items:center;gap:8px;background:{{ s.bg }}"><dc-import name="LumenGlyph" glyph="{{ s.g }}" size="{{ 14 }}" color="{{ s.c }}" hint-size="14px,14px"></dc-import><span style="flex:1">{{ s.l }}</span><span style="color:var(--ac)">{{ s.chk }}</span></div></sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ popView }}">
+      <div style="position:absolute;left:calc({{ px }} + 120px);top:92px;width:300px;border-radius:12px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 18px 44px rgba(0,0,0,.45);padding:12px;display:flex;flex-direction:column;gap:10px">
+        <span style="font-weight:600">View settings</span>
+        <sc-for list="{{ vset }}" as="v" hint-placeholder-count="5"><div style="display:flex;align-items:center;gap:8px"><span style="flex:1;color:var(--mu)">{{ v.l }}</span><span style="height:28px;padding:0 10px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);display:flex;align-items:center;font-size:12.5px">{{ v.v }}</span></div></sc-for>
+        <div style="height:1px;background:var(--bd)"></div>
+        <span style="color:var(--tx)">Duplicate view</span><span>Edit YAML</span><span>Download .base</span><span style="color:var(--da)">Delete view</span>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;view&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;table&quot;,&quot;board&quot;,&quot;gallery&quot;,&quot;list&quot;,&quot;cal&quot;],&quot;default&quot;:&quot;table&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;pop&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;filter&quot;,&quot;cell&quot;,&quot;view&quot;],&quot;default&quot;:&quot;none&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;multi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const v = this.props.view ?? 'table', pop = this.props.pop ?? 'none', p = !!this.props.phone, multi = !!this.props.multi;
+    const VT = [['table','Table','v-table'],['board','Board','v-board'],['gallery','Gallery','v-gallery'],['list','List','v-list'],['cal','Calendar','v-calendar']];
+    const vtabs = VT.map(([k,l,g]) => ({ l, g, sh:k===v?'inset 0 -2px 0 var(--ac)':'none', c:k===v?'var(--tx)':'var(--mu)', w:k===v?600:450 }));
+    const tools = [['Filter','2',pop==='filter'],['Sort','1'],[v==='board'?'Group: status':'Group',''],['Properties','6'],['⋯','']].slice(0, p?3:5).map(([l,k,on]) => ({ l, k, ks:k?'inline':'none', b:on?'var(--ac)':'var(--bd)', bg:on?'color-mix(in srgb,var(--ac) 10%,transparent)':'transparent', c:'var(--tx)' }));
+    const S = { learning:['s-learning','var(--in)','Learning'], review:['s-revise','var(--wa)','To revise'], done:['s-done','var(--ok)','Done'], todo:['s-todo','var(--mu)','Todo'], mastered:['s-mastered','var(--ok)','Mastered'] };
+    const CC = { 'CS231n':'#39C5CF', 'CS224n':'#A371F7', 'DL Spec.':'#E8893A', 'Karpathy':'#E3B341', 'fast.ai':'#E5534B', 'HOML':'#57AB5A' };
+    const D = [['Backpropagation','learning','CS231n',['#nn'],'24 Nov','12',2],['Attention','todo','CS224n',['#nlp','#llm'],'2 Dec','0',1],['Batch normalization','review','DL Spec.',['#nn'],'26 Nov','8'],['Tokenization (BPE)','learning','Karpathy',['#nlp','#llm'],'28 Nov','6',1],['Convolution','todo','CS231n',['#cv'],'2 Dec','0'],['Fine-tuning with LoRA','todo','fast.ai',['#llm'],'9 Dec','0'],['Gradient descent','mastered','DL Spec.',['#math'],'3 Nov','14'],['ResNet','todo','CS231n',['#cv'],'9 Dec','0'],['RAG','todo','CS224n',['#llm','#nlp'],'12 Dec','0',1],['AdamW','done','Karpathy',['#nn'],'14 Nov','9']];
+    const trows = D.map(([t,s,c,tags,d,cards,also],i) => ({ t, s:S[s][2], sg:S[s][0], sc:S[s][1], sbg:`color-mix(in srgb, ${S[s][1]} 14%, transparent)`, sring: pop==='cell'&&i===0?'0 0 0 2px var(--ac)':'none', c, cc:CC[c], tags, d, cards, alsoS: multi&&also?'inline':'none', also: (also||0)+' group'+(also>1?'s':''), bg: i===0&&pop==='cell'?'var(--sf)':'transparent' })).slice(0, p?8:10);
+    const th = [['Title'],['Status'],['Course'],['Tags'],['Due ↑'],['Cards']].map(([t]) => ({ t, c: t.includes('↑')?'var(--tx)':'var(--mu)' })).slice(0, p?3:6);
+    const bc = (t,c,o={}) => ({ t, c, cc:CC[c], b:o.drag?'1px solid var(--ac)':'1px solid transparent', tf:o.drag?'rotate(2deg)':'none', sh:o.drag?'0 14px 30px rgba(0,0,0,.45)':'none', op:o.ghost?.3:1, alsoS:o.also?'inline':'none', also:o.also||'' });
+    let board = multi ? [
+      ['#cv','s-todo','var(--mu)','3',[bc('Convolution','CS231n'),bc('ResNet','CS231n'),bc('Attention','CS224n',{ghost:1,also:'#nlp'})]],
+      ['#nlp','s-learning','var(--in)','4',[bc('Tokenization (BPE)','Karpathy',{also:'#llm'}),bc('RAG','CS224n',{also:'#llm'})],1],
+      ['#llm','s-learning','var(--in)','4',[bc('Attention','CS224n',{also:'#nlp'}),bc('Fine-tuning with LoRA','fast.ai'),bc('RAG','CS224n',{also:'#nlp'})]],
+      ['#nn','s-done','var(--ok)','3',[bc('Backpropagation','CS231n'),bc('Batch normalization','DL Spec.'),bc('AdamW','Karpathy')]]
+    ] : [
+      ['Todo','s-todo','var(--mu)','4',[bc('Attention','CS224n'),bc('Convolution','CS231n'),bc('ResNet','CS231n')]],
+      ['Learning','s-learning','var(--in)','2',[bc('Backpropagation','CS231n'),bc('Tokenization (BPE)','Karpathy')],1],
+      ['To revise','s-revise','var(--wa)','1',[bc('Batch normalization','DL Spec.',{drag:1})]],
+      ['Done','s-done','var(--ok)','2',[bc('AdamW','Karpathy'),bc('Gradient descent','DL Spec.')]]
+    ];
+    board = board.map(([n,g,gc,k,cards,drop]) => ({ n, g, gc, k, cards, dropS: drop?'block':'none', ring: drop?'inset 0 0 0 1.5px color-mix(in srgb,var(--ac) 50%,transparent)':'none' }));
+    if (p) board = board.slice(0,1);
+    const gallery = D.slice(0, p?4:8).map(([t,s,c]) => ({ t, s:S[s][2], sg:S[s][0], sc:S[s][1], c }));
+    const listRows = []; [['Learning',['learning']],['To revise',['review']],['Todo',['todo']]].forEach(([h,ss]) => { listRows.push({ hS:'block', rS:'none', h, sg:'note', sc:'', t:'', c:'', d:'' }); D.filter(r => ss.includes(r[1])).slice(0,3).forEach(([t,s,c,,d]) => listRows.push({ hS:'none', rS:'flex', h:'', sg:S[s][0], sc:S[s][1], t, c, d })); });
+    const due = { 3:[['Gradient descent','DL Spec.']], 14:[['AdamW','Karpathy']], 24:[['Backpropagation','CS231n']], 26:[['Batch normalization','DL Spec.']], 28:[['Tokenization (BPE)','Karpathy']], 30:[['Attention','CS224n']], 32:[['Convolution','CS231n']] };
+    const cal = Array.from({length:35},(_,i) => { const n = i-5; const inM = n>=1&&n<=30; return { n: inM?n:'', bg: inM?'transparent':'color-mix(in srgb,var(--sf) 50%,transparent)', nc: n===19?'var(--ac)':'var(--mu)', fw: n===19?700:400, items:(due[i]||[]).map(([t,c]) => ({ t, cc:CC[c], bg:'var(--sf2)' })) }; });
+    const frows = [['Where','status','is any of','learning, review','var(--bd)'],['and','course','is','CS231n ×  CS224n ×','var(--ac)'],['and','tags','contains','#nn','var(--bd)']].map(([j,pp,o,vv,vb]) => ({ j, p:pp, o, v:vv, vb }));
+    const statusOpts = ['todo','learning','review','done','mastered'].map(k => ({ g:S[k][0], c:S[k][1], l:S[k][2], bg:k==='learning'?'var(--bg)':'transparent', chk:k==='learning'?'✓':'' }));
+    const vset = [['Name','By status'],['Layout','Board'],['Group by','status'],['Several values','Show in each group'],['Limit','200']].map(([l,vv]) => ({ l, v:vv }));
+    const on = k => v===k;
+    return { vtabs, tools, th, trows, board, gallery, listRows, cal, frows, statusOpts, vset,
+      isTable:on('table'), isBoard:on('board'), isGallery:on('gallery'), isList:on('list'), isCal:on('cal'),
+      popFilter: pop==='filter', popCell: pop==='cell', popView: pop==='view', moveToastS: multi?'flex':'none',
+      count: multi ? '18 notes · 4 shown in several groups' : '38 notes · filtered',
+      deskOnly: p?'none':'flex', hp: p?'12px 16px 0':'20px 32px 0', px: p?'16px':'32px', h1: p?'17px':'20px',
+      tcols: p?'1.6fr 1.1fr 1fr':'2.2fr 1.1fr 1fr 1.1fr .8fr .5fr', bcols: p?'1fr':'repeat(4,1fr)', gcols: p?'1fr 1fr':'repeat(4,1fr)' };
+  }
+}
+</script>
+</body>
+</html>

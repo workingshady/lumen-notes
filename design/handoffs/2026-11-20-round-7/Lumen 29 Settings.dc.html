@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 29 Settings</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 6</span></div><div style="font-size:14px;color:#9A9890">All 13 sections in one pattern: grouped rows (label, one-line description, one control), Advanced folded at the bottom, danger actions in red outline only. Supersedes the settings screens in 06, 20 and 27.</div></div>
+  </div>
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="5">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ sec.k }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ sec.t }}</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">{{ sec.d }}</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+        <sc-for list="{{ sec.frames }}" as="f" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)">
+              <dc-import name="SettingsDesk" section="{{ f.s }}" limit="{{ f.lim }}" tokens="{{ f.tok }}" dialog="{{ f.dlg }}" sim="{{ f.sim }}" phone="{{ f.ph }}" list="{{ f.list }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+            </div>
+            <div style="max-width:{{ f.w }};font-size:13px;line-height:20px;color:#CFCBC3;display:{{ f.nS }};gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', inn:'#7AA2F7', le:'#B48EF0' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', inn:'#2F5BD3', le:'#7A4BD1' };
+    const F = (id,l,s,t,n,o={}) => ({ id, l, s, t, n, nS:n?'flex':'none', lim:o.lim||'normal', tok:o.tok||'empty', dlg:!!o.dlg, sim:!!o.sim, ph:!!o.ph, list:!!o.list, w:o.ph?'412px':'1440px', h:o.ph?'915px':'900px', r:o.ph?'28px':'12px' });
+    const sections = [
+      { k:'R6 · AI', t:'Settings › AI · usage and limits', d:'What runs on your Cloudflare vs on the device, per-feature switches with typical cost, and the daily free allowance as a meter you can read at a glance.', frames:[
+        F('R6-29A','AI · normal day · Lamplight','ai',L,'Meter coloured by feature, “about 55 summaries left”, reset countdown, 7-day bars. Device features are listed as “No AI” so it is clear what keeps working.'),
+        F('R6-29B','AI · 84% used · Paper','ai',P,'Amber meter, nav badge “84%”, and one warning line. Nothing is blocked yet.',{lim:'near'}),
+        F('R6-29C','AI · limit reached','ai',L,'Red meter and badge. Every feature row reads “Daily free AI limit reached. Try tomorrow.” and dims. Note: nothing is charged.',{lim:'reached'}),
+        F('R6-29D','AI · phone','ai',L,'',{ph:1}),
+        F('R6-29E','AI · limit reached · phone · Paper','ai',P,'',{ph:1,lim:'reached'})
+      ]},
+      { k:'R6 · DEVELOPER', t:'Settings › Developer · tokens and simulator', d:'From “no tokens” to a shown-once token and a list you can revoke one by one. Simulator opens as a bottom drawer with a banner that never lets you forget it is on.', frames:[
+        F('R6-29F','Developer · no tokens yet','developer',L,'Simulator card on top, Base URL, endpoint rows with Copy, empty token state with one action, example request tabs.'),
+        F('R6-29G','Create token dialog · Paper','developer',P,'Name, Read only vs Read + write, expiry. Default 90 days.',{dlg:1}),
+        F('R6-29H','Token created · shown once + list','developer',L,'Amber card with the token and Copy; “You won\'t see this again”. Below: each token with access, last used, expiry and Revoke.',{tok:'list'}),
+        F('R6-29I','Simulator drawer open','developer',L,'Ctrl+Shift+D. Four groups: Network, Data, Look, Faults. Amber banner at the top of the whole app lists what is faked, with Reset all.',{sim:1}),
+        F('R6-29J','Developer · phone','developer',L,'',{ph:1}),
+        F('R6-29K','Simulator · phone · Paper','developer',P,'',{ph:1,sim:1})
+      ]},
+      { k:'R6 · ALL SECTIONS', t:'Every section, same pattern', d:'Account, Appearance, Branding, Reading, Study plan, Diagrams, Sync, Sharing, Blog, Storage, About.', frames:[
+        F('R6-29L','Account','account',L,''), F('R6-29M','Appearance · Paper','palette',P,''), F('R6-29N','Branding','branding',L,''), F('R6-29O','Reading · Paper','reading',P,''),
+        F('R6-29P','Study plan','study',L,''), F('R6-29Q','Diagrams · note tabs · Paper','diagrams',P,'New section: Diagrams tab on/off, default zoom, edge style, tab order for Note · Diagrams · Media · Links · Outline.'),
+        F('R6-29R','Sync','sync',L,''), F('R6-29S','Sharing · Paper','sharing',P,''), F('R6-29T','Blog','blog',L,''), F('R6-29U','Storage · Paper','storage',P,''), F('R6-29V','About','about',L,'')
+      ]},
+      { k:'R6 · PHONE', t:'Phone · list, then one section per screen', d:'', frames:[
+        F('R6-29W','Settings list','ai',L,'Grouped: You · Learning · Data · Advanced. Badges show AI usage and sync state.',{ph:1,list:1}),
+        F('R6-29X','Settings list · Paper · limit reached','ai',P,'',{ph:1,list:1,lim:'reached'}),
+        F('R6-29Y','Account','account',L,'',{ph:1}), F('R6-29Z','Diagrams · Paper','diagrams',P,'',{ph:1})
+      ]}
+    ];
+    return { sections };
+  }
+}
+</script>
+</body>
+</html>

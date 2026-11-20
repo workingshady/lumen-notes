@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+</helmet>
+<article style="font-family:'Source Serif 4','Noto Naskh Arabic',Georgia,serif;font-size:{{ fs }};line-height:{{ lh }};color:var(--tx);display:flex;flex-direction:column;gap:{{ gap }};position:relative">
+  <div dir="ltr" style="font-family:Inter,'IBM Plex Sans Arabic',system-ui,sans-serif;font-size:12.5px;color:var(--mu);display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span><dc-import name="LumenGlyph" glyph="language" size="{{ 15 }}" color="#39C5CF" hint-size="15px,15px"></dc-import> Arabic Grammar</span><span>·</span><span>Lesson</span><span>·</span><span style="display:flex;align-items:center;gap:5px;padding:0 8px;border-radius:999px;background:color-mix(in srgb,var(--in) 14%,transparent);color:var(--in);line-height:20px;font-weight:500"><span style="width:6px;height:6px;border-radius:50%;background:var(--in)"></span>Learning</span><span>·</span><span>AR + EN</span></div>
+  <div style="position:relative"><span style="display:{{ gutter }};position:absolute;left:-96px;top:12px;font:600 10.5px 'JetBrains Mono',monospace;color:#F25C9A;border:1px solid #F25C9A;border-radius:4px;padding:1px 5px">RTL ←</span>
+    <h1 dir="rtl" style="margin:0;font-family:'Noto Naskh Arabic','Source Serif 4',serif;font-size:{{ h1 }};line-height:1.5;font-weight:700;text-align:start">الإضافة في اللغة العربية</h1></div>
+  <div style="position:relative"><span style="display:{{ gutter }};position:absolute;left:-96px;top:6px;font:600 10.5px 'JetBrains Mono',monospace;color:#F25C9A;border:1px solid #F25C9A;border-radius:4px;padding:1px 5px">LTR →</span>
+    <p dir="ltr" style="margin:0">The <i>idafa</i> (<span dir="rtl" style="font-family:'Noto Naskh Arabic',serif">إضافة</span>) joins two nouns. The first, the <i>muḍāf</i> (<span dir="rtl" style="font-family:'Noto Naskh Arabic',serif">مُضاف</span>), drops its tanwīn and never takes <i>al-</i>; the second, the <i>muḍāf ilayhi</i> (<span dir="rtl" style="font-family:'Noto Naskh Arabic',serif">مُضاف إليه</span>), is genitive. So <span dir="rtl" style="font-family:'Noto Naskh Arabic',serif;font-size:1.12em">كِتابُ الطالِبِ</span> is simply “the student's book”.</p></div>
+  <div style="position:relative"><span style="display:{{ gutter }};position:absolute;left:-96px;top:10px;font:600 10.5px 'JetBrains Mono',monospace;color:#F25C9A;border:1px solid #F25C9A;border-radius:4px;padding:1px 5px">RTL ←</span>
+    <h2 dir="rtl" style="margin:8px 0 0;font-family:'Noto Naskh Arabic',serif;font-size:{{ h2 }};line-height:1.5;font-weight:700">أمثلة</h2></div>
+  <div style="position:relative"><span style="display:{{ gutter }};position:absolute;left:-96px;top:8px;font:600 10.5px 'JetBrains Mono',monospace;color:#F25C9A;border:1px solid #F25C9A;border-radius:4px;padding:1px 5px">RTL ←</span>
+    <ul dir="rtl" style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-family:'Noto Naskh Arabic','Source Serif 4',serif;font-size:{{ arfs }}">
+      <li style="display:flex;gap:12px;align-items:baseline"><span style="color:var(--mu)">•</span><span>بابُ البيتِ — <span dir="ltr" style="font-family:'Source Serif 4',serif;font-size:{{ fs }};color:var(--mu)">the door of the house</span></span></li>
+      <li style="display:flex;gap:12px;align-items:baseline"><span style="color:var(--mu)">•</span><span>قلمُ المُعلّمِ — <span dir="ltr" style="font-family:'Source Serif 4',serif;font-size:{{ fs }};color:var(--mu)">the teacher's pen</span></span></li>
+      <li style="display:flex;gap:12px;align-items:baseline"><span style="color:var(--mu)">•</span><span>بابُ بيتِ المُعلّمِ — <span dir="ltr" style="font-family:'Source Serif 4',serif;font-size:{{ fs }};color:var(--mu)">a three-noun chain</span></span></li>
+    </ul></div>
+  <div style="position:relative"><span style="display:{{ gutter }};position:absolute;left:-96px;top:14px;font:600 10.5px 'JetBrains Mono',monospace;color:#F25C9A;border:1px solid #F25C9A;border-radius:4px;padding:1px 5px">RTL ←</span>
+    <div dir="rtl" style="font-family:'IBM Plex Sans Arabic',Inter,sans-serif;font-size:{{ cfs }};line-height:1.7;border-radius:10px;background:color-mix(in srgb,var(--in) 9%,transparent);border:1px solid color-mix(in srgb,var(--in) 28%,transparent);padding:12px 16px;display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:center;gap:8px;font-weight:600;color:var(--in)"><i class="icon-info" style="font-size:16px"></i>ملاحظة</span><span>المُضاف لا يُعرَّف بـ«ال» أبداً، والمُضاف إليه مجرور دائماً.</span></div></div>
+  <div style="position:relative"><span style="display:{{ gutter }};position:absolute;left:-96px;top:12px;font:600 10.5px 'JetBrains Mono',monospace;color:#F25C9A;border:1px solid #F25C9A;border-radius:4px;padding:1px 5px">LTR →</span>
+    <h2 dir="ltr" style="margin:8px 0 0;font-size:{{ h2 }};line-height:1.3;font-weight:650">Checking it in code</h2></div>
+  <div style="position:relative"><span style="display:{{ gutter }};position:absolute;left:-96px;top:12px;font:600 10.5px 'JetBrains Mono',monospace;color:#F25C9A;border:1px solid #F25C9A;border-radius:4px;padding:1px 5px">LTR ⇥ forced</span>
+    <div dir="ltr" style="border-radius:10px;border:1px solid var(--bd);background:var(--sf);overflow:hidden;font-family:'JetBrains Mono','IBM Plex Sans Arabic',monospace;unicode-bidi:isolate">
+      <div style="height:32px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bd);font-size:12px;color:var(--mu)"><span>python</span><span style="font-family:Inter,sans-serif;display:flex;align-items:center;gap:6px"><i class="icon-copy" style="font-size:13px"></i>Copy</span></div>
+      <div style="padding:12px 14px;font-size:{{ codefs }};line-height:1.7;white-space:pre;overflow:hidden"><span style="color:var(--le)">def</span> <span style="color:var(--in)">is_idafa</span>(first, second):
+    <span style="color:var(--mu)"># الاسم الأول بلا «ال»</span>
+    <span style="color:var(--le)">return</span> <span style="color:var(--le)">not</span> first.startswith(<span style="color:#E3B341">"ال"</span>) \
+        <span style="color:var(--le)">and</span> second.case == <span style="color:#E3B341">"genitive"</span></div>
+    </div></div>
+  <div style="position:relative"><span style="display:{{ gutter }};position:absolute;left:-96px;top:6px;font:600 10.5px 'JetBrains Mono',monospace;color:#F25C9A;border:1px solid #F25C9A;border-radius:4px;padding:1px 5px">LTR →</span>
+    <ul dir="ltr" style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px">
+      <li style="display:flex;gap:12px"><span style="color:var(--mu)">•</span><span>Each block takes the direction of its first strong letter.</span></li>
+      <li style="display:flex;gap:12px"><span style="color:var(--mu)">•</span><span>Inline <span dir="rtl" style="font-family:'Noto Naskh Arabic',serif">عربي</span> inside English stays isolated, so punctuation lands correctly.</span></li>
+    </ul></div>
+</article>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:760,&quot;height&quot;:1100},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;gutter&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = !!this.props.phone;
+    return p
+      ? { fs:'16px', lh:'28px', gap:'16px', h1:'30px', h2:'21px', arfs:'19px', cfs:'15px', codefs:'12px', gutter:'none' }
+      : { fs:'17px', lh:'30px', gap:'20px', h1:'40px', h2:'26px', arfs:'21px', cfs:'16px', codefs:'13.5px', gutter: this.props.gutter ? 'inline-block' : 'none' };
+  }
+}
+</script>
+</body>
+</html>

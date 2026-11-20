@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+</helmet>
+<div style="position:absolute;inset:0;overflow:hidden;background-color:var(--bg);background-image:radial-gradient(color-mix(in srgb,var(--mu) 35%,transparent) 1px, transparent 1.2px);background-size:22px 22px;font-family:Inter,system-ui,sans-serif;font-size:13px;color:var(--tx)">
+  <div style="position:absolute;left:0;top:0;width:1100px;height:640px;transform:{{ tf }};transform-origin:0 0">
+    <sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+      <div style="position:absolute;left:{{ g.x }};top:{{ g.y }};width:{{ g.w }};height:{{ g.h }};border-radius:14px;background:{{ g.fill }};border:1.5px solid {{ g.c }}">
+        <span style="position:absolute;left:0;top:-30px;padding:3px 10px;border-radius:6px;background:{{ g.c }};color:#0F1115;font-weight:600;font-size:12.5px;white-space:nowrap">{{ g.l }}</span>
+      </div>
+    </sc-for>
+    <sc-for list="{{ edges }}" as="e" hint-placeholder-count="4">
+      <div style="position:absolute;left:{{ e.x }};top:{{ e.y }};width:{{ e.w }};height:2px;margin-top:-1px;background:var(--mu);transform:rotate({{ e.a }});transform-origin:0 50%">
+        <span style="position:absolute;right:-2px;top:-5px;border-left:10px solid var(--mu);border-top:6px solid transparent;border-bottom:6px solid transparent"></span>
+      </div>
+      <span style="position:absolute;left:{{ e.mx }};top:{{ e.my }};transform:translate(-50%,-50%);padding:2px 8px;border-radius:6px;background:var(--bg);border:1px solid var(--bd);font-size:11.5px;color:var(--mu);white-space:nowrap">{{ e.l }}</span>
+    </sc-for>
+    <sc-for list="{{ texts }}" as="t" hint-placeholder-count="5">
+      <div style="position:absolute;left:{{ t.x }};top:{{ t.y }};width:{{ t.w }};height:{{ t.h }};box-sizing:border-box;border-radius:10px;background:{{ t.fill }};border:1px solid {{ t.c }};padding:12px 14px;display:flex;flex-direction:column;gap:6px;overflow:hidden">
+        <span style="font-weight:650;font-size:14px">{{ t.title }}</span>
+        <span style="color:var(--tx);opacity:.85;line-height:19px;font-family:{{ t.ff }};font-size:{{ t.fs }};white-space:pre-line">{{ t.body }}</span>
+      </div>
+    </sc-for>
+    <sc-for list="{{ files }}" as="f" hint-placeholder-count="2">
+      <div style="position:absolute;left:{{ f.x }};top:{{ f.y }};width:{{ f.w }};height:{{ f.h }};box-sizing:border-box;border-radius:10px;background:var(--sf);border:{{ f.b }};box-shadow:{{ f.ring }};display:flex;flex-direction:column;overflow:visible">
+        <div style="height:30px;padding:0 10px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd);font-size:11.5px;color:var(--mu)"><i class="icon-file-text" style="font-size:12px"></i><span style="flex:1">{{ f.path }}</span><span style="width:7px;height:7px;border-radius:50%;background:{{ f.st }}"></span></div>
+        <div style="padding:10px 12px;display:flex;flex-direction:column;gap:5px"><span style="font-weight:650;font-size:14px">{{ f.t }}</span><span style="color:var(--mu);font-size:12px;line-height:17px">{{ f.ex }}</span></div>
+        <span style="display:{{ f.hd }};position:absolute;left:-5px;top:-5px;width:8px;height:8px;background:var(--bg);border:1.5px solid var(--ac);border-radius:2px"></span><span style="display:{{ f.hd }};position:absolute;right:-5px;top:-5px;width:8px;height:8px;background:var(--bg);border:1.5px solid var(--ac);border-radius:2px"></span><span style="display:{{ f.hd }};position:absolute;left:-5px;bottom:-5px;width:8px;height:8px;background:var(--bg);border:1.5px solid var(--ac);border-radius:2px"></span><span style="display:{{ f.hd }};position:absolute;right:-5px;bottom:-5px;width:8px;height:8px;background:var(--bg);border:1.5px solid var(--ac);border-radius:2px"></span>
+        <span style="display:{{ f.hd }};position:absolute;left:50%;bottom:-6px;margin-left:-6px;width:12px;height:12px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 3px var(--bg)"></span><span style="display:{{ f.hd }};position:absolute;left:50%;top:-6px;margin-left:-6px;width:12px;height:12px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 3px var(--bg)"></span><span style="display:{{ f.hd }};position:absolute;top:50%;left:-6px;margin-top:-6px;width:12px;height:12px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 3px var(--bg)"></span><span style="display:{{ f.hd }};position:absolute;top:50%;right:-6px;margin-top:-6px;width:12px;height:12px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 3px var(--bg)"></span>
+      </div>
+    </sc-for>
+    <div style="position:absolute;left:584px;top:470px;width:270px;height:84px;box-sizing:border-box;border-radius:10px;background:var(--sf);border:1px solid var(--bd);display:flex;gap:12px;padding:12px;align-items:center">
+      <span style="width:40px;height:40px;border-radius:8px;background:#8C1515;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">CS</span>
+      <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-weight:600">CS231n — Backprop notes</span><span style="color:var(--ln);font-size:12px;display:flex;align-items:center;gap:4px"><i class="icon-link-2" style="font-size:12px"></i>cs231n.github.io/optimization-2</span></div>
+    </div>
+  </div>
+  <sc-if value="{{ minimap }}">
+    <div style="position:absolute;right:16px;bottom:16px;width:176px;height:112px;border-radius:10px;background:var(--sf);border:1px solid var(--bd);overflow:hidden">
+      <div style="position:absolute;left:10px;top:16px;width:67px;height:53px;border-radius:3px;background:rgba(57,197,207,.35)"></div>
+      <div style="position:absolute;left:90px;top:16px;width:70px;height:53px;border-radius:3px;background:rgba(163,113,247,.35)"></div>
+      <div style="position:absolute;left:94px;top:78px;width:43px;height:14px;border-radius:2px;background:var(--mu);opacity:.6"></div>
+      <div style="position:absolute;left:32px;top:78px;width:35px;height:13px;border-radius:2px;background:rgba(87,171,90,.6)"></div>
+      <div style="position:absolute;left:4px;top:8px;width:150px;height:90px;border-radius:4px;border:1.5px solid var(--ac)"></div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1200,&quot;height&quot;:700},&quot;ox&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:0,&quot;tsType&quot;:&quot;number&quot;},&quot;oy&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:0,&quot;tsType&quot;:&quot;number&quot;},&quot;scale&quot;:{&quot;editor&quot;:&quot;float&quot;,&quot;default&quot;:1,&quot;tsType&quot;:&quot;number&quot;},&quot;minimap&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;selected&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const ox = this.props.ox ?? 0, oy = this.props.oy ?? 0, s = this.props.scale ?? 1;
+    const P = { red:'#E5534B', green:'#57AB5A', cyan:'#39C5CF', purple:'#A371F7' };
+    const px = v => v + 'px';
+    const groups = [[60,80,420,330,'Forward pass','cyan'],[560,80,440,330,'Backward pass','purple']]
+      .map(([x,y,w,h,l,c]) => ({ x:px(x),y:px(y),w:px(w),h:px(h),l,c:P[c],fill:`color-mix(in srgb, ${P[c]} 8%, transparent)` }));
+    const texts = [
+      [84,130,180,120,'Idea','Compute activations layer by layer and cache them for the backward pass.'],
+      [84,270,180,110,'Layer','z = Wx + b\na = σ(z)',null,1],
+      [794,130,186,128,'Chain rule','∂L/∂W = ∂L/∂a · ∂a/∂z · ∂z/∂W',null,1],
+      [794,276,186,112,'Open question','Why do gradients vanish with sigmoid but not ReLU?','red'],
+      [150,470,240,80,'Checked','Derived by hand for a 2-layer MLP ✓','green']
+    ].map(([x,y,w,h,title,body,c,math]) => ({ x:px(x),y:px(y),w:px(w),h:px(h),title,body, c:c?P[c]:'var(--bd)', fill:c?`color-mix(in srgb, ${P[c]} 14%, var(--sf))`:'var(--sf)', ff:math?"'Source Serif 4',serif":'Inter,system-ui,sans-serif', fs:math?'15px':'13px' }));
+    const sel = this.props.selected !== false;
+    const files = [
+      [284,130,176,160,'02 Optimization','Gradient descent','Minimize J(θ) by stepping against the gradient…','var(--in)',0],
+      [584,130,190,160,'03 Neural networks','Backpropagation','Reverse-mode autodiff over the computation graph. Cache, then…','var(--in)',1]
+    ].map(([x,y,w,h,path,t,ex,st,isSel]) => ({ x:px(x),y:px(y),w:px(w),h:px(h),path,t,ex,st, b:isSel&&sel?'2px solid var(--ac)':'1px solid var(--bd)', ring:isSel&&sel?'0 0 0 4px color-mix(in srgb,var(--ac) 16%,transparent)':'none', hd:isSel&&sel?'block':'none' }));
+    const E = [[480,245,560,245,'feeds'],[679,290,679,470,'explained in'],[174,380,250,470,'check'],[887,388,854,500,'see §3']];
+    const edges = E.map(([x1,y1,x2,y2,l]) => ({ x:px(x1),y:px(y1),w:px(Math.hypot(x2-x1,y2-y1)),a:Math.atan2(y2-y1,x2-x1)+'rad',mx:px((x1+x2)/2),my:px((y1+y2)/2),l }));
+    return { groups, texts, files, edges, tf:`translate(${ox}px, ${oy}px) scale(${s})`, minimap: this.props.minimap !== false };
+  }
+}
+</script>
+</body>
+</html>

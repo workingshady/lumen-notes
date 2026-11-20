@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+</helmet>
+<div style="position:absolute;inset:0;background:radial-gradient(720px 440px at 50% -90px, color-mix(in srgb,var(--ac) 9%,transparent), transparent 70%), var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Inter,system-ui,sans-serif;color:var(--tx);font-size:13px">
+  <div style="width:380px;display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+      <dc-import name="LumenMark" size="{{ 60 }}" tile="{{ markTile }}" hint-size="60px,60px"></dc-import>
+      <div style="font-weight:600;font-size:30px;line-height:1;letter-spacing:-0.045em">lumen</div>
+      <div style="font-size:14px;color:var(--mu)">A quiet notebook for what you learn.</div>
+    </div>
+    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:var(--sh)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--sf2);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:18px"><dc-import name="LumenGlyph" glyph="owl" size="{{ 15 }}" color="#F2A93B" hint-size="15px,15px"></dc-import></div>
+        <div style="display:flex;flex-direction:column;gap:2px"><div style="font-weight:600;font-size:14px">Welcome back, Amir</div><div style="font-size:12px;color:var(--mu)">1,284 notes on this device · last sync Tue 22:10</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <span style="font-size:12px;font-weight:500;color:var(--mu)">Passcode</span>
+        <div style="height:40px;box-sizing:border-box;border-radius:6px;background:var(--bg);border:1px solid var(--ac);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 22%,transparent);display:flex;align-items:center;padding:0 12px;gap:7px">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--tx)"></span><span style="width:7px;height:7px;border-radius:50%;background:var(--tx)"></span><span style="width:7px;height:7px;border-radius:50%;background:var(--tx)"></span><span style="width:7px;height:7px;border-radius:50%;background:var(--tx)"></span><span style="width:7px;height:7px;border-radius:50%;background:var(--tx)"></span><span style="width:7px;height:7px;border-radius:50%;background:var(--tx)"></span>
+          <span style="width:1.5px;height:18px;background:var(--ac)"></span><span style="flex:1"></span><i class="icon-eye" style="font-size:16px;color:var(--mu)"></i>
+        </div>
+      </div>
+      <div style="height:40px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;font-size:14px">Unlock sync <span style="font:500 11px 'JetBrains Mono',monospace;opacity:.7">↵</span></div>
+      <div style="font-size:12px;color:var(--mu);display:flex;gap:8px;align-items:flex-start;line-height:18px"><i class="icon-lock" style="font-size:13px;margin-top:2px"></i><span>Hashed on this device. Lumen never stores your passcode.</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;color:var(--mu);font-size:12px"><span style="flex:1;height:1px;background:var(--bd)"></span>or<span style="flex:1;height:1px;background:var(--bd)"></span></div>
+    <div style="height:48px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;gap:12px;padding:0 16px">
+      <i class="icon-cloud-off" style="font-size:16px;color:var(--mu)"></i>
+      <span style="flex:1;font-weight:500;font-size:14px">Continue offline</span>
+      <span style="font-size:12px;color:var(--mu)">Local only</span>
+    </div>
+  </div>
+  <div style="position:absolute;left:32px;right:32px;bottom:24px;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--mu)">
+    <span>v0.1.4 · Local-first · Works offline</span>
+    <div style="display:flex;gap:2px;padding:3px;border-radius:8px;border:1px solid var(--bd);background:var(--sf)">
+      <span style="width:28px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:{{ sunBg }}"><i class="icon-sun" style="font-size:14px"></i></span>
+      <span style="width:28px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:{{ moonBg }}"><i class="icon-moon" style="font-size:14px"></i></span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const light = this.props.theme === 'light';
+    return { markTile: light ? 'light' : 'dark', sunBg: light ? 'var(--sf2)' : 'transparent', moonBg: light ? 'transparent' : 'var(--sf2)' };
+  }
+}
+</script>
+</body>
+</html>

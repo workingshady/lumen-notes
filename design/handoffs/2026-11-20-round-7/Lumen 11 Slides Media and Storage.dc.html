@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 11 Slides with media · Files &amp; storage</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 3</span></div><div style="font-size:14px;color:#9A9890">Five slide layouts written in plain Markdown, the presenter bar, and free-tier storage made visible.</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R3 · 3</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Five slide layouts</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Styling, not a layout engine: the renderer looks at what a slide contains. One heading → Title. Heading + list → Bullets. A lone image → Full image (≤ 62% of height, 16 px radius, caption from alt text). A video URL → 16:9 player. A mermaid block → centred diagram.</p></div>
+    <div style="display:grid;grid-template-columns:repeat(3,640px);gap:32px 28px">
+      <sc-for list="{{ layouts }}" as="l" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <dc-import name="SlideFrame" layout="{{ l.k }}" width="{{ 640 }}" hint-size="640px,360px"></dc-import>
+          <div style="display:flex;align-items:baseline;gap:10px"><span style="font-weight:600;font-size:15px">{{ l.n }}</span><code style="font:12px 'JetBrains Mono',monospace;color:#9A9890">{{ l.md }}</code></div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R3 · 3</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Presenter</h2></div>
+    <div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">R3-3A</span> Presenter · Desktop · video slide</div>
+        <div style="width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:#0A0C0F;color:#E8E6E1;display:flex;flex-direction:column">
+          <div style="height:3px;background:#1D222B"><div style="width:42%;height:100%;background:#F2A93B"></div></div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center"><dc-import name="SlideFrame" layout="video" width="{{ 1120 }}" hint-size="1120px,630px"></dc-import></div>
+          <div style="height:120px;padding:0 24px;display:flex;align-items:center;gap:10px;border-top:1px solid #1D222B">
+            <sc-for list="{{ thumbs }}" as="t" hint-placeholder-count="12"><div style="width:120px;height:68px;flex-shrink:0;border-radius:6px;background:#0F1115;border:{{ t.b }};padding:8px;box-sizing:border-box;position:relative;display:flex;flex-direction:column;gap:5px;opacity:{{ t.o }}"><span style="font-size:9.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.t }}</span><span style="height:3px;width:70%;border-radius:2px;background:#9AA0AA;opacity:.35"></span><span style="display:{{ t.mb }};position:absolute;left:6px;bottom:5px;padding:0 5px;border-radius:4px;background:rgba(255,255,255,.12);font-size:9.5px;line-height:15px">{{ t.m }}</span><span style="position:absolute;right:6px;bottom:4px;font-size:9.5px;color:#9AA0AA">{{ t.n }}</span></div></sc-for>
+          </div>
+          <div style="height:52px;padding:0 24px;display:flex;align-items:center;gap:14px;color:#9AA0AA;font-size:13px;border-top:1px solid #1D222B"><span style="flex:1">Backprop, from one neuron up</span><span style="width:34px;height:34px;border-radius:8px;border:1px solid #2A303B;display:flex;align-items:center;justify-content:center;color:#E8E6E1"><i class="icon-chevron-left" style="font-size:16px"></i></span><span style="color:#E8E6E1;font-variant-numeric:tabular-nums">5 / 12</span><span style="width:34px;height:34px;border-radius:8px;border:1px solid #2A303B;display:flex;align-items:center;justify-content:center;color:#E8E6E1"><i class="icon-chevron-right" style="font-size:16px"></i></span><span style="flex:1;text-align:right">F fullscreen · Esc exit</span></div>
+        </div>
+        <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Video never autoplays when you land on a slide; Space plays/pauses media on the current slide, → still advances. Thumbnails flag media so you can find them: <dc-import name="LumenGlyph" glyph="image" size="{{ 15 }}" hint-size="15px,15px"></dc-import> Image, <dc-import name="LumenGlyph" glyph="play" size="{{ 15 }}" hint-size="15px,15px"></dc-import> Media.</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">R3-3B</span> Presenter · Phone · image slide</div>
+        <div style="width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:#0A0C0F;color:#E8E6E1;display:flex;flex-direction:column">
+          <div style="height:32px"></div><div style="height:3px;background:#1D222B"><div style="width:33%;height:100%;background:#F2A93B"></div></div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center"><dc-import name="SlideFrame" layout="image" width="{{ 396 }}" radius="{{ 6 }}" hint-size="396px,223px"></dc-import></div>
+          <div style="padding:0 16px 12px;display:flex;align-items:center;gap:12px"><span style="flex:1;height:52px;border-radius:12px;border:1px solid #2A303B;display:flex;align-items:center;justify-content:center"><i class="icon-chevron-left" style="font-size:20px"></i></span><span style="font-size:14px;width:60px;text-align:center">4 / 12</span><span style="flex:1;height:52px;border-radius:12px;border:1px solid #2A303B;display:flex;align-items:center;justify-content:center"><i class="icon-chevron-right" style="font-size:20px"></i></span></div>
+          <div style="text-align:center;font-size:12px;color:#9AA0AA;padding-bottom:6px">Swipe ← → · tap image to zoom</div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:#9AA0AA;opacity:.45"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R3 · 4</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Files &amp; storage (free tier)</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Attachments live on your device first, then upload to Cloudflare D1 in 1.5 MB parts. Max 100 MB per file, 5 GB total, no paid storage.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+      <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--wa:#E8B34A;display:flex;flex-direction:column;gap:14px;color:var(--tx);font-size:13px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">R3-4A</span> Attachment states in a note</div>
+        <div style="width:720px;border-radius:12px;background:var(--bg);padding:28px;display:flex;flex-direction:column;gap:22px;box-sizing:border-box">
+          <div style="display:flex;flex-direction:column;gap:6px"><div style="height:260px;border-radius:12px;background:repeating-linear-gradient(135deg,var(--sf) 0 12px,var(--sf2) 12px 24px);border:1px solid var(--bd);position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden"><span style="position:absolute;left:12px;top:10px;font:500 11.5px 'JetBrains Mono',monospace;color:var(--mu);background:var(--bg);padding:3px 8px;border-radius:4px">whiteboard-photo.jpg · 9.8 MB</span><div style="width:64px;height:64px;border-radius:50%;background:conic-gradient(var(--tx) 0 43%, rgba(232,230,225,.18) 43% 100%);display:flex;align-items:center;justify-content:center"><div style="width:58px;height:58px;border-radius:50%;background:rgba(15,17,21,.85);display:flex;align-items:center;justify-content:center;font:600 12px Inter">43%</div></div></div><span style="font-size:12.5px;color:var(--mu);display:flex;align-items:center;gap:8px"><i class="icon-upload" style="font-size:13px"></i>Uploading 3/7 parts · already viewable on this device</span></div>
+          <div style="display:flex;gap:16px">
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:150px;border-radius:12px;background:repeating-linear-gradient(135deg,var(--sf) 0 12px,var(--sf2) 12px 24px);border:1px dashed var(--bd);display:flex;align-items:center;justify-content:center"><span style="width:44px;height:44px;border-radius:50%;background:rgba(15,17,21,.85);display:flex;align-items:center;justify-content:center"><i class="icon-cloud-off" style="font-size:18px;color:var(--wa)"></i></span></div><span style="font-size:12.5px;color:var(--mu)"><span style="color:var(--wa)">Queued</span> · will upload when online</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:150px;border-radius:12px;background:repeating-linear-gradient(135deg,var(--sf) 0 12px,var(--sf2) 12px 24px);border:1px solid var(--bd);position:relative;display:flex;align-items:center;justify-content:center"><span style="width:44px;height:44px;border-radius:50%;background:rgba(15,17,21,.85);display:flex;align-items:center;justify-content:center"><i class="icon-play" style="font-size:18px;margin-left:2px"></i></span><span style="position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(232,230,225,.15)"><span style="display:block;width:100%;height:100%;background:#6BCB8B"></span></span></div><span style="font-size:12.5px;color:var(--mu)">Synced · 48 MB · streams by range</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">R3-4B</span> Too-big file · Desktop dialog</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);font-size:13px">
+          <dc-import name="ScreenWorkspace" mode="Split" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+          <div style="position:absolute;inset:0;background:rgba(5,6,8,.62)"></div>
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:520px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column">
+            <div style="padding:22px 24px 0;display:flex;gap:14px;align-items:flex-start"><span style="width:40px;height:40px;border-radius:10px;background:color-mix(in srgb,var(--wa) 14%,transparent);color:var(--wa);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="icon-file-video" style="font-size:19px"></i></span><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:17px;font-weight:650">This file is too big to store</span><span style="color:var(--mu);line-height:19px"><span style="font-family:'JetBrains Mono',monospace;color:var(--tx)">lecture-07-full.mp4</span> is 1.4 GB. Lumen stores files up to 100 MB on your free Cloudflare.</span></div></div>
+            <div style="margin:18px 24px 0;border-radius:10px;background:var(--sf2);padding:14px;display:flex;flex-direction:column;gap:10px">
+              <span style="font-weight:600;display:flex;align-items:center;gap:8px"><i class="icon-lightbulb" style="font-size:15px;color:var(--ac)"></i>Tip for long videos</span>
+              <span style="line-height:20px">Upload it to YouTube as <b style="font-weight:600">Unlisted</b>, then paste the link here. It plays inline, in slides and for visitors, and costs nothing.</span>
+              <span style="align-self:flex-start;height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px"><i class="icon-copy" style="font-size:13px"></i>Copy tip</span>
+            </div>
+            <div style="padding:18px 24px;display:flex;justify-content:flex-end;gap:8px"><span style="height:36px;padding:0 14px;border-radius:10px;display:flex;align-items:center;color:var(--mu)">Choose another file</span><span style="height:36px;padding:0 16px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">Paste a link instead</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">R3-4C</span> Too-big · Phone sheet</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--wa:#E8B34A;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);font-size:14px">
+          <div style="position:absolute;inset:0;background:rgba(5,6,8,.55)"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--sf);border-radius:14px 14px 0 0;padding:10px 20px 0;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;justify-content:center"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+            <span style="font-size:18px;font-weight:650">Too big to store</span>
+            <span style="color:var(--mu);line-height:21px">lecture-07-full.mp4 is 1.4 GB. The limit is 100 MB per file.</span>
+            <div style="border-radius:12px;background:var(--sf2);padding:14px;line-height:21px"><b style="font-weight:600">Tip:</b> upload long videos to YouTube as <b style="font-weight:600">Unlisted</b> and paste the link.</div>
+            <span style="height:52px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600">Paste a link instead</span>
+            <span style="height:48px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Choose another file</span>
+            <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">R3-4D</span> Settings › Storage · Desktop</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+          <div style="width:220px;flex-shrink:0;border-right:1px solid var(--bd);padding:20px 10px;display:flex;flex-direction:column;gap:2px">
+            <span style="padding:0 10px 12px;font-size:18px;font-weight:650">Settings</span>
+            <sc-for list="{{ setNav }}" as="n" hint-placeholder-count="9"><div style="height:34px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:10px;background:{{ n.bg }};color:{{ n.c }};font-weight:{{ n.fw }}"><i class="{{ n.i }}" style="font-size:15px;color:{{ n.ic }}"></i>{{ n.l }}</div></sc-for>
+          </div>
+          <div style="flex:1;padding:28px 40px;display:flex;flex-direction:column;gap:24px;max-width:900px">
+            <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:22px;font-weight:650;letter-spacing:-.02em">Storage</span><span style="color:var(--mu)">Free Cloudflare D1 · files split into 1.5 MB parts · 100 MB per file.</span></div>
+            <div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:baseline;gap:8px"><span style="font-weight:600">Cloudflare</span><span style="flex:1"></span><span><b style="font-weight:650;font-size:15px">1.38 GB</b> <span style="color:var(--mu)">of 5 GB</span></span></div>
+              <div style="height:10px;border-radius:5px;background:var(--sf2);overflow:hidden;display:flex;gap:2px"><span style="width:4%;background:var(--tx);opacity:.75"></span><span style="width:23.6%;background:var(--in)"></span></div>
+              <div style="display:flex;gap:18px;font-size:12.5px;color:var(--mu)"><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:var(--tx);opacity:.75"></span>Notes 182 MB</span><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:var(--in)"></span>Files 1.2 GB · 312 files</span><span style="flex:1"></span><span>3.62 GB free</span></div></div>
+            <div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:baseline;gap:8px"><span style="font-weight:600">This device</span><span style="flex:1"></span><span><b style="font-weight:650;font-size:15px">640 MB</b> <span style="color:var(--mu)">of ~12 GB browser quota</span></span></div>
+              <div style="height:10px;border-radius:5px;background:var(--sf2);overflow:hidden"><span style="display:block;width:5.3%;height:100%;background:var(--tx);opacity:.75"></span></div>
+              <span style="font-size:12.5px;color:var(--mu)">Older attachments can be dropped from this device and fetched again when opened.</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px"><span style="font-weight:600">Largest files</span>
+              <div style="border-radius:12px;border:1px solid var(--bd);overflow:hidden">
+                <sc-for list="{{ files }}" as="f" hint-placeholder-count="5"><div style="min-height:48px;padding:0 8px 0 14px;display:flex;align-items:center;gap:12px;border-top:{{ f.bt }};background:var(--sf)"><i class="{{ f.i }}" style="font-size:16px;color:var(--mu)"></i><div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-family:'JetBrains Mono',monospace;font-size:12.5px">{{ f.n }}</span><span style="font-size:11.5px;color:var(--mu)">in {{ f.note }}</span></div><span style="width:70px;text-align:right;font-variant-numeric:tabular-nums">{{ f.s }}</span><span style="height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;color:var(--da)"><i class="icon-trash-2" style="font-size:13px"></i>Delete</span></div></sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">R3-4E</span> Storage · Phone</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--da:#EF6B6B;--in:#7AA2F7;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 4px;display:flex;align-items:center;gap:4px"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-arrow-left" style="font-size:20px"></i></span><span style="font-weight:650;font-size:17px">Storage</span></div>
+          <div style="margin:0 16px;border-radius:14px;background:var(--sf);padding:16px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:baseline"><span style="font-weight:600;flex:1">Cloudflare</span><b style="font-weight:650">1.38</b><span style="color:var(--mu)">&nbsp;/ 5 GB</span></div><div style="height:10px;border-radius:5px;background:var(--sf2);overflow:hidden;display:flex;gap:2px"><span style="width:4%;background:var(--tx);opacity:.75"></span><span style="width:23.6%;background:var(--in)"></span></div><span style="font-size:12.5px;color:var(--mu)">Notes 182 MB · Files 1.2 GB</span></div>
+          <div style="margin:12px 16px 0;border-radius:14px;background:var(--sf);padding:16px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:baseline"><span style="font-weight:600;flex:1">This phone</span><b style="font-weight:650">640 MB</b></div><div style="height:10px;border-radius:5px;background:var(--sf2);overflow:hidden"><span style="display:block;width:5.3%;height:100%;background:var(--tx);opacity:.75"></span></div></div>
+          <div style="padding:20px 20px 8px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Largest files</div>
+          <div style="margin:0 16px;border-radius:14px;background:var(--sf);overflow:hidden">
+            <sc-for list="{{ files }}" as="f" hint-placeholder-count="4"><div style="min-height:60px;padding:8px 8px 8px 14px;display:flex;align-items:center;gap:12px;border-top:{{ f.bt }}"><i class="{{ f.i }}" style="font-size:18px;color:var(--mu)"></i><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.n }}</span><span style="font-size:12px;color:var(--mu)">{{ f.s }}</span></div><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--da)"><i class="icon-trash-2" style="font-size:18px"></i></span></div></sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const layouts = [['title','Title','# Backprop, from one neuron up'],['bullets','Bullets','## Heading + - list'],['image','Full image','![caption](att:feature-maps)'],['video','Video','https://youtu.be/…'],['diagram','Diagram','```mermaid flowchart LR']].map(([k,n,md]) => ({ k, n, md }));
+    const thumbs = ['Backprop, from one neuron up','Why gradients?','The chain rule, one neuron','What the network sees','Watch: backprop, visually','One training step','Vanishing gradients','ReLU vs sigmoid','Live demo','Exercises','Summary','Questions']
+      .map((t,i) => ({ t, n:i+1, m:[3].includes(i)?'Image':[4,8].includes(i)?'Media':'', mb:[3,4,8].includes(i)?'block':'none', b:i===4?'2px solid #F2A93B':'1px solid #2A303B', o:i<4?.55:1 }));
+    const setNav = [['palette','Appearance'],['pen-tool','Branding'],['refresh-cw','Sync'],['share','Sharing'],['rss','Blog'],['hard-drive','Storage',1],['sparkles','AI'],['code','Developer'],['info','About']]
+      .map(([i,l,a]) => ({ i:'icon-'+i, l, bg:a?'var(--sf2)':'transparent', c:a?'var(--tx)':'var(--mu)', ic:a?'var(--ac)':'var(--mu)', fw:a?600:450 }));
+    const files = [['file-video','entropy-per-layer.mp4','Attention, explained','92 MB'],['file-audio','lecture-07-attention.m4a','Attention, explained','61 MB'],['file-video','backprop-demo.webm','Backprop deck','48 MB'],['file-text','vaswani-2017-attention.pdf','Attention, explained','2.1 MB'],['image','whiteboard-photo.jpg','Study plan — November','9.8 MB']]
+      .map(([i,n,note,s],ix) => ({ i:'icon-'+i, n, note, s, bt:ix?'1px solid var(--bd)':'none' }));
+    return { layouts, thumbs, setNav, files };
+  }
+}
+</script>
+</body>
+</html>

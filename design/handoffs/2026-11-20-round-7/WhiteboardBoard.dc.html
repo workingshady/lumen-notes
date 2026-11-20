@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+</helmet>
+<div style="position:absolute;inset:0;overflow:hidden;background-color:var(--bg);background-image:linear-gradient(color-mix(in srgb,var(--mu) 9%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--mu) 9%,transparent) 1px,transparent 1px);background-size:24px 24px;font-family:Inter,system-ui,sans-serif;font-size:13px;color:var(--tx)">
+  <div style="position:absolute;left:0;top:0;width:1100px;height:640px;transform:{{ tf }};transform-origin:0 0">
+    <span style="position:absolute;left:40px;top:34px;font-size:13px;color:var(--mu);font-weight:500;white-space:nowrap">Week 3</span>
+    <div style="position:absolute;left:40px;top:56px;width:620px;height:430px;border:1.5px solid color-mix(in srgb,var(--mu) 60%,transparent);border-radius:6px;background:color-mix(in srgb,var(--sf) 40%,transparent)"></div>
+    <sc-for list="{{ stickies }}" as="s" hint-placeholder-count="6">
+      <div style="position:absolute;left:{{ s.x }};top:{{ s.y }};width:160px;height:128px;box-sizing:border-box;background:{{ s.c }};border-radius:3px;transform:rotate({{ s.r }});box-shadow:0 2px 0 rgba(0,0,0,.06), 0 8px 18px rgba(0,0,0,.18);padding:14px 14px;font-family:Caveat,'Comic Sans MS',cursive;font-size:23px;line-height:25px;color:#1F1D1A;font-weight:600;outline:{{ s.sel }};outline-offset:4px">{{ s.t }}</div>
+    </sc-for>
+    <svg width="1100" height="640" style="position:absolute;left:0;top:0;overflow:visible;pointer-events:none">
+      <path d="M 572 150 C 630 70, 690 80, 738 128" style="fill:none;stroke:var(--tx);stroke-width:2.2;stroke-linecap:round"></path>
+      <path d="M 720 124 L 739 130 L 734 110" style="fill:none;stroke:var(--tx);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round"></path>
+      <path d="M 862 360 L 905 360" style="fill:none;stroke:var(--tx);stroke-width:2;stroke-linecap:round"></path>
+      <path d="M 895 352 L 906 360 L 895 368" style="fill:none;stroke:var(--tx);stroke-width:2;stroke-linecap:round;stroke-linejoin:round"></path>
+      <path d="M 950 410 C 950 460, 900 486, 884 486" style="fill:none;stroke:var(--tx);stroke-width:2;stroke-linecap:round"></path>
+      <path d="M 894 478 L 882 486 L 894 494" style="fill:none;stroke:var(--tx);stroke-width:2;stroke-linecap:round;stroke-linejoin:round"></path>
+    </svg>
+    <span style="position:absolute;left:640px;top:150px;font-family:Caveat,cursive;font-size:22px;font-weight:600;color:var(--tx);transform:rotate(-6deg)">see the plot</span>
+    <div style="position:absolute;left:742px;top:70px;width:300px;height:190px;border-radius:4px;overflow:hidden;background:repeating-linear-gradient(135deg,var(--sf) 0 10px,var(--sf2) 10px 20px);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(0,0,0,.2)"><span style="font:500 12px 'JetBrains Mono',monospace;color:var(--mu);background:var(--bg);padding:4px 8px;border-radius:4px">pasted image · loss-curve.png</span></div>
+    <div style="position:absolute;left:720px;top:330px;width:140px;height:60px;border:2px solid var(--tx);border-radius:6px;transform:rotate(-1deg);display:flex;align-items:center;justify-content:center;font-family:Caveat,cursive;font-size:22px;font-weight:600">forward</div>
+    <div style="position:absolute;left:910px;top:318px;width:76px;height:76px;border:2px solid var(--tx);transform:rotate(45deg);background:color-mix(in srgb,#E3B341 22%,transparent)"></div>
+    <span style="position:absolute;left:910px;top:340px;width:76px;text-align:center;font-family:Caveat,cursive;font-size:20px;font-weight:600">loss ok?</span>
+    <div style="position:absolute;left:760px;top:458px;width:124px;height:58px;border:2px solid var(--tx);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Caveat,cursive;font-size:22px;font-weight:600">ship it</div>
+  </div>
+  <sc-if value="{{ chrome }}">
+    <div style="position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;align-items:center;gap:2px;padding:4px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);box-shadow:var(--sh)">
+      <sc-for list="{{ tools }}" as="t" hint-placeholder-count="13">
+        <span style="display:{{ t.sep }};width:1px;height:20px;background:var(--bd);margin:0 4px"></span>
+        <span style="display:{{ t.show }};position:relative;width:34px;height:34px;border-radius:8px;align-items:center;justify-content:center;background:{{ t.bg }};color:{{ t.c }}"><i class="{{ t.i }}" style="font-size:16px"></i><span style="position:absolute;right:3px;bottom:1px;font-size:9px;color:var(--mu)">{{ t.k }}</span></span>
+      </sc-for>
+    </div>
+    <div style="position:absolute;right:14px;top:14px;display:flex;align-items:center;gap:2px;padding:4px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);box-shadow:var(--sh)">
+      <span style="height:34px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:6px;background:{{ codeBg }};color:{{ codeC }}"><i class="icon-code" style="font-size:15px"></i></span>
+      <span style="height:34px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:6px;background:{{ scriptBg }};color:{{ scriptC }}"><i class="icon-square-terminal" style="font-size:15px"></i></span>
+      <span style="height:34px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:6px"><i class="icon-workflow" style="font-size:15px"></i><span style="font-size:12.5px">Mermaid</span></span>
+      <span style="width:1px;height:20px;background:var(--bd);margin:0 2px"></span>
+      <span style="height:34px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:6px"><i class="icon-download" style="font-size:15px"></i></span>
+    </div>
+    <div style="position:absolute;left:14px;bottom:14px;display:flex;gap:8px">
+      <div style="display:flex;align-items:center;gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center"><i class="icon-minus" style="font-size:14px"></i></span><span style="font-size:12px;width:40px;text-align:center">90%</span><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center"><i class="icon-plus" style="font-size:14px"></i></span></div>
+      <div style="display:flex;align-items:center;gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center"><i class="icon-undo-2" style="font-size:14px"></i></span><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-redo-2" style="font-size:14px"></i></span></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ selected }}">
+    <div style="position:absolute;left:{{ popX }};top:{{ popY }};padding:6px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 10px 28px rgba(0,0,0,.35);display:flex;align-items:center;gap:6px">
+      <sc-for list="{{ swatches }}" as="w" hint-placeholder-count="6"><span style="width:22px;height:22px;border-radius:5px;background:{{ w.c }};box-shadow:{{ w.ring }}"></span></sc-for>
+      <span style="width:1px;height:18px;background:var(--bd);margin:0 2px"></span>
+      <span style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-copy" style="font-size:14px"></i></span><span style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-trash-2" style="font-size:14px"></i></span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1200,&quot;height&quot;:700},&quot;ox&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:40,&quot;tsType&quot;:&quot;number&quot;},&quot;oy&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:60,&quot;tsType&quot;:&quot;number&quot;},&quot;scale&quot;:{&quot;editor&quot;:&quot;float&quot;,&quot;default&quot;:1,&quot;tsType&quot;:&quot;number&quot;},&quot;chrome&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;selected&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;tool&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;select&quot;,&quot;hand&quot;,&quot;rect&quot;,&quot;diamond&quot;,&quot;ellipse&quot;,&quot;arrow&quot;,&quot;line&quot;,&quot;pen&quot;,&quot;text&quot;,&quot;image&quot;,&quot;eraser&quot;,&quot;sticky&quot;,&quot;frame&quot;],&quot;default&quot;:&quot;select&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;panel&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;&quot;,&quot;code&quot;,&quot;script&quot;],&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const ox = this.props.ox ?? 0, oy = this.props.oy ?? 0, s = this.props.scale ?? 1;
+    const sel = !!this.props.selected;
+    const C = ['#fff3bf','#d3f9d8','#d0ebff','#ffd8a8','#eebefa','#ffc9c9'];
+    const stickies = [[66,92,'-2deg',0,'Finish PS3 Q2 by Fri'],[250,84,'1.5deg',1,'Eigen ✓ — now derive PCA'],[432,98,'-1deg',2,'Ask: why does ReLU help?'],[70,282,'1deg',3,'Re-watch backprop lecture'],[254,290,'-1.5deg',4,'Idafa drills 11–20'],[436,276,'2deg',5,'Thesis: send §2 to Dr. Lim']]
+      .map(([x,y,r,ci,t]) => ({ x:x+'px', y:y+'px', r, c:C[ci], t, sel: sel && ci===2 ? '2px solid var(--ac)' : 'none' }));
+    const active = this.props.tool ?? 'select';
+    const tools = [['lock','',''],['|'],['hand','hand','H'],['mouse-pointer-2','select','1'],['square','rect','2'],['diamond','diamond','3'],['circle','ellipse','4'],['move-up-right','arrow','5'],['minus','line','6'],['pencil','pen','7'],['type','text','8'],['image','image','9'],['eraser','eraser','0'],['|'],['sticky-note','sticky','S'],['frame','frame','F']]
+      .map(([i,k,key]) => i==='|' ? { sep:'block', show:'none', i:'', k:'', bg:'', c:'' } : { sep:'none', show:'flex', i:'icon-'+i, k:key||'', bg:k===active?'color-mix(in srgb,var(--ac) 18%,transparent)':'transparent', c:k===active?'var(--ac)':'var(--tx)' });
+    const panel = this.props.panel ?? '';
+    const sx = ox + 432*s, sy = oy + 98*s;
+    return { stickies, tools, tf:`translate(${ox}px, ${oy}px) scale(${s})`, chrome:this.props.chrome !== false, selected:sel,
+      popX:(sx - 10)+'px', popY:(sy - 54)+'px', swatches:C.map((c,i) => ({ c, ring: i===2 ? '0 0 0 2px var(--sf2), 0 0 0 3.5px var(--tx)' : 'inset 0 0 0 1px rgba(0,0,0,.08)' })),
+      codeBg: panel==='code'?'color-mix(in srgb,var(--ac) 18%,transparent)':'transparent', codeC: panel==='code'?'var(--ac)':'var(--tx)',
+      scriptBg: panel==='script'?'color-mix(in srgb,var(--ac) 18%,transparent)':'transparent', scriptC: panel==='script'?'var(--ac)':'var(--tx)' };
+  }
+}
+</script>
+</body>
+</html>

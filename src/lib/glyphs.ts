@@ -1,12 +1,13 @@
-// Lumen glyph set (design round 6, "Lumen 13 Icon System" + round 6 additions): 24 px grid, 1.75 stroke, round caps/joins.
-// Source of truth: design/handoffs/2026-11-20-round-6/lumen-glyphs.js (ported verbatim) + app-only glyphs appended below.
+// Lumen glyph set (design round 7 handoff, "Lumen 13 Icon System" + round 6 brief additions): 24 px grid, 1.75 stroke, round caps/joins.
+// Source of truth: design/handoffs/2026-11-20-round-7/lumen-glyphs.js, ported verbatim by a script (body unchanged) + app-only glyphs below.
 /* eslint-disable */
+// @ts-nocheck -- verbatim port of the design's plain-JS glyph file; the exported types below are what callers use.
 export type GlyphPart = string | { d: string; fill?: boolean; stroke?: string };
-const C = (x: number, y: number, r: number) => `M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
-const R = (x: number, y: number, w: number, h: number, r = 2) => `M${x + r} ${y}h${w - 2 * r}a${r} ${r} 0 0 1 ${r} ${r}v${h - 2 * r}a${r} ${r} 0 0 1 ${-r} ${r}h${-(w - 2 * r)}a${r} ${r} 0 0 1 ${-r} ${-r}v${-(h - 2 * r)}a${r} ${r} 0 0 1 ${r} ${-r}z`;
+const C = (x, y, r) => `M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
+const R = (x, y, w, h, r = 2) => `M${x + r} ${y}h${w - 2 * r}a${r} ${r} 0 0 1 ${r} ${r}v${h - 2 * r}a${r} ${r} 0 0 1 ${-r} ${r}h${-(w - 2 * r)}a${r} ${r} 0 0 1 ${-r} ${-r}v${-(h - 2 * r)}a${r} ${r} 0 0 1 ${r} ${-r}z`;
 const DOC = 'M6 3h8l4 4v14H6z M14 3v4h4';
-const F = (s: string): GlyphPart => ({ d: s, fill: true });
-const G: Record<string, GlyphPart[]> = {
+const F = s => ({ d: s, fill: true });
+const G = {
   'note': [DOC, 'M9 12h6 M9 16h6'],
   'lesson': [DOC, 'M9 13l2 2 4-4'],
   'journal': [R(5, 3, 14, 18, 2), 'M9 3v18 M12 8h4 M12 12h4'],
@@ -27,7 +28,7 @@ const G: Record<string, GlyphPart[]> = {
   'area': [C(12, 12, 9), C(12, 12, 4), F(C(12, 12, 1))],
   'course': ['M2 9l10-5 10 5-10 5z', 'M6 11v5c3 2 9 2 12 0v-5', 'M22 9v5'],
   'resource': ['M4 19V5a2 2 0 0 1 2-2h12v15H6a2 2 0 0 0-2 2 2 2 0 0 0 2 2h12', 'M9 7h5'],
-  '_overridden-archive': [R(3, 4, 18, 5, 1.5), 'M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9', 'M10 13h4'],
+  'archive': [R(3, 4, 18, 5, 1.5), 'M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9', 'M10 13h4'],
   'math': ['M4 6h7 M7.5 2.5v7', 'M14 6h6', 'M5 15l5 5 M10 15l-5 5', 'M14 16h6 M14 19h6'],
   'code': ['M8 7l-5 5 5 5', 'M16 7l5 5-5 5', 'M14 4l-4 16'],
   'language': ['M4 5h8 M8 3v2 M5 5c1 4 4 7 7 8 M11 5c-1 4-3 7-7 9', 'M13 21l4-9 4 9 M14.5 18h5'],
@@ -59,8 +60,8 @@ const G: Record<string, GlyphPart[]> = {
   'columns-2': [R(3, 4, 18, 16, 2), 'M12 4v16'], 'columns-3': [R(3, 4, 18, 16, 2), 'M9 4v16 M15 4v16'], 'sidebar-main': [R(3, 4, 18, 16, 2), 'M15 4v16', 'M6 8h6 M6 11h6'],
   'tabs': ['M3 20V8h6V5h6v3h6v12z', 'M9 8h6'], 'expand': ['M6 9l6 6 6-6'], 'wide': ['M3 12h18 M6 9l-3 3 3 3 M18 9l3 3-3 3', 'M3 5v14 M21 5v14'], 'full': ['M3 8V3h5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5'], 'aside': [R(3, 4, 18, 16, 2), R(13, 7, 5, 6, 1)], 'center': ['M3 6h18 M7 10h10 M5 14h14 M8 18h8'], 'box': [R(4, 4, 16, 16, 2), 'M4 9h16'],
   'image': [R(3, 4, 18, 16, 2), C(9, 9.5, 1.8), 'M21 16l-5-5-9 9'], 'video': [R(2, 6, 14, 12, 2), 'M16 10l6-3v10l-6-3'], 'audio': ['M3 10v4 M7 7v10 M11 4v16 M15 8v8 M19 10v4'], 'file': [DOC], 'link-card': [R(3, 5, 18, 14, 2), R(6, 8, 5, 5, 1), 'M14 9h4 M14 12h3 M6 16h12'], 'embed': [R(3, 4, 18, 16, 2), 'M10 10l-3 2 3 2 M14 10l3 2-3 2'],
-  'wikilink': ['M8 4H5v16h3 M16 4h3v16h-3', 'M10 12h4'], 'block-embed': [R(3, 6, 18, 12, 2), 'M7 10h10 M7 14h6', 'M19 3v3 M17.5 4.5h3'], 'include': [R(3, 3, 18, 18, 2), R(7, 8, 10, 8, 1.5)], 'query': [C(10, 10, 6), 'M14.5 14.5L20 20', 'M8 10h4'], '_overridden-search': [C(11, 11, 7), 'M16 16l5 5'], 'toc': ['M4 6h2 M9 6h11 M6 12h2 M11 12h9 M6 18h2 M11 18h9'], 'status-pill': [R(3, 8, 18, 8, 4), F(C(7.5, 12, 1.4)), 'M11 12h6'], 'date': [R(3, 5, 18, 16, 2), 'M3 10h18 M8 3v4 M16 3v4'], 'voice': [R(9, 3, 6, 11, 3), 'M5 11a7 7 0 0 0 14 0 M12 18v3'],
-  'cloze': [R(3, 8, 18, 8, 2), 'M8 12h8', 'M3 5h4 M17 5h4 M3 19h4 M17 19h4'], 'occlusion': [R(3, 4, 18, 16, 2), R(6, 7, 5, 4, 1), 'M14 9h4', F(R(13, 13, 5, 4, 1)), 'M6 15h4'], 'timestamp': [C(12, 13, 8), 'M12 9v4l3 2', 'M9 2h6'], '_overridden-smart-folder': ['M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z', C(12, 13, 2.2), 'M13.7 14.7l2 2'],
+  'wikilink': ['M8 4H5v16h3 M16 4h3v16h-3', 'M10 12h4'], 'block-embed': [R(3, 6, 18, 12, 2), 'M7 10h10 M7 14h6', 'M19 3v3 M17.5 4.5h3'], 'include': [R(3, 3, 18, 18, 2), R(7, 8, 10, 8, 1.5)], 'query': [C(10, 10, 6), 'M14.5 14.5L20 20', 'M8 10h4'], 'search': [C(11, 11, 7), 'M16 16l5 5'], 'toc': ['M4 6h2 M9 6h11 M6 12h2 M11 12h9 M6 18h2 M11 18h9'], 'status-pill': [R(3, 8, 18, 8, 4), F(C(7.5, 12, 1.4)), 'M11 12h6'], 'date': [R(3, 5, 18, 16, 2), 'M3 10h18 M8 3v4 M16 3v4'], 'voice': [R(9, 3, 6, 11, 3), 'M5 11a7 7 0 0 0 14 0 M12 18v3'],
+  'cloze': [R(3, 8, 18, 8, 2), 'M8 12h8', 'M3 5h4 M17 5h4 M3 19h4 M17 19h4'], 'occlusion': [R(3, 4, 18, 16, 2), R(6, 7, 5, 4, 1), 'M14 9h4', F(R(13, 13, 5, 4, 1)), 'M6 15h4'], 'timestamp': [C(12, 13, 8), 'M12 9v4l3 2', 'M9 2h6'], 'smart-folder': ['M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z', C(12, 13, 2.2), 'M13.7 14.7l2 2'],
   'c-note': [R(4, 3, 16, 18, 2), 'M8 8h8 M8 12h8 M8 16h5'], 'c-info': [C(12, 12, 9), 'M12 11v5', F(C(12, 8, 1))], 'c-tip': ['M9 18h6 M10 21h4', 'M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z'], 'c-success': [C(12, 12, 9), 'M8 12l3 3 5-6'], 'c-warning': ['M12 3l10 17H2z', 'M12 10v4', F(C(12, 17, 1))], 'c-danger': ['M8 3h8l5 5v8l-5 5H8l-5-5V8z', 'M12 8v5', F(C(12, 16, 1))], 'c-question': [C(12, 12, 9), 'M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.7', F(C(12, 17, 1))], 'c-example': [R(3, 4, 18, 16, 2), 'M7 9l3 3-3 3 M12 15h5'], 'c-quote': ['M4 18c0-6 2-10 6-11 M14 18c0-6 2-10 6-11', 'M4 18h5v-5H4 M14 18h5v-5h-5'], 'c-abstract': ['M4 5h16 M4 10h16 M4 15h10 M4 20h6'],
   's-todo': [C(12, 12, 7.5)], 's-learning': [C(12, 12, 7.5), F('M12 4.5a7.5 7.5 0 0 1 0 15z')], 's-done': [F(C(12, 12, 8)), { d: 'M8.5 12l2.5 2.5 4.5-5', stroke: 'var(--bg, #0F1115)' }], 's-skipped': [C(12, 12, 7.5), 'M7 17L17 7'], 's-locked': [R(5, 11, 14, 10, 2), 'M8 11V8a4 4 0 0 1 8 0v3'], 's-mastered': ['M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z'], 's-revise': ['M3 12a9 9 0 1 0 3-6.7', 'M3 4v5h5', 'M12 8v4l2.5 1.5'],
   'd-draft': ['M4 20h4l11-11-4-4L4 16z', 'M13 7l4 4'], 'd-review': [C(11, 11, 6), 'M15.5 15.5L20 20'], 'd-approved': ['M12 3l2 2.2 3-.4.6 3 2.6 1.6-1.3 2.7 1.3 2.7-2.6 1.6-.6 3-3-.4L12 21l-2-2.2-3 .4-.6-3-2.6-1.6 1.3-2.7-1.3-2.7 2.6-1.6.6-3 3 .4z', 'M9 12l2 2 4-4'], 'd-superseded': [R(3, 6, 12, 14, 2), 'M9 3h10a2 2 0 0 1 2 2v12', 'M6 13h6'], 'd-rejected': [C(12, 12, 9), 'M9 9l6 6 M15 9l-6 6'],
@@ -94,10 +95,122 @@ const G: Record<string, GlyphPart[]> = {
 };
 
 
+const SQ = 'M2 10c1.5-3 2.5 1 4-2s2 2 3 0 M2 15h6', AR = 'M10.5 12h3.5 M12.5 10l2 2-2 2';
+const NUM = { 1:'M10.5 9l2-1.5v9', 2:'M9.5 9.5a2.5 2.5 0 1 1 4.2 1.8L9.5 16.5h5', 3:'M9.5 7.5h5l-2.5 3a2.6 2.6 0 1 1-2.5 3.6', 4:'M13.5 16.5v-9L9 13.5h6', 5:'M14.5 7.5H10l-.5 3.8a2.7 2.7 0 1 1-.3 4', 6:'M14 7.5c-3 0-4.5 2.5-4.5 5.5a2.5 2.5 0 1 0 2.5-2.5c-1.4 0-2.5 1.1-2.5 2.5', 7:'M9.5 7.5h5L11 16.5', 8:C(12,9.6,2)+' '+C(12,14.3,2.3), 9:'M10 16.5c3 0 4.5-2.5 4.5-5.5A2.5 2.5 0 1 0 12 13.5c1.4 0 2.5-1.1 2.5-2.5' };
+Object.assign(G, {
+  // tools
+  'select': ['M5 3l14 7-6 2-2 6z'], 'hand': ['M8 13V5.5a1.5 1.5 0 0 1 3 0V12 M11 5V3.5a1.5 1.5 0 0 1 3 0V12 M14 5.5a1.5 1.5 0 0 1 3 0V12 M17 8.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-2a6 6 0 0 1-5-2.7L4 14a1.5 1.5 0 0 1 2.4-1.8L8 14'],
+  'lasso': ['M8.5 15.7C5.3 14.9 3 12.7 3 10c0-3.3 4-6 9-6s9 2.7 9 6-4 6-9 6', C(7.5,17.5,1.6), 'M7.5 19.1c0 1.2-.8 2-2 2'],
+  'highlighter': ['M4 21h7', 'M7.5 17.5l-2-2 9-9 4 4-9 9z', 'M14.5 6.5l2-2.5 4 4-2.5 2'], 'laser': [F(C(17,7,2.6)), 'M14.5 9.5c-3 3-6 3.5-9.5 7.5', 'M13 7.5c-3 1.5-6 1.5-9 4'],
+  'eraser-stroke': ['M8 20h12', 'M4.5 15.5l9-9a1.5 1.5 0 0 1 2 0l4 4a1.5 1.5 0 0 1 0 2L13 19H8z', 'M9 11l5 5'],
+  'eraser-partial': ['M4.5 15.5l9-9a1.5 1.5 0 0 1 2 0l4 4a1.5 1.5 0 0 1 0 2L13 19H8z', 'M9 11l5 5', 'M15 21h2 M19 21h2'],
+  'eraser-lasso': ['M9 15.5C5.6 14.8 3 12.6 3 10c0-3.3 4-6 9-6s9 2.7 9 6c0 1.5-.8 2.8-2.1 3.8', 'M11 21l4-4 3 3-1 1z'],
+  'ruler': ['M3 16L16 3l5 5L8 21z', 'M7 12l2 2 M10 9l1.5 1.5 M13 6l2 2'], 'auto-shape': ['M3 18c2-3 3-8 7-9', C(16.5,13,4.5)],
+  'frame': ['M7 3v18 M17 3v18 M3 7h18 M3 17h18'], 'sticky': ['M4 4h16v10l-6 6H4z', 'M14 20v-6h6'], 'stamp': ['M9 3h6v5l3 4H6l3-4z', 'M4 15h16v3H4z', 'M6 21h12'],
+  'connector': [C(5,6,2), C(19,18,2), 'M7 6h5v12h5'], 'note-card': [R(3,4,18,16,2), 'M7 9h10 M7 13h7 M7 17h4'], 'board': [R(3,4,18,16,2), 'M6 16c2-3 3-1 5-3', R(13,7,5,4,1), 'M13 16h5'],
+  'line': ['M5 19L19 5'], 'arrow': ['M5 19L19 5', 'M10 5h9v9'], 'ellipse': ['M3 12c0-3.9 4-7 9-7s9 3.1 9 7-4 7-9 7-9-3.1-9-7z'], 'rect': [R(4,6,16,12,1.5)],
+  'script': ['M4 17l6-5-6-5', 'M12 19h8'], 'gif': [R(3,5,18,14,2), 'M10 10H7.5v4H10v-2H9', 'M12.5 10v4', 'M15 14v-4h2.5 M15 12h2'], 'web-embed': [C(12,12,9), 'M3 12h18', 'M12 3c3 3 3 15 0 18 M12 3c-3 3-3 15 0 18'],
+  'undo': ['M9 14L4 9l5-5', 'M4 9h11a5 5 0 0 1 0 10h-3'], 'redo': ['M15 14l5-5-5-5', 'M20 9H9a5 5 0 0 0 0 10h3'], 'minus': ['M5 12h14'],
+  'lock': [R(5,11,14,10,2), 'M8 11V8a4 4 0 0 1 8 0v3'], 'unlock': [R(5,11,14,10,2), 'M8 11V8a4 4 0 0 1 7.5-2'], 'eye-off': ['M3 3l18 18', 'M10.6 5.1A10 10 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3 3.7 M6.6 6.6A17 17 0 0 0 2 12s4 7 10 7a9.700 9.700 0 0 0 5.400-1.600', 'M9.9 9.9a3 3 0 0 0 4.2 4.2'],
+  'tool-wheel': [C(12,12,9), C(12,12,3), 'M12 3v6 M12 15v6 M3 12h6 M15 12h6'], 'pen-mode': ['M15 3l6 6-8 8-4 1 1-4z', 'M3 14v5a2 2 0 0 0 2 2h5'], 'pressure': ['M3 18c4 0 5-12 9-12s5 12 9 12'], 'smoothing': ['M3 16c2.5-8 5.5 0 9-4s6 2 9-6'], 'searchable': [DOC, 'M8 14c1-2 2 0 3-1.5', C(15,16,2.2), 'M16.6 17.6l1.9 1.9'],
+  // pens
+  'pen-ballpoint': ['M15 4l5 5L9 20H4v-5z', 'M13 6l5 5'], 'pen-fountain': ['M14 3l7 7-6 2-5 5-6 3 3-6 5-5z', 'M4 20l5.5-5.5', C(12.5,11.5,1.4)],
+  'pen-brush': ['M20 4c-3 1-8 6-10 9l2 2c3-2 8-7 9-10z', 'M10 13c-3 0-4 2-4 4 0 1-1 2-3 2 2 2 7 2 8-1 .4-1.2.3-2.2-.9-2.9'], 'pen-marker': ['M15 3l6 6-9 9-6-6z', 'M6 12l-2 6 6-2', 'M3 21h6'],
+  'pen-pencil': ['M16 3l5 5L8 21H3v-5z', 'M14 5l5 5', 'M3 16l5 5', 'M5.5 18.5l1 1'], 'pen-calligraphy': ['M12 3l5 8-5 10-5-10z', 'M12 11v5', F(C(12,11,1.2))], 'pen-highlighter': ['M4 21h7', 'M7.5 17.5l-2-2 9-9 4 4-9 9z'],
+  // shapes
+  'shape-library': [R(3,3,8,8,1.5), C(17,7,4), 'M7 13l4 8H3z', R(13,13,8,8,1.5)], 'rounded-rect': [R(3,6,18,12,4.5)], 'triangle': ['M12 4l9 16H3z'], 'hexagon': ['M12 3l8 4.5v9L12 21l-8-4.5v-9z'], 'star': ['M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z'],
+  'parallelogram': ['M7 6h14l-4 12H3z'], 'trapezoid': ['M7 6h10l4 12H3z'], 'cylinder': ['M5 6c0-1.7 3-3 7-3s7 1.3 7 3-3 3-7 3-7-1.3-7-3z', 'M5 6v12c0 1.7 3 3 7 3s7-1.3 7-3V6'],
+  'callout': [R(3,4,18,12,2), 'M8 16l-2 5 6-5'], 'speech-bubble': ['M12 4c5 0 9 3 9 7s-4 7-9 7c-1 0-2-.1-3-.4L4 20l1.4-4C4 14.7 3 13 3 11c0-4 4-7 9-7z'], 'heart': ['M12 20s-8-4.6-8-10.2A4.4 4.4 0 0 1 12 7a4.4 4.4 0 0 1 8 2.8C20 15.4 12 20 12 20z'],
+  // flowchart
+  'process': [R(3,7,18,10,1)], 'decision': ['M12 3l9 9-9 9-9-9z'], 'terminator': [R(3,7,18,10,5)], 'data': ['M7 7h14l-4 10H3z'], 'document': ['M3 5h18v12c-3-2-6 2-9 0s-6 2-9 0z'],
+  'multi-document': ['M7 3h14v11', 'M3 7h15v11c-2.5-1.6-5 1.6-7.5 0S5.5 19.6 3 18z'], 'manual-input': ['M3 10l18-4v13H3z'], 'predefined': [R(3,6,18,12,1), 'M6.5 6v12 M17.5 6v12'], 'delay': ['M3 6h10a6 6 0 0 1 0 12H3z'], 'off-page': ['M5 4h14v11l-7 6-7-6z'],
+  // uml & mind map
+  'uml-class': [R(4,3,16,18,1.5), 'M4 8h16 M4 14h16', 'M7 11h6 M7 17h8'], 'actor': [C(12,5,2.5), 'M12 7.5V15 M6 10h12 M8 21l4-6 4 6'], 'package': ['M3 8h18v12H3z', 'M3 8V5h7l1 3'],
+  'mind-map': [R(8.5,10,7,4,2), 'M8.5 12H6 M15.5 12H18', 'M6 12c0-3-1-5-3-5 M6 12c0 3-1 5-3 5 M18 12c0-3 1-5 3-5 M18 12c0 3 1 5 3 5'],
+  'axes': ['M4 3v17h17', 'M4 20l6-6'], 'number-line': ['M2 12h20', 'M5 9v6 M12 9v6 M19 9v6'], 'venn': [C(9,12,6), C(15,12,6)], 'venn-3': [C(12,8.5,5), C(8.5,14.5,5), C(15.5,14.5,5)], 'timeline': ['M3 12h18', F(C(6,12,1.6)), F(C(12,12,1.6)), F(C(18,12,1.6)), 'M6 12V7 M12 12v5 M18 12V7'],
+  'cornell': [R(3,4,18,16,2), 'M8 4v12 M3 16h18', 'M11 8h7 M11 12h7'], 'kanban': [R(3,4,5,16,1.5), R(10,4,5,10,1.5), R(17,4,4,13,1.5)], 'section': [R(3,6,18,15,2), 'M3 6V4a1 1 0 0 1 1-1h7v3'],
+  // arrowheads
+  'arrowhead-none': ['M3 12h18'], 'arrowhead-arrow': ['M3 12h17', 'M15 7l5 5-5 5'], 'arrowhead-triangle': ['M3 12h11', F('M14 7l7 5-7 5z')], 'arrowhead-triangle-outline': ['M3 12h11', 'M14 7l7 5-7 5z'],
+  'arrowhead-bar': ['M3 12h17', 'M20 6v12'], 'arrowhead-dot': ['M3 12h12', F(C(18,12,3))], 'arrowhead-dot-outline': ['M3 12h12', C(18,12,3)], 'arrowhead-diamond': ['M3 12h9', F('M12 12l4.5-4 4.5 4-4.5 4z')], 'arrowhead-diamond-outline': ['M3 12h9', 'M12 12l4.5-4 4.5 4-4.5 4z'],
+  'crowfoot-one': ['M3 12h18', 'M17 7v10 M14 7v10'], 'crowfoot-many': ['M3 12h18', 'M15 12l6-5 M15 12l6 5', 'M12 7v10'], 'crowfoot-one-many': ['M3 12h18', 'M15 12l6-5 M15 12l6 5', 'M12 7v10 M9 7v10'],
+  'path-straight': ['M4 19L20 5'], 'path-curved': ['M4 19C4 9 20 15 20 5'], 'path-elbow': ['M4 19h8V5h8'],
+  // style
+  'fill-none': [R(4,4,16,16,2)], 'fill-solid': [F(R(4,4,16,16,2))], 'fill-hachure': [R(4,4,16,16,2), 'M4 11l7-7 M4 17l13-13 M8 20l12-12 M14 20l6-6'], 'fill-crosshatch': [R(4,4,16,16,2), 'M4 11l7-7 M4 17l13-13 M8 20l12-12 M14 20l6-6 M13 4l7 7 M7 4l13 13 M4 8l12 12 M4 14l6 6'],
+  'fill-zigzag': [R(4,4,16,16,2), 'M6 10l2-3 2 3 2-3 2 3 2-3 2 3', 'M6 17l2-3 2 3 2-3 2 3 2-3 2 3'], 'fill-dots': [R(4,4,16,16,2), F(C(9,9,1.1)), F(C(15,9,1.1)), F(C(9,15,1.1)), F(C(15,15,1.1))],
+  'stroke-solid': ['M3 12h18'], 'stroke-dashed': ['M3 12h4 M10 12h4 M17 12h4'], 'stroke-dotted': [F(C(4,12,1.2)), F(C(9.3,12,1.2)), F(C(14.7,12,1.2)), F(C(20,12,1.2))],
+  'stroke-thin': [{ d:'M3 12h18', sw:1 }], 'stroke-bold': [F(R(3,10,18,4,2))], 'sloppiness-0': ['M4 18L20 6'], 'sloppiness-1': ['M4 18c4-2 8-8 16-12', 'M5 16.5c4-3 9-8 15-11'], 'sloppiness-2': ['M4 18c2-1 3-4 6-5s3-4 6-5 3-1 4-2', 'M4 15.5c3 0 4-3 6-4s4-3 6-4 3-1 4 0'],
+  'edges-sharp': ['M4 20V4h16'], 'edges-round': ['M4 20V10a6 6 0 0 1 6-6h10'], 'opacity': [C(12,12,8), F('M12 4a8 8 0 0 1 0 16z')], 'font': ['M4 20l6-16h1l6 16 M6.5 14h8', 'M18 20v-6'],
+  // arrange
+  'layers': ['M12 3l9 5-9 5-9-5z', 'M3 13l9 5 9-5', 'M3 17.5l9 4.5 9-4.5'], 'layer-add': ['M11 3L3 8l8 5 8-5z', 'M3 13l8 5 3-1.9', 'M19 14v7 M15.5 17.5h7'], 'layer-hidden': ['M12 3l9 5-9 5-9-5z', 'M3 13l9 5 9-5', 'M3 3l18 18'],
+  'layer-locked': ['M12 3l9 5-9 5-9-5z', 'M3 13l6 3.5', R(13,15.5,8,6,1.5), 'M15 15.5v-1.8a2 2 0 0 1 4 0v1.8'],
+  'bring-front': [R(3,9,11,11,2), 'M18 15V3 M15 6l3-3 3 3', 'M15 21h6'], 'bring-forward': [R(3,9,11,11,2), 'M18 15V5 M15 8l3-3 3 3'], 'send-backward': [R(3,4,11,11,2), 'M18 9v10 M15 16l3 3 3-3'], 'send-back': [R(3,4,11,11,2), 'M18 9v12 M15 18l3 3 3-3', 'M15 3h6'],
+  'align-left': ['M4 3v18', R(7,6,12,4,1), R(7,14,7,4,1)], 'align-center': ['M12 3v18', R(5,6,14,4,1), R(8,14,8,4,1)], 'align-right': ['M20 3v18', R(5,6,12,4,1), R(10,14,7,4,1)],
+  'align-top': ['M3 4h18', R(6,7,4,12,1), R(14,7,4,7,1)], 'align-middle': ['M3 12h18', R(6,5,4,14,1), R(14,8,4,8,1)], 'align-bottom': ['M3 20h18', R(6,5,4,12,1), R(14,10,4,7,1)],
+  'distribute-h': ['M4 3v18 M20 3v18', R(9,7,6,10,1)], 'distribute-v': ['M3 4h18 M3 20h18', R(7,9,10,6,1)], 'flip-h': ['M12 3v18', 'M9 6L3 18h6z', 'M15 6l6 12h-6z'], 'flip-v': ['M3 12h18', 'M6 9l12-6v6z', 'M6 15l12 6v-6z'],
+  'group': ['M3 7V3h4 M17 3h4v4 M21 17v4h-4 M7 21H3v-4', R(7,7,6,6,1), R(11,11,6,6,1)], 'ungroup': [R(3,3,8,8,1.5), R(13,13,8,8,1.5), 'M15 3h6v6 M3 15v6h6'], 'duplicate': [R(8,8,13,13,2), 'M4 16V5a1 1 0 0 1 1-1h11', 'M14.5 12v6 M11.5 15h6'],
+  // board
+  'palette': ['M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2s-1-1.5-1-2.5 1-1.5 2-1.5h2a4 4 0 0 0 4-4C21 6.5 17 3 12 3z', F(C(7.5,11,1.2)), F(C(10,7,1.2)), F(C(15,7,1.2))],
+  'eyedropper': ['M17 7l2.5-2.5a1.6 1.6 0 0 0-2.2-2.2L15 5', 'M13 4l7 7', 'M15 6l-9 9-1 4 4-1 9-9'], 'swatch-add': [R(3,3,8,8,2), R(13,3,8,8,2), R(3,13,8,8,2), 'M17 14v6 M14 17h6'],
+  'background': [R(3,4,18,16,2), 'M3 11l7-7 M3 17l13-13 M8 20l13-13 M15 20l6-6'], 'pattern-dots': [R(3,4,18,16,2), F(C(8,9,1)), F(C(12,9,1)), F(C(16,9,1)), F(C(8,15,1)), F(C(12,15,1)), F(C(16,15,1))],
+  'pattern-grid': [R(3,4,18,16,2), 'M9 4v16 M15 4v16 M3 10h18 M3 15h18'], 'pattern-lines': [R(3,4,18,16,2), 'M3 9h18 M3 13h18 M3 17h18'], 'pattern-isometric': [R(3,4,18,16,2), 'M5 20l9-16 M11 20l9-16 M19 20l-9-16 M13 20L4 4'],
+  'pattern-cornell': [R(3,4,18,16,2), 'M8 4v12 M3 16h18', 'M11 8h7 M11 12h7'], 'pattern-graph': [R(3,4,18,16,2), 'M7.5 4v16 M12 4v16 M16.5 4v16 M3 8h18 M3 12h18 M3 16h18'], 'pattern-staff': ['M3 6h18 M3 9.5h18 M3 13h18 M3 16.5h18 M3 20h18'],
+  'pages': [R(5,2,14,9,1.5), R(5,13,14,9,1.5)], 'infinite': ['M12 12c-2-3-4-4-6-4a4 4 0 0 0 0 8c2 0 4-1 6-4s4-4 6-4a4 4 0 0 1 0 8c-2 0-4-1-6-4z'], 'snap': ['M5 3v8a7 7 0 0 0 14 0V3', 'M9 3v8a3 3 0 0 0 6 0V3', 'M5 7h4 M15 7h4'],
+  'zen': ['M3 8V3h5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5', C(12,12,2.5)], 'performance': ['M4 17a8 8 0 1 1 16 0', 'M12 17l4-6', F(C(12,17,1.4))],
+  // presentation
+  'present': [R(3,4,18,12,2), 'M12 16v4 M8 21l4-1 4 1', 'M10 7.5l4.5 2.5-4.5 2.5z'], 'presenter-notes': [R(3,4,18,12,2), 'M7 8h6 M7 12h10', 'M12 16v4'], 'slide-next': [R(3,5,13,14,2), 'M19 9l3 3-3 3'], 'slide-prev': [R(8,5,13,14,2), 'M5 9l-3 3 3 3'], 'remote': [R(7,2,10,20,3), C(12,8,2), 'M10 14h4 M10 17h4'],
+  // export
+  'scope-selection': ['M3 7V3h4 M17 3h4v4 M21 17v4h-4 M7 21H3v-4', R(8,8,8,8,1)], 'scope-frame': ['M7 3v18 M17 3v18 M3 7h18 M3 17h18', F(R(9,9,6,6,1))], 'scope-visible': [R(2,3,20,18,2), 'M5 12s2.5-4 7-4 7 4 7 4-2.5 4-7 4-7-4-7-4z', C(12,12,1.6)],
+  'vector': [R(3,17,4,4,.8), R(17,3,4,4,.8), 'M5 17C5 10 10 5 17 5'], 'transparent': [R(3,3,18,18,2), F('M3 3h6v6H3z'), F('M9 9h6v6H9z'), F('M15 15h6v6h-6z'), F('M15 3h6v6h-6z'), F('M3 15h6v6H3z')],
+  'embed-scene': [R(3,4,18,16,2), 'M6.5 16c2-3 3-1 5-3', 'M16 7v6 M14 11l2 2 2-2'], 'copy-image': [R(8,8,13,13,2), 'M8 18l4-4 3 3 2-2 4 4', 'M16 8V4H3v13h5'], 'markdown': [R(2,5,20,14,2), 'M6 15V9l2.5 3L11 9v6', 'M16 9v6 M13.5 12.5L16 15l2.5-2.5'],
+  // AI convert (plain)
+  'to-text': [SQ, AR, 'M17 7h5 M19.5 7v10'], 'to-math': [SQ, AR, 'M22 6h-5l3 6-3 6h5'], 'to-mermaid': [SQ, AR, R(17,4,5,4,.8), R(17,16,5,4,.8), 'M19.5 8v8'], 'to-shapes': [SQ, AR, R(17,4,5,5,1), C(19.5,16,2.5)], 'to-architecture': [SQ, AR, R(16.5,4,6,4.5,1), 'M19.5 8.5v4', 'M16.5 16c0-1.1 1.3-2 3-2s3 .9 3 2-1.3 2-3 2-3-.9-3-2z'],
+  // architecture nodes
+  'service': [R(3,5,18,14,3), C(12,12,2.5), 'M12 7.5v2 M12 14.5v2 M7.5 12h2 M14.5 12h2'], 'server': [R(4,3,16,7,1.5), R(4,14,16,7,1.5), F(C(8,6.5,1)), F(C(8,17.5,1)), 'M12 6.5h4 M12 17.5h4'],
+  'queue': [R(2,7,20,10,2), 'M7 7v10 M12 7v10 M17 7v10'], 'topic': [C(5,12,2), 'M7 12h3l4-6h7 M10 12h11 M10 12l4 6h7'], 'cache': [R(3,5,18,14,2), 'M13 7l-4 6h6l-4 6'],
+  'bucket': ['M4 6h16l-2 14H6z', 'M4 6c0-1.5 3.6-2.5 8-2.5s8 1 8 2.5'], 'function': ['M8 20c3 0 3-4 4-8s1-8 4-8', 'M7 11h8'], 'container': ['M12 3l8 4.5v9L12 21l-8-4.5v-9z', 'M4 7.5l8 4.5 8-4.5 M12 12v9'],
+  'pod': ['M12 3l8 4.5v9L12 21l-8-4.5v-9z', C(12,12,3)], 'gateway': ['M4 21V9l8-6 8 6v12', 'M9 21v-6h6v6', 'M8 11h8'], 'load-balancer': [C(12,5,2.5), 'M12 7.5V17 M5 17v-3h14v3', C(5,19.5,1.8), C(12,19.5,1.8), C(19,19.5,1.8)],
+  'cdn': [C(12,12,9), 'M3 12h18', 'M12 3c3 3 3 15 0 18', F(C(6.5,7,1.4)), F(C(17.5,16.5,1.4))], 'dns': [C(12,12,9), 'M7.5 9v6h1a3 3 0 0 0 0-6z', 'M13.5 15V9l3.5 6V9'],
+  'api': ['M3.5 17L6 7l2.5 10 M4.3 13.5h3.4', 'M11 17V7h2.5a2.5 2.5 0 0 1 0 5H11', 'M19.5 7v10'], 'team': [C(9,8,3.5), C(17,9,2.5), 'M2 20a7 7 0 0 1 14 0', 'M16 14a5 5 0 0 1 6 5'],
+  'browser': [R(3,4,18,16,2), 'M3 9h18', F(C(6,6.5,.8)), F(C(8.5,6.5,.8))], 'mobile': [R(7,2,10,20,2.5), 'M11 18h2'], 'desktop': [R(2,4,20,13,2), 'M8 21h8 M12 17v4'],
+  'external-system': [R(3,7,14,14,2), 'M13 3h8v8 M21 3l-9 9'], 'firewall': [R(3,4,18,16,1), 'M3 9h18 M3 14h18 M9 4v5 M15 9v5 M9 14v6'], 'key': [C(8,15,4), 'M11 12l9-9', 'M17 6l3 3 M14.5 8.5l2 2'],
+  'lock-shield': ['M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z', R(9,11,6,5,1), 'M10 11V9.5a2 2 0 0 1 4 0V11'], 'vault': [R(3,3,18,17,2), C(12,11.5,4), 'M12 7.5V9 M12 14v1.5 M8 11.5h1.5 M14.5 11.5H16', 'M6 20v1.5 M18 20v1.5'],
+  'identity': [R(3,5,18,14,2), C(9,11,2.5), 'M5.5 16.5a3.5 3.5 0 0 1 7 0', 'M15 10h3 M15 14h3'], 'monitoring': [R(3,4,18,13,2), 'M6 11h3l2-3.5 2 6 2-3h3', 'M9 21h6 M12 17v4'],
+  'logs': [R(3,3,18,18,2), 'M7 8l2 2-2 2', 'M11 12h6', 'M7 16h10'], 'metrics': ['M3 3v18h18', 'M7 16v-4 M11 16V8 M15 16v-6 M19 16V6'], 'alert': ['M6 17v-6a6 6 0 0 1 12 0v6', 'M4 17h16', 'M10 20.5h4', 'M12 3v2'],
+  'scheduler': [R(3,5,18,16,2), 'M3 10h18 M8 3v4 M16 3v4', C(12,15.5,3), 'M12 14v1.5l1 .8'], 'worker': [R(3,6,18,13,2), 'M8 6V4h8v2', C(12,12.5,2.5), 'M12 8.5v1 M12 15.5v1 M8 12.5h1 M15 12.5h1'],
+  'stream': ['M3 8c3-2 6 2 9 0s6-2 9 0', 'M3 12c3-2 6 2 9 0s6-2 9 0', 'M3 16c3-2 6 2 9 0s6-2 9 0'], 'etl': [R(2,9,5,6,1), R(17,9,5,6,1), 'M7 12h2.5 M14.5 12H17', 'M9.5 9l5 3-5 3z'],
+  'warehouse': ['M3 21V9l9-5 9 5v12', 'M7 21v-8h10v8', 'M7 17h10'], 'lake': ['M12 3c2 3 3.5 4.5 3.5 6.5a3.5 3.5 0 0 1-7 0C8.5 7.5 10 6 12 3z', 'M3 16c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0', 'M3 20c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0'],
+  'feature-store': [R(3,3,18,18,2), 'M3 9h18 M3 15h18', F(C(7,6,1)), F(C(7,12,1)), F(C(7,18,1)), 'M11 6h6 M11 12h6 M11 18h6'], 'model': [R(4,4,16,16,3), C(12,12,3), 'M12 4v5 M12 15v5 M4 12h5 M15 12h5'],
+  'gpu': [R(5,5,14,14,2), R(9,9,6,6,1), 'M9 2v3 M15 2v3 M9 19v3 M15 19v3 M2 9h3 M2 15h3 M19 9h3 M19 15h3'], 'vector-db': ['M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z', 'M4 6v12c0 1.7 3.6 3 8 3', 'M20 6v6', 'M14 20l6-6 M16 14h4v4'],
+  'llm': ['M4 5h16v11H9l-5 4z', 'M8 9l2 2-2 2 M12 13h4'], 'embedding': ['M3 3v18h18', F(C(8,8,1.4)), F(C(11,15,1.4)), F(C(17,9,1.4)), F(C(15,17,1.4)), F(C(19,14,1.4))],
+  'registry': [R(3,4,18,16,2), 'M3 9h18', 'M7 13h4 M7 16h6', R(14,12,4,5,1)], 'ci': ['M4 12a8 8 0 0 1 14-5.3', 'M18 3v4h-4', 'M20 12a8 8 0 0 1-14 5.3', 'M6 21v-4h4'],
+  'repo': [C(6,5,2), C(6,19,2), C(18,7,2), 'M6 7v10', 'M18 9c0 4-6 3-11 8'], 'webhook': [C(12,7,3), C(6,17,3), C(18,17,3), 'M10.5 9.5l-3 5 M9 17h6 M13.5 9.5l3 5'],
+  'email': [R(3,5,18,14,2), 'M3 7l9 6 9-6'], 'sms': ['M4 5h16v11H9l-5 4z', 'M8 10.5h.1 M12 10.5h.1 M16 10.5h.1'], 'payment': [R(2,5,20,14,2), 'M2 10h20', 'M6 15h4'],
+  'region': [C(12,10,3), 'M12 21c-4-4-7-7.5-7-11a7 7 0 0 1 14 0c0 3.5-3 7-7 11z'], 'vpc': [R(3,4,18,16,3), 'M8.5 15a2.5 2.5 0 0 1-.3-5 3.5 3.5 0 0 1 6.8-.5 2.5 2.5 0 0 1 .5 5.5z'], 'subnet': [R(3,3,18,18,2), R(7,7,10,10,1.5), 'M12 7v10 M7 12h10'],
+  'zone': [R(3,3,18,18,2), 'M9 3v18 M15 3v18'], 'namespace': ['M8 4H6a2 2 0 0 0-2 2v4l-2 2 2 2v4a2 2 0 0 0 2 2h2', 'M16 4h2a2 2 0 0 1 2 2v4l2 2-2 2v4a2 2 0 0 1-2 2h-2'],
+  'trust-boundary': ['M3 8V6a3 3 0 0 1 3-3h2 M11 3h2 M16 3h2a3 3 0 0 1 3 3v2 M21 11v2 M21 16v2a3 3 0 0 1-3 3h-2 M13 21h-2 M8 21H6a3 3 0 0 1-3-3v-2 M3 13v-2', 'M12 8l3 1.2v2.5c0 2-1.3 3.3-3 3.8-1.7-.5-3-1.8-3-3.8V9.2z'],
+  'on-prem': ['M3 21h18', 'M5 21V7l7-4 7 4v14', R(9,10,6,4,.8), R(9,15,6,4,.8)],
+  // architecture UI
+  'library': [R(3,3,7,7,1.5), R(14,3,7,7,1.5), R(3,14,7,7,1.5), C(17.5,17.5,3.5)], 'split-view': [R(3,4,18,16,2), 'M12 4v16', 'M16 10l-1.5 2 1.5 2 M18.5 10l1 2-1 2'],
+  'layout-auto': [R(3,3,6,5,1), R(15,3,6,5,1), R(9,16,6,5,1), 'M6 8v3h12V8 M12 11v5'], 'layout-direction': ['M4 12h14', 'M14 7l5 5-5 5', 'M4 5v14'],
+  'port': [R(5,5,14,14,2), F(C(12,5,1.7)), F(C(19,12,1.7)), F(C(12,19,1.7)), F(C(5,12,1.7))], 'junction': ['M3 12h6 M15 12h6 M12 3v6 M12 15v6', F(C(12,12,3))],
+  'edge-sync': ['M3 12h17', 'M15 7l5 5-5 5'], 'edge-async': ['M3 12h3 M9 12h3 M15 12h5', 'M15 7l5 5-5 5'], 'edge-data': ['M3 12h16', 'M15 8l4 4-4 4', 'M3 8v8'], 'edge-control': ['M3 12h17', 'M15 7l5 5-5 5', 'M7 8l3 4-3 4'],
+  'status-planned': ['M12 4a8 8 0 0 1 5.7 2.3 M20 12a8 8 0 0 1-2.3 5.7 M12 20a8 8 0 0 1-5.7-2.3 M4 12a8 8 0 0 1 2.3-5.7'], 'status-building': [C(12,12,8), F('M12 4a8 8 0 0 1 8 8h-8z')], 'status-live': [C(12,12,8), F(C(12,12,4))], 'status-deprecated': [C(12,12,8), 'M6.5 17.5l11-11'],
+  'c4-level': [R(3,3,18,18,2), R(7,7,10,10,1.5), R(10.5,10.5,3,3,.5)], 'reused-object': [R(3,9,11,11,2), 'M10 9V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3'], 'diff': [R(3,3,18,18,2), 'M12 6.5v7 M8.5 10h7', 'M8.5 17h7'], 'template': [R(3,3,18,18,2), 'M3 9h18 M9 9v12'],
+  'cost': [C(12,12,9), 'M14.5 9a2.5 2 0 0 0-2.5-1.5c-1.4 0-2.5.8-2.5 2s1.1 1.7 2.5 2 2.5.8 2.5 2-1.1 2-2.5 2A2.6 2 0 0 1 9.5 15 M12 6v1.5 M12 16.5V18'], 'sla': [C(12,13,8), 'M12 9v4l3 2', 'M10 2h4', 'M19 5l1.5 1.5'], 'threat': ['M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z', 'M12 8v4.5', F(C(12,15.5,1))],
+  // drag and drop
+  'drop-into': [R(3,10,18,11,2), 'M12 3v10 M8 9l4 4 4-4'], 'not-allowed': [C(12,12,9), 'M5.6 5.6l12.8 12.8'], 'send-to': ['M3 11l18-8-8 18-2-8z', 'M11 13l10-10'], 'move-to-group': ['M10 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-9', 'M3 12h11 M11 9l3 3-3 3'],
+  // stamps
+  'stamp-check': [C(12,12,9), 'M8 12l3 3 5-6'], 'stamp-cross': [C(12,12,9), 'M9 9l6 6 M15 9l-6 6'], 'stamp-important': [C(12,12,9), 'M12 7v6', F(C(12,16.5,1.1))], 'stamp-flag': ['M5 21V4', 'M5 4h11l-2 4 2 4H5'],
+  // chips replacing emoji
+  'start-chip': ['M3 20h18', 'M5 15l13-5a2 2 0 0 1 1.5 3.7L8 17.5z', 'M9.5 11.3L7.5 7.5h2l4 2.3'], 'thumbs-up': ['M7 10v11H3V10z', 'M7 10l4-7a2 2 0 0 1 3 2l-1 4h6a2 2 0 0 1 2 2.3l-1.3 7A2 2 0 0 1 17.7 21H7'], 'thumbs-down': ['M7 14V3H3v11z', 'M7 14l4 7a2 2 0 0 0 3-2l-1-4h6a2 2 0 0 0 2-2.3l-1.3-7A2 2 0 0 0 17.7 3H7']
+});
+for (let n = 1; n <= 9; n++) G['number-' + n] = [C(12,12,9), NUM[n]];
+const A = { 'eraser':'eraser-stroke', 'shape-ellipse':'ellipse', 'user':'owner', 'internet':'globe', 'drag-handle':'grip', 'code-view':'code', 'stamp-pin':'pin', 'stamp-star':'star', 'stamp-heart':'heart', 'stamp-question':'c-question', 'stamp-idea':'c-tip', 'stamp-warning':'c-warning', 'calendar-chip':'due', 'notebook':'k-notebook', 'convert':'switch', 'image-export':'image', 'shape-cloud':'cloud', 'shape-database':'database', 'arrowhead-triangle-filled':'arrowhead-triangle', 'mermaid-file':'mermaid', 'canvas-ws':'canvas', 'eye-on':'eye', 'pen':'pen-ballpoint', 'stamp-arrow':'select', 'stamp-see-note':'note-card', 'board-settings':'gear' };
+for (const k in A) if (!G[k]) G[k] = G[A[k]];
+
 // App-only glyphs (not in the design file; keep until the design adds them)
 G["footnote"] = ["M3 9h11 M3 14h11 M3 19h7","M17 6l2-1.5V10 M17 10h4"];
-G["undo"] = ["M9 14L4 9l5-5", "M4 9h10.5a5.5 5.5 0 0 1 0 11H11"]; // Ask › Regenerate (Lumen 23 uses it; not in lumen-glyphs.js)
 G["columns-4"] =["M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2z","M7.5 4v16 M12 4v16 M16.5 4v16"];
-export const GLYPHS = G;
-export type GlyphName = keyof typeof G | (string & {});
+export const GLYPHS: Record<string, GlyphPart[]> = G;
+export type GlyphName = string;
 export const hasGlyph = (n: string) => Object.prototype.hasOwnProperty.call(G, n);

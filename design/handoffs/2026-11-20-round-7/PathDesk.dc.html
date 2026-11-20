@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+</helmet>
+<div style="position:absolute;inset:0;display:flex;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:13px;overflow:hidden">
+  <dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,100%" style="height:100%"></dc-import>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+    <div style="padding:16px 28px 0;display:flex;flex-direction:column;gap:14px;border-bottom:1px solid var(--bd)">
+      <div style="display:flex;align-items:center;gap:14px">
+        <dc-import name="LumenGlyph" glyph="path" size="{{ 20 }}" tile="#F2A93B" color="var(--ac)" hint-size="35px,35px"></dc-import>
+        <div style="display:flex;flex-direction:column;gap:2px"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:20px;font-weight:650;letter-spacing:-.02em;white-space:nowrap">AI Engineer</span><span style="padding:0 7px;border-radius:6px;border:1px solid var(--bd);line-height:20px;font-size:12px;color:var(--mu)">Path</span></div><span style="font-size:12px;color:var(--mu);white-space:nowrap">28 courses · 101 concepts · 7 stages</span></div>
+        <div style="width:40px;height:40px;border-radius:50%;background:conic-gradient(var(--ok) 0 41%, var(--sf2) 41% 100%);display:flex;align-items:center;justify-content:center;margin-left:8px"><div style="width:32px;height:32px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:650">41%</div></div>
+        <span style="display:flex;gap:10px;align-items:center;white-space:nowrap"><span><b style="font-weight:650">41</b> <span style="color:var(--mu)">/ 101 learned</span></span><span style="color:var(--mu)">·</span><span style="color:var(--in)">6 learning</span><span style="color:var(--mu)">·</span><span style="color:var(--le)">3 to revise</span><span style="color:var(--mu)">·</span><span style="color:var(--ok)">12 mastered</span></span>
+        <span style="flex:1"></span>
+        <span style="height:28px;padding:0 10px;border-radius:999px;border:1px solid {{ ovBd }};background:{{ ovBg }};display:flex;align-items:center;gap:6px;font-weight:500;white-space:nowrap"><dc-import name="LumenGlyph" glyph="overlap" size="{{ 15 }}" hint-size="15px,15px"></dc-import>4 overlaps</span>
+        <sc-if value="{{ expanded }}"><span style="height:32px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px"><i class="icon-plus" style="font-size:14px"></i>Courses</span><span style="height:32px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px"><dc-import name="LumenGlyph" glyph="organize" size="{{ 15 }}" hint-size="15px,15px"></dc-import>Organize<i class="icon-chevron-down" style="font-size:13px;color:var(--mu)"></i></span></sc-if>
+        <span style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--mu);border:1px solid var(--bd)"><i class="{{ chev }}" style="font-size:16px"></i></span>
+      </div>
+      <sc-if value="{{ expanded }}">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <sc-for list="{{ coursesShown }}" as="c" hint-placeholder-count="8"><span style="height:32px;padding:0 10px 0 0;border-radius:8px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:8px;overflow:hidden;white-space:nowrap"><span style="width:3px;align-self:stretch;background:{{ c.c }}"></span><dc-import name="LumenGlyph" glyph="{{ c.k }}" size="{{ 14 }}" color="{{ c.c }}" hint-size="14px,14px"></dc-import><span style="font-weight:500">{{ c.n }}</span><span style="color:var(--mu);font-size:12px;font-variant-numeric:tabular-nums">{{ c.d }}</span></span></sc-for>
+          <span style="height:32px;padding:0 12px;border-radius:8px;border:1px dashed var(--bd);display:flex;align-items:center;color:var(--mu)">+20 more</span>
+        </div>
+      </sc-if>
+      <div style="display:flex;align-items:center;gap:18px">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5"><span style="padding:8px 0 10px;box-shadow:{{ t.sh }};font-weight:{{ t.fw }};color:{{ t.c }};display:flex;align-items:center;gap:6px"><dc-import name="LumenGlyph" glyph="{{ t.g }}" size="{{ 15 }}" hint-size="15px,15px"></dc-import>{{ t.l }}<span style="display:{{ t.ks }};padding:0 6px;border-radius:999px;line-height:17px;font-size:11px;font-weight:600;background:color-mix(in srgb,var(--le) 16%,transparent);color:var(--le)">{{ t.k }}</span></span></sc-for>
+        <span style="flex:1"></span>
+        <sc-for list="{{ filters }}" as="f" hint-placeholder-count="4"><span style="height:28px;padding:0 10px;border-radius:6px;border:1px solid {{ f.bd }};background:{{ f.bg }};display:flex;align-items:center;gap:6px;color:{{ f.c }};font-size:12.5px;white-space:nowrap">{{ f.l }}<i class="icon-chevron-down" style="font-size:12px;color:var(--mu)"></i></span></sc-for>
+        <span style="color:var(--mu);font-size:12.5px;white-space:nowrap">Collapse all</span>
+      </div>
+    </div>
+
+    <sc-if value="{{ isStages }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;min-height:0;display:flex;gap:12px;padding:16px 28px;overflow:hidden">
+        <sc-for list="{{ stages }}" as="s" hint-placeholder-count="7">
+          <div style="display:{{ s.colShow }};width:228px;flex-shrink:0;flex-direction:column;gap:8px;min-height:0">
+            <div style="display:flex;flex-direction:column;gap:6px;padding:2px 2px 4px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="width:20px;height:20px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:650">{{ s.i }}</span><span style="font-weight:650;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.n }}</span><span style="font-size:12px;color:var(--mu);font-variant-numeric:tabular-nums">{{ s.d }}</span><i class="icon-chevrons-left" style="font-size:13px;color:var(--mu)"></i></div>
+              <span style="height:4px;border-radius:2px;background:var(--sf2);overflow:hidden"><span style="display:block;height:100%;width:{{ s.p }};background:var(--ok)"></span></span>
+            </div>
+            <sc-for list="{{ s.items }}" as="c" hint-placeholder-count="4">
+              <div style="border-radius:10px;background:{{ c.bg }};border:{{ c.b }};padding:10px 11px;display:flex;flex-direction:column;gap:7px;opacity:{{ c.op }};box-shadow:{{ c.ring }}">
+                <div style="display:flex;align-items:center;gap:8px"><i class="{{ c.si }}" style="font-size:15px;color:{{ c.sc }}"></i><span style="font-weight:600;flex:1;line-height:17px">{{ c.n }}</span></div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mu)"><span style="display:flex;gap:3px"><sc-for list="{{ c.dots }}" as="d" hint-placeholder-count="2"><span style="width:7px;height:7px;border-radius:50%;background:{{ d }}"></span></sc-for></span><span>{{ c.cc }}</span><span style="opacity:.5">·</span><span>{{ c.r }} res</span><span style="flex:1"></span><span style="display:{{ c.rv }};padding:0 6px;border-radius:999px;line-height:17px;font-weight:600;background:color-mix(in srgb,var(--le) 16%,transparent);color:var(--le)">revise</span></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:{{ s.stripShow }};width:44px;flex-shrink:0;border-radius:10px;background:var(--sf);border:1px solid var(--bd);flex-direction:column;align-items:center;padding:10px 0;gap:10px">
+            <span style="width:20px;height:20px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:650">{{ s.i }}</span><i class="icon-chevrons-right" style="font-size:13px;color:var(--mu)"></i>
+            <span style="writing-mode:vertical-rl;font-weight:600;white-space:nowrap">{{ s.n }} · {{ s.d }}</span>
+          </div>
+        </sc-for>
+        <div style="width:200px;flex-shrink:0;border-radius:12px;border:1.5px dashed var(--bd);padding:12px;display:flex;flex-direction:column;gap:8px;color:var(--mu)">
+          <span style="font-weight:600;color:var(--tx)">Not placed yet · 2</span><span style="font-size:12px;line-height:17px">Drop on a stage, or let Organize place them.</span>
+          <div style="border-radius:8px;background:var(--sf);padding:8px 10px;color:var(--tx)">Mixture of experts</div><div style="border-radius:8px;background:var(--sf);padding:8px 10px;color:var(--tx)">Diffusion basics</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isGraph }}">
+      <div style="flex:1;min-height:0;position:relative;overflow:hidden;background-image:radial-gradient(color-mix(in srgb,var(--mu) 30%,transparent) 1px,transparent 1.2px);background-size:22px 22px">
+        <sc-for list="{{ gHead }}" as="h" hint-placeholder-count="5"><div style="position:absolute;left:{{ h.x }};top:14px;width:190px;display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Step {{ h.i }}</span><span style="font-weight:650">{{ h.n }}</span></div></sc-for>
+        <sc-for list="{{ gEdges }}" as="e" hint-placeholder-count="14"><div style="position:absolute;left:{{ e.x }};top:{{ e.y }};width:{{ e.w }};height:{{ e.h }};background:{{ e.c }};opacity:{{ e.o }};transform:rotate({{ e.a }});transform-origin:0 50%;border-top:{{ e.dash }}"></div></sc-for>
+        <sc-for list="{{ gNodes }}" as="n" hint-placeholder-count="16">
+          <div style="position:absolute;left:{{ n.x }};top:{{ n.y }};width:176px;height:46px;box-sizing:border-box;border-radius:10px;background:{{ n.bg }};border:{{ n.b }};box-shadow:{{ n.ring }};opacity:{{ n.op }};display:flex;overflow:hidden">
+            <span style="width:4px;display:flex;flex-direction:column"><sc-for list="{{ n.bars }}" as="b" hint-placeholder-count="2"><span style="flex:1;background:{{ b }}"></span></sc-for></span>
+            <div style="flex:1;min-width:0;padding:0 10px;display:flex;align-items:center;gap:8px"><i class="{{ n.si }}" style="font-size:14px;color:{{ n.sc }}"></i><span style="flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.n }}</span><span style="font-size:10.5px;color:var(--mu);font-weight:600">{{ n.st }}</span></div>
+          </div>
+        </sc-for>
+        <div style="position:absolute;left:{{ sumX }};top:300px;width:150px;border-radius:12px;border:1px dashed var(--bd);background:var(--sf);padding:10px 12px;display:flex;flex-direction:column;gap:4px"><span style="font-weight:650">Step 7 · Systems</span><span style="font-size:12px;color:var(--mu)">2 concepts · collapsed</span><span style="font-size:12px;color:var(--ln)">Expand</span></div>
+        <div style="position:absolute;left:{{ dragX }};top:{{ dragY }};display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:8px;background:var(--sf2);border:1px solid var(--ac);font-size:12px;box-shadow:0 8px 20px rgba(0,0,0,.35)"><span style="width:10px;height:10px;border-radius:50%;background:var(--ac)"></span>Drop on a concept to make it a prerequisite</div>
+        <div style="position:absolute;left:20px;bottom:16px;display:flex;gap:14px;align-items:center;padding:8px 12px;border-radius:10px;background:var(--sf);border:1px solid var(--bd);font-size:12px;color:var(--mu)"><span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:2px;background:var(--ok)"></span>done</span><span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:2px;background:var(--mu)"></span>needed</span><span style="display:flex;align-items:center;gap:6px"><span style="width:16px;border-top:2px dashed var(--ac)"></span>added by you</span><span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:2px;background:var(--ac)"></span>focus chain</span></div>
+        <div style="position:absolute;right:16px;bottom:16px;width:168px;height:96px;border-radius:10px;background:var(--sf);border:1px solid var(--bd);overflow:hidden"><sc-for list="{{ mini }}" as="m" hint-placeholder-count="16"><span style="position:absolute;left:{{ m.x }};top:{{ m.y }};width:18px;height:5px;border-radius:2px;background:{{ m.c }}"></span></sc-for><span style="position:absolute;left:6px;top:6px;width:110px;height:76px;border:1.5px solid var(--ac);border-radius:4px"></span></div>
+        <div style="position:absolute;right:196px;bottom:16px;display:flex;gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center"><i class="icon-minus" style="font-size:14px"></i></span><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center"><i class="icon-plus" style="font-size:14px"></i></span><span style="height:28px;padding:0 8px;display:flex;align-items:center;font-size:12px">Fit</span></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isMatrix }}">
+      <div style="flex:1;min-height:0;overflow:hidden;padding:12px 28px">
+        <div style="display:flex;gap:8px;margin-bottom:10px"><span style="height:28px;padding:0 10px;border-radius:999px;background:color-mix(in srgb,var(--ac) 14%,transparent);box-shadow:inset 0 0 0 1px var(--ac);display:flex;align-items:center;font-size:12.5px;font-weight:600">Only overlapping · 23</span><span style="height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;font-size:12.5px;color:var(--mu)">Missing from my courses · 9</span></div>
+        <div style="border:1px solid var(--bd);border-radius:12px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:{{ mCols }};height:112px;background:var(--sf);align-items:end;border-bottom:1px solid var(--bd)"><span style="padding:10px 14px;font-size:12px;font-weight:600;color:var(--mu)">Concept</span><sc-for list="{{ mHead }}" as="h" hint-placeholder-count="10"><span style="height:104px;position:relative"><span style="position:absolute;left:50%;bottom:10px;transform:rotate(-55deg);transform-origin:0 50%;white-space:nowrap;font-size:12px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:{{ h.c }}"></span>{{ h.n }}</span></span></sc-for><span style="padding:10px 8px;font-size:12px;font-weight:600;color:var(--mu);text-align:center">Overlap</span></div>
+          <sc-for list="{{ mRows }}" as="r" hint-placeholder-count="14">
+            <div style="display:{{ r.hdr }};height:30px;padding:0 14px;align-items:center;background:var(--bg);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);border-top:1px solid var(--bd)">{{ r.g }}</div>
+            <div style="display:{{ r.row }};grid-template-columns:{{ mCols }};height:36px;align-items:center;border-top:1px solid var(--bd);background:{{ r.bg }}">
+              <span style="padding:0 14px;display:flex;align-items:center;gap:8px;position:sticky;left:0;font-weight:500"><i class="{{ r.si }}" style="font-size:14px;color:{{ r.sc }}"></i>{{ r.n }}</span>
+              <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="10"><span style="display:flex;align-items:center;justify-content:center"><span style="width:12px;height:12px;border-radius:50%;background:{{ c.f }};box-shadow:{{ c.b }}"></span></span></sc-for>
+              <span style="text-align:center;font-weight:650;color:{{ r.oc }}">{{ r.o }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isTimeline }}">
+      <div style="flex:1;min-height:0;padding:12px 28px;display:flex;flex-direction:column">
+        <div style="display:grid;grid-template-columns:200px 1fr;height:30px;align-items:center;font-size:12px;color:var(--mu);border-bottom:1px solid var(--bd)"><span>Course</span><div style="display:grid;grid-template-columns:repeat(10,1fr)"><sc-for list="{{ weeks }}" as="w" hint-placeholder-count="10"><span>{{ w }}</span></sc-for></div></div>
+        <div style="position:relative;flex:1">
+          <div style="position:absolute;left:calc(200px + (100% - 200px) * .32);top:0;bottom:0;width:2px;background:var(--ac);z-index:1"><span style="position:absolute;top:-1px;left:-22px;padding:0 6px;border-radius:6px;background:var(--ac);color:var(--af);font-size:11px;font-weight:600;line-height:18px">Today</span></div>
+          <sc-for list="{{ lanes }}" as="l" hint-placeholder-count="7">
+            <div style="display:grid;grid-template-columns:200px 1fr;height:62px;border-bottom:1px solid var(--bd);background:{{ l.bg }}">
+              <span style="display:flex;align-items:center;gap:8px;font-weight:600"><span style="width:3px;height:22px;border-radius:2px;background:{{ l.c }}"></span>{{ l.n }}</span>
+              <div style="position:relative"><sc-for list="{{ l.items }}" as="i" hint-placeholder-count="3"><span style="position:absolute;left:{{ i.x }};top:16px;height:30px;width:{{ i.w }};box-sizing:border-box;padding:0 10px;border-radius:8px;background:{{ i.f }};border:1px solid {{ i.bd }};display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;font-size:12px;font-weight:500"><i class="{{ i.si }}" style="font-size:13px;color:{{ i.gc }}"></i>{{ i.n }}</span></sc-for></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isRevise }}">
+      <div style="flex:1;min-height:0;display:flex;gap:28px;padding:28px 28px 0;justify-content:center">
+        <div style="width:640px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:center;gap:8px;color:var(--mu)"><span style="color:var(--le);font-weight:600">Revise · 1 of 3</span><span>·</span><span>last seen 6 days ago · interval 7 d</span></div>
+          <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:24px 28px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;align-items:center;gap:10px"><dc-import name="LumenGlyph" glyph="s-revise" size="{{ 18 }}" color="var(--le)" hint-size="18px,18px"></dc-import><span style="font-size:24px;font-weight:650;letter-spacing:-.02em">Attention</span><span style="flex:1"></span><span style="font-size:12px;color:var(--mu)">Step 5 · Sequence &amp; attention</span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap"><span style="font-size:12px;color:var(--mu);align-self:center">Taught in</span><sc-for list="{{ taught }}" as="t" hint-placeholder-count="3"><span style="height:26px;padding:0 9px 0 0;border-radius:6px;background:var(--sf2);display:flex;align-items:center;gap:6px;overflow:hidden;font-size:12px"><span style="width:3px;align-self:stretch;background:{{ t.c }}"></span>{{ t.n }}</span></sc-for></div>
+            <div style="border-radius:10px;background:var(--bg);padding:16px 18px;display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--mu)">Recall, then check</span><span style="font-family:'Source Serif 4',serif;font-size:19px;line-height:28px">Why divide the scores by √d<sub>k</sub> before the softmax?</span></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--mu)">Resources</span><sc-for list="{{ res }}" as="r" hint-placeholder-count="3"><span style="display:flex;align-items:center;gap:8px"><dc-import name="LumenGlyph" glyph="{{ r.g }}" size="{{ 15 }}" color="var(--mu)" hint-size="15px,15px"></dc-import><span style="flex:1">{{ r.n }}</span><span style="font-size:12px;color:var(--mu)">{{ r.m }}</span></span></sc-for></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><span style="height:48px;border-radius:10px;background:color-mix(in srgb,var(--da) 10%,var(--sf));border:1px solid color-mix(in srgb,var(--da) 30%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:center"><b style="color:var(--da);font-weight:600">Again</b><span style="font-size:11.5px;color:var(--mu)">back to 1 day</span></span><span style="height:48px;border-radius:10px;background:color-mix(in srgb,var(--ok) 10%,var(--sf));border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:center"><b style="color:var(--ok);font-weight:600">Got it</b><span style="font-size:11.5px;color:var(--mu)">next in 14 days</span></span></div>
+          </div>
+        </div>
+        <div style="width:260px;display:flex;flex-direction:column;gap:10px"><span style="font-weight:600">Coming up</span><sc-for list="{{ coming }}" as="c" hint-placeholder-count="5"><div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--sf)"><span style="flex:1">{{ c.n }}</span><span style="font-size:12px;color:{{ c.cc }}">{{ c.d }}</span></div></sc-for><span style="font-size:12px;color:var(--mu);line-height:18px">Intervals: 1 → 3 → 7 → 14 → 30 → 60 → 120 days. Again resets to 1.</span></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ ovOpen }}">
+      <div style="position:absolute;right:{{ ovRight }};top:58px;width:420px;border-radius:14px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 16px 40px rgba(0,0,0,.4);display:flex;flex-direction:column;z-index:5">
+        <div style="padding:14px 16px 10px;display:flex;align-items:center;gap:8px"><span style="font-weight:650;font-size:15px;flex:1">4 possible overlaps</span><span style="font-size:12.5px;color:var(--ln)">Review all</span></div>
+        <sc-for list="{{ overlaps }}" as="o" hint-placeholder-count="4">
+          <div style="padding:10px 16px;border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:600">{{ o.a }}</span><span style="color:var(--mu)">≈</span><span style="font-weight:600">{{ o.b }}</span><span style="flex:1"></span><span style="font-size:12px;color:var(--mu)">{{ o.why }}</span></div>
+            <div style="display:flex;gap:6px"><span style="height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-size:12.5px"><dc-import name="LumenGlyph" glyph="merge" size="{{ 13 }}" hint-size="13px,13px"></dc-import>Merge</span><span style="height:28px;padding:0 10px;border-radius:8px;display:flex;align-items:center;font-size:12.5px;color:var(--mu)">They're different</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ sheetOpen }}">
+      <div style="position:absolute;top:0;right:0;bottom:0;width:420px;background:var(--sf);border-left:1px solid var(--bd);box-shadow:var(--sh);display:flex;flex-direction:column;z-index:4">
+        <div style="padding:16px 18px 12px;display:flex;flex-direction:column;gap:6px;border-bottom:1px solid var(--bd)">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mu)"><span>Step 3 · Deep learning basics</span><span style="flex:1"></span><i class="icon-x" style="font-size:16px"></i></div>
+          <div style="display:flex;align-items:center;gap:10px"><dc-import name="LumenGlyph" glyph="s-learning" size="{{ 18 }}" color="var(--in)" hint-size="18px,18px"></dc-import><span style="font-size:21px;font-weight:650;letter-spacing:-.01em">Batch normalization</span></div>
+        </div>
+        <sc-if value="{{ sheetMastery }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+            <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="6">
+              <div style="border-bottom:1px solid var(--bd)">
+                <div style="height:42px;padding:0 18px;display:flex;align-items:center;gap:8px"><i class="{{ sec.chev }}" style="font-size:13px;color:var(--mu)"></i><span style="font-weight:600;flex:1">{{ sec.n }}</span><span style="font-size:12px;color:var(--mu)">{{ sec.m }}</span></div>
+                <sc-if value="{{ sec.isMastery }}"><div style="padding:0 18px 14px;display:flex;flex-direction:column;gap:10px">
+                  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:3px;border-radius:10px;background:var(--bg);border:1px solid var(--bd);font-size:12.5px"><span style="height:28px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Todo</span><span style="height:28px;border-radius:7px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--in)">Learning</span><span style="height:28px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Learned</span><span style="height:28px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Mastered</span></div>
+                  <div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--mu)">Progress to mastered</span><span>4 of 14 days</span></div><span style="height:6px;border-radius:3px;background:var(--sf2);overflow:hidden"><span style="display:block;width:28%;height:100%;background:var(--ok)"></span></span><span style="font-size:12px;color:var(--mu)">Mastered after 14 days of correct recalls.</span></div>
+                  <div style="display:flex;align-items:center;gap:8px;font-size:12.5px"><dc-import name="LumenGlyph" glyph="s-locked" size="{{ 14 }}" color="var(--mu)" hint-size="14px,14px"></dc-import><span style="color:var(--mu)">Blocks</span><span>ResNet, Transformer block</span></div>
+                  <span style="align-self:flex-start;height:32px;padding:0 12px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">Mark learned</span>
+                </div></sc-if>
+                <sc-if value="{{ sec.isTaught }}"><div style="padding:0 18px 14px;display:flex;flex-direction:column;gap:6px"><sc-for list="{{ taughtRows }}" as="t" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 8px;border-radius:8px;background:var(--bg)"><i class="icon-grip-vertical" style="font-size:13px;color:var(--mu)"></i><span style="width:3px;height:18px;border-radius:2px;background:{{ t.c }}"></span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.n }}</span><span style="font-size:12px;color:{{ t.sc }}">{{ t.s }}</span><span style="font-size:12px;color:var(--ln)">Open</span></div></sc-for></div></sc-if>
+                <sc-if value="{{ sec.isPrereq }}"><div style="padding:0 18px 14px;display:flex;flex-wrap:wrap;gap:6px"><span style="height:28px;padding:0 8px;border-radius:6px;background:color-mix(in srgb,var(--ok) 12%,var(--bg));border:1px solid color-mix(in srgb,var(--ok) 40%,transparent);display:flex;align-items:center;gap:6px;font-size:12.5px"><dc-import name="LumenGlyph" glyph="s-done" size="{{ 13 }}" color="var(--ok)" hint-size="13px,13px"></dc-import>Backpropagation</span><span style="height:28px;padding:0 6px 0 8px;border-radius:6px;background:var(--bg);border:1px dashed var(--ac);display:flex;align-items:center;gap:6px;font-size:12.5px">Activation functions<span style="font-size:10.5px;color:var(--ac)">added</span><i class="icon-x" style="font-size:12px;color:var(--mu)"></i></span><span style="height:28px;padding:0 10px;border-radius:6px;border:1px dashed var(--bd);color:var(--mu);display:flex;align-items:center;gap:4px;font-size:12.5px"><i class="icon-plus" style="font-size:12px"></i>Add</span></div></sc-if>
+              </div>
+            </sc-for>
+            <div style="padding:14px 18px;display:flex;gap:8px;margin-top:auto;border-top:1px solid var(--bd)"><span style="flex:1;height:36px;border-radius:10px;background:color-mix(in srgb,var(--le) 14%,transparent);color:var(--le);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600"><dc-import name="LumenGlyph" glyph="flashcards" size="{{ 15 }}" hint-size="15px,15px"></dc-import>Practice · 5 questions</span><span style="height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center">Test out</span></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ sheetQuiz }}">
+          <div style="flex:1;overflow:hidden;padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--le);font-weight:600">Practice</span><span style="color:var(--mu)">· question 3 of 5 · from 4 notes</span><span style="flex:1"></span><span style="display:flex;gap:4px"><span style="width:18px;height:4px;border-radius:2px;background:var(--ok)"></span><span style="width:18px;height:4px;border-radius:2px;background:var(--da)"></span><span style="width:18px;height:4px;border-radius:2px;background:var(--le)"></span><span style="width:18px;height:4px;border-radius:2px;background:var(--sf2)"></span><span style="width:18px;height:4px;border-radius:2px;background:var(--sf2)"></span></span></div>
+            <span style="font-family:'Source Serif 4',serif;font-size:19px;line-height:28px">What does batch norm normalise over, during training?</span>
+            <sc-for list="{{ choices }}" as="c" hint-placeholder-count="4"><div style="min-height:44px;padding:8px 12px;border-radius:10px;border:{{ c.b }};background:{{ c.bg }};display:flex;align-items:center;gap:10px;box-sizing:border-box"><span style="width:22px;height:22px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:650;flex-shrink:0">{{ c.k }}</span><span style="flex:1;line-height:18px">{{ c.t }}</span><dc-import name="LumenGlyph" glyph="{{ c.g }}" size="{{ 16 }}" color="{{ c.gc }}" hint-size="16px,16px"></dc-import></div></sc-for>
+            <div style="border-radius:10px;background:color-mix(in srgb,var(--ok) 9%,transparent);border:1px solid color-mix(in srgb,var(--ok) 28%,transparent);padding:10px 12px;line-height:19px;font-size:12.5px"><b style="color:var(--ok);font-weight:600">Right.</b> Mean and variance per feature across the mini-batch; at test time it uses running averages. <span style="color:var(--ln)">From “Batch normalization” · Coursera DL</span></div>
+            <div style="display:flex;gap:8px;margin-top:auto"><span style="height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;color:var(--mu)">Save as flashcards</span><span style="flex:1"></span><span style="height:36px;padding:0 16px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">Next question</span></div>
+            <span style="font-size:12px;color:var(--mu)">Score 80% or more to mark it learned.</span>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;view&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;stages&quot;,&quot;graph&quot;,&quot;matrix&quot;,&quot;timeline&quot;,&quot;revise&quot;],&quot;default&quot;:&quot;stages&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;expanded&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;overlaps&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;sheet&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;&quot;,&quot;mastery&quot;,&quot;quiz&quot;],&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const v = this.props.view ?? 'stages', exp = !!this.props.expanded, sheet = this.props.sheet ?? '', ov = !!this.props.overlaps;
+    const P = { red:'#E5534B', orange:'#E8893A', yellow:'#E3B341', green:'#57AB5A', cyan:'#39C5CF', purple:'#A371F7' };
+    const courses = [['Coursera DL Specialization',P.purple,'k-video','14/20'],['CS231n',P.cyan,'k-lecture','11/16'],['CS224n',P.green,'k-lecture','6/19'],['Karpathy · Zero to Hero',P.orange,'k-video','5/8'],['HOML (Géron)',P.yellow,'k-book','9/19'],['fast.ai',P.red,'k-notebook','4/9'],['MIT 6.S191',P.orange,'k-lecture','3/10'],['CS336',P.red,'k-lecture','0/17']];
+    const C = Object.fromEntries(courses.map(([n,c]) => [n.split(' ')[0], c]));
+    const LU = { 's-todo':'icon-circle', 's-learning':'icon-circle-dot', 's-done':'icon-circle-check', 's-mastered':'icon-star', 's-locked':'icon-lock', 's-revise':'icon-history' };
+    const stInfo = s => ({ todo:['s-todo','var(--mu)'], learning:['s-learning','var(--in)'], done:['s-done','var(--ok)'], mastered:['s-mastered','var(--ok)'], locked:['s-locked','var(--mu)'], revise:['s-done','var(--ok)'] }[s]);
+    const cc = [P.purple,P.cyan,P.green,P.orange,P.yellow,P.red];
+    const K = (n,s,nc,r,o={}) => { const [sg,sc] = stInfo(s); return { n, sg, sc, si:LU[sg], dots:cc.slice(o.off||0,(o.off||0)+Math.min(nc,3)), cc: nc + (nc>1?' courses':' course'), r, rv:(s==='revise'||o.rv)?'inline':'none', op:s==='locked'?.5:1, bg:o.sel?'var(--sf2)':'var(--sf)', b:o.sel?'1.5px solid var(--ac)':'1px solid var(--bd)', ring:o.sel?'0 0 0 3px color-mix(in srgb,var(--ac) 16%,transparent)':'none' }; };
+    const stages = [
+      ['Foundations','4/4','100%',[K('Linear algebra','done',4,6),K('Probability','done',3,5,{off:1}),K('Gradient descent','mastered',6,9),K('Calculus refresher','done',2,3,{off:2})]],
+      ['Classic ML','2/3','67%',[K('Linear regression','mastered',3,4),K('Regularization','done',3,4,{off:2}),K('Evaluation metrics','learning',2,3,{off:3})]],
+      ['Deep learning basics','3/6','50%',[K('Backpropagation','revise',5,8),K('Activation functions','done',3,3,{off:1}),K('AdamW','learning',2,2,{off:3}),K('Batch normalization','learning',3,4,{sel:sheet!==''}),K('Dropout','todo',2,2,{off:4})]],
+      ['Vision','1/3','33%',[K('Convolution','done',3,5,{off:1}),K('ResNet','learning',2,3,{off:1}),K('Data augmentation','todo',2,2,{off:5})]],
+      ['Sequence & attention','1/4','25%',[K('Tokenization (BPE)','learning',3,4,{off:2}),K('Attention','revise',4,7),K('Transformer block','todo',3,5,{off:2}),K('Positional encoding','locked',2,2,{off:2})]],
+      ['LLMs','0/4','0%',[K('Pretraining','locked',2,3),K('Fine-tuning with LoRA','locked',2,2,{off:3}),K('RAG','todo',2,3,{off:3}),K('Prompting','todo',3,2,{off:2})]],
+      ['Systems & eval','0/2','0%',[K('Evaluation','todo',3,4),K('Serving','locked',1,2)]]
+    ].map(([n,d,p,items],i) => ({ n, d, p, items, i:i+1, colShow: (i===6 || (sheet && i>=4)) ? 'none' : 'flex', stripShow: (i===6 || (sheet && i>=4)) ? 'flex' : 'none' }));
+    const tabs = [['stages','Stages','v-board'],['graph','Graph','graph'],['matrix','Matrix','v-table'],['timeline','Timeline','v-calendar'],['revise','Revise','s-revise','3']]
+      .map(([k,l,g,c]) => ({ l, g, k:c||'', ks:c?'inline-block':'none', sh:k===v?'inset 0 -2px 0 var(--ac)':'none', fw:k===v?600:450, c:k===v?'var(--tx)':'var(--mu)' }));
+    const filters = [['Course: all 28',0],['Status: any',0],['Stage: all',0],['Group by stage',1]].map(([l,a]) => ({ l, bd:'var(--bd)', bg:'transparent', c:a?'var(--tx)':'var(--mu)' }));
+    // graph
+    const GX = i => 24 + i * 214;
+    const gStages = stages.slice(0,6);
+    const nodes = []; const pos = {};
+    gStages.forEach((s,si) => s.items.forEach((c,ci) => { const key = c.n; const x = GX(si), y = 72 + ci*68; pos[key] = [x,y]; nodes.push({ c, x, y, si }); }));
+    const chain = ['Gradient descent','Backpropagation','Batch normalization','ResNet'];
+    const E = [['Linear algebra','Backpropagation'],['Gradient descent','Backpropagation'],['Calculus refresher','Backpropagation'],['Probability','Evaluation metrics'],['Gradient descent','Linear regression'],['Linear regression','Regularization'],['Backpropagation','AdamW'],['Backpropagation','Batch normalization'],['Activation functions','Batch normalization'],['Backpropagation','Convolution'],['Convolution','ResNet'],['Batch normalization','ResNet'],['Backpropagation','Attention'],['Tokenization (BPE)','Transformer block'],['Attention','Transformer block'],['Transformer block','Pretraining'],['Pretraining','Fine-tuning with LoRA'],['Attention','RAG'],['Linear algebra','Attention']];
+    const doneSet = new Set(['Linear algebra','Probability','Gradient descent','Calculus refresher','Linear regression','Regularization','Backpropagation','Activation functions','Convolution','Attention']);
+    const gEdges = E.map(([a,b],i) => { const [x1,y1]=pos[a],[x2,y2]=pos[b]; const sx=x1+176, sy=y1+23, ex=x2, ey=y2+23; const foc = chain.includes(a)&&chain.includes(b)&&chain.indexOf(b)-chain.indexOf(a)===1; const added = a==='Activation functions';
+      return { x:sx+'px', y:sy+'px', w:Math.hypot(ex-sx,ey-sy)+'px', a:Math.atan2(ey-sy,ex-sx)+'rad', h:added?'0':'2px', dash:added?'2px dashed var(--ac)':'none', c:foc?'var(--ac)':doneSet.has(b)?'var(--ok)':'var(--mu)', o:foc?1:doneSet.has(b)?.6:.3 }; });
+    const gNodes = nodes.map(({c,x,y,si}) => ({ n:c.n, sg:c.sg, sc:c.sc, si:c.si, x:x+'px', y:y+'px', st:'S'+(si+1), bars:c.dots, op:chain.includes(c.n)?1:c.op===1?(doneSet.has(c.n)?.9:.75):.4, bg:doneSet.has(c.n)?'color-mix(in srgb,var(--ok) 10%,var(--sf))':'var(--sf)', b:chain.includes(c.n)?'1.5px solid var(--ac)':'1px solid var(--bd)', ring:c.n==='Batch normalization'?'0 0 0 4px color-mix(in srgb,var(--ac) 18%,transparent)':'none' }));
+    const gHead = gStages.map((s,i) => ({ i:i+1, n:s.n, x:GX(i)+'px' }));
+    const mini = nodes.map(({x,y,c}) => ({ x:(8+x*.12)+'px', y:(8+y*.18)+'px', c:doneSet.has(c.n)?'var(--ok)':'var(--mu)' }));
+    // matrix
+    const mHead = [['DL Spec',P.purple],['CS231n',P.cyan],['CS224n',P.green],['Zero to Hero',P.orange],['HOML',P.yellow],['fast.ai',P.red],['6.S191',P.orange],['CS336',P.red],['Hands-On LLMs',P.purple],['3B1B',P.cyan]].map(([n,c]) => ({ n, c }));
+    const mCols = `240px repeat(${mHead.length}, minmax(0,1fr)) 80px`;
+    const M = [['Foundations'],['Gradient descent','mastered','1111110101'],['Linear algebra','done','1000100101'],['Deep learning basics'],['Backpropagation','revise','1111110101'],['Batch normalization','learning','1100101000'],['AdamW','learning','1001001010'],['Dropout','todo','1100100000'],['Sequence & attention'],['Attention','revise','1010001110'],['Tokenization (BPE)','learning','0011000110'],['Transformer block','todo','0011001110'],['LLMs'],['Fine-tuning with LoRA','locked','0000000110'],['RAG','todo','0000000010']];
+    const mRows = M.map(([n,s,cells]) => { if (!s) return { hdr:'flex', row:'none', g:n, n:'', cells:[], o:'', sg:'s-todo', si:'', sc:'', oc:'', bg:'' }; const [sg,sc] = stInfo(s); const k = cells.split('').filter(x=>x==='1').length;
+      return { hdr:'none', row:'grid', g:'', n, sg, sc, si:LU[sg], o:k+'×', oc:k>=4?'var(--tx)':'var(--mu)', bg:'transparent', cells:cells.split('').map((x,i) => ({ f: x==='1' ? (s==='done'||s==='mastered'||s==='revise' ? mHead[i].c : 'transparent') : 'transparent', b: x==='1' ? `inset 0 0 0 2px ${mHead[i].c}` : 'inset 0 0 0 1px var(--bd)' })) }; });
+    // timeline
+    const weeks = ['26 Oct','2 Nov','9 Nov','16 Nov','23 Nov','30 Nov','7 Dec','14 Dec','21 Dec','28 Dec'];
+    const T = (n,x,w,s,c) => { const [g,gc] = stInfo(s); return { n, x, w, g, gc, si:LU[g], f:s==='done'||s==='mastered'?`color-mix(in srgb, ${c} 14%, var(--sf))`:'var(--sf)', bd:s==='learning'?'var(--in)':'var(--bd)' }; };
+    const lanes = [['Coursera DL Specialization',P.purple,[T('Backprop',  '0%','18%','done',P.purple),T('Batch norm','22%','16%','learning',P.purple),T('Optimizers','40%','16%','todo',P.purple)]],['CS231n',P.cyan,[T('Convolution','6%','16%','done',P.cyan),T('ResNet','26%','16%','learning',P.cyan),T('Augmentation','48%','18%','todo',P.cyan)]],['CS224n',P.green,[T('Tokenization','24%','18%','learning',P.green),T('Attention','46%','14%','todo',P.green),T('Transformers','64%','18%','todo',P.green)]],['Karpathy · Zero to Hero',P.orange,[T('micrograd','2%','14%','done',P.orange),T('makemore','18%','16%','done',P.orange),T('GPT from scratch','38%','22%','learning',P.orange)]],['HOML (Géron)',P.yellow,[T('Ch 10–11','10%','20%','done',P.yellow),T('Ch 14 CNNs','34%','20%','todo',P.yellow)]],['CS336',P.red,[T('Pretraining','60%','22%','todo',P.red),T('Scaling','84%','14%','todo',P.red)]]]
+      .map(([n,c,items]) => ({ n, c, items, bg:'transparent' }));
+    lanes.push({ n:'Revision', c:'var(--le)', bg:'color-mix(in srgb,var(--le) 5%,transparent)', items:[['Attention','30%'],['Backprop','34%'],['Grad descent','50%'],['Convolution','70%']].map(([n,x]) => ({ n, x, w:'11%', g:'s-revise', si:'icon-history', gc:'var(--le)', f:'color-mix(in srgb,var(--le) 12%,var(--sf))', bd:'color-mix(in srgb,var(--le) 40%,transparent)' })) });
+    const taught = [['Coursera DL · W2',P.purple],['CS224n · L7',P.green],['Zero to Hero · GPT',P.orange],['Hands-On LLMs · Ch 3',P.purple]].map(([n,c]) => ({ n, c }));
+    const res = [['lesson','Attention — my lesson note','3 d ago'],['pdf','Attention Is All You Need','p. 4 · 2 highlights'],['k-video','3B1B · Attention in transformers','26:10']].map(([g,n,m]) => ({ g, n, m }));
+    const coming = [['Backpropagation','today','var(--le)'],['Convolution','tomorrow','var(--mu)'],['Gradient descent','in 3 d','var(--mu)'],['Linear regression','in 9 d','var(--mu)'],['Probability','in 21 d','var(--mu)']].map(([n,d,cc]) => ({ n, d, cc }));
+    const overlaps = [['Batch normalization','BatchNorm (CS231n)','same notes cited'],['Tokenization (BPE)','Byte-pair encoding','same name'],['AdamW','Adam with weight decay','same formula'],['Attention','Self-attention','3 shared lessons']].map(([a,b,why]) => ({ a, b, why }));
+    const sections = [['Mastery','learning · 4/14 d',1],['Practice','5 questions'],['Taught in','3 courses',0,1],['Prerequisites','2'],['Unlocks','ResNet, Transformer block'],['Resources','4']].map(([n,m,ma,ta]) => ({ n, m, isMastery:!!ma, isTaught:!!ta, isPrereq:n==='Prerequisites', chev:(ma||ta||n==='Prerequisites')?'icon-chevron-down':'icon-chevron-right' }));
+    const taughtRows = [['Coursera DL · C2 W3 — Batch norm',P.purple,'done','var(--ok)'],['CS231n · L7 — Training NNs II',P.cyan,'learning','var(--in)'],['HOML · Ch 11',P.yellow,'todo','var(--mu)']].map(([n,c,s,sc]) => ({ n, c, s, sc }));
+    const choices = [['A','Each example, across its features',0],['B','Each feature, across the examples in the mini-batch',1],['C','The whole dataset, once before training',0],['D','Each layer\u2019s weights',0]].map(([k,t,r]) => ({ k, t, b:r?'1.5px solid var(--ok)':'1px solid var(--bd)', bg:r?'color-mix(in srgb,var(--ok) 8%,var(--bg))':'var(--bg)', g:r?'s-done':'s-todo', gc:r?'var(--ok)':'transparent' }));
+    return { expanded:exp, chev:exp?'icon-chevron-up':'icon-chevron-down', coursesShown:courses.map(([n,c,k,d]) => ({ n, c, k, d })), tabs, filters,
+      isStages:v==='stages', isGraph:v==='graph', isMatrix:v==='matrix', isTimeline:v==='timeline', isRevise:v==='revise', stages,
+      gHead, gEdges, gNodes, mini, sumX:(GX(6)-30)+'px', dragX:(GX(2)+120)+'px', dragY:'420px',
+      mHead, mRows, mCols, weeks, lanes, taught, res, coming,
+      ovOpen:ov, ovRight:'250px', ovBd:ov?'var(--ac)':'var(--bd)', ovBg:ov?'color-mix(in srgb,var(--ac) 12%,transparent)':'transparent', overlaps,
+      sheetOpen:!!sheet, sheetMastery:sheet==='mastery', sheetQuiz:sheet==='quiz', sections, taughtRows, choices };
+  }
+}
+</script>
+</body>
+</html>

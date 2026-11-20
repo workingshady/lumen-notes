@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div dir="{{ dir }}" style="position:absolute;inset:0;display:flex;background:var(--bg);color:var(--tx);font-family:{{ ui }};font-size:{{ fs }};overflow:hidden">
+  <div style="display:{{ deskOnly }};height:100%"><dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,100%" style="height:100%"></dc-import></div>
+  <div style="display:{{ deskOnly }};width:280px;flex-shrink:0;border-inline-end:1px solid var(--bd);flex-direction:column;padding:14px 10px;gap:4px">
+    <div style="display:flex;align-items:center;gap:8px;padding:0 6px 10px"><span style="font-weight:650;font-size:15px;flex:1">{{ L.ask }}</span><span style="height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px">+ {{ L.newChat }}</span></div>
+    <div style="height:32px;margin:0 2px 8px;border-radius:7px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--mu)"><dc-import name="LumenGlyph" glyph="query" size="{{ 14 }}" hint-size="14px,14px"></dc-import>{{ L.search }}</div>
+    <sc-for list="{{ threads }}" as="t" hint-placeholder-count="8">
+      <div style="display:{{ t.hS }};padding:10px 8px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">{{ t.h }}</div>
+      <div style="display:{{ t.rS }};padding:8px;border-radius:8px;background:{{ t.bg }};flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="display:{{ t.pinS }};color:var(--ac);font-size:11px">●</span><span style="flex:1;font-weight:{{ t.w }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.t }}</span><span style="display:{{ t.moreS }};color:var(--mu)">⋯</span></div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mu)"><span style="padding:0 6px;line-height:18px;border-radius:5px;background:var(--sf2)">{{ t.scope }}</span>{{ t.d }}</div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+    <div style="height:{{ barH }};padding:0 {{ px }};display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd);flex-shrink:0">
+      <span style="display:{{ phoneOnly }};font-size:18px">{{ backArrow }}</span>
+      <span style="font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ title }}</span>
+      <span style="display:{{ ctxS }};font-size:12px;color:var(--mu);white-space:nowrap">{{ L.ctx }}</span>
+      <span style="display:{{ phoneOnly }};width:36px;height:36px;align-items:center;justify-content:center"><dc-import name="LumenGlyph" glyph="v-list" size="{{ 18 }}" hint-size="18px,18px"></dc-import></span>
+      <span style="color:var(--mu);font-size:16px">⋯</span>
+    </div>
+    <div style="flex:1;overflow:hidden;display:flex;justify-content:center">
+      <div style="width:{{ cw }};max-width:100%;padding:{{ pad }};display:flex;flex-direction:column;gap:16px">
+        <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding-bottom:80px"><dc-import name="LumenGlyph" glyph="query" size="{{ 24 }}" color="var(--mu)" tile="#9AA0AA" hint-size="42px,42px"></dc-import><span style="font-size:17px;font-weight:600">{{ L.emptyT }}</span><span style="color:var(--mu)">{{ L.emptyD }}</span><div style="display:flex;flex-direction:column;gap:8px;width:100%;max-width:440px"><sc-for list="{{ starters }}" as="s" hint-placeholder-count="3"><span style="min-height:40px;padding:8px 14px;border-radius:10px;border:1px solid var(--bd);background:var(--sf);display:flex;align-items:center;text-align:start">{{ s }}</span></sc-for></div></div>
+        </sc-if>
+        <sc-if value="{{ hasMsgs }}" hint-placeholder-val="{{ true }}">
+          <sc-if value="{{ summarized }}"><div style="display:flex;align-items:center;gap:10px;color:var(--mu);font-size:12px"><span style="flex:1;height:1px;background:var(--bd)"></span>{{ L.summarized }}<span style="flex:1;height:1px;background:var(--bd)"></span></div></sc-if>
+          <sc-for list="{{ msgs }}" as="m" hint-placeholder-count="3">
+            <div style="display:{{ m.userS }};justify-content:flex-end"><span style="max-width:78%;padding:10px 14px;border-radius:14px;border-end-end-radius:4px;background:var(--sf2);line-height:1.5">{{ m.q }}</span></div>
+            <div style="display:{{ m.ansS }};flex-direction:column;gap:10px">
+              <span style="display:{{ m.rwS }};font-size:12px;color:var(--mu);align-items:center;gap:6px"><dc-import name="LumenGlyph" glyph="query" size="{{ 12 }}" hint-size="12px,12px"></dc-import>{{ L.searchedFor }} {{ m.rw }}</span>
+              <div style="display:{{ m.genS }};align-self:flex-start;padding:0 8px;line-height:22px;border-radius:6px;background:color-mix(in srgb,var(--wa) 14%,transparent);color:var(--wa);font-size:12px;font-weight:600">{{ L.general }}</div>
+              <p style="margin:0;font-family:{{ read }};font-size:{{ rfs }};line-height:1.75">{{ m.a1 }}<sup style="display:{{ m.c1S }};font:600 11px Inter;color:var(--ln);padding:0 4px;border-radius:4px;background:color-mix(in srgb,var(--ln) 14%,transparent);margin:0 2px">1</sup>{{ m.a2 }}<sup style="display:{{ m.c2S }};font:600 11px Inter;color:var(--ln);padding:0 4px;border-radius:4px;background:color-mix(in srgb,var(--ln) 14%,transparent);margin:0 2px">2</sup>{{ m.a3 }}<span style="display:{{ m.caretS }};width:2px;height:18px;background:var(--ac);vertical-align:-3px;margin-inline-start:2px"></span></p>
+              <div style="display:{{ m.srcS }};flex-direction:column;gap:8px">
+                <span style="font-size:12px;color:var(--mu);display:flex;align-items:center;gap:6px">▾ {{ L.sources }} · 2</span>
+                <div style="display:grid;grid-template-columns:{{ srcCols }};gap:8px"><sc-for list="{{ m.src }}" as="s" hint-placeholder-count="2"><div style="border-radius:10px;background:var(--sf);border:1px solid var(--bd);padding:8px 10px;display:flex;flex-direction:column;gap:4px"><span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600"><span style="color:var(--ln)">{{ s.n }}</span><dc-import name="LumenGlyph" glyph="{{ s.g }}" size="{{ 13 }}" color="var(--mu)" hint-size="13px,13px"></dc-import><span dir="auto" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.t }}</span></span><span dir="auto" style="font-size:12.5px;color:var(--mu);line-height:17px">“{{ s.q }}”</span></div></sc-for></div>
+              </div>
+              <div style="display:{{ m.actS }};align-items:center;gap:4px;color:var(--mu);flex-wrap:wrap"><sc-for list="{{ acts }}" as="a" hint-placeholder-count="6"><span style="height:28px;padding:0 8px;border-radius:7px;display:flex;align-items:center;gap:5px;font-size:12.5px"><dc-import name="LumenGlyph" glyph="{{ a.g }}" size="{{ 14 }}" hint-size="14px,14px"></dc-import><span style="display:{{ a.lS }}">{{ a.l }}</span></span></sc-for></div>
+              <div style="display:{{ m.sugS }};gap:6px;flex-wrap:wrap"><sc-for list="{{ sugs }}" as="s" hint-placeholder-count="3"><span style="height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;font-size:12.5px">{{ s }}</span></sc-for></div>
+            </div>
+          </sc-for>
+        </sc-if>
+        <sc-if value="{{ notFound }}">
+          <div style="border-radius:12px;border:1px solid var(--bd);background:var(--sf);padding:14px 16px;display:flex;flex-direction:column;gap:10px"><span style="font-weight:600">{{ L.nfT }}</span><span style="color:var(--mu);line-height:1.5">{{ L.nfD }}</span><div style="display:flex;gap:8px;flex-wrap:wrap"><span style="height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center">{{ L.nfSearch }}</span><span style="height:32px;padding:0 12px;border-radius:8px;border:1px solid color-mix(in srgb,var(--wa) 45%,transparent);color:var(--wa);display:flex;align-items:center">{{ L.nfGeneral }}</span></div></div>
+        </sc-if>
+        <sc-if value="{{ errOn }}">
+          <div style="border-radius:12px;border:1px solid {{ errB }};background:color-mix(in srgb,{{ errC }} 8%,var(--sf));padding:12px 14px;display:flex;align-items:center;gap:10px"><dc-import name="LumenGlyph" glyph="{{ errG }}" size="{{ 16 }}" color="{{ errC }}" hint-size="16px,16px"></dc-import><span style="flex:1;line-height:1.5">{{ errT }}</span><span style="height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;white-space:nowrap">{{ errA }}</span></div>
+        </sc-if>
+      </div>
+    </div>
+    <div style="padding:{{ cpad }};display:flex;justify-content:center;flex-shrink:0">
+      <div style="width:{{ cw }};max-width:100%;border-radius:14px;background:var(--sf);border:1px solid {{ compB }};padding:10px 12px;display:flex;flex-direction:column;gap:10px;opacity:{{ compOp }}">
+        <span dir="auto" style="min-height:22px;color:{{ compC }};line-height:1.5">{{ compT }}</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="height:28px;padding:0 10px;border-radius:999px;background:var(--sf2);display:flex;align-items:center;gap:6px;font-size:12.5px"><dc-import name="LumenGlyph" glyph="path" size="{{ 13 }}" color="#A371F7" hint-size="13px,13px"></dc-import>{{ L.scope }} ▾</span>
+          <span style="height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;gap:8px;font-size:12.5px">{{ L.tutor }}<span style="width:26px;height:15px;border-radius:8px;background:var(--bd);position:relative"><span style="position:absolute;top:2px;inset-inline-start:2px;width:11px;height:11px;border-radius:50%;background:var(--mu)"></span></span></span>
+          <span style="flex:1"></span>
+          <span style="display:{{ hintS }};font-size:11.5px;color:var(--mu)">{{ L.enter }}</span>
+          <span style="height:32px;padding:0 14px;border-radius:9px;background:{{ sendBg }};color:{{ sendC }};border:{{ sendB }};display:flex;align-items:center;gap:6px;font-weight:600">{{ sendL }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;thread&quot;,&quot;empty&quot;,&quot;streaming&quot;,&quot;notfound&quot;,&quot;general&quot;,&quot;offline&quot;,&quot;signedout&quot;,&quot;error&quot;],&quot;default&quot;:&quot;thread&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;arabic&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.props.state ?? 'thread', p = !!this.props.phone, ar = !!this.props.arabic;
+    const EN = { ask:'Ask', newChat:'New', search:'Search chats', ctx:'Using the last 4 turns · 8 passages', summarized:'Earlier messages summarized', searchedFor:'Searched for:', general:'Not from your notes · general knowledge', sources:'Sources', emptyT:'Ask your notes anything', emptyD:'Answers come from AI Engineer, with sources.', nfT:'Your notes don\'t cover this yet.', nfD:'The closest notes are about AdamW and learning-rate schedules, but none mention Lion.', nfSearch:'Show closest notes', nfGeneral:'Answer from general knowledge', scope:'AI Engineer', tutor:'Tutor mode', enter:'Enter to send · Shift+Enter new line' };
+    const AR = { ask:'اسأل', newChat:'جديد', search:'ابحث في المحادثات', ctx:'آخر ٤ أدوار · ٨ مقاطع', summarized:'تم تلخيص الرسائل السابقة', searchedFor:'بحثنا عن:', general:'ليس من ملاحظاتك · معرفة عامة', sources:'المصادر', emptyT:'اسأل ملاحظاتك عن أي شيء', emptyD:'الإجابات من مسار مهندس الذكاء الاصطناعي مع المصادر.', nfT:'ملاحظاتك لا تغطي هذا بعد.', nfD:'أقرب الملاحظات عن AdamW وجداول معدّل التعلم.', nfSearch:'أظهر أقرب الملاحظات', nfGeneral:'أجب من المعرفة العامة', scope:'مهندس الذكاء الاصطناعي', tutor:'وضع المعلّم', enter:'Enter للإرسال' };
+    const L = ar ? AR : EN;
+    const SRC = [{ n:'1', g:'lesson', t:'AdamW · Karpathy', q:'decoupled weight decay: applied to the weights, not the gradient' },{ n:'2', g:'pdf', t:'Loshchilov 2019.pdf · p. 3', q:'L2 regularization and weight decay are not identical for Adam' }];
+    const M = (o) => ({ userS:'none', ansS:'none', q:'', rw:'', rwS:'none', genS:'none', a1:'', a2:'', a3:'', c1S:'none', c2S:'none', caretS:'none', srcS:'none', src:SRC, actS:'none', sugS:'none', ...o });
+    let msgs;
+    if (ar) msgs = [M({ userS:'flex', q:'ما هو الانتشار العكسي؟' }), M({ ansS:'flex', a1:'الانتشار العكسي هو تطبيق قاعدة السلسلة من الخسارة إلى كل وزن', c1S:'inline', a2:'، وكل عقدة تحتاج فقط إلى التدرّج المحلي (local gradient) والتدرّج القادم من الأعلى', c2S:'inline', a3:'.', srcS:'flex', actS:'flex', src:[{ n:'1', g:'lesson', t:'Backpropagation · CS231n', q:'the chain rule applied from the loss back to every weight' },{ n:'2', g:'lesson', t:'الانتشار العكسي', q:'كل عقدة تضرب التدرّج القادم في تدرّجها المحلي' }] })];
+    else msgs = [
+      M({ userS:'flex', q:'What does AdamW change compared to Adam?' }),
+      M({ ansS:'flex', a1:'AdamW applies weight decay directly to the weights instead of adding it to the gradient', c1S:'inline', a2:'. With Adam, L2 regularization gets scaled by the adaptive learning rate, so it isn\'t true weight decay', c2S:'inline', a3:'.', srcS: st==='streaming'?'none':'flex', actS: st==='streaming'?'none':'flex' }),
+      M({ userS:'flex', q:'And how does that compare to plain SGD with momentum?' }),
+      M({ ansS:'flex', rwS:'flex', rw:'AdamW vs SGD momentum weight decay', a1: st==='streaming' ? 'With SGD, L2 and weight decay are the same thing, because the learning rate is shared by every' : 'With SGD, L2 and weight decay are the same thing, because every parameter shares one learning rate', c1S: st==='streaming'?'none':'inline', a3: st==='streaming'?'':'. So AdamW mostly fixes an Adam-specific issue.', caretS: st==='streaming'?'inline-block':'none', srcS: st==='streaming'?'none':'flex', actS: st==='streaming'?'none':'flex', sugS: st==='thread'?'flex':'none' })
+    ];
+    if (st === 'general') msgs = [M({ userS:'flex', q:'Is the Lion optimizer better than AdamW?' }), M({ ansS:'flex', genS:'block', a1:'Lion uses only the sign of the update, so it needs a smaller learning rate and more weight decay. Reported gains are mixed and depend on batch size.', actS:'flex' })];
+    if (['notfound','offline','signedout','error'].includes(st)) msgs = [M({ userS:'flex', q: st==='notfound' ? 'Is the Lion optimizer better than AdamW?' : 'Why does RAG need re-ranking?' })];
+    const acts = [['columns-2','Copy'],['note','Save as note'],['flashcards','Make flashcards'],['undo','Regenerate'],['s-done',''],['d-rejected','']].map(([g,l]) => ({ g, l, lS: l&&!p?'inline':'none' }));
+    const sugs = ['Show the update rule side by side','When should I still use Adam?','Make 3 flashcards'];
+    const TH = [['Pinned'],['AdamW vs Adam weight decay','Path','Today',1,1],['Today'],['Why does RAG need re-ranking?','Space','10:12'],['Earlier'],['Backprop on a 2-layer MLP','Note + links','Mon'],['LoRA rank vs alpha','Path','Sun'],['Attention: why √dk','Vault','12 Nov']];
+    const threads = TH.map(([t,scope,d,sel,pin]) => scope===undefined ? { hS:'block', rS:'none', h:t, t:'', scope:'', d:'', bg:'', w:400, pinS:'none', moreS:'none' } : { hS:'none', rS:'flex', h:'', t, scope, d, bg: sel?'var(--sf2)':'transparent', w: sel?600:450, pinS: pin?'inline':'none', moreS: sel?'inline':'none' });
+    const ERR = { offline:['c-info','var(--in)','Ask needs a connection. Search and your notes still work offline.','Search instead'], signedout:['s-locked','var(--mu)','Unlock sync to use Ask on this device.','Unlock'], error:['c-danger','var(--da)','Something went wrong while answering. Your question is kept.','Retry'] }[st];
+    const streaming = st==='streaming';
+    return { L, msgs, acts, sugs, threads, starters: ['Explain backpropagation like I\'m new to it','Compare LoRA and full fine-tuning','What should I revise before RAG?'],
+      title: ar ? 'ما هو الانتشار العكسي؟' : (st==='empty' ? 'New chat' : st==='notfound'||st==='general' ? 'Lion vs AdamW' : 'AdamW vs Adam weight decay'),
+      isEmpty: st==='empty', hasMsgs: st!=='empty', notFound: st==='notfound', summarized: st==='thread' && !p, errOn: !!ERR, errG: ERR?ERR[0]:'c-info', errC: ERR?ERR[1]:'', errB: ERR?`color-mix(in srgb, ${ERR[1]} 35%, transparent)`:'', errT: ERR?ERR[2]:'', errA: ERR?ERR[3]:'',
+      ctxS: p||st==='empty' ? 'none' : 'inline', compT: st==='offline'||st==='signedout' ? (st==='offline'?'Offline':'Locked') : (ar ? 'اكتب سؤالاً متابعاً…' : 'Ask a follow-up…'), compC:'var(--mu)', compB: streaming?'var(--bd)':'var(--ac)', compOp: st==='offline'||st==='signedout'?.55:1,
+      sendL: streaming ? '■ Stop' : (ar ? 'إرسال' : 'Send'), sendBg: streaming?'transparent':'var(--ac)', sendC: streaming?'var(--tx)':'var(--af)', sendB: streaming?'1px solid var(--bd)':'none', hintS: p?'none':'inline',
+      dir: ar?'rtl':'ltr', ui: ar?"'IBM Plex Sans Arabic',Inter,sans-serif":'Inter,system-ui,sans-serif', read: ar?"'Noto Naskh Arabic','IBM Plex Sans Arabic',serif":"'Source Serif 4',Georgia,serif", fs: ar?'14px':'13px', rfs: p?'16px':'17px', backArrow: ar?'→':'←',
+      deskOnly: p?'none':'flex', phoneOnly: p?'flex':'none', barH: p?'56px':'52px', px: p?'12px':'24px', cw: p?'100%':'760px', pad: p?'16px':'24px 0', cpad: p?'8px 12px 20px':'0 24px 20px', srcCols: p?'1fr':'1fr 1fr' };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 32 Big data &amp; customization</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 6</span></div><div style="font-size:14px;color:#9A9890">When there is far more than expected: 3,142-note graph, a tree view, a 214-topic skill tree, 2,140 notes in folders, one note with 47 videos. Plus the new glyphs and how to customise note tabs and the assistant.</div></div>
+  </div>
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="2">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ sec.k }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ sec.t }}</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">{{ sec.d }}</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+        <sc-for list="{{ sec.frames }}" as="f" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)">
+              <dc-import name="BigDataDesk" view="{{ f.v }}" phone="{{ f.ph }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+            </div>
+            <div style="max-width:{{ f.w }};font-size:13px;line-height:20px;color:#CFCBC3;display:{{ f.nS }};gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+
+  <section style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ok:#6BCB8B;--in:#7AA2F7;--le:#B48EF0;display:flex;flex-direction:column;gap:28px;color:var(--tx)">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R6 · CUSTOMIZE</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Note tabs, assistant and diagram defaults</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Settings › Diagrams › Note tabs, and the assistant panel's own ⋯ menu.</p></div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+      <div style="width:460px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:10px">
+        <b style="font-weight:600;font-size:15px">Note tabs</b><span style="color:var(--mu);line-height:18px">Drag to reorder. Off tabs never show; “Only when content” hides a tab on notes that have nothing for it.</span>
+        <sc-for list="{{ tabCfg }}" as="t" hint-placeholder-count="6"><div style="height:46px;border-radius:9px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;gap:10px;padding:0 10px;opacity:{{ t.op }}"><dc-import name="LumenGlyph" glyph="grip" size="{{ 14 }}" color="var(--mu)" hint-size="14px,14px"></dc-import><dc-import name="LumenGlyph" glyph="{{ t.g }}" size="{{ 16 }}" hint-size="16px,16px"></dc-import><span style="flex:1;font-weight:500">{{ t.l }}</span><span style="font-size:12px;color:var(--mu)">{{ t.m }}</span><span style="width:30px;height:18px;border-radius:9px;background:{{ t.tb }};position:relative"><span style="position:absolute;top:3px;left:{{ t.tl }};width:12px;height:12px;border-radius:50%;background:{{ t.tk }}"></span></span></div></sc-for>
+      </div>
+      <div style="width:420px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:12px">
+        <b style="font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px"><dc-import name="LumenGlyph" glyph="assistant" size="{{ 17 }}" color="var(--ac)" hint-size="17px,17px"></dc-import>Assistant defaults</b>
+        <sc-for list="{{ asCfg }}" as="r" hint-placeholder-count="6"><div style="display:flex;align-items:center;gap:10px;min-height:34px"><span style="flex:1">{{ r.l }}</span><span style="display:{{ r.segS }};gap:2px;padding:3px;border-radius:7px;background:var(--bg);border:1px solid var(--bd)"><sc-for list="{{ r.seg }}" as="s" hint-placeholder-count="3"><span style="height:22px;padding:0 8px;border-radius:5px;display:flex;align-items:center;font-size:12px;background:{{ s.bg }};color:{{ s.c }};font-weight:{{ s.w }}">{{ s.l }}</span></sc-for></span><span style="display:{{ r.tgS }};width:30px;height:18px;border-radius:9px;background:{{ r.tb }};position:relative"><span style="position:absolute;top:3px;left:{{ r.tl }};width:12px;height:12px;border-radius:50%;background:{{ r.tk }}"></span></span></div></sc-for>
+      </div>
+      <div style="width:420px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:12px">
+        <b style="font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px"><dc-import name="LumenGlyph" glyph="graph" size="{{ 17 }}" hint-size="17px,17px"></dc-import>Big-data limits</b>
+        <sc-for list="{{ bigCfg }}" as="r" hint-placeholder-count="5"><div style="display:flex;align-items:center;gap:10px;min-height:34px"><span style="flex:1;line-height:18px">{{ r.l }}<span style="display:block;font-size:12px;color:var(--mu)">{{ r.d }}</span></span><span style="height:28px;padding:0 10px;border-radius:7px;border:1px solid var(--bd);display:flex;align-items:center;font-size:12px;white-space:nowrap">{{ r.v }}</span></div></sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R6 · GLYPHS</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">New glyphs · drawn in-house</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Same grid as the rest (24, 1.75 stroke, round caps). The assistant is a speech bubble holding the Lumen flame — no sparkles, no gradients.</p></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="border-radius:14px;background:#0F1115;padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px;color:#E8E6E1"><sc-for list="{{ glyphs }}" as="g" hint-placeholder-count="30"><div style="height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px"><dc-import name="LumenGlyph" glyph="{{ g.n }}" size="{{ 24 }}" color="{{ g.d }}" hint-size="24px,24px"></dc-import><span style="font-size:11.5px;color:#9AA0AA;text-align:center">{{ g.l }}</span></div></sc-for></div>
+      <div style="border-radius:14px;background:#FAF8F3;padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px;color:#1F1D1A"><sc-for list="{{ glyphs }}" as="g" hint-placeholder-count="30"><div style="height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px"><dc-import name="LumenGlyph" glyph="{{ g.n }}" size="{{ 24 }}" color="{{ g.lc }}" hint-size="24px,24px"></dc-import><span style="font-size:11.5px;color:#6A655C;text-align:center">{{ g.l }}</span></div></sc-for></div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', inn:'#7AA2F7', le:'#B48EF0' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', inn:'#2F5BD3', le:'#7A4BD1' };
+    const F = (id,l,v,t,n,ph=false) => ({ id, l, v, t, n, nS:n?'flex':'none', ph, w:ph?'412px':'1440px', h:ph?'915px':'900px', r:ph?'28px':'12px' });
+    const sections = [
+      { k:'R6 · TOO BIG', t:'More than expected', d:'Rule: above a threshold Lumen asks before drawing everything. The original full view is never removed — it is always one click away next to Grouped, Tree, Local and Filter, and can be set as the default in Settings.', frames:[
+        F('R6-32A','3,142-note graph · “too big” banner','hair',L,'Nothing is taken away: Full graph (the original view) stays the first option and is always in the view switch at the top. Grouped is pre-selected only as a suggestion. “Remember my choice” stops the question for this space.'),
+        F('R6-32B','Grouped by folder · Paper','cluster',P,'Circle size = notes, line thickness = links between folders. Click a group for a summary; Open group drills in.'),
+        F('R6-32C','Tree layout · branches fold','tree',L,'Folders → notes, left to right, with counts on every branch. Long branches end in “+ 22 more”.'),
+        F('R6-32D','Skill tree · 214 topics · compact','skill',P,'Done modules fold to strips, each column caps at 12 visible topics, the rest behind “+N more”. Find a topic jumps and highlights.'),
+        F('R6-32E','Folder tree · 2,140 notes · search','folders',L,'Virtualised. Sticky path headers while scrolling. Match counts in the search box.'),
+        F('R6-32F','One note · 47 videos, 14 diagrams, 212 links · Paper','note',P,'Tabs keep counts; filters and lazy thumbnails keep the Media tab fast.')
+      ]},
+      { k:'R6 · TOO BIG · PHONE', t:'Phone', d:'', frames:[
+        F('R6-32G','Too big · phone','hair',L,'',true), F('R6-32H','Grouped · phone · Paper','cluster',P,'',true), F('R6-32I','Tree · phone','tree',L,'',true), F('R6-32J','Folders search · phone · Paper','folders',P,'',true)
+      ]}
+    ];
+    const tg = on => ({ tb: on?'var(--ac)':'var(--bd)', tl: on?'15px':'3px', tk: on?'var(--af)':'var(--mu)' });
+    const tabCfg = [['lesson','Note','Always',1],['diagrams-tab','Diagrams','Only when content',1],['media','Media','Only when content',1],['links-tab','Links','Only when content',1],['toc','Outline','Always',0],['history','History','In right panel',0]].map(([g,l,m,on]) => ({ g, l, m, op: on?1:.55, ...tg(on) }));
+    const seg = (arr,i) => arr.map((l,j) => ({ l, bg:j===i?'var(--sf2)':'transparent', c:j===i?'var(--tx)':'var(--mu)', w:j===i?600:450 }));
+    const asCfg = [['Opens',['Closed','Right panel'],1],['Answer length',['Short','Normal','Detailed'],1],['Only from my notes',null,1],['Show citations',null,1],['Show cost on quick actions',null,1],['Language',['Match note','English','العربية'],0]].map(([l,s,v]) => s ? { l, seg:seg(s,v), segS:'flex', tgS:'none', ...tg(false) } : { l, seg:[], segS:'none', tgS:'block', ...tg(!!v) });
+    const bigCfg = [['Graph: default view','Full · Grouped · Tree · Ask when big','Ask when big'],['Graph: ask above','Shows the choice instead of drawing straight away','300 notes'],['Skill tree: topics per column','Rest behind “+N more”','12'],['Folder: page size','“Show 200 more”','200'],['Media tab: thumbnails at once','Lazy-loaded as you scroll','12'],['Table: rows in Read mode','Then pages or “Open as base”','100']].map(([l,d,v]) => ({ l, d, v }));
+    const G = [['assistant','Assistant','ac'],['zoom-in','Zoom in'],['zoom-out','Zoom out'],['fit','Fit'],['minimap','Minimap'],['play','Play'],['pause','Pause'],['link','Link'],['media','Media tab'],['links-tab','Links tab'],['diagrams-tab','Diagrams tab'],['history','History'],['token','Token'],['simulator','Simulator'],['meter','Usage meter'],['limit','Limit reached','da'],['smart-folder','Smart folder'],['smart-star','Smart · starred'],['smart-clock','Smart · due'],['path-add','New path'],['tag','Tag'],['tag-nested','Nested tag'],['pin','Pin'],['trash','Trash'],['account','Account'],['switch','Switch'],['search','Search'],['archive','Archive'],['external','Open outside'],['broken-link','Broken link','da'],['copy','Copy'],['insert','Insert'],['replace','Replace'],['rail','Panel'],['gear','Settings'],['cluster','Grouped'],['tree','Tree']];
+    const D = { ac:['#F2A93B','#B45F0E'], da:['#EF6B6B','#C42B2B'] };
+    const glyphs = G.map(([n,l,c]) => ({ n, l, d: c?D[c][0]:'#E8E6E1', lc: c?D[c][1]:'#1F1D1A' }));
+    return { sections, tabCfg, asCfg, bigCfg, glyphs };
+  }
+}
+</script>
+</body>
+</html>

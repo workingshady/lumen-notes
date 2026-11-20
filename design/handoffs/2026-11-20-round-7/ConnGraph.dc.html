@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:absolute;inset:0;overflow:hidden;background-color:var(--bg);background-image:radial-gradient(color-mix(in srgb,var(--mu) 22%,transparent) 1px, transparent 1.2px);background-size:22px 22px;font-family:Inter,system-ui,sans-serif;font-size:12.5px;color:var(--tx)">
+  <div style="position:absolute;left:0;top:0;width:1100px;height:600px;transform:{{ tf }};transform-origin:0 0">
+    <sc-for list="{{ bands }}" as="b" hint-placeholder-count="5"><div style="position:absolute;left:{{ b.x }};top:0;width:{{ b.w }};height:{{ b.h }};border-radius:12px;background:{{ b.bg }};display:{{ b.show }}"></div><div style="position:absolute;left:{{ b.lx }};top:14px;display:{{ b.show }};flex-direction:column;gap:2px"><span style="font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">{{ b.k }}</span><span style="font-weight:600;font-size:13px">{{ b.n }}</span></div></sc-for>
+    <svg width="1100" height="600" style="position:absolute;left:0;top:0;overflow:visible">
+      <sc-for list="{{ edges }}" as="e" hint-placeholder-count="20">
+        <path d="{{ e.d }}" style="fill:none;stroke:{{ e.c }};stroke-width:{{ e.w }};stroke-dasharray:{{ e.dash }};opacity:{{ e.o }};stroke-linecap:round"></path>
+        <path d="{{ e.ah }}" style="fill:{{ e.c }};stroke:none;opacity:{{ e.o }}"></path>
+      </sc-for>
+      <path d="{{ dragD }}" style="fill:none;stroke:{{ dragC }};stroke-width:2;stroke-dasharray:6 5;display:{{ dragShow }}"></path>
+    </svg>
+    <sc-for list="{{ nodes }}" as="n" hint-placeholder-count="16">
+      <div style="position:absolute;left:{{ n.x }};top:{{ n.y }};width:{{ n.w }};height:40px;box-sizing:border-box;border-radius:10px;background:{{ n.fill }};border:{{ n.bd }};box-shadow:{{ n.ring }};opacity:{{ n.op }};display:flex;align-items:center;gap:7px;padding:0 9px">
+        <dc-import name="LumenGlyph" glyph="{{ n.g }}" size="{{ 15 }}" color="{{ n.gc }}" hint-size="15px,15px"></dc-import>
+        <span style="flex:1;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.n }}</span>
+        <span style="display:flex;gap:2px"><sc-for list="{{ n.dots }}" as="d" hint-placeholder-count="2"><span style="width:5px;height:12px;border-radius:2px;background:{{ d }}"></span></sc-for></span>
+        <span style="display:{{ n.portShow }};position:absolute;right:-6px;top:14px;width:12px;height:12px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 3px var(--bg)"></span>
+        <span style="display:{{ n.tagShow }};position:absolute;left:8px;top:-22px;padding:0 8px;line-height:20px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;background:{{ n.tagBg }};color:{{ n.tagC }}">{{ n.tag }}</span>
+      </div>
+    </sc-for>
+    <div style="display:{{ sumShow }};position:absolute;left:{{ sumX }};top:{{ sumY }};width:170px;height:96px;box-sizing:border-box;border-radius:12px;border:1px dashed var(--bd);background:var(--sf);padding:10px 12px;flex-direction:column;gap:5px"><span style="font-weight:600">LLM engineering</span><span style="color:var(--mu);font-size:12px">3 concepts · all locked</span><span style="height:4px;border-radius:2px;background:var(--sf2)"></span><span style="color:var(--mu);font-size:11.5px">Click to expand stage</span></div>
+    <div style="display:{{ tipShow }};position:absolute;left:{{ tipX }};top:{{ tipY }};max-width:300px;padding:9px 12px;border-radius:10px;background:var(--sf2);border:1px solid {{ tipBd }};box-shadow:0 12px 28px rgba(0,0,0,.4);line-height:18px;flex-direction:column;gap:6px"><span style="display:flex;align-items:center;gap:8px;font-weight:600;color:{{ tipC }}"><dc-import name="LumenGlyph" glyph="{{ tipG }}" size="{{ 15 }}" hint-size="15px,15px"></dc-import>{{ tipT }}</span><span>{{ tipB }}</span><span style="display:{{ tipActShow }};gap:8px;margin-top:2px"><span style="height:26px;padding:0 10px;border-radius:7px;border:1px solid var(--bd);display:flex;align-items:center">Add anyway</span><span style="height:26px;padding:0 10px;display:flex;align-items:center;color:var(--mu)">Cancel</span></span></div>
+    <div style="display:{{ menuShow }};position:absolute;left:{{ menuX }};top:{{ menuY }};width:220px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 14px 32px rgba(0,0,0,.45);padding:4px;flex-direction:column;gap:1px">
+      <span style="padding:6px 8px 4px;font-size:11px;color:var(--mu)">Backpropagation → Batch normalization</span>
+      <sc-for list="{{ menu }}" as="m" hint-placeholder-count="6"><div style="display:{{ m.sep }};height:1px;background:var(--bd);margin:3px 4px"></div><div style="display:{{ m.row }};height:30px;padding:0 8px;border-radius:6px;align-items:center;gap:8px;background:{{ m.bg }};color:{{ m.c }}"><svg width="22" height="10" style="flex-shrink:0"><path d="M1 5h20" style="stroke:{{ m.lc }};stroke-width:2;stroke-dasharray:{{ m.dash }};fill:none;stroke-linecap:round"></path></svg><span style="flex:1">{{ m.l }}</span><span style="font-size:12px;color:var(--ac)">{{ m.chk }}</span></div></sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1100,&quot;height&quot;:560},&quot;layout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;tidy&quot;,&quot;messy&quot;],&quot;default&quot;:&quot;tidy&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;edge&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;curved&quot;,&quot;elbow&quot;,&quot;straight&quot;],&quot;default&quot;:&quot;curved&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;hideImplied&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;bundle&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;stages&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;focus&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;collapsed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;edit&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;valid&quot;,&quot;loop&quot;,&quot;redundant&quot;,&quot;duplicate&quot;],&quot;default&quot;:&quot;none&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;edgeMenu&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;scale&quot;:{&quot;editor&quot;:&quot;float&quot;,&quot;default&quot;:1,&quot;tsType&quot;:&quot;number&quot;},&quot;ox&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:0,&quot;tsType&quot;:&quot;number&quot;},&quot;oy&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:0,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props, layout = P.layout ?? 'tidy', es = P.edge ?? 'curved', hide = P.hideImplied !== false && layout === 'tidy', bundle = !!P.bundle, edit = P.edit ?? 'none', focus = P.focus !== false, collapsed = !!P.collapsed, stages = P.stages !== false && layout === 'tidy';
+    const s = P.scale ?? 1, ox = P.ox ?? 0, oy = P.oy ?? 0;
+    const CW = 210, NW = 160, X0 = 24, Y0 = 70, RH = 64;
+    const CC = { cs231n:'#39C5CF', dls:'#E8893A', cs224n:'#A371F7', homl:'#57AB5A', kar:'#E3B341', fast:'#E5534B' };
+    const N = {
+      la:['Linear algebra','done',0,0,['dls','homl']], calc:['Calculus','done',0,1,['dls']], prob:['Probability','done',0,2.4,['homl']],
+      gd:['Gradient descent','done',1,0.5,['dls','cs231n','homl']], loss:['Loss functions','done',1,1.8,['cs231n']], reg:['Regularization','learning',1,3,['dls']],
+      adam:['AdamW','todo',2,0,['kar']], bp:['Backpropagation','learning',2,1.2,['cs231n','kar','dls']], bn:['Batch normalization','todo',2,2.4,['cs231n']], conv:['Convolution','todo',2,3.5,['cs231n','fast']],
+      tok:['Tokenization (BPE)','todo',3,0.3,['kar','cs224n']], att:['Attention','locked',3,1.5,['cs224n','kar']], tb:['Transformer block','locked',3,2.6,['cs224n']],
+      lora:['Fine-tuning with LoRA','locked',4,0.9,['fast']], rag:['RAG','locked',4,2.1,['cs224n']], ev:['Evaluation','locked',4,3.3,['fast']]
+    };
+    const MESSY = { la:[520,300], calc:[80,420], prob:[700,90], gd:[300,160], loss:[860,420], reg:[150,90], adam:[640,470], bp:[420,380], bn:[880,250], conv:[60,250], tok:[300,470], att:[700,250], tb:[480,90], lora:[900,120], rag:[240,320], ev:[600,170] };
+    const E = [['la','gd'],['calc','gd'],['calc','bp','imp'],['la','bp','imp'],['prob','loss'],['gd','bp'],['loss','bp'],['gd','adam'],['bp','bn'],['bp','conv'],['reg','bn','rec'],['bp','att'],['la','att','imp'],['tok','tb'],['att','tb'],['tb','lora'],['tb','rag'],['adam','lora'],['rag','ev','rec'],['lora','ev','rel'],['conv','att','rel'],['bn','tb','add'],['prob','ev','imp']];
+    const pos = k => { if (layout === 'messy') return MESSY[k]; const [, , c, r] = N[k]; return [X0 + c * CW, Y0 + r * RH]; };
+    const chainA = new Set(['bp','gd','loss','la','calc','prob']), chainD = new Set(['bn','conv','att','tb','lora','rag','ev']);
+    const st = k => N[k][1];
+    const typeStyle = { pre:['solid','none'], rec:['rec','6 5'], rel:['rel','1.5 5'], add:['add','6 5'], imp:['imp','2 4'] };
+    const edges = [];
+    E.forEach(([a,b,t='pre']) => {
+      if (t === 'imp' && hide) return;
+      if (collapsed && N[b][2] === 4 && N[a][2] === 4) return;
+      let [x1,y1] = pos(a), [x2,y2] = pos(b); x1 += NW; y1 += 20; y2 += 20;
+      if (collapsed && N[b][2] === 4) { x2 = X0 + 4*CW; y2 = Y0 + 1.6*RH + 48; }
+      if (layout === 'messy') { const dx = x2 - x1; if (dx < 0) { x1 -= NW; } }
+      const mx = (x1 + x2) / 2;
+      let d, ah;
+      if (es === 'straight' || layout === 'messy') { d = `M${x1} ${y1}L${x2} ${y2}`; const an = Math.atan2(y2-y1, x2-x1); const c = Math.cos(an), sn = Math.sin(an); ah = `M${x2} ${y2}L${x2-8*c+4*sn} ${y2-8*sn-4*c}L${x2-8*c-4*sn} ${y2-8*sn+4*c}Z`; }
+      else if (es === 'elbow') { const sg = Math.sign(y2-y1), r = Math.min(10, Math.abs(y2-y1)/2); d = Math.abs(y2-y1) < 1 ? `M${x1} ${y1}H${x2}` : `M${x1} ${y1}H${mx-r}Q${mx} ${y1} ${mx} ${y1+sg*r}V${y2-sg*r}Q${mx} ${y2} ${mx+r} ${y2}H${x2}`; ah = `M${x2} ${y2}L${x2-8} ${y2-4}L${x2-8} ${y2+4}Z`; }
+      else if (bundle && N[b][2] - N[a][2] >= 1) { const gx = x1 + 25, gy = (y1 + y2) / 2 * .5 + (Y0 + 1.7*RH + 20) * .5; d = `M${x1} ${y1}C${gx} ${y1} ${gx} ${gy} ${gx+12} ${gy}L${x2-37} ${gy}C${x2-25} ${gy} ${x2-25} ${y2} ${x2} ${y2}`; ah = `M${x2} ${y2}L${x2-8} ${y2-4}L${x2-8} ${y2+4}Z`; }
+      else { d = `M${x1} ${y1}C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`; ah = `M${x2} ${y2}L${x2-8} ${y2-4}L${x2-8} ${y2+4}Z`; }
+      const onChain = focus && layout==='tidy' && ((chainA.has(a) && (chainA.has(b))) || (a==='bp' && chainD.has(b)) || (chainD.has(a) && chainD.has(b)));
+      const sel = P.edgeMenu && a==='bp' && b==='bn';
+      let c = st(a)==='done' ? 'var(--ok)' : st(b)==='locked' ? 'var(--mu)' : 'var(--in)', w = 1.6, dash = 'none', o = layout==='messy' ? .55 : (onChain || !focus ? .9 : .28);
+      if (t === 'rec') { c = 'var(--mu)'; dash = '6 5'; }
+      if (t === 'rel') { c = 'var(--ln)'; dash = '1.5 5'; w = 1.8; ah = ''; }
+      if (t === 'add') { c = 'var(--ac)'; dash = '6 5'; }
+      if (t === 'imp') { c = 'var(--mu)'; dash = '2 4'; o = .5; }
+      if (sel) { c = 'var(--ac)'; w = 3; o = 1; }
+      edges.push({ d, ah: ah || 'M0 0', c, w, dash, o });
+    });
+    const nodes = Object.entries(N).filter(([k,v]) => !(collapsed && v[2] === 4)).map(([k,[n,s2,c,r,cs]]) => { const [x,y] = pos(k); const sel = k==='bp';
+      const G = { done:['s-done','var(--ok)'], learning:['s-learning','var(--in)'], todo:['s-todo','var(--mu)'], locked:['s-locked','var(--mu)'] }[s2];
+      const on = !focus || layout==='messy' || chainA.has(k) || chainD.has(k) || sel;
+      let tag = '', tagBg = '', tagC = '';
+      if (edit==='valid' && k==='tb') { tag = 'Becomes a prerequisite'; tagBg = 'color-mix(in srgb,var(--ok) 18%,var(--bg))'; tagC = 'var(--ok)'; }
+      return { n, x:x+'px', y:y+'px', w:NW+'px', g:G[0], gc:G[1], dots: cs.map(c2 => CC[c2]), op: on ? (s2==='locked'?.62:1) : .3,
+        fill: s2==='done' ? 'color-mix(in srgb,var(--ok) 13%,var(--sf))' : 'var(--sf)',
+        bd: sel ? '2px solid var(--ac)' : (edit==='valid'&&k==='tb') ? '2px solid var(--ok)' : (edit==='loop'&&k==='la') ? '2px solid var(--da)' : (edit==='duplicate'&&k==='bn') ? '2px solid var(--mu)' : s2==='learning' ? '1.5px solid var(--in)' : '1px solid var(--bd)',
+        ring: sel ? '0 0 0 4px color-mix(in srgb,var(--ac) 18%,transparent)' : 'none', portShow: (sel && edit!=='none') ? 'block' : 'none', tagShow: tag ? 'block' : 'none', tag, tagBg, tagC };
+    });
+    const bands = [['Stage 1','Math foundations'],['Stage 2','ML basics'],['Stage 3','Deep learning'],['Stage 4','NLP & transformers'],['Stage 5','LLM engineering']].map(([k,n],i) => ({ k, n, x:(X0 - 12 + i*CW)+'px', lx:(X0 + i*CW)+'px', w:(NW+24)+'px', h:(Y0 + 4.2*RH)+'px', bg: i%2 ? 'transparent' : 'color-mix(in srgb,var(--sf) 55%,transparent)', show: stages ? 'flex' : 'none' }));
+    const [bx, by] = pos('bp');
+    const targets = { valid:pos('tb'), loop:pos('la'), redundant:pos('att'), duplicate:pos('bn') }[edit];
+    let dragD = 'M0 0', dragShow = 'none', dragC = 'var(--ac)';
+    if (targets) { const x1 = bx + NW + 6, y1 = by + 20, x2 = targets[0] + (edit==='loop' ? NW : 0), y2 = targets[1] + 20; const mx = (x1+x2)/2; dragD = `M${x1} ${y1}C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`; dragShow = 'inline'; dragC = edit==='valid' ? 'var(--ok)' : edit==='loop' ? 'var(--da)' : edit==='redundant' ? 'var(--wa)' : 'var(--mu)'; }
+    const TIP = {
+      loop:['c-danger','var(--da)','var(--da)','Would make a loop','Linear algebra is already needed (through Gradient descent) to reach Backpropagation.',false],
+      redundant:['c-warning','var(--wa)','var(--wa)','Already implied','Attention already needs Backpropagation through Gradient descent → … This link adds nothing new.',true],
+      duplicate:['c-info','var(--mu)','var(--bd)','Already connected','Backpropagation → Batch normalization exists.',false]
+    }[edit];
+    const tp = targets || [0,0];
+    const menu = [['Prerequisite','var(--in)','none','✓'],['Recommended order','var(--mu)','6 5',''],['Related (no order)','var(--ln)','1.5 5',''],['|'],['Reverse direction','var(--mu)','none',''],['Remove link','var(--da)','none','',1]]
+      .map(([l,lc,dash,chk,danger]) => l==='|' ? { sep:'block', row:'none', l:'', lc:'', dash:'', chk:'', bg:'', c:'' } : { sep:'none', row:'flex', l, lc, dash, chk, bg: l==='Prerequisite'?'var(--bg)':'transparent', c: danger?'var(--da)':'var(--tx)' });
+    return { tf:`translate(${ox}px, ${oy}px) scale(${s})`, bands, edges, nodes, dragD, dragShow, dragC,
+      tipShow: TIP ? 'flex' : 'none', tipX:(tp[0] + (edit==='loop'? 0 : NW + 16))+'px', tipY:(tp[1] + (edit==='loop'? 50 : -6))+'px', tipBd: TIP?TIP[2]:'', tipC: TIP?TIP[1]:'', tipG: TIP?TIP[0]:'c-info', tipT: TIP?TIP[3]:'', tipB: TIP?TIP[4]:'', tipActShow: TIP&&TIP[5]?'flex':'none',
+      menuShow: P.edgeMenu ? 'flex' : 'none', menuX:(bx + NW + 30)+'px', menuY:(by + 80)+'px', menu,
+      sumShow: collapsed ? 'flex' : 'none', sumX:(X0 + 4*CW)+'px', sumY:(Y0 + 1.6*RH)+'px' };
+  }
+}
+</script>
+</body>
+</html>
