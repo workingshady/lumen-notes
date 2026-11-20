@@ -7,6 +7,11 @@
    - **Features to cover:** whiteboard pens/palettes/layers/presentation, Board cards + conversions, canvas, architecture studio (code sync, ELK layout, AI), export, drag and drop, library + vendor icons, AI convert backend, sync + storage, sidebar + note list.
    - **Benchmark against** Excalidraw, tldraw, Miro, FigJam, Eraser, Obsidian and Goodnotes.
    - **Backend and data:** D1 row size vs big scenes, attachments/R2, sync conflicts, offline queue, AI limits/retries, performance on large boards. Add migrations if needed.
+3b. **Regression + consistency + small details:**
+   - **Old features:** check notes, editor/Read, review/flashcards, paths/roadmaps, hub, PDF, slides, Ask/tutor, imports, share/blog, Android, Arabic.
+   - **Compatibility:** old `.canvas` / `.excalidraw` files and notes still open; sync between devices stays correct with the new data (layers, pens, palettes, activity, board, `lumenArch`); share links and exports still work.
+   - **Consistency:** same shortcuts, menus, delete/undo, icons, themes, wording and Arabic everywhere.
+   - **Small details:** focus rings, tooltips, empty/error/loading states, phone sizes, RTL, keyboard order, missing translations, stray emoji, console errors, leftover "not available yet" toasts.
 4. **Fix wave** closes every gap and adds the enhancements: identical design, every flow and use case, consistency across workspaces, backend/logic/UX/optimisation.
 5. Final check, then deploy, commit and push.
 
