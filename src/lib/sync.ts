@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import type { Kind, Note, SyncItem, SyncResponse } from "../../shared/types";
 import { isWbType, KINDS } from "../../shared/types";
 import { mergeBoards } from "./board-merge";
+import { noteConflict } from "./conflicts";
 import { api, getToken } from "./api";
 import { DEMO } from "./db";
 import { db, getMeta, onDirty, setMeta, TABLE } from "./db";
@@ -230,6 +231,7 @@ async function apply(items: SyncItem[]) {
           if (m === "keep") return;
           if (m) { rows.push(m); return; }
         }
+        if (kind === "note" && c) noteConflict(c as Note, it); // unpushed markdown edit about to be overwritten: keep both (lib/conflicts.ts)
         // Skip: a newer unsynced local edit, or a clean local copy of this exact version (own echo / repeat page:
         // re-putting it would wake every liveQuery and re-render the app for nothing).
         if (c?.dirty && c.updatedAt > it.updatedAt) return;

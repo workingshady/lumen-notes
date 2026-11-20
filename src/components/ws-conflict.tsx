@@ -4,6 +4,8 @@ import { lazy, Suspense, useSyncExternalStore } from "react";
 import type { Note, Version } from "../../shared/types";
 import { updateNote } from "../lib/actions";
 import { db, now, save, uid } from "../lib/db";
+import { isConflicted } from "../lib/conflicts";
+import { ConflictHost } from "./versions/ConflictScreen";
 import { setUI, toast } from "../lib/store";
 // Preview (markdown-it, KaTeX, highlight.js) loads only when a conflict is opened: this sheet is mounted at start-up.
 const Preview = lazy(() => import("./Preview").then((m) => ({ default: m.Preview })));
@@ -70,6 +72,7 @@ db.use({
 });
 
 async function conflict(mine: Tagged, theirs: Tagged) {
+  if (isConflicted(mine.id)) return; // lib/conflicts.ts already keeps both and offers the Sync conflict screen
   const keepTheirs = theirs.updatedAt >= mine.updatedAt;
   const loser = keepTheirs ? mine : theirs;
   const v: Version = { id: uid(), noteId: mine.id, title: loser.title, body: loser.body, label: `Other version · ${keepTheirs ? deviceName() : theirs.lumenDeviceName ?? "another device"}`, createdAt: now(), updatedAt: now(), deleted: 0 } as Version;
@@ -91,6 +94,8 @@ export function ConflictSheet() {
   const v = useLiveQuery(() => (id ? db.versions.get(id) : undefined), [id]);
   const note = useLiveQuery(() => (v ? db.notes.get(v.noteId) : undefined), [v?.noteId]);
   return (
+    <>
+    <ConflictHost />
     <Sheet open={!!id && !!v} onClose={() => openOther(null)} wide title={<span className="flex items-center gap-2"><GitMerge size={16} className="text-warn" />{t("Other version")}{v ? <span dir="auto"> · {v.title}</span> : ""}</span>}>
       {v && (
         <div className="flex flex-col gap-3">
@@ -104,5 +109,6 @@ export function ConflictSheet() {
         </div>
       )}
     </Sheet>
+    </>
   );
 }

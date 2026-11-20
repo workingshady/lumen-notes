@@ -52,7 +52,7 @@ const H = 3_600_000, D = 24 * H;
  * per day for 90 days, then the newest per week. Named versions (a label that isn't restore bookkeeping) and each
  * note's newest version are always kept. Returns the ids to tombstone (already deleted ones are ignored).
  */
-export function versionsToPrune(vs: VersionLite[], now = Date.now()): string[] {
+export function versionsToPrune(vs: VersionLite[], now = Date.now(), keep: { all: number; hourly: number; daily: number } = { all: D, hourly: 7 * D, daily: 90 * D }): string[] {
   const byNote = new Map<string, VersionLite[]>();
   for (const v of vs) if (!v.deleted) (byNote.get(v.noteId) ?? byNote.set(v.noteId, []).get(v.noteId)!).push(v);
   const out: string[] = [];
@@ -61,9 +61,9 @@ export function versionsToPrune(vs: VersionLite[], now = Date.now()): string[] {
     const seen = new Set<string>();
     list.forEach((v, i) => {
       const age = now - v.createdAt;
-      const bucket = age < 7 * D ? `h${Math.floor(v.createdAt / H)}` : age < 90 * D ? `d${Math.floor(v.createdAt / D)}` : `w${Math.floor(v.createdAt / (7 * D))}`;
+      const bucket = age < keep.hourly ? `h${Math.floor(v.createdAt / H)}` : age < keep.daily ? `d${Math.floor(v.createdAt / D)}` : `w${Math.floor(v.createdAt / (7 * D))}`;
       if (i === 0) { seen.add(bucket); return; } // the note's newest version always stays (and fills its bucket)
-      if (age < D || (v.label && !/^(Restored|Before)/.test(v.label))) return;
+      if (age < keep.all || (v.label && !/^(Restored|Before)/.test(v.label))) return;
       if (seen.has(bucket)) out.push(v.id);
       else seen.add(bucket);
     });

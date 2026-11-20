@@ -22,6 +22,7 @@ import { runNav } from "../components/Sidebar";
 import { syncNow, useSync } from "../lib/sync";
 import { MODE_LABEL, setAssistantPrefs, setTabPrefs, TAB_META, useAssistantPrefs, useTabPrefs, type TabPref } from "../lib/tab-prefs";
 import { AppearanceClassic, SharingSection, StorageSection, SyncSection, Branding as BrandingClassic, saveBranding } from "./Settings";
+import { VersionSettings } from "../components/versions/VersionSettings";
 import { AISection } from "./settings-ai";
 import { BlogSection, setInboxProps } from "./settings-blog-ai";
 import { DeveloperSection } from "./settings-developer";
@@ -38,7 +39,7 @@ import { openSidebarCustomise, openKeyboardMap } from "../components/sidebar-r6"
 /** Always group thousands (3,120 · 10,000) like the design. */
 const G: Intl.NumberFormatOptions = { useGrouping: true };
 
-export type SecId = "account" | "appearance" | "branding" | "reading" | "plan" | "diagrams" | "sync" | "sharing" | "blog" | "storage" | "ai" | "developer" | "about";
+export type SecId = "account" | "appearance" | "branding" | "reading" | "plan" | "diagrams" | "sync" | "sharing" | "blog" | "storage" | "versions" | "ai" | "developer" | "about";
 type NavItem = { id: SecId; label: string; glyph: string; words: string };
 const NAV: { h: string; items: NavItem[] }[] = [
   { h: tk("You"), items: [
@@ -56,6 +57,7 @@ const NAV: { h: string; items: NavItem[] }[] = [
     { id: "sharing", label: tk("Sharing"), glyph: "link", words: "links posts turn off" },
     { id: "blog", label: tk("Blog"), glyph: "post", words: "address rss comments posts license" },
     { id: "storage", label: tk("Storage"), glyph: "archive", words: "cloudflare device largest files quota" },
+    { id: "versions", label: tk("Versions & history"), glyph: "history", words: "versions history keep retention hourly daily named prune automatic snapshot restore" },
   ] },
   { h: tk("Advanced"), items: [
     { id: "ai", label: tk("AI"), glyph: "assistant", words: "usage limit neurons summarize flashcards voice model" },
@@ -193,6 +195,7 @@ export function SettingsView() {
           {sec === "sharing" && <SharingR6 go={go} />}
           {sec === "blog" && <BlogR6 />}
           {sec === "storage" && <StorageR6 />}
+          {sec === "versions" && <VersionSettings />}
           {sec === "ai" && <AISection />}
           {sec === "developer" && <DeveloperSection />}
           {sec === "about" && <AboutR6 />}

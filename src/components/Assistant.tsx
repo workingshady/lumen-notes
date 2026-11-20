@@ -10,6 +10,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import type { ChatMessage, ChatThread, Note } from "../../shared/types";
 import { updateNote } from "../lib/actions";
+import { autoVersion } from "../lib/auto-versions";
 import { aiRun, getToken } from "../lib/api";
 import { getUsage, limitState, TYPICAL, useAiUsage, usedPct } from "../lib/ai-usage";
 import { useFaults } from "../lib/sim/faults";
@@ -319,6 +320,7 @@ function AnswerBlock({ m, note, last, threadId, onRetryGeneral }: { m: ChatMessa
   const md = plain(m.text);
   const btn = "flex h-7 items-center gap-[5px] rounded-[7px] border border-line px-[9px] hover:bg-surface-2 disabled:opacity-50";
   const insertBelow = async () => {
+    await autoVersion("ai", note.id); // Settings › Versions: a version before an AI edit is applied
     const block = `\n\n${md}\n`;
     const ed = getActiveEditor();
     if (ed) { const { to } = ed.state.selection.main; const line = ed.state.doc.lineAt(to); ed.dispatch({ changes: { from: line.to, insert: block }, selection: { anchor: line.to + block.length } }); ed.focus(); }
@@ -328,6 +330,7 @@ function AnswerBlock({ m, note, last, threadId, onRetryGeneral }: { m: ChatMessa
   const replaceSel = () => {
     const ed = getActiveEditor();
     if (!ed || ed.state.selection.main.empty) { toast(t("Select text in the editor to replace.")); return; }
+    void autoVersion("ai", note.id);
     const { from, to } = ed.state.selection.main;
     ed.dispatch({ changes: { from, to, insert: md }, selection: { anchor: from + md.length } });
     ed.focus();

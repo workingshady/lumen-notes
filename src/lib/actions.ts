@@ -4,6 +4,7 @@ import { NOTE_TYPES, STATUSES, type NoteType, type Status } from "../../shared/t
 import { firstH1, fmList, inlineTags, setFrontMatter, slugify, splitFrontMatter } from "./parse";
 import { TEMPLATES, type Template } from "./templates";
 import { versionsToPrune } from "./sync-plan";
+import { getVersionPrefs, retentionMs } from "./version-prefs";
 import { carryTombstones } from "./board-merge";
 import { isWbType } from "../../shared/types";
 import { activityHint, activityQuiet, activityVersion, purgeActivity, thisDevice } from "./activity";
@@ -121,7 +122,9 @@ export async function pruneVersions(at = now()): Promise<number> {
   let n = 0;
   for (const noteId of (await db.versions.orderBy("noteId").uniqueKeys()) as string[]) {
     const vs = await db.versions.where("noteId").equals(noteId).toArray();
-    const drop = new Set(versionsToPrune(vs, at));
+    const prefs = getVersionPrefs();
+    const mode = Object.keys(prefs.verSpace).length ? prefs.verSpace[(await db.notes.get(noteId))?.spaceId ?? ""] ?? "default" : "default";
+    const drop = new Set(versionsToPrune(vs, at, retentionMs(prefs, mode)));
     for (const v of vs) if (drop.has(v.id)) { await save("version", { ...v, deleted: 1, body: "" }); n++; }
   }
   return n;

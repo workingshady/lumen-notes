@@ -1,848 +1,446 @@
 [
  {
-  "page": "Lumen 33 Whiteboard Shell.dc.html",
-  "id": "33A",
-  "label": "Shape selected · Lamplight",
-  "note": "Toolbar: lock, then 8 groups with hairline dividers. The pen slot shows the current pen and its colour dot; Shapes and Arrow are split buttons that remember the last choice. Tooltips read “Name · key”. Property bar floats 24 px above the selection; each control opens a small popover."
+  "page": "Lumen 53 Course Timeline.dc.html",
+  "id": "53A",
+  "label": "Month · Lamplight",
+  "note": "Up next: A1 Vocabulary has the accent border. Pace and level filters sit next to the zoom control."
  },
  {
-  "page": "Lumen 33 Whiteboard Shell.dc.html",
-  "id": "33B",
-  "label": "Shape selected · Paper",
+  "page": "Lumen 53 Course Timeline.dc.html",
+  "id": "53B",
+  "label": "Month · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 33 Whiteboard Shell.dc.html",
-  "id": "33C",
-  "label": "Pen active · bar docks under toolbar",
-  "note": "Nothing selected and a tool active: the same bar docks under the toolbar and shows the tool’s settings. It never overlaps the toolbar."
- },
- {
-  "page": "Lumen 33 Whiteboard Shell.dc.html",
-  "id": "33D",
-  "label": "Board header ⋯ menu",
-  "note": "Board settings, Layers, Frames, Present, Export, Convert, History, Handwriting search, Zen."
- },
- {
-  "page": "Lumen 33 Whiteboard Shell.dc.html",
-  "id": "33E",
-  "label": "Tool wheel · desktop",
-  "note": "Opens at the pointer. Pens show their colour dot. Esc or click outside closes it."
- },
- {
-  "page": "Lumen 33 Whiteboard Shell.dc.html",
-  "id": "33F",
-  "label": "Tool wheel · phone",
-  "note": "Long-press with a finger. In pen mode a finger pans, so the wheel opens on a two-finger long-press instead."
- },
- {
-  "page": "Lumen 33 Whiteboard Shell.dc.html",
-  "id": "33G",
-  "label": "Empty board",
-  "note": "Draw (primary), Add a note card, Paste an image. Dropping files works here too."
- },
- {
-  "page": "Lumen 33 Whiteboard Shell.dc.html",
-  "id": "33H",
-  "label": "View-only shared link · Paper",
-  "note": "Toolbar hidden. Header offers Duplicate to my vault. Zoom and frames still work."
- },
- {
-  "page": "Lumen 33 Whiteboard Shell.dc.html",
-  "id": "33I",
-  "label": "Offline",
-  "note": "Header line turns amber: Saved on device. Everything except AI convert keeps working."
- },
- {
-  "page": "Lumen 33 Whiteboard Shell.dc.html",
-  "id": "33J",
-  "label": "Large board · performance mode",
-  "note": "Over ~3,000 elements shadows and hand-drawn roughness switch off; a chip says so and lets you undo it."
- },
- {
-  "page": "Lumen 33 Whiteboard Shell.dc.html",
-  "id": "33K",
-  "label": "Arabic · RTL",
-  "note": "Toolbar, panels and header mirror; the drawing, arrows and handwriting do not."
- },
- {
-  "page": "Lumen 34 Pens and Handwriting.dc.html",
-  "id": "34A",
-  "label": "Pen popover · Lamplight",
-  "note": "Saved pens (up to 8, synced) sit first: most people switch pens, not settings. Pencil and Calligraphy are tagged Later. Thickness 0.5–24 px with five preset dots."
- },
- {
-  "page": "Lumen 34 Pens and Handwriting.dc.html",
-  "id": "34B",
-  "label": "Pen popover · Paper",
-  "note": "Lumen ink flips per theme: the same pen draws dark ink on Paper."
- },
- {
-  "page": "Lumen 34 Pens and Handwriting.dc.html",
-  "id": "34C",
-  "label": "Pen sheet · phone, pen mode on",
-  "note": "Stylus draws, finger pans. Auto-detected on the first stylus touch; the chip under the header shows it and toggles it."
- },
- {
-  "page": "Lumen 34 Pens and Handwriting.dc.html",
-  "id": "34D",
-  "label": "Eraser modes, ruler, scratch-out",
-  "note": "Each eraser has three sizes. The ruler rotates with two fingers; Shift snaps to 15°."
- },
- {
-  "page": "Lumen 34 Pens and Handwriting.dc.html",
-  "id": "34E",
-  "label": "Auto-shape · Undo snap chip",
-  "note": "Rough circle → clean ellipse. The chip stays 3 s with a countdown ring, then fades. Snapping is one undo step."
- },
- {
-  "page": "Lumen 34 Pens and Handwriting.dc.html",
-  "id": "34F",
-  "label": "Lasso selection · desktop",
-  "note": "Convert to shapes runs on device. Text, Math and Mermaid use the vision model and always go through review."
- },
- {
-  "page": "Lumen 34 Pens and Handwriting.dc.html",
-  "id": "34G",
-  "label": "Lasso · phone",
-  "note": "The action bar sits above the dock and wraps to two rows."
- },
- {
-  "page": "Lumen 34 Pens and Handwriting.dc.html",
-  "id": "34H",
-  "label": "Handwriting search badge",
-  "note": "Recognised text is stored invisibly; the header shows Searchable so you know search will find your ink."
- },
- {
-  "page": "Lumen 35 AI Review.dc.html",
-  "id": "35A",
-  "label": "Convert to text",
-  "note": "Editable result in the reading font. One neuron per convert, shown in the header so the daily limit is never a surprise."
- },
- {
-  "page": "Lumen 35 AI Review.dc.html",
-  "id": "35B",
-  "label": "Convert to math · Paper",
-  "note": "LaTeX source with a rendered preview under it."
- },
- {
-  "page": "Lumen 35 AI Review.dc.html",
-  "id": "35C",
-  "label": "Convert to Mermaid",
-  "note": "Live Mermaid code; Open as architecture diagram hands it to the studio (page 46)."
- },
- {
-  "page": "Lumen 35 AI Review.dc.html",
-  "id": "35D",
-  "label": "Working",
+  "page": "Lumen 53 Course Timeline.dc.html",
+  "id": "53C",
+  "label": "A1 Grammar expanded · Month",
   "note": ""
  },
  {
-  "page": "Lumen 35 AI Review.dc.html",
-  "id": "35E",
-  "label": "Low confidence",
-  "note": "Unsure words are highlighted on both sides; click one to see alternatives."
+  "page": "Lumen 53 Course Timeline.dc.html",
+  "id": "53D",
+  "label": "A1 Grammar expanded · Week",
+  "note": "Week zoom: each topic gets a bar with its name beside it. The axis shows month names over week start dates and scrolls sideways."
  },
  {
-  "page": "Lumen 35 AI Review.dc.html",
-  "id": "35F",
-  "label": "Error · Paper",
+  "page": "Lumen 53 Course Timeline.dc.html",
+  "id": "53E",
+  "label": "Behind schedule",
+  "note": "Done topics fill the bar. A red hatched overrun shows the projected slip, with Replan next to it."
+ },
+ {
+  "page": "Lumen 53 Course Timeline.dc.html",
+  "id": "53F",
+  "label": "Quarter zoom · all levels collapsed · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 35 AI Review.dc.html",
-  "id": "35G",
-  "label": "Offline",
+  "page": "Lumen 53 Course Timeline.dc.html",
+  "id": "53G",
+  "label": "Locked topic",
+  "note": "“Study anyway” lets you start before the prerequisite is done."
+ },
+ {
+  "page": "Lumen 53 Course Timeline.dc.html",
+  "id": "53H",
+  "label": "Ready to start · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 35 AI Review.dc.html",
-  "id": "35H",
-  "label": "Phone · full screen",
-  "note": "Ink on top, result below; buttons wrap."
- },
- {
-  "page": "Lumen 36 Shapes and Connectors.dc.html",
-  "id": "36A",
-  "label": "Library · Lamplight",
-  "note": "The Shapes split button remembers the last shape (here Rectangle) and opens this panel."
- },
- {
-  "page": "Lumen 36 Shapes and Connectors.dc.html",
-  "id": "36B",
-  "label": "Library · Paper",
+  "page": "Lumen 53 Course Timeline.dc.html",
+  "id": "53I",
+  "label": "Timeline",
   "note": ""
  },
  {
-  "page": "Lumen 36 Shapes and Connectors.dc.html",
-  "id": "36C",
-  "label": "Library sheet · phone",
+  "page": "Lumen 53 Course Timeline.dc.html",
+  "id": "53J",
+  "label": "Topic sheet",
   "note": ""
  },
  {
-  "page": "Lumen 36 Shapes and Connectors.dc.html",
-  "id": "36D",
-  "label": "Connector popover",
-  "note": "Path, heads per end (start | end), line style, label. Bound arrows follow their shapes."
- },
- {
-  "page": "Lumen 36 Shapes and Connectors.dc.html",
-  "id": "36E",
-  "label": "Shape style · text · stickies",
+  "page": "Lumen 53 Course Timeline.dc.html",
+  "id": "53K",
+  "label": "Timeline · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 36 Shapes and Connectors.dc.html",
-  "id": "36F",
-  "label": "Shape style · Paper",
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54A",
+  "label": "Timeline · Gantt",
+  "note": "Groups (here, modules) fold; one bar per item; dependencies dashed; milestones as diamonds; overdue in red with how late."
+ },
+ {
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54B",
+  "label": "Lanes · by track",
+  "note": "One lane per track (Lectures, Labs, Papers, Project). Phase bands across the top. Best for “what am I doing in parallel?”"
+ },
+ {
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54C",
+  "label": "Board · Now / Next / Later",
+  "note": "Status columns with Overdue first. Drag between columns to reschedule. Best for weekly planning."
+ },
+ {
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54D",
+  "label": "Agenda · by week",
+  "note": "This week first, then what starts each week. The right column shows load against your pace and upcoming milestones."
+ },
+ {
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54E",
+  "label": "Language course · CEFR",
+  "note": "Levels as groups; later levels fold to one bar."
+ },
+ {
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54F",
+  "label": "Team project · lanes by owner · Paper",
+  "note": "Avatars on lanes and bars; at-risk count in the header."
+ },
+ {
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54G",
+  "label": "Team project · board",
   "note": ""
  },
  {
-  "page": "Lumen 36 Shapes and Connectors.dc.html",
-  "id": "36G",
-  "label": "Stamps and icon insert",
-  "note": "Stamps are Lumen glyphs, never emoji. Icon insert offers the whole glyph set, recolourable."
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54H",
+  "label": "Exam prep · agenda",
+  "note": "Scheduled backwards from Sat 13 Feb; Continue shows today’s session."
  },
  {
-  "page": "Lumen 37 Palettes.dc.html",
-  "id": "37A",
-  "label": "Lumen ink · Lamplight",
-  "note": "Opened from the property bar’s stroke swatch."
- },
- {
-  "page": "Lumen 37 Palettes.dc.html",
-  "id": "37B",
-  "label": "Palette switcher open",
-  "note": "Each palette shows a strip of its first colours."
- },
- {
-  "page": "Lumen 37 Palettes.dc.html",
-  "id": "37C",
-  "label": "Colour-blind safe + contrast warning · Paper",
-  "note": "Okabe-Ito with names in tooltips. Text on this fill fails AA, so a warning suggests a darker shade."
- },
- {
-  "page": "Lumen 37 Palettes.dc.html",
-  "id": "37D",
-  "label": "Palette sheet · phone",
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54I",
+  "label": "Thesis · timeline · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 37 Palettes.dc.html",
-  "id": "37E",
-  "label": "Palettes + custom editor",
-  "note": "Create, name, add from eyedropper or hex, reorder by drag, delete. Synced across devices."
- },
- {
-  "page": "Lumen 37 Palettes.dc.html",
-  "id": "37F",
-  "label": "Palettes · Paper",
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54J",
+  "label": "Exam prep · timeline",
   "note": ""
  },
  {
-  "page": "Lumen 38 Layers and Arrange.dc.html",
-  "id": "38A",
-  "label": "Layers · Lamplight",
-  "note": "Answers is hidden (dimmed, eye-off). Background is locked. Diagram is at 70% opacity."
- },
- {
-  "page": "Lumen 38 Layers and Arrange.dc.html",
-  "id": "38B",
-  "label": "Layers · Paper",
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54K",
+  "label": "Organize · course",
   "note": ""
  },
  {
-  "page": "Lumen 38 Layers and Arrange.dc.html",
-  "id": "38C",
-  "label": "Layers sheet · phone",
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54L",
+  "label": "Organize · exam, back from deadline · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 38 Layers and Arrange.dc.html",
-  "id": "38D",
-  "label": "Frames navigator",
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54M",
+  "label": "Timeline",
   "note": ""
  },
  {
-  "page": "Lumen 38 Layers and Arrange.dc.html",
-  "id": "38E",
-  "label": "Arrange popover",
-  "note": "Order, group, lock, align ×6, distribute ×2, flip. Shortcuts shown."
- },
- {
-  "page": "Lumen 39 Board Settings.dc.html",
-  "id": "39A",
-  "label": "Chalkboard + grid",
-  "note": "Ink flips to light on dark boards automatically."
- },
- {
-  "page": "Lumen 39 Board Settings.dc.html",
-  "id": "39B",
-  "label": "Warm paper + Cornell · Paper",
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54N",
+  "label": "Board",
   "note": ""
  },
  {
-  "page": "Lumen 39 Board Settings.dc.html",
-  "id": "39C",
-  "label": "Blueprint + isometric",
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54O",
+  "label": "Agenda",
   "note": ""
  },
  {
-  "page": "Lumen 39 Board Settings.dc.html",
-  "id": "39D",
-  "label": "Pages mode · A4",
-  "note": "Pages stack vertically for handwritten notes and printing."
- },
- {
-  "page": "Lumen 39 Board Settings.dc.html",
-  "id": "39E",
-  "label": "Board settings · phone",
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54P",
+  "label": "Lanes",
   "note": ""
  },
  {
-  "page": "Lumen 39 Board Settings.dc.html",
-  "id": "39F",
-  "label": "All patterns",
+  "page": "Lumen 54 Plans and Timelines.dc.html",
+  "id": "54Q",
+  "label": "Organize sheet · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 39 Board Settings.dc.html",
-  "id": "39G",
-  "label": "All patterns · Paper",
+  "page": "Lumen 55 Today Calendar Tasks.dc.html",
+  "id": "55A",
+  "label": "Today · Lamplight",
+  "note": "Plan my day fills free slots from each plan’s pace and today’s review load. You confirm before anything moves."
+ },
+ {
+  "page": "Lumen 55 Today Calendar Tasks.dc.html",
+  "id": "55B",
+  "label": "Today · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 40 Mixed Board.dc.html",
-  "id": "40A",
-  "label": "Chooser · Lamplight",
-  "note": "Not sure? Start with Board. Templates and Import rows sit under the cards; the folder picker stays."
- },
- {
-  "page": "Lumen 40 Mixed Board.dc.html",
-  "id": "40B",
-  "label": "Chooser · Paper",
+  "page": "Lumen 55 Today Calendar Tasks.dc.html",
+  "id": "55C",
+  "label": "Today · phone",
   "note": ""
  },
  {
-  "page": "Lumen 40 Mixed Board.dc.html",
-  "id": "40C",
-  "label": "Chooser · phone",
+  "page": "Lumen 55 Today Calendar Tasks.dc.html",
+  "id": "55D",
+  "label": "Month",
+  "note": "Busy-week warning compares planned hours against your pace and offers Rebalance."
+ },
+ {
+  "page": "Lumen 55 Today Calendar Tasks.dc.html",
+  "id": "55E",
+  "label": "Week · suggestions dashed",
+  "note": "Auto-schedule proposes dashed blocks from plan pace; drag one or press Accept all."
+ },
+ {
+  "page": "Lumen 55 Today Calendar Tasks.dc.html",
+  "id": "55F",
+  "label": "Month · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 40 Mixed Board.dc.html",
-  "id": "40D",
-  "label": "Board · Lamplight",
+  "page": "Lumen 55 Today Calendar Tasks.dc.html",
+  "id": "55G",
+  "label": "Month · phone",
+  "note": "Phone month shows coloured bars per day; the agenda for the tapped day sits below."
+ },
+ {
+  "page": "Lumen 55 Today Calendar Tasks.dc.html",
+  "id": "55H",
+  "label": "Week · phone (3 days)",
   "note": ""
  },
  {
-  "page": "Lumen 40 Mixed Board.dc.html",
-  "id": "40E",
+  "page": "Lumen 55 Today Calendar Tasks.dc.html",
+  "id": "55I",
+  "label": "List + detail",
+  "note": "Quick add parses dates, #tags and !priority. The task is still a Markdown checkbox in its note."
+ },
+ {
+  "page": "Lumen 55 Today Calendar Tasks.dc.html",
+  "id": "55J",
   "label": "Board · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 40 Mixed Board.dc.html",
-  "id": "40F",
-  "label": "Board · phone",
+  "page": "Lumen 55 Today Calendar Tasks.dc.html",
+  "id": "55K",
+  "label": "Tasks · phone",
   "note": ""
  },
  {
-  "page": "Lumen 40 Mixed Board.dc.html",
-  "id": "40G",
-  "label": "Note card states",
-  "note": "Collapsed, card, expanded (inline editor), missing note. Plus Mermaid card, link card, PDF page card (Later)."
- },
- {
-  "page": "Lumen 40 Mixed Board.dc.html",
-  "id": "40H",
-  "label": "Convert menu",
-  "note": "Always a copy. Each target says what is kept and what is lost."
- },
- {
-  "page": "Lumen 41 Presentation.dc.html",
-  "id": "41A",
-  "label": "Presenting",
+  "page": "Lumen 56 Ask Enhanced.dc.html",
+  "id": "56A",
+  "label": "Empty · Lamplight",
   "note": ""
  },
  {
-  "page": "Lumen 41 Presentation.dc.html",
-  "id": "41B",
-  "label": "With presenter notes",
-  "note": "Notes come from the frame description."
- },
- {
-  "page": "Lumen 41 Presentation.dc.html",
-  "id": "41C",
-  "label": "Paper board presenting",
+  "page": "Lumen 56 Ask Enhanced.dc.html",
+  "id": "56B",
+  "label": "Scope menu",
   "note": ""
  },
  {
-  "page": "Lumen 41 Presentation.dc.html",
-  "id": "41D",
-  "label": "Phone",
+  "page": "Lumen 56 Ask Enhanced.dc.html",
+  "id": "56C",
+  "label": "Empty · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 41 Presentation.dc.html",
-  "id": "41E",
-  "label": "Frames panel = slide order",
+  "page": "Lumen 56 Ask Enhanced.dc.html",
+  "id": "56D",
+  "label": "Streaming",
   "note": ""
  },
  {
-  "page": "Lumen 41 Presentation.dc.html",
-  "id": "41F",
-  "label": "Same controls in every workspace + phone remote",
+  "page": "Lumen 56 Ask Enhanced.dc.html",
+  "id": "56E",
+  "label": "Slow · model busy",
+  "note": "After 6 s the line says why and offers Stop or a smaller scope."
+ },
+ {
+  "page": "Lumen 56 Ask Enhanced.dc.html",
+  "id": "56F",
+  "label": "Answer + sources",
+  "note": "Numbered citations map to the Sources panel; clicking one opens the note at that paragraph."
+ },
+ {
+  "page": "Lumen 56 Ask Enhanced.dc.html",
+  "id": "56G",
+  "label": "Saved as note · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 42 Export Dialog.dc.html",
-  "id": "42A",
-  "label": "Whiteboard · PDF, one page per frame",
-  "note": "Scope Frames with thumbnails; 3 of 5 picked. PDF adds page size, orientation and margins."
- },
- {
-  "page": "Lumen 42 Export Dialog.dc.html",
-  "id": "42B",
-  "label": "Board · PNG · Paper",
-  "note": ""
- },
- {
-  "page": "Lumen 42 Export Dialog.dc.html",
-  "id": "42C",
-  "label": "Canvas · PNG transparent · too large",
-  "note": "Background Transparent shows a checkerboard. At this size the browser limits scale to 3×, said in one line."
- },
- {
-  "page": "Lumen 42 Export Dialog.dc.html",
-  "id": "42D",
-  "label": "Mermaid · SVG",
-  "note": ""
- },
- {
-  "page": "Lumen 42 Export Dialog.dc.html",
-  "id": "42E",
-  "label": "Architecture · Mermaid + copy menu",
-  "note": "Extra formats: Lumen code, draw.io XML, SQL DDL, Markdown with a component table. Mermaid kinds: architecture-beta, flowchart, erDiagram, C4, block-beta."
- },
- {
-  "page": "Lumen 42 Export Dialog.dc.html",
-  "id": "42F",
-  "label": "Rendering",
-  "note": "Rendering runs off the main thread; Download shows progress."
- },
- {
-  "page": "Lumen 42 Export Dialog.dc.html",
-  "id": "42G",
-  "label": "Media placeholders warning · Paper",
-  "note": "GIF and video can’t animate inside images."
- },
- {
-  "page": "Lumen 42 Export Dialog.dc.html",
-  "id": "42H",
-  "label": "Done toast",
-  "note": ""
- },
- {
-  "page": "Lumen 42 Export Dialog.dc.html",
-  "id": "42I",
-  "label": "Phone · one sheet with sections",
-  "note": "Preview on top; options scroll under it; Download stays pinned."
- },
- {
-  "page": "Lumen 43 Canvas Options.dc.html",
-  "id": "43A",
-  "label": "Options · Lamplight",
-  "note": ""
- },
- {
-  "page": "Lumen 43 Canvas Options.dc.html",
-  "id": "43B",
-  "label": "Options · Paper",
-  "note": ""
- },
- {
-  "page": "Lumen 43 Canvas Options.dc.html",
-  "id": "43C",
-  "label": "Canvas export",
-  "note": "Canvas-only toggles: card style, group labels, edge labels."
- },
- {
-  "page": "Lumen 43 Canvas Options.dc.html",
-  "id": "43D",
-  "label": "Options · phone",
-  "note": ""
- },
- {
-  "page": "Lumen 44 Phone.dc.html",
-  "id": "44A",
-  "label": "Drawing · shape selected",
-  "note": ""
- },
- {
-  "page": "Lumen 44 Phone.dc.html",
-  "id": "44B",
-  "label": "Pen sheet",
-  "note": ""
- },
- {
-  "page": "Lumen 44 Phone.dc.html",
-  "id": "44C",
-  "label": "Palette sheet",
-  "note": ""
- },
- {
-  "page": "Lumen 44 Phone.dc.html",
-  "id": "44D",
-  "label": "Shape library",
-  "note": ""
- },
- {
-  "page": "Lumen 44 Phone.dc.html",
-  "id": "44E",
-  "label": "Layers",
-  "note": ""
- },
- {
-  "page": "Lumen 44 Phone.dc.html",
-  "id": "44F",
-  "label": "Board settings",
-  "note": ""
- },
- {
-  "page": "Lumen 44 Phone.dc.html",
-  "id": "44G",
-  "label": "Board ⋯ menu",
-  "note": ""
- },
- {
-  "page": "Lumen 44 Phone.dc.html",
-  "id": "44H",
-  "label": "Tool wheel",
-  "note": "In pen mode one finger pans, so the wheel opens with a two-finger long-press."
- },
- {
-  "page": "Lumen 44 Phone.dc.html",
-  "id": "44I",
-  "label": "Lasso + actions",
-  "note": ""
- },
- {
-  "page": "Lumen 44 Phone.dc.html",
-  "id": "44J",
-  "label": "AI review",
-  "note": ""
- },
- {
-  "page": "Lumen 44 Phone.dc.html",
-  "id": "44K",
+  "page": "Lumen 56 Ask Enhanced.dc.html",
+  "id": "56H",
   "label": "Empty",
   "note": ""
  },
  {
-  "page": "Lumen 44 Phone.dc.html",
-  "id": "44L",
-  "label": "Arabic · RTL",
-  "note": "Dock, sheets and header mirror. Drawing, arrows and handwriting never mirror."
- },
- {
-  "page": "Lumen 45 Components R6.dc.html",
-  "id": "45A",
-  "label": "Components · Lamplight",
+  "page": "Lumen 56 Ask Enhanced.dc.html",
+  "id": "56I",
+  "label": "Answer",
   "note": ""
  },
  {
-  "page": "Lumen 45 Components R6.dc.html",
-  "id": "45B",
-  "label": "Components · Paper",
+  "page": "Lumen 56 Ask Enhanced.dc.html",
+  "id": "56J",
+  "label": "Streaming",
   "note": ""
  },
  {
-  "page": "Lumen 45 Components R6.dc.html",
-  "id": "45C",
-  "label": "Connectors",
+  "page": "Lumen 57 Review.dc.html",
+  "id": "57A",
+  "label": "By space",
   "note": ""
  },
  {
-  "page": "Lumen 45 Components R6.dc.html",
-  "id": "45D",
-  "label": "Style · text · sticky",
+  "page": "Lumen 57 Review.dc.html",
+  "id": "57B",
+  "label": "By plan",
+  "note": "Plan decks follow the course or project; the current module comes first."
+ },
+ {
+  "page": "Lumen 57 Review.dc.html",
+  "id": "57C",
+  "label": "By tag · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 45 Components R6.dc.html",
-  "id": "45E",
-  "label": "Note card states",
+  "page": "Lumen 57 Review.dc.html",
+  "id": "57D",
+  "label": "By card type",
   "note": ""
  },
  {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46A",
-  "label": "Diagram types · Lamplight",
+  "page": "Lumen 57 Review.dc.html",
+  "id": "57E",
+  "label": "Custom study",
   "note": ""
  },
  {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46B",
-  "label": "Diagram types · Paper",
+  "page": "Lumen 57 Review.dc.html",
+  "id": "57F",
+  "label": "Question",
+  "note": "One action: Show answer (Space)."
+ },
+ {
+  "page": "Lumen 57 Review.dc.html",
+  "id": "57G",
+  "label": "Answer + ratings",
   "note": ""
  },
  {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46C",
-  "label": "50 / 50 · Lamplight",
-  "note": "Typing updates the canvas within 300 ms; existing nodes keep their positions; only new nodes get placed."
- },
- {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46D",
-  "label": "50 / 50 · Paper",
+  "page": "Lumen 57 Review.dc.html",
+  "id": "57H",
+  "label": "Cloze · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46E",
-  "label": "Canvas only",
+  "page": "Lumen 57 Review.dc.html",
+  "id": "57I",
+  "label": "Done",
   "note": ""
  },
  {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46F",
-  "label": "Code only · Mermaid tab",
+  "page": "Lumen 57 Review.dc.html",
+  "id": "57J",
+  "label": "Hub",
   "note": ""
  },
  {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46G",
-  "label": "Hover code ⇄ node",
-  "note": "Hover line 9 and DB highlights; hover a node and its line lights."
- },
- {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46H",
-  "label": "Syntax error",
-  "note": "Inline marker, wavy underline, one-line banner. Canvas keeps the last good diagram."
- },
- {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46I",
-  "label": "Autocomplete",
-  "note": "Icons, node names and keywords."
- },
- {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46J",
-  "label": "Paste-in conversion · Paper",
-  "note": "Paste Mermaid, draw.io XML or SQL DDL → inline confirm bar."
- },
- {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46K",
-  "label": "JSON tab",
+  "page": "Lumen 57 Review.dc.html",
+  "id": "57K",
+  "label": "Answer",
   "note": ""
  },
  {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46L",
-  "label": "Properties · Lamplight",
-  "note": "Name, kind, icon, technology, description, status, links (notes, RFC, REQ-n, repo, hub cards), owner, cost, SLA, tags, reuse."
- },
- {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46M",
-  "label": "Properties · Paper",
+  "page": "Lumen 57 Review.dc.html",
+  "id": "57L",
+  "label": "Cloze",
   "note": ""
  },
  {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46N",
-  "label": "Canvas",
+  "page": "Lumen 57 Review.dc.html",
+  "id": "57M",
+  "label": "Custom study",
   "note": ""
  },
  {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46O",
-  "label": "Library sheet",
+  "page": "Lumen 58 Versioning.dc.html",
+  "id": "58A",
+  "label": "Inline diff",
+  "note": "Restore makes a new version, so nothing is lost. Restore selection takes back only the lines you pick."
+ },
+ {
+  "page": "Lumen 58 Versioning.dc.html",
+  "id": "58B",
+  "label": "Side by side · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46P",
-  "label": "Properties sheet",
+  "page": "Lumen 58 Versioning.dc.html",
+  "id": "58C",
+  "label": "Compare any two",
+  "note": "Pick any two versions, including a named one."
+ },
+ {
+  "page": "Lumen 58 Versioning.dc.html",
+  "id": "58D",
+  "label": "Name this version",
+  "note": "Named versions are kept forever. They are also made automatically before AI edits, restores and conversions."
+ },
+ {
+  "page": "Lumen 58 Versioning.dc.html",
+  "id": "58E",
+  "label": "Conflict",
   "note": ""
  },
  {
-  "page": "Lumen 46 Architecture Studio.dc.html",
-  "id": "46Q",
-  "label": "Long-press menu",
+  "page": "Lumen 58 Versioning.dc.html",
+  "id": "58F",
+  "label": "PDF v4 → v5",
   "note": ""
  },
  {
-  "page": "Lumen 47 Architecture Nodes.dc.html",
-  "id": "47A",
-  "label": "Kit · Lamplight",
+  "page": "Lumen 58 Versioning.dc.html",
+  "id": "58G",
+  "label": "PDF · Paper",
   "note": ""
  },
  {
-  "page": "Lumen 47 Architecture Nodes.dc.html",
-  "id": "47B",
-  "label": "Kit · Paper",
+  "page": "Lumen 58 Versioning.dc.html",
+  "id": "58H",
+  "label": "Versions & history settings",
   "note": ""
  },
  {
-  "page": "Lumen 47 Architecture Nodes.dc.html",
-  "id": "47C",
-  "label": "Glyphs · Lamplight",
+  "page": "Lumen 58 Versioning.dc.html",
+  "id": "58I",
+  "label": "History",
   "note": ""
  },
  {
-  "page": "Lumen 47 Architecture Nodes.dc.html",
-  "id": "47D",
-  "label": "Glyphs · Paper",
+  "page": "Lumen 58 Versioning.dc.html",
+  "id": "58J",
+  "label": "Conflict",
   "note": ""
  },
  {
-  "page": "Lumen 48 Architecture Layout AI Model.dc.html",
-  "id": "48A",
-  "label": "Layout preview",
+  "page": "Lumen 58 Versioning.dc.html",
+  "id": "58K",
+  "label": "Document versions",
   "note": ""
  },
  {
-  "page": "Lumen 48 Architecture Layout AI Model.dc.html",
-  "id": "48B",
-  "label": "Layout · canvas only · Paper",
-  "note": ""
- },
- {
-  "page": "Lumen 48 Architecture Layout AI Model.dc.html",
-  "id": "48C",
-  "label": "Describe → diagram",
-  "note": "Also code, OpenAPI, docker-compose, k8s, Terraform, SQL, an RFC note, or a whiteboard sketch."
- },
- {
-  "page": "Lumen 48 Architecture Layout AI Model.dc.html",
-  "id": "48D",
-  "label": "Edit by instruction · diff",
-  "note": "Added green, removed red, changed amber, on the canvas and in the code. Accept or Reject."
- },
- {
-  "page": "Lumen 48 Architecture Layout AI Model.dc.html",
-  "id": "48E",
-  "label": "Review",
-  "note": "Explanation, single points of failure, missing auth / encryption / backups, STRIDE. Turn into a note or tasks; Docs and Flashcards tabs."
- },
- {
-  "page": "Lumen 48 Architecture Layout AI Model.dc.html",
-  "id": "48F",
-  "label": "Diff · Paper",
-  "note": ""
- },
- {
-  "page": "Lumen 48 Architecture Layout AI Model.dc.html",
-  "id": "48G",
-  "label": "Insert existing object",
-  "note": "Linked objects show “Used in 3 diagrams”; edits update everywhere."
- },
- {
-  "page": "Lumen 48 Architecture Layout AI Model.dc.html",
-  "id": "48H",
-  "label": "C4 component level",
-  "note": "Double-click a container to go in; breadcrumb back."
- },
- {
-  "page": "Lumen 48 Architecture Layout AI Model.dc.html",
-  "id": "48I",
-  "label": "Version diff",
-  "note": "Compare two versions from History."
- },
- {
-  "page": "Lumen 48 Architecture Layout AI Model.dc.html",
-  "id": "48J",
-  "label": "Phone · describe",
-  "note": ""
- },
- {
-  "page": "Lumen 49 Shared Library.dc.html",
-  "id": "49A",
-  "label": "Architecture first",
-  "note": ""
- },
- {
-  "page": "Lumen 49 Shared Library.dc.html",
-  "id": "49B",
-  "label": "Search",
-  "note": ""
- },
- {
-  "page": "Lumen 49 Shared Library.dc.html",
-  "id": "49C",
-  "label": "Vendor icons on · Paper",
-  "note": ""
- },
- {
-  "page": "Lumen 49 Shared Library.dc.html",
-  "id": "49D",
-  "label": "Drawing tab inside the studio",
-  "note": ""
- },
- {
-  "page": "Lumen 49 Shared Library.dc.html",
-  "id": "49E",
-  "label": "Whiteboard: drawing first",
-  "note": ""
- },
- {
-  "page": "Lumen 49 Shared Library.dc.html",
-  "id": "49F",
-  "label": "Categories, order, vendor packs",
-  "note": ""
- },
- {
-  "page": "Lumen 50 Drag and Drop.dc.html",
-  "id": "50A",
-  "label": "States · Lamplight",
-  "note": ""
- },
- {
-  "page": "Lumen 50 Drag and Drop.dc.html",
-  "id": "50B",
-  "label": "States · Paper",
-  "note": ""
- },
- {
-  "page": "Lumen 50 Drag and Drop.dc.html",
-  "id": "50C",
-  "label": "Phone",
-  "note": ""
- },
- {
-  "page": "Lumen 51 Templates.dc.html",
-  "id": "51A",
-  "label": "Gallery · Lamplight",
-  "note": ""
- },
- {
-  "page": "Lumen 51 Templates.dc.html",
-  "id": "51B",
-  "label": "Gallery · Paper",
-  "note": ""
- },
- {
-  "page": "Lumen 52 Conversions.dc.html",
-  "id": "52A",
-  "label": "Convert menu · whiteboard",
-  "note": ""
- },
- {
-  "page": "Lumen 52 Conversions.dc.html",
-  "id": "52B",
-  "label": "Matrix + chips",
-  "note": ""
- },
- {
-  "page": "Lumen 52 Conversions.dc.html",
-  "id": "52C",
-  "label": "Matrix · Paper",
+  "page": "Lumen 58 Versioning.dc.html",
+  "id": "58L",
+  "label": "Name version",
   "note": ""
  }
 ]

@@ -2,38 +2,26 @@
  * Versions are grouped by day (Today / Earlier); each row shows the device and +/− characters against the version
  * before it; named versions (bookmark) carry a label you can set or change (double-click, F2 or the pin button).
  * "Restore as new version" never overwrites: the current text is saved as a version, then the old text becomes the
- * note and a new "Restored from …" version on top. Diff opens the full comparison over the note.
+ * note and a new "Restored from …" version on top. Diff and Compare open the version studio (components/versions: word-level diff, compare any two, name, restore lines).
  * Activity (lib/activity.ts): what happened to the note, grouped by day; entries tied to a version can be previewed and
  * restored with the same restore as the Versions tab. "All notes" lists recent activity across the vault. */
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Activity, Note, Version } from "../../shared/types";
-import { snapshot, updateNote } from "../lib/actions";
-import { ACTIVITY_CAP, activityHint, charDelta } from "../lib/activity";
+import { snapshot } from "../lib/actions";
+import { ACTIVITY_CAP, charDelta } from "../lib/activity";
 import { db, save } from "../lib/db";
 import { fmtDate, fmtNum, t } from "../lib/i18n";
 import { useRecentOpened } from "../lib/recent-opened";
 import { openNote, toast, useVault } from "../lib/store";
 import { Glyph } from "./Glyph";
-import { DiffOverlay } from "./RightPanel";
+import { useConflicts, openConflict } from "../lib/conflicts";
+import { VersionStudio } from "./versions/VersionStudio";
+import { DAY, dayStart, hm, isNamed, isRestore, restoreFromVersion, restoreText, whenShort } from "./versions/vs-util";
 import { cx } from "./ui";
 
 export { charDelta };
 
-const DAY = 86400000;
-const dayStart = (ts: number) => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
-const hm = (ts: number) => fmtDate(ts, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-/** "Yesterday 23:05", "Mon 20:18" (this week), "8 Nov 20:18". */
-function whenShort(ts: number) {
-  const d0 = dayStart(Date.now());
-  if (ts >= d0) return hm(ts);
-  if (ts >= d0 - DAY) return t("Yesterday {time}", { time: hm(ts) });
-  if (ts >= d0 - 6 * DAY) return `${fmtDate(ts, { weekday: "short" })} ${hm(ts)}`;
-  return `${fmtDate(ts, { day: "numeric", month: "short", ...(new Date(ts).getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}) })} ${hm(ts)}`;
-}
-const isRestore = (v: Version) => v.label.startsWith("Restored") || v.label === "Before restore" || v.label === "Before keeping the other version";
-const isNamed = (v: Version) => !!v.label && !isRestore(v) && !v.label.startsWith("Other version");
-const restoreText = (l: string) => (l.startsWith("Restored from ") ? t("Restored from {when}", { when: l.slice(14) }) : t(l));
 function rowTitle(v: Version) {
   const today = v.createdAt >= dayStart(Date.now());
   if (isRestore(v)) return today && v.label === "Before restore" ? `${hm(v.createdAt)} · ${t("Before restore")}` : restoreText(v.label);
@@ -64,8 +52,9 @@ function Versions({ note }: { note: Note }) {
   const deltas = useMemo(() => live.map((v, i) => charDelta(live[i + 1]?.body ?? "", v.body)), [live]);
   const current = useMemo(() => charDelta(live[0]?.body ?? "", note.body), [live, note.body]);
   const [selId, setSelId] = useState<string | null>(null);
-  const [diff, setDiff] = useState(false);
+  const [diff, setDiff] = useState<false | "diff" | "compare">(false);
   const [naming, setNaming] = useState<string | null>(null); // version id, or "current" = save a named version now
+  const conflict = useConflicts().find((x) => x.noteId === note.id);
   const sel = live.find((v) => v.id === selId) ?? (selId === null ? live[0] ?? null : null);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -75,8 +64,7 @@ function Versions({ note }: { note: Note }) {
       const i = sel ? live.findIndex((v) => v.id === sel.id) : -1;
       if (e.key === "ArrowDown" && i < live.length - 1) { e.preventDefault(); setSelId(live[i + 1].id); }
       else if (e.key === "ArrowUp" && i > 0) { e.preventDefault(); setSelId(live[i - 1].id); }
-      else if (e.key === "Escape" && diff) setDiff(false);
-      else if (e.key === "F2" && sel) { e.preventDefault(); setNaming(sel.id); }
+            else if (e.key === "F2" && sel) { e.preventDefault(); setNaming(sel.id); }
     };
     addEventListener("keydown", k);
     return () => removeEventListener("keydown", k);
@@ -99,6 +87,11 @@ function Versions({ note }: { note: Note }) {
   let shownEarlier = false;
   return (
     <div ref={ref} className="flex min-h-0 flex-1 flex-col">
+      {conflict && (
+        <button onClick={() => openConflict(conflict.id)} className="mx-3 mt-2.5 flex shrink-0 items-center gap-2 rounded-[9px] border border-accent/50 bg-accent/10 px-3 py-2 text-start text-[12.5px]">
+          <Glyph name="merge" size={14} color="var(--accent)" /><span className="min-w-0 flex-1">{t("Edited on two devices")}</span><span className="font-semibold text-accent">{t("Resolve")}</span>
+        </button>
+      )}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-2">
         {head(t("Today"))}
         <Row glyph="s-learning" title={t("Current")} sub={t("This device")} d={current} on={false} onClick={() => { setSelId(null); setDiff(false); }}
@@ -119,22 +112,12 @@ function Versions({ note }: { note: Note }) {
       </div>
       <div className="mt-auto flex shrink-0 gap-2 border-t border-line px-3.5 py-3">
         <button disabled={!sel} onClick={() => void restore()} className="flex h-8 flex-1 items-center justify-center rounded-[8px] bg-accent font-semibold text-accent-fg hover:brightness-110 disabled:opacity-50">{t("Restore as new version")}</button>
-        <button disabled={!sel} aria-pressed={diff} onClick={() => setDiff(!diff)} className={cx("flex h-8 items-center rounded-[8px] border border-line px-2.5 hover:bg-surface-2 disabled:opacity-50", diff && "bg-surface-2")}>{t("Diff")}</button>
+        <button disabled={!sel} onClick={() => setDiff("diff")} className="flex h-8 items-center rounded-[8px] border border-line px-2.5 hover:bg-surface-2 disabled:opacity-50">{t("Diff")}</button>
+        <button disabled={live.length < 2} onClick={() => setDiff("compare")} className="flex h-8 items-center rounded-[8px] border border-line px-2.5 hover:bg-surface-2 disabled:opacity-50">{t("Compare")}</button>
       </div>
-      {diff && sel && <DiffOverlay anchor={ref} note={note} v={sel} onClose={() => setDiff(false)} onRestore={() => void restore()} />}
+      {diff && (sel || live[0]) && <VersionStudio note={note} initialId={(sel ?? live[0]).id} compare={diff === "compare"} onClose={() => setDiff(false)} />}
     </div>
   );
-}
-
-/** Restore as new version (Versions tab and Activity "Restore to here"): logged as "reverted", undoable from the toast. */
-async function restoreFromVersion(note: Note, v: Version, latestBody: string | undefined) {
-  const before = { title: note.title, body: note.body };
-  const when = whenShort(v.createdAt);
-  if (latestBody !== note.body) await snapshot(note, "");
-  activityHint(note.id, { action: "reverted", ver: v.id, from: String(v.createdAt) });
-  await updateNote(note.id, { title: v.title, body: v.body });
-  await snapshot({ ...note, title: v.title, body: v.body }, `Restored from ${fmtDate(v.createdAt, { day: "numeric", month: "short" })}`);
-  toast(t("Restored from {when}", { when }), { label: t("Undo"), run: () => { activityHint(note.id, { action: "reverted", to: "undo" }); void updateNote(note.id, before); } });
 }
 
 function Row({ glyph, title, sub, d, on, onClick, onDoubleClick, naming, nameInit, onName, onNamed, onCancelName, nameTitle }: {
@@ -327,7 +310,7 @@ function ActivityTab({ note }: { note: Note }) {
         )}
         {scope === "note" && list.length >= ACTIVITY_CAP && <p className="px-3.5 pt-2 text-[11.5px] text-muted">{t("Only the last {n} entries are kept for each note.", { n: ACTIVITY_CAP })}</p>}
       </div>
-      {preview && <DiffOverlay anchor={ref} note={note} v={preview} onClose={() => setPreview(null)} onRestore={() => void restoreTo(preview)} />}
+      {preview && <VersionStudio note={note} initialId={preview.id} onClose={() => setPreview(null)} />}
     </div>
   );
 }
