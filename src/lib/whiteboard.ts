@@ -2,6 +2,7 @@
 // Protocol: GET/PUT /api/whiteboard/:id (full .excalidraw JSON), or POST /api/whiteboard/:id/elements with
 // { "skeleton": [...] } (Excalidraw element skeletons) which the app converts and merges on next open.
 import type { JsonCanvas } from "../../shared/types";
+import { sanitizeElements } from "./board-sanitize";
 import { colorOf } from "./canvas";
 import { t } from "./i18n";
 
@@ -24,7 +25,8 @@ export function parseScene(text: string): { scene: Scene; error: string | null }
   try {
     const s = JSON.parse(text) as Scene;
     if (!s || !Array.isArray(s.elements)) return { scene: { ...EMPTY_SCENE }, error: t("Missing {key} array", { key: "`elements`" }) };
-    return { scene: { ...EMPTY_SCENE, ...s }, error: null };
+    // Every element made safe for Excalidraw (compact tombstones of strokes have no `points`, see board-sanitize.ts).
+    return { scene: { ...EMPTY_SCENE, ...s, elements: sanitizeElements(s.elements) }, error: null };
   } catch (e) {
     return { scene: { ...EMPTY_SCENE }, error: `JSON: ${(e as Error).message}` };
   }

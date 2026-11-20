@@ -1,5 +1,6 @@
 import { Excalidraw, convertToExcalidrawElements, exportToBlob, exportToSvg, reconcileElements, restore, restoreElements, serializeAsJSON } from "@excalidraw/excalidraw";
 import { carriedFrom } from "../lib/board-merge";
+import { sanitizeElements } from "../lib/board-sanitize";
 import { ensureIndices } from "../../shared/board-index";
 import "@excalidraw/excalidraw/index.css";
 import { Check, Shapes, StickyNote, GitFork, Workflow, X } from "lucide-react";
@@ -566,7 +567,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     const hit = (x: number, y: number) => live.some((e) => x < e.x + e.width + 16 && x + cw + 16 > e.x && y < e.y + e.height + 16 && y + ch + 16 > e.y);
     for (let i = 0; i < 12 && hit(px, py); i++) { if (i % 4 === 3) { px -= (cw + 24) * 3; py += ch + 24; } else px += cw + 24; }
     // the skeleton converter passes an embeddable through half-made (no groupIds / boundElements…): restoreElements fills it
-    const els = restoreElements(convertToExcalidrawElements([{ ...cardSkeleton(c, px, py), id }] as never, { regenerateIds: false }) as never, null);
+    const els = restoreElements(sanitizeElements(convertToExcalidrawElements([{ ...cardSkeleton(c, px, py), id }] as never, { regenerateIds: false }) as unknown[]) as never, null);
     a.updateScene({ elements: [...a.getSceneElementsIncludingDeleted(), ...els], appState: { selectedElementIds: { [id]: true } }, captureUpdate: "IMMEDIATELY" });
     a.setActiveTool({ type: "selection" });
     scheduleSave(200);
@@ -743,7 +744,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     if (!a || !skel.length) return;
     // Sticky ink is pure black so it stays dark on paper in both themes (see INK_TABLE).
     const fixed = skel.map((k) => (k.type === "rectangle" && PAPER.includes(String(k.backgroundColor).toLowerCase()) && k.label ? { ...k, label: { ...(k.label as object), strokeColor: "#000000" } } : k));
-    const conv = convertToExcalidrawElements(placeBoundArrows(fixed as Skeleton[], a.getSceneElements() as never) as never, { regenerateIds: false }) as unknown as El[];
+    const conv = sanitizeElements<El>(convertToExcalidrawElements(placeBoundArrows(fixed as Skeleton[], a.getSceneElements() as never) as never, { regenerateIds: false }) as unknown[]);
     const stickyIds = new Set(conv.filter(isSticky).map((e) => e.id));
     const els = conv.map((e) => (e.type === "text" && e.containerId && stickyIds.has(e.containerId) ? { ...e, strokeColor: "#000000" } : e));
     a.updateScene({ elements: [...a.getSceneElementsIncludingDeleted(), ...els] });
@@ -753,7 +754,8 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   // Apply skeletons pushed through the REST API (lumenPending), once the editor is ready.
   const applyPending = (sc: Scene) => {
     if (!sc.lumenPending?.length) return;
-    const pending = sc.lumenPending;
+    // REST skeletons: only objects with a type reach the converter (the converted elements are sanitised in add()).
+    const pending = sc.lumenPending.filter((k) => k && typeof k === "object" && typeof k.type === "string");
     sc.lumenPending = undefined; // save() serializes from the editor, which never includes lumenPending
     void add(pending, true);
     toast(t("Added {n} elements from the API", { n: pending.length }));
@@ -1624,8 +1626,9 @@ class BoardBoundary extends Component<{ note: Note; children: (k: number) => Rea
     this.setState({ busy: true });
     try {
       const { scene } = parseScene(this.props.note.body);
-      const ok = (scene.elements as unknown[]).filter((e) => e && typeof e === "object" && typeof (e as El).type === "string");
-      const els = restoreElements(ok as never, null, { repairBindings: true });
+      // Same sanitiser as every load path (fills points / pressures / groupIds / boundElements, drops what can't be
+      // repaired), then Excalidraw's restore for the rest. Tombstones drop out here; updateNote carries them over.
+      const els = restoreElements(sanitizeElements(scene.elements) as never, null, { repairBindings: true });
       await updateNote(this.props.note.id, { body: JSON.stringify({ ...scene, elements: els }) });
       toast(t("Board repaired"));
     } catch { toast(t("Couldn't repair this board")); }

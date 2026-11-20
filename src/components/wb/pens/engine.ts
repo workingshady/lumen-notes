@@ -2,6 +2,7 @@
 // the ruler edge and the highlighter z-order. All edits go through updateScene with one IMMEDIATELY capture per gesture,
 // so each gesture is one undo step.
 import { restoreElements } from "@excalidraw/excalidraw";
+import { sanitizeElements } from "../../../lib/board-sanitize";
 import type { WbAPI } from "../hooks";
 import { absPoints, isScratch, recognise, snappedElement, type Recognised } from "./shapes";
 import { circleBox, InkIndex, polyBox } from "./spatial";
@@ -91,7 +92,7 @@ export function withBound(els: readonly El[], ids: Set<string>) {
 
 /** Commit: replace the scene's elements (deleted flags, new elements) as one undo step. */
 export function commit(api: WbAPI, next: El[], capture: "IMMEDIATELY" | "EVENTUALLY" | "NEVER" = "IMMEDIATELY", appState?: Record<string, unknown>) {
-  api.updateScene({ elements: restoreElements(next as never, null, { refreshDimensions: false, repairBindings: true }), captureUpdate: capture, ...(appState ? { appState } : {}) });
+  api.updateScene({ elements: restoreElements(sanitizeElements(next) as never, null, { refreshDimensions: false, repairBindings: true }), captureUpdate: capture, ...(appState ? { appState } : {}) });
 }
 export function deleteIds(api: WbAPI, ids: Set<string>, capture: "IMMEDIATELY" | "EVENTUALLY" | "NEVER" = "IMMEDIATELY") {
   const all = api.getSceneElementsIncludingDeleted() as El[];

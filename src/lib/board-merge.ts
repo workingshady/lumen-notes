@@ -11,6 +11,7 @@
 //   `lumenPending` (REST skeletons not yet applied): union, minus skeletons whose id is already an element;
 // - everything else comes from the newer note. Parse failure or an oversized result → null (caller keeps LWW).
 import { ensureIndices } from "../../shared/board-index";
+import { sanitizeElement } from "./board-sanitize";
 import { MAX_ITEM_BYTES } from "./sync-plan";
 
 export const TOMBSTONE_TTL = 7 * 24 * 3_600_000;
@@ -52,7 +53,7 @@ export function mergeElements(local: readonly BoardEl[], remote: readonly BoardE
   for (const e of R) won.set(e.id, won.has(e.id) ? pickElement(won.get(e.id)!, e) : e);
   const live: BoardEl[] = [], dead: BoardEl[] = [];
   for (const e of won.values()) {
-    if (!e.isDeleted) live.push(e);
+    if (!e.isDeleted) { if (sanitizeElement(e)) live.push(e); } // unrepairable (e.g. a stroke without points) → dropped; the rest is filled on load
     else if (!expired(e, now)) dead.push(tombstone(e, now));
   }
   live.sort((a, b) => (a.index! < b.index! ? -1 : a.index! > b.index! ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
