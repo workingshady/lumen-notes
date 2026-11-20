@@ -36,7 +36,7 @@ const DISPLAY_DEFAULT: Display = { layout: "free", edges: "straight", links: tru
 /** Folder colours in design order (01 cyan, 02 orange, 03 purple, 04 green, 05 yellow, …). */
 const FOLDER_PAL = ["#39C5CF", "#E8893A", "#A371F7", "#57AB5A", "#E3B341", "#E5534B", "#7AA2F7", "#D37FB4", "#5CC8C2"];
 const MOC_C = "var(--text)", JOURNAL_C = "#6B7280";
-const TYPE_C: Record<string, string> = { note: "#9AA0AA", lesson: "#39C5CF", journal: JOURNAL_C, flashcards: "#B48EF0", slides: "#E8893A", post: "#57AB5A", canvas: "#A371F7", whiteboard: "#E3B341", roadmap: "#F2A93B", moc: MOC_C };
+const TYPE_C: Record<string, string> = { note: "#9AA0AA", lesson: "#39C5CF", journal: JOURNAL_C, flashcards: "#B48EF0", slides: "#E8893A", post: "#57AB5A", canvas: "#A371F7", whiteboard: "#E3B341", board: "#F2A93B", roadmap: "#F2A93B", moc: MOC_C };
 const STATUS_C: Record<string, string> = { todo: "#9AA0AA", learning: "#7AA2F7", review: "#E8B34A", mastered: "#6BCB8B", none: "#4B5260" };
 const css = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 /** Canvas can't paint `var(--x)`: resolve it first. */

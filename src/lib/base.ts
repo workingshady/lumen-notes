@@ -305,7 +305,7 @@ export function label(p: string) {
 export const editable = (p: string) => !["title", "folder", "created", "updated", "cards"].includes(canon(p));
 export const isDateProp = (p: string, sample?: Val) => ["created", "updated"].includes(canon(p)) || /date|due|deadline|day|when|start|end|review/i.test(canon(p)) || (typeof sample === "string" && /^\d{4}-\d{2}-\d{2}/.test(sample));
 
-const fmOf = (n: Note): Record<string, string> => (["canvas", "whiteboard", "diagram"].includes(n.type) ? {} : splitFrontMatter(n.body).data);
+const fmOf = (n: Note): Record<string, string> => (["canvas", "whiteboard", "board", "diagram"].includes(n.type) ? {} : splitFrontMatter(n.body).data);
 const listy = (s: string) => /^\[.*\]$/.test(s.trim()) ? s.trim().slice(1, -1).split(",").map((x) => x.trim().replace(/^["']|["']$/g, "")).filter(Boolean) : null;
 
 /** Front-matter + record props of a note (cached by the caller). */

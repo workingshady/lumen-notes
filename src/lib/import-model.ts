@@ -5,6 +5,7 @@
 // batch tagged with an import id, so the whole import can be undone.
 import type { NoteType } from "../../shared/types";
 import { fmtNum, t } from "./i18n";
+import { isWbType } from "../../shared/types";
 
 export type ImportSourceKind = "anki" | "notion" | "obsidian" | "markdown";
 
@@ -402,7 +403,7 @@ export function planTree(plan: ImportPlan, opts: { files?: boolean; pages?: bool
       node.noteKeys = [...(node.self ? [node.self] : []), ...node.children.flatMap(fill)];
       const kids = node.children;
       node.notes = kids.reduce((s, c) => s + (c.kind === "note" ? 1 : c.kind === "folder" ? (c.notes ?? 0) + (c.self ? 1 : 0) : 0), 0);
-      node.canvases = kids.reduce((s, c) => s + (c.kind === "note" && (c.badge === "canvas" || c.badge === "whiteboard") ? 1 : c.canvases ?? 0), 0);
+      node.canvases = kids.reduce((s, c) => s + (c.kind === "note" && (c.badge === "canvas" || isWbType(c.badge)) ? 1 : c.canvases ?? 0), 0);
       node.files = kids.reduce((s, c) => s + (c.kind === "folder" || c.kind === "file" ? c.files ?? 0 : 0), 0);
       node.bytes = kids.reduce((s, c) => s + (c.kind === "folder" || c.kind === "file" ? c.bytes ?? 0 : 0), 0);
       node.allCards = (node.self ? node.cards ?? 0 : 0) + kids.reduce((s, c) => s + (c.kind === "folder" ? c.allCards ?? 0 : c.cards ?? 0), 0);

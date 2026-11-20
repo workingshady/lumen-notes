@@ -23,6 +23,7 @@ import { BulkBar, DeskRow, Dropdown, FilterBox, FilterEmpty, GroupHeader, groupR
 import { EmptyState } from "./EmptyState";
 import { indexLabel, LIST_PAGE, useIndexStatus } from "../lib/big-vault";
 import { fmtDate, t, useLang } from "../lib/i18n";
+import { isWbType } from "../../shared/types";
 
 type Sort = "updated" | "created" | "title";
 /** Note type → glyph (Lumen 13 › B1 note types; the glyph name equals the type). Flashcards carry the violet "practice" colour. */
@@ -54,7 +55,7 @@ const dropSyntax = (s: string) => s.replace(/\s*[\u{1F4C5}\u{1F6EB}\u{23F3}]️?
   // round-4 Markdown: status pills keep their text; glyphs, block ids, ::: fences, {.attrs}, [[toc]] and == marks go
   .replace(/:status\[([^\]]*)\](\{[^}]*\})?/g, "$1").replace(/:glyph\[[^\]]*\]/g, "").replace(/\s\^[A-Za-z0-9-]+$/gm, "")
   .replace(/^\s*:{3,}.*$/gm, "").replace(/\{\.[^}]*\}/g, "").replace(/\[\[toc\]\]/gi, "").replace(/==/g, "");
-const preview = (n: Note) => (n.type === "canvas" ? t("Canvas board") : n.type === "whiteboard" ? t("Whiteboard") : noteDerived("listPreview", n, (x) => excerpt(dropSyntax(listBody(x.body.slice(0, 8000))), 160)) || t("Empty"));
+const preview = (n: Note) => (n.type === "canvas" ? t("Canvas board") : isWbType(n.type) ? t("Whiteboard") : noteDerived("listPreview", n, (x) => excerpt(dropSyntax(listBody(x.body.slice(0, 8000))), 160)) || t("Empty"));
 
 /**
  * Big vaults (design 20b A15): the list renders LIST_PAGE rows at a time; the footer says "Showing 200 of 738" and
@@ -297,7 +298,7 @@ export function TemplatePicker({ open, onClose, spaceId, folderId }: { open: boo
     <Sheet open={open} onClose={onClose} title={t("New from template")}>
       <div className="grid grid-cols-2 gap-2">
         {[...TEMPLATES.filter((tp) => tp.type === "base" || tp.type === "dashboard"), ...TEMPLATES.filter((tp) => tp.type !== "base" && tp.type !== "dashboard")].map((tp) => (
-          <button key={tp.id} onClick={async () => { onClose(); openNote((await createNote({ template: tp.id, spaceId, folderId })).id, tp.type === "slides" || tp.type === "canvas" || tp.type === "whiteboard" ? undefined : tp.type === "base" || tp.type === "dashboard" ? "read" : "edit"); }}
+          <button key={tp.id} onClick={async () => { onClose(); openNote((await createNote({ template: tp.id, spaceId, folderId })).id, tp.type === "slides" || tp.type === "canvas" || isWbType(tp.type) ? undefined : tp.type === "base" || tp.type === "dashboard" ? "read" : "edit"); }}
             className="rounded-[10px] border border-line p-3 text-start hover:border-accent">
             <div className="flex items-center gap-2 text-[13.5px] font-semibold"><span className="text-muted">{TYPE_ICON(tp.type)}</span>{t(tp.name)}</div>
             <div className="text-[12px] text-muted">{t(tp.hint)}</div>

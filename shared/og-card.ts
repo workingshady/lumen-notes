@@ -14,7 +14,7 @@ const plain = (md: string) => md.replace(/^---[\s\S]*?---/, "").replace(/```[\s\
   .replace(/^\s*(---|\*\*\*)\s*$/gm, "").replace(/\[![\w-]+\][+-]?/g, "").replace(/^\s*[-*+]\s+\[[ xX/>?-]\]\s+/gm, "").replace(/^\s*([-*+]|\d+\.)\s+/gm, "")
   .replace(/\s*\p{Extended_Pictographic}\uFE0F?\s*\d{4}-\d{2}-\d{2}/gu, "").replace(/@due\(\d{4}-\d{2}-\d{2}\)/g, "")
   .replace(/[#>*_`\[\]!]|\(.*?\)/g, "").replace(/\s+/g, " ").trim();
-const TYPE_LABEL: Record<string, string> = { path: "Learning path", roadmap: "Roadmap", slides: "Slides", canvas: "Canvas", whiteboard: "Whiteboard", flashcards: "Flashcards", lesson: "Lesson", post: "Post", base: "Base", dashboard: "Dashboard", diagram: "Diagram", moc: "Map of content", journal: "Journal" };
+const TYPE_LABEL: Record<string, string> = { path: "Learning path", roadmap: "Roadmap", slides: "Slides", canvas: "Canvas", whiteboard: "Whiteboard", board: "Board", flashcards: "Flashcards", lesson: "Lesson", post: "Post", base: "Base", dashboard: "Dashboard", diagram: "Diagram", moc: "Map of content", journal: "Journal" };
 
 /** Greedy word wrap by estimated glyph width (serif bold ≈ 0.52 em; CJK/Arabic a bit wider). */
 export function wrap(text: string, maxPx: number, fontPx: number, maxLines: number): string[] {

@@ -10,6 +10,7 @@ import { matcher, parseQuery } from "../lib/search";
 import { go, openNote, toast, useVault, type Vault } from "../lib/store";
 
 import { fmtDate, fmtRelative, t } from "../lib/i18n";
+import { isWbType } from "../../shared/types";
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
 /** ```query block: operators + optional `sort:updated|title|created` `limit:N` `view:list|table`. */
@@ -32,7 +33,7 @@ const plainHeading = (s: string) => s.replace(/[*_`[\]]/g, "").replace(/\s+#*\s*
 /** `![[Note]]` / `![[Note#Heading]]` source: the note body (no front-matter, no H1) or one section of it. */
 export function includeSource(v: Vault, title: string, heading: string): string | null {
   const n = v.byTitle.get(title.toLowerCase());
-  if (!n || n.deleted || n.type === "canvas" || n.type === "whiteboard") return null;
+  if (!n || n.deleted || n.type === "canvas" || isWbType(n.type)) return null;
   const body = n.body.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
   const lines = body.split("\n");
   if (!heading) return lines.filter((l, i) => !(i === lines.findIndex((x) => /^#\s/.test(x)) && /^#\s/.test(l))).join("\n");

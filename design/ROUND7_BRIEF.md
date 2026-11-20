@@ -8,6 +8,14 @@ Handoff: **`design/handoffs/2026-11-20-round-7/`** (from `Lumen Index Design Rou
 3. **Live render** of any page: http://localhost:5397/ + URL-encoded file name (server already running; don't start another).
 4. Behaviour and data: `docs/design/CLAUDE_DESIGN_UPDATE_06.md`, `docs/ARCHITECTURE_DIAGRAMS.md` (architecture studio), `docs/WHITEBOARD_CANVAS_PLAN.md` (engine facts, file plan).
 
+## The owner's bar (applies to every package in every wave)
+**Identical to Claude Design in everything:** UI, UX, layout, sizes, colours, type, icons, copy, animations, every click and flow, plus the logic and backend behind them, working with real data. Accurate, complete and fast. When the design shows it, the app does it.
+
+## Port the design code, don't redraw it
+- Translate the component's markup from the `.dc.html` source (WBStudio, ArchStudio, R6Parts, ExportDlg, CanvasBoard…) **1:1 into JSX**: same element structure, same inline values (px, colours via the token map, radii, fonts, gaps), same copy, same SVG. Templates map directly: `<sc-for>` → `.map()`, `<sc-if>` → `&&`, `{{ x }}` → `{x}`, `<dc-import name="LumenGlyph">` → `<Glyph>`. Then wire it to real state and data. Use the screenshots only to check the result.
+- **Nothing static.** Port the animations and transitions too (keyframes, durations, easing from the source), and make every click, hover, menu, popover, sheet, drag and state change in the design really work with real data and real logic, end to end. Each flow the frames show (open → choose → apply → undo, error → retry, phone gestures) must be clickable in the app, not a picture.
+- Helper scripts: Node.js (no Python).
+
 ## Rules (all packages)
 - **Identical to the design**, Lamplight + Paper where drawn, phone where drawn, Arabic RTL where drawn. Design tokens map to the app's CSS variables (`--bg --sf --sf2 --bd --tx --mu --ac …` in the design = `var(--bg) var(--surface) var(--surface-2) var(--border) var(--text) var(--muted) var(--accent) …` in the app; check `src/index.css`).
 - **Everything shown must really work**, including logic and backend. Items tagged [Later] in the brief: build them if the package's scope allows; otherwise render the designed UI and say exactly what's missing in your report (never fake success).
@@ -17,6 +25,7 @@ Handoff: **`design/handoffs/2026-11-20-round-7/`** (from `Lumen Index Design Rou
 - **Performance:** no main-thread freezes (images already shrink off-thread: `src/lib/wb-files.ts`); heavy libs (elkjs, pdf) are lazy chunks.
 - **File ownership:** only edit the files your package owns (table below) plus new files you create. Shared files: re-read right before editing, keep the change to a small hook, and mention it in the report. Other agents work at the same time.
 - **Don't** commit, deploy, start a second dev server, or run more than one Edge at a time; close the browser when done.
+- **Speed (owner's rule):** go fast, minimal testing: at most one quick screenshot check per main frame, no long test loops. Deploy happens after each wave.
 - **Check:** `npx tsc -b` and `npx vite build` must pass at the end. Browser check against the frames: app at http://localhost:5330/?demo=1 → click "Continue offline" → "Skip" through onboarding; demo whiteboard "Study plan — November", canvas "Backprop study board" (open with Ctrl+K + title, clicking the app shell first). puppeteer-core + Edge (`C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe`) are installed in `C:\Users\worki\AppData\Local\Temp\claude\a36550ff316812e0\7d09b627-7163-423d-8ee0-6ea8dedb02b4\scratchpad` (scripts go there). Save your app screenshots next to the frame they match: `design/verify/r7/<package>/<frameID>-app.png`.
 - **Report** (under 350 words): frames done (IDs), frames partly done and what's missing, files changed, new files, shared-file hooks, anything the next wave needs.
 

@@ -6,6 +6,7 @@ import { diagramFiles, fileFor, mermaidBlocks, saveDiagramFile, saveDiagramToCan
 import { t } from "./i18n";
 import { getSettings } from "./settings";
 import { getVault, toast } from "./store";
+import { isWbType } from "../../shared/types";
 
 const IDLE_MS = 4000;
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -22,7 +23,7 @@ async function run(noteId: string) {
   running.add(noteId);
   try {
     const note = await db.notes.get(noteId);
-    if (!note || note.deleted || note.type === "canvas" || note.type === "whiteboard" || note.type === "diagram") return;
+    if (!note || note.deleted || note.type === "canvas" || isWbType(note.type) || note.type === "diagram") return;
     const blocks = mermaidBlocks(note.body);
     if (!blocks.length) return;
     const v = getVault();

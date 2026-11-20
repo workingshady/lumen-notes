@@ -157,7 +157,7 @@ function useBackGesture(wide: boolean) {
 }
 
 /** Pages the design draws with the collapsed sidebar rail (LumenSidebar `collapsed` in the R4 desks + Lumen 04/07/08/11/17/20). */
-const RAIL_TYPES = new Set(["path", "pdf", "base", "dashboard", "canvas", "whiteboard"]);
+const RAIL_TYPES = new Set(["path", "pdf", "base", "dashboard", "canvas", "whiteboard", "board"]);
 function autoRail(ui: ReturnType<typeof getUI>, note: { type: string } | undefined, space: { kind: string; roadmapId: string | null } | undefined): boolean {
   if (ui.view === "today" || ui.view === "graph" || ui.view === "settings") return true;
   if (ui.view === "space") return !!space && (space.kind === "project" || (space.kind === "course" && !!space.roadmapId));

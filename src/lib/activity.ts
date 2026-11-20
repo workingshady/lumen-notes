@@ -91,7 +91,7 @@ if (typeof window !== "undefined") {
 }
 
 // ------------------------------------------------------------------ diff → entries
-const BOARD = new Set(["canvas", "whiteboard"]);
+const BOARD = new Set(["canvas", "whiteboard", "board"]);
 /** Markdown text without front-matter and the title line: type/status/tags/title changes live there and get their own entries. */
 const prose = (n: Note) => (BOARD.has(n.type) || n.type === "diagram" ? n.body : splitFrontMatter(n.body).body.replace(/^#\s+.*$/m, ""));
 const place = (n: Note) => `${n.spaceId}/${n.folderId ?? ""}`;

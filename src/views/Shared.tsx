@@ -25,6 +25,7 @@ function relTime(ts: number) {
   return fmtDate(ts, { day: "numeric", month: "short" });
 }
 import { Canvas2D, type GLink, type GNode } from "./GraphView";
+import { isWbType } from "../../shared/types";
 
 /** Read-only whiteboard with an API handle (zoom bar + PNG export). Excalidraw is a big chunk, so it loads on demand. */
 type ExApi = { getAppState: () => { zoom: { value: number } }; updateScene: (s: { appState: Record<string, unknown> }) => void; scrollToContent: (t?: unknown, o?: { fitToContent?: boolean; animate?: boolean }) => void; getSceneElements: () => readonly unknown[]; getFiles: () => Record<string, unknown>; onChange: (cb: (els: unknown, st: { zoom: { value: number } }) => void) => () => void };
@@ -79,10 +80,10 @@ type NoteData = { kind: "note"; blog: Brand; note: PubNote };
 
 const go = (path: string) => { history.pushState(null, "", path); dispatchEvent(new PopStateEvent("popstate")); };
 const SERIF = "'Source Serif 4', Georgia, serif";
-const KIND: Partial<Record<NoteType, string>> = { note: tk("Note"), lesson: tk("Lesson"), journal: tk("Journal"), flashcards: tk("Flashcards"), slides: tk("Slides"), post: tk("Post"), canvas: tk("Canvas"), whiteboard: tk("Whiteboard"), roadmap: tk("Roadmap"), moc: tk("Map of content") };
+const KIND: Partial<Record<NoteType, string>> = { note: tk("Note"), lesson: tk("Lesson"), journal: tk("Journal"), flashcards: tk("Flashcards"), slides: tk("Slides"), post: tk("Post"), canvas: tk("Canvas"), whiteboard: tk("Whiteboard"), board: tk("Board"), roadmap: tk("Roadmap"), moc: tk("Map of content") };
 const SPACE_KIND: Record<string, string> = { project: tk("Project"), area: tk("Area"), course: tk("Course"), resource: tk("Resource"), archive: tk("Archive") };
 const STATUS_LABEL: Record<string, string> = { todo: tk("To do"), learning: tk("Learning"), review: tk("Review"), mastered: tk("Mastered") };
-const isBoard = (t: NoteType) => t === "canvas" || t === "whiteboard";
+const isBoard = (t: NoteType) => t === "canvas" || isWbType(t);
 
 function useTheme() {
   const [dark, setDark] = useState(activeTheme().dark);
@@ -230,7 +231,7 @@ function SpaceViewer({ token, data }: { token: string; data: SpaceData }) {
               {notes.map((n) => (
                 <a key={n.id} href={`/s/${token}/${n.id}`} onClick={(e) => { e.preventDefault(); open(n.id); }} className="flex flex-col gap-1.5 rounded-[12px] border border-line bg-surface p-3.5 hover:border-accent">
                   <div className="flex items-center gap-2"><span className="size-[7px] shrink-0 rounded-full" style={{ background: n.status ? STATUS_COLOR[n.status] : "var(--muted)" }} /><span dir="auto" className="flex-1 truncate font-semibold">{n.title}</span></div>
-                  <span dir="auto" className="line-clamp-2 h-9 text-[12.5px] leading-[18px] text-muted">{n.type === "canvas" ? t("Canvas board") : n.type === "whiteboard" ? t("Whiteboard") : n.excerpt}</span>
+                  <span dir="auto" className="line-clamp-2 h-9 text-[12.5px] leading-[18px] text-muted">{n.type === "canvas" ? t("Canvas board") : isWbType(n.type) ? t("Whiteboard") : n.excerpt}</span>
                   <span className="text-[11.5px] text-muted">{t(KIND[n.type] ?? "Note")} · {relTime(n.updatedAt)}</span>
                 </a>
               ))}
@@ -559,7 +560,7 @@ function ZoomBar({ ex }: { ex: ExApi | null }) {
 function BoardBody({ note, onApi, ex, refsPath }: { note: PubNote; onApi?: (a: ExApi) => void; ex?: ExApi | null; refsPath?: string }) {
   const [refs, setRefs] = useState<Record<string, FileRef>>({});
   useEffect(() => { if (refsPath && note.type === "canvas") publicApi<{ refs: Record<string, FileRef> }>(refsPath).then((r) => setRefs(r.refs ?? {})).catch(() => {}); }, [refsPath, note.type]);
-  if (note.type === "whiteboard") return (
+  if (isWbType(note.type)) return (
     <>
       <style>{".lumen-board .excalidraw .layer-ui__wrapper__footer-left,.lumen-board .excalidraw .layer-ui__wrapper__footer-right,.lumen-board .excalidraw .App-menu_top,.lumen-board .excalidraw .exit-view-mode{display:none!important}.lumen-board .excalidraw{--color-surface-low:transparent}"}</style>
       <div className="lumen-board absolute inset-0"><Suspense fallback={null}><BoardViewer body={note.body} onApi={onApi ?? (() => {})} /></Suspense></div>

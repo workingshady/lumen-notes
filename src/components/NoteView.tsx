@@ -38,9 +38,11 @@ import { FocusView } from "./FocusView";
 import { tr, useRtl } from "./ws-dir";
 import { fmtNum, fmtRelative, t, tk, tx } from "../lib/i18n";
 import type { NoteType, Status } from "../../shared/types";
+import { isWbType } from "../../shared/types";
 
 const Whiteboard = lazy(() => import("./Whiteboard"));
 const CanvasEditor = lazy(() => import("./CanvasEditor").then((m) => ({ default: m.CanvasEditor })));
+const ArchStudio = lazy(() => import("./arch/ArchStudio")); // canvas with lumenArch = architecture studio (round 7, W1-D)
 const PathView = lazy(() => import("../views/PathView").then((m) => ({ default: m.PathView })));
 const RoadmapView = lazy(() => import("../views/RoadmapView").then((m) => ({ default: m.RoadmapView })));
 const GraphView = lazy(() => import("../views/GraphView").then((m) => ({ default: m.GraphView })));
@@ -60,7 +62,7 @@ const fixedW = () => { const m = getSettings().measure; return m === 0 ? "none" 
 // Layout / panel inserts come from the slash-command catalog (lib/slash.ts).
 const LATIN = /[A-Za-z]{3}/;
 const STATUS_L: Record<Status, string> = { todo: tk("To do"), learning: tk("Learning"), review: tk("Review"), mastered: tk("Mastered") };
-const TYPE_L: Record<NoteType, string> = { note: tk("Note"), lesson: tk("Lesson"), journal: tk("Journal"), flashcards: tk("Flashcards"), slides: tk("Slides"), post: tk("Post"), canvas: tk("Canvas"), whiteboard: tk("Whiteboard"), roadmap: tk("Roadmap"), moc: tk("MOC"), path: tk("Path"), diagram: tk("Diagram"), base: tk("Base"), pdf: tk("PDF"), dashboard: tk("Dashboard") };
+const TYPE_L: Record<NoteType, string> = { note: tk("Note"), lesson: tk("Lesson"), journal: tk("Journal"), flashcards: tk("Flashcards"), slides: tk("Slides"), post: tk("Post"), canvas: tk("Canvas"), whiteboard: tk("Whiteboard"), board: tk("Board"), roadmap: tk("Roadmap"), moc: tk("MOC"), path: tk("Path"), diagram: tk("Diagram"), base: tk("Base"), pdf: tk("PDF"), dashboard: tk("Dashboard") };
 
 export function NoteView({ note }: { note: Note }) {
   const ui = useUI();
@@ -74,13 +76,14 @@ export function NoteView({ note }: { note: Note }) {
 
   const titleRef = useRef<HTMLInputElement>(null);
   const wide = useWide();
-  const isBoard = note.type === "whiteboard";
+  const isBoard = isWbType(note.type);
   const isCanvas = note.type === "canvas" || isBoard;
+  const isArch = note.type === "canvas" && /"lumenArch"s*:/.test(note.body); // the studio brings its own header
   const isPath = note.type === "path";
   const isRoadmap = note.type === "roadmap" || isPath;
   const isDiagram = note.type === "diagram";
   const ownBar = note.type === "pdf" || note.type === "base" || note.type === "dashboard"; // readers with their own bar
-  const diagramCount = useMemo(() => (note.type === "canvas" || note.type === "whiteboard" || note.type === "diagram" ? 0 : (note.body.match(/^\s*(`{3,}|~{3,})\s*mermaid/gim) ?? []).length), [note.body, note.type]);
+  const diagramCount = useMemo(() => (note.type === "canvas" || isWbType(note.type) || note.type === "diagram" ? 0 : (note.body.match(/^\s*(`{3,}|~{3,})\s*mermaid/gim) ?? []).length), [note.body, note.type]);
   // A .mermaid file has three views (Source / Split / Preview); other modes show the preview.
   const mode: Mode = isDiagram && !["edit", "split", "read"].includes(ui.mode) ? "read" : ui.mode;
 
@@ -276,7 +279,8 @@ export function NoteView({ note }: { note: Note }) {
     <div className="flex h-full min-h-0">
       <div className="flex min-w-0 flex-1 flex-col">
         {/* full-height readers bring their own bar (Back · title · Edit): path map, PDF (PdfDesk), base (BaseDesk), dashboard (DashDesk) */}
-        {(isPath && !rmEdit) || (ownBar && effMode !== "edit") ? null : wide ? (
+        {/* whiteboards bring their own header (board ⋯ menu, Present, Layers; Whiteboard.tsx, design 33A) */}
+        {(isPath && !rmEdit) || (ownBar && effMode !== "edit") || isBoard || isArch ? null : wide ? (
           twoRows ? (
             <header ref={hdrRef} className="@container bg-bg text-[13px]">
               <div className="flex h-11 items-center gap-2.5 pe-3 ps-5">
@@ -361,7 +365,9 @@ export function NoteView({ note }: { note: Note }) {
         {/* body */}
         <div className="relative min-h-0 flex-1">
           {isBoard ? (
-            <Suspense fallback={<Skeleton kind="board" />}><Whiteboard key={note.id} note={note} /></Suspense>
+            <Suspense fallback={<Skeleton kind="board" />}><Whiteboard key={note.id} note={note} kind={note.type === "board" ? "board" : "whiteboard"} /></Suspense>
+          ) : isArch ? (
+            <Suspense fallback={<Skeleton kind="board" />}><ArchStudio key={note.id} note={note} /></Suspense>
           ) : isCanvas ? (
             <Suspense fallback={<Skeleton kind="board" />}><CanvasEditor key={note.id} note={note} /></Suspense>
           ) : isRoadmap && !rmEdit ? (

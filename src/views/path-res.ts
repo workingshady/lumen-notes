@@ -3,6 +3,7 @@ import type { Note } from "../../shared/types";
 import type { GlyphName } from "../lib/glyphs";
 import type { BuiltConcept } from "../lib/path";
 import { t } from "../lib/i18n";
+import { isWbType } from "../../shared/types";
 
 export interface Res { label: string; url: string; kind: "video" | "article" | "book" | "course" | "file" | "link"; from: string }
 export const kindOf = (u: string): Res["kind"] =>
@@ -15,7 +16,7 @@ export function conceptResources(c: BuiltConcept, notes: Map<string, Note>): Res
   const lessonTitles = new Set([...c.def.notes, ...c.coverage.map((x) => x.topic.note ?? x.topic.name)]);
   for (const lt of lessonTitles) {
     const n = notes.get(lt.toLowerCase());
-    if (!n || n.type === "canvas" || n.type === "whiteboard") continue;
+    if (!n || n.type === "canvas" || isWbType(n.type)) continue;
     const course = c.coverage.find((x) => (x.topic.note ?? x.topic.name).toLowerCase() === lt.toLowerCase())?.course.spaceName ?? t("Note");
     for (const m of n.body.matchAll(/\[([^\]]+)\]\((https?:[^)\s]+|att:[^)\s]+)\)|(?:^|\s)(https?:\/\/[^\s)]+)/gm)) {
       const url = m[2] ?? m[3];

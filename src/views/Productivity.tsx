@@ -16,6 +16,7 @@ import { ReviewSession, useDueCards } from "../components/Review";
 import { Button, cx, relTime, STATUS_COLOR, StatusDot } from "../components/ui";
 import { dragNote } from "../components/Sidebar";
 import { fmtDate, fmtNum, fmtRelative, getLang, locale, t, tk, tx } from "../lib/i18n";
+import { isWbType } from "../../shared/types";
 
 /** Learning status labels (the ids are stored values). */
 const STATUS_NAME: Record<string, string> = { todo: tk("Todo"), learning: tk("Learning"), review: tk("Review"), mastered: tk("Mastered"), none: tk("No status") };
@@ -258,7 +259,7 @@ export function TasksView() {
 export function KanbanView() {
   const v = useVault();
   const ui = useUI();
-  const inScope = scoped(v, ui).filter((n) => n.type !== "canvas" && n.type !== "whiteboard" && n.type !== "roadmap");
+  const inScope = scoped(v, ui).filter((n) => n.type !== "canvas" && !isWbType(n.type) && n.type !== "roadmap");
   const hasLessons = inScope.some((n) => n.type === "lesson");
   const [typeFilter, setTypeFilter] = useState<"lesson" | "any">("lesson");
   const lessonsOnly = typeFilter === "lesson" && hasLessons;
@@ -455,7 +456,7 @@ type Chip = { k: FKey; vals: string[] };
 const F_LABEL: Record<FKey, string> = { status: tk("Status"), type: tk("Type"), tag: tk("Tag"), in: tk("Folder"), space: tk("Space"), is: tk("Is"), text: tk("Text") };
 const TABLE_KEY = "lumen.table";
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const MD_TYPES = NOTE_TYPES.filter((t) => t !== "canvas" && t !== "whiteboard" && t !== "diagram");
+const MD_TYPES = NOTE_TYPES.filter((t) => t !== "canvas" && !isWbType(t) && t !== "diagram");
 
 function loadTable(): { order: Col[]; hidden: Col[]; sort: Sort[]; chips: Chip[] } {
   const def = { order: ALL_COLS, hidden: ["created", "cards"] as Col[], sort: [{ col: "updated", dir: -1 }] as Sort[], chips: [] as Chip[] };
@@ -623,7 +624,7 @@ export function TableView() {
           </div>
           {rows.map((n) => {
             const f = n.folderId ? v.folderMap.get(n.folderId) : null;
-            const md = n.type !== "canvas" && n.type !== "whiteboard";
+            const md = n.type !== "canvas" && !isWbType(n.type);
             const editable = (c: Col) => (c === "status" || c === "tags" || c === "type") && md;
             return (
               <div key={n.id} onClick={() => openNote(n.id)} className="grid h-[43px] cursor-pointer items-center border-t border-line hover:bg-surface" style={grid}>

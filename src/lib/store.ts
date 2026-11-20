@@ -4,6 +4,7 @@ import type { Folder, Note, Space } from "../../shared/types";
 import { db, DEFAULT_SPACE } from "./db";
 import { wikiLinks } from "./parse";
 import { scheduleIndex } from "./search";
+import { isWbType } from "../../shared/types";
 
 export type View = "home" | "today" | "notes" | "tasks" | "kanban" | "calendar" | "review" | "graph" | "table" | "space" | "settings" | "trash" | "folders";
 export type Mode = "edit" | "split" | "read" | "focus" | "slides" | "review" | "diagrams" | "media" | "links";
@@ -133,7 +134,7 @@ const linkCache = new Map<string, { v: number; links: string[] }>();
 function linksOf(n: Note): string[] {
   const hit = linkCache.get(n.id);
   if (hit && hit.v === n.updatedAt) return hit.links;
-  const links = n.type === "canvas" ? canvasFiles(n.body) : n.type === "whiteboard" ? [] : wikiLinks(n.body);
+  const links = n.type === "canvas" ? canvasFiles(n.body) : isWbType(n.type) ? [] : wikiLinks(n.body);
   linkCache.set(n.id, { v: n.updatedAt, links });
   return links;
 }
@@ -229,7 +230,7 @@ function canvasFiles(body: string): string[] {
 /** Notes visible in the current scope (space / folder / tag). */
 export function scoped(v: Vault, u: Pick<UI, "spaceId" | "folderId" | "tag"> & { filter?: UI["filter"] }) {
   return v.notes.filter((n) => (u.spaceId === "all" || n.spaceId === u.spaceId) && (!u.folderId || n.folderId === u.folderId) && (!u.tag || n.tags.some((x) => x === u.tag || x.startsWith(u.tag + "/")))
-    && (!u.filter || u.filter.startsWith("smart:") || (u.filter === "visual" ? n.type === "canvas" || n.type === "whiteboard" : u.filter === "paths" ? n.type === "path" : !!n.published)));
+    && (!u.filter || u.filter.startsWith("smart:") || (u.filter === "visual" ? n.type === "canvas" || isWbType(n.type) : u.filter === "paths" ? n.type === "path" : !!n.published)));
 }
 
 // ------------------------------------------------------------------ toasts

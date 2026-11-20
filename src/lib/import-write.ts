@@ -9,6 +9,7 @@ import { NOTE_TYPES, STATUSES } from "../../shared/types";
 import { fmtDate, t } from "./i18n";
 import { ATT_REF, FOLDER_REF, wikiLinks, yieldUI, type ImportPlan, type ImportSourceKind, type PlanNote, type Progress } from "./import-model";
 import { fmList, inlineTags, splitFrontMatter } from "./parse";
+import { isWbType } from "../../shared/types";
 
 export type ConflictAction = "skip" | "rename" | "merge";
 type Rec = { id: string } & Record<string, unknown>;
@@ -105,7 +106,7 @@ export function renamedTitle(title: string, used: Set<string>): string {
   return `${title} (${i})`;
 }
 
-const isMd = (type: NoteType) => !["canvas", "whiteboard", "diagram"].includes(type);
+const isMd = (type: NoteType) => !["canvas", "whiteboard", "board", "diagram"].includes(type);
 const KNOWN = new Set(["title", "tags", "tag", "type", "status", "created", "slug"]);
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const withoutFmAndH1 = (body: string) => splitFrontMatter(body).body.replace(/^\s*#\s+[^\n]*\n+/, "");
@@ -162,7 +163,7 @@ export async function writePlan(plan: ImportPlan, o: WriteOptions, store: Import
     const ls = isMd(x.n.type) ? wikiLinks(x.body) : [];
     return [x, { total: ls.length, resolved: ls.filter((l) => titles.has(tkey(l.split("/").pop() ?? l))).length }] as const;
   }));
-  const isCanvas = (x: { n: PlanNote }) => x.n.type === "canvas" || x.n.type === "whiteboard";
+  const isCanvas = (x: { n: PlanNote }) => x.n.type === "canvas" || isWbType(x.n.type);
   const live: LiveCounts = {
     notes: [0, todo.length], canvases: [0, todo.filter(isCanvas).length], attachments: [0, 0],
     links: [0, [...linkInfo.values()].reduce((s, v) => s + v.total, 0)], current: "",
@@ -402,7 +403,7 @@ export function planCounts(plan: ImportPlan, selected?: Set<string>, excludeAtta
     if (!keys.has(n.key)) continue;
     for (const m of n.body.matchAll(ATT_REF)) if (!excludeAttachments?.has(m[1])) refs.add(m[1]);
     if (n.type === "base") bases++;
-    if (n.type === "canvas" || n.type === "whiteboard") canvases++;
+    if (n.type === "canvas" || isWbType(n.type)) canvases++;
     flash += n.cards && n.type === "flashcards" ? n.cards : 0;
     if (isMd(n.type)) {
       links += wikiLinks(n.body).length;

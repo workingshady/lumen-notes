@@ -2,6 +2,7 @@ import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY
 import type { CanvasEdge, CanvasNode, JsonCanvas, Side } from "../../shared/types";
 import { uid } from "./db";
 import { countCrossings, tidy, type LEdge, type LNode } from "./graph-layout";
+import { pickMeta } from "./canvas-style";
 
 export const PRESETS: Record<string, string> = { "1": "#E5534B", "2": "#E8893A", "3": "#E3B341", "4": "#57AB5A", "5": "#39C5CF", "6": "#A371F7" };
 export const colorOf = (c?: string) => (c ? PRESETS[c] ?? c : undefined);
@@ -11,7 +12,7 @@ export function parseCanvas(text: string): { canvas: JsonCanvas; error: string |
   try {
     const c = JSON.parse(text || "{}") as JsonCanvas;
     const err = validate(c);
-    return { canvas: err ? { nodes: [], edges: [] } : { nodes: c.nodes ?? [], edges: c.edges ?? [] }, error: err };
+    return { canvas: err ? { nodes: [], edges: [] } : { nodes: c.nodes ?? [], edges: c.edges ?? [], ...pickMeta(c) }, error: err };
   } catch (e) {
     return { canvas: { nodes: [], edges: [] }, error: `JSON: ${(e as Error).message}` };
   }
@@ -42,7 +43,8 @@ export function validate(c: unknown): string | null {
   return null;
 }
 
-export const stringify = (c: JsonCanvas) => JSON.stringify({ nodes: c.nodes ?? [], edges: c.edges ?? [] }, null, 2);
+/** Canvas-level `lumen*` keys (background, default edge path, group options) ride along after nodes / edges. */
+export const stringify = (c: JsonCanvas) => JSON.stringify({ nodes: c.nodes ?? [], edges: c.edges ?? [], ...pickMeta(c) }, null, 2);
 
 // ------------------------------------------------------------------ layouts
 type LayoutKind = "grid" | "tree" | "force" | "tidy";

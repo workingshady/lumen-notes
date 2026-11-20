@@ -11,7 +11,7 @@ import { fmList, setFrontMatter, splitFrontMatter } from "./parse";
 import { readTagMeta, serializeTagMeta, TAG_PROP, TAG_SPACE, underTag, type TagMeta } from "./tag-tree";
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const isMd = (n: Note) => !["canvas", "whiteboard", "diagram"].includes(n.type);
+const isMd = (n: Note) => !["canvas", "whiteboard", "board", "diagram"].includes(n.type);
 
 /** Map one tag path through a rename (`from` → `to`, children follow) or a delete (`to` = null drops it and its children). */
 export function mapTag(tag: string, from: string, to: string | null): string | null {

@@ -3,10 +3,10 @@
 /** `diagram` = a `.mermaid` file: body is raw Mermaid source (no front-matter), title ends in `.mermaid` (lib/diagrams.ts).
  *  `pdf` = a PDF document note (reader + highlights). `dashboard` = chart tiles built from base queries.
  *  `base` = a database view of notes (Obsidian Bases style): the body holds the view definition (filters, views, columns) as YAML-ish Markdown. */
-export type NoteType = "note" | "lesson" | "journal" | "flashcards" | "slides" | "post" | "canvas" | "whiteboard" | "roadmap" | "moc" | "path" | "diagram" | "base" | "pdf" | "dashboard";
+export type NoteType = "note" | "lesson" | "journal" | "flashcards" | "slides" | "post" | "canvas" | "whiteboard" | "board" | "roadmap" | "moc" | "path" | "diagram" | "base" | "pdf" | "dashboard";
 export type Status = "todo" | "learning" | "review" | "mastered";
 export const STATUSES: Status[] = ["todo", "learning", "review", "mastered"];
-export const NOTE_TYPES: NoteType[] = ["note", "lesson", "journal", "flashcards", "slides", "post", "canvas", "whiteboard", "roadmap", "moc", "path", "diagram", "base", "pdf", "dashboard"];
+export const NOTE_TYPES: NoteType[] = ["note", "lesson", "journal", "flashcards", "slides", "post", "canvas", "whiteboard", "board", "roadmap", "moc", "path", "diagram", "base", "pdf", "dashboard"];
 
 /** PARA-style space kinds. A space encapsulates its own folder tree, notes, roadmap and settings. */
 export type SpaceKind = "project" | "area" | "course" | "resource" | "archive";
@@ -246,3 +246,6 @@ export interface CanvasEdge {
   label?: string;
 }
 export interface JsonCanvas { nodes?: CanvasNode[]; edges?: CanvasEdge[] }
+
+/** Notes whose body is an .excalidraw scene and that open in the Whiteboard editor (whiteboard = free drawing, board = mixed surface). */
+export const isWbType = (t: string | undefined | null): boolean => t === "whiteboard" || t === "board";

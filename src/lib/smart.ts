@@ -10,6 +10,7 @@ import type { Folder, Note, Space } from "../../shared/types";
 import { serializeBase, testFilter, type Ctx, type FilterNode } from "./base";
 import { matcher, normalize, parseQuery, type Query } from "./search";
 import { t } from "./i18n";
+import { isWbType } from "../../shared/types";
 
 export interface SmartFolder {
   id: string;
@@ -202,7 +203,7 @@ export function smartMatcher(sf: Pick<SmartFolder, "query" | "filters" | "match"
 }
 export const smartNotes = (notes: Note[], sf: Pick<SmartFolder, "query" | "filters" | "match">, c: SmartCtx) => notes.filter(smartMatcher(sf, c));
 /** Text a note is searched by (normalize once and cache per note version). */
-export const searchText = (n: Note) => normalize(`${n.title}\n${n.type === "canvas" || n.type === "whiteboard" ? "" : n.body}`);
+export const searchText = (n: Note) => normalize(`${n.title}\n${n.type === "canvas" || isWbType(n.type) ? "" : n.body}`);
 
 // ------------------------------------------------------------------ "Save as base"
 const js = (s: string) => JSON.stringify(s);

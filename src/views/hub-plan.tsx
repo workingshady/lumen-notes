@@ -11,6 +11,7 @@ import { openNoteAtLine } from "../components/study-nav";
 import { monDay, TaskGlyph, todayISO } from "./hub-parts";
 import { fmtDate, fmtNum, t as tr, tk, tx } from "../lib/i18n";
 import { arrow } from "../lib/prereq-graph";
+import { isWbType } from "../../shared/types";
 
 // ------------------------------------------------------------------ requirements
 export const REQ_STATE = { met: [tk("Met"), "var(--success)"], progress: [tk("In progress"), "var(--info)"], planned: [tk("Planned"), "var(--muted)"], none: [tk("No tasks"), "var(--warning)"] } as const;
@@ -106,7 +107,7 @@ export function Gantt({ cards, phone }: { cards: TaskCard[]; phone: boolean }) {
 
 // ------------------------------------------------------------------ diagrams
 const EPIC_COLORS = ["#39C5CF", "#57AB5A", "#E8893A", "#A371F7", "#E3B341", "#E5534B", "#7AA2F7"];
-export function diagramNotes(notes: Note[]) { return notes.filter((n) => !n.deleted && (n.type === "canvas" || n.type === "whiteboard" || n.type === "diagram" || /```mermaid/.test(n.body))); }
+export function diagramNotes(notes: Note[]) { return notes.filter((n) => !n.deleted && (n.type === "canvas" || isWbType(n.type) || n.type === "diagram" || /```mermaid/.test(n.body))); }
 async function saveMermaid(sp: Space, title: string, code: string) {
   const n = await createNote({ title: `${title}: ${sp.name}`, body: `# ${title}: ${sp.name}\n\nGenerated ${new Date().toLocaleDateString()}. Edit freely.\n\n\`\`\`mermaid\n${code}\n\`\`\`\n`, spaceId: sp.id, fm: { doc: "spec", docstatus: "draft" } });
   openNote(n.id);
@@ -167,7 +168,7 @@ export function Diagrams({ sp, cards, reqs, notes, phone }: { sp: Space; cards: 
         <span className="pb-1.5 font-semibold">{tr("Diagrams in this project")}</span>
         {list.length ? list.map((n) => (
           <button key={n.id} onClick={() => openNote(n.id)} className="flex min-h-9 items-center gap-2.5 border-t border-line text-start hover:text-ink">
-            <Glyph name={n.type === "canvas" ? "canvas" : n.type === "whiteboard" ? "whiteboard" : n.type === "diagram" ? "diagram" : "mermaid"} size={16} color="var(--muted)" />
+            <Glyph name={n.type === "canvas" ? "canvas" : isWbType(n.type) ? "whiteboard" : n.type === "diagram" ? "diagram" : "mermaid"} size={16} color="var(--muted)" />
             <span className="min-w-0 flex-1 truncate" dir="auto">{n.title}</span><span className="text-[12px] text-muted">{relTime(n.updatedAt)}</span>
           </button>
         )) : <span className="border-t border-line py-2 text-muted">{tr("No Mermaid diagrams, canvases or whiteboards yet. PRD, RFC and spec templates include Mermaid starters.")}</span>}

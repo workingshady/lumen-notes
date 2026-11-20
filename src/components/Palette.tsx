@@ -19,6 +19,7 @@ import { Glyph } from "./Glyph";
 import { glyphOf, openSmart, openSmartEditor, saveSmartAsBase, SmartEditorHost, useSmartFolders } from "./SmartFolders";
 import { suggestName } from "../lib/smart";
 import { t, tx, useLang } from "../lib/i18n";
+import { isWbType } from "../../shared/types";
 
 interface Cmd { id: string; label: ReactNode; text: string; hint?: string; icon?: ReactNode; run: () => void | Promise<void> }
 
@@ -44,7 +45,7 @@ function hl(text: string, terms: string[], cls = "font-bold text-accent"): React
 /** Plain-text snippet around the first hit: no front-matter, no title line, no Markdown marks. */
 function snippet(n: Note, terms: string[], fallback: string) {
   // boards: the hit text when searching; "Recent" (no terms) would show raw scene JSON, so name the kind instead
-  if (n.type === "canvas" || n.type === "whiteboard") return terms.length ? fallback : n.type === "canvas" ? t("Canvas board") : t("Whiteboard");
+  if (n.type === "canvas" || isWbType(n.type)) return terms.length ? fallback : n.type === "canvas" ? t("Canvas board") : t("Whiteboard");
   const plain = plainText(around(n.body, terms));
   if (!plain) return fallback;
   const low = normalize(plain);

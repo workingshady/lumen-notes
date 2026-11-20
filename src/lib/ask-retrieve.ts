@@ -3,6 +3,7 @@ import type { Note, Space } from "../../shared/types";
 import { parsePath, resolveCourses } from "./path";
 import { normalize } from "./search";
 import type { Vault } from "./store";
+import { isWbType } from "../../shared/types";
 
 // ------------------------------------------------------------------ chunking
 /** One retrievable passage: a heading section (or part of one) of a note, ~800 chars. */
@@ -35,7 +36,7 @@ function splitLong(p: string): string[] {
 
 /** Note → passages: split by headings (keeping the heading path), then paragraphs packed up to ~800 chars. */
 export function chunkNote(n: Note, spaceName = ""): Chunk[] {
-  if (n.type === "whiteboard") return [];
+  if (isWbType(n.type)) return [];
   let body = n.type === "canvas" ? canvasText(n.body) : n.body.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
   body = body.replace(/\r/g, "");
   const src = `${spaceName} ${n.tags.join(" ")}`.trim();

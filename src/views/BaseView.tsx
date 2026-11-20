@@ -28,7 +28,7 @@ const VIEW_GLYPH: Record<ViewType, string> = { table: "v-table", board: "v-board
 const VIEW_LABEL: Record<ViewType, string> = { table: tk("Table"), board: tk("Board"), cards: tk("Gallery"), list: tk("List"), calendar: tk("Calendar") };
 const PAGE = 200;
 const propsFor = (n: Note) => noteDerived("baseProps", n, propsOf);
-const isMd = (n: Note) => !["canvas", "whiteboard", "diagram"].includes(n.type);
+const isMd = (n: Note) => !["canvas", "whiteboard", "board", "diagram"].includes(n.type);
 const DEFAULT_ORDER = ["file.name", "status", "file.tags", "file.mtime"];
 type Spaces = { id: string; name: string; color: string | null }[];
 

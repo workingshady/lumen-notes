@@ -7,6 +7,7 @@
 import type { Note } from "../../shared/types";
 import { wikiLinks } from "./parse";
 import { t } from "./i18n";
+import { isWbType } from "../../shared/types";
 
 export interface BrokenLink { note: Note; target: string }
 export interface VaultChecks { orphans: Note[]; broken: BrokenLink[] }
@@ -16,7 +17,7 @@ const linksOf = (n: Note) => {
   const hit = cache.get(n.id);
   if (hit && hit.v === n.updatedAt) return hit.links;
   // Canvas / whiteboard bodies are JSON, not Markdown (their card links are checked by the canvas itself).
-  const links = n.type === "canvas" || n.type === "whiteboard" ? [] : wikiLinks(n.body);
+  const links = n.type === "canvas" || isWbType(n.type) ? [] : wikiLinks(n.body);
   cache.set(n.id, { v: n.updatedAt, links });
   return links;
 };

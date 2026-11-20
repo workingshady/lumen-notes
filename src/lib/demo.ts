@@ -8,6 +8,7 @@
 import type { AttachmentMeta, Card, Folder, Note, NoteType, Session, Space, Status, Version } from "../../shared/types";
 import { db as defaultDb } from "./db";
 import { demoPdf } from "./demo-pdf";
+import { paymentsCanvas } from "./arch-starters";
 import { serializeHighlight, type Highlight } from "./pdf-format";
 import { flashcards, inlineTags, splitFrontMatter } from "./parse";
 import type { Settings } from "./settings";
@@ -876,6 +877,7 @@ flowchart LR
   for (const [i, t] of ["IP addressing & CIDR", "Subnetting practice", "Routing: OSPF vs BGP", "NAT", "ICMP & traceroute", "IPv6 basics", "ARP"].entries()) add({ id: `dm-net-l3-${i}`, title: t, space: NET, folder: F.netlayer, type: "lesson", updated: 0, text: `${t}: notes and two worked examples.\n` });
   add({ id: "dm-net-moc", title: "Networking MOC", space: NET, type: "moc", updated: 0, text: "- [[TCP handshake]]\n- [[DNS resolution]]\n- [[TLS 1.3 handshake]]\n- [[IP addressing & CIDR]]\n" });
   add({ id: "dm-net-tcp-canvas", title: "TCP state machine", space: NET, type: "canvas", updated: at(oct(16), "19:00"), body: JSON.stringify(TCP_CANVAS, null, 2) });
+  add({ id: "dm-arch-payments", title: "Payments platform", space: NET, type: "canvas", updated: at(oct(17), "19:00"), body: paymentsCanvas() }); // architecture studio demo (round 7)
   for (const [i, t] of ["Wireshark cheatsheet", "Home lab setup", "Interview questions", "Reading list"].entries()) add({ id: `dm-net-root-${i}`, title: t, space: NET, type: "note", updated: 0, text: `${t}.\n` });
 
   // ---------------------------------------------------------------- Math reference (63)

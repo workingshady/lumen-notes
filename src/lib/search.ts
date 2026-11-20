@@ -2,6 +2,7 @@ import MiniSearch from "minisearch";
 import type { Folder, Note, Space } from "../../shared/types";
 import { excerpt } from "./parse";
 import { sceneText } from "./whiteboard";
+import { isWbType } from "../../shared/types";
 
 /** Parsed query: free text + operators `tag:` `type:` `status:` `in:` (folder) `space:` `is:pinned|published|fav`. */
 export interface Query { text: string; tags: string[]; types: string[]; statuses: string[]; folders: string[]; spaces: string[]; is: string[] }
@@ -82,7 +83,7 @@ export async function updateIndex(notes: Note[], stale: () => boolean = () => fa
     fields: ["title", "body", "tagText"],
     storeFields: ["id"],
     autoVacuum: false,
-    extractField: (doc, f) => (f === "tagText" ? doc.tags.join(" ") : f === "body" && doc.type === "canvas" ? canvasText(doc.body) : f === "body" && doc.type === "whiteboard" ? sceneText(doc.body) : (doc as never)[f]),
+    extractField: (doc, f) => (f === "tagText" ? doc.tags.join(" ") : f === "body" && doc.type === "canvas" ? canvasText(doc.body) : f === "body" && isWbType(doc.type) ? sceneText(doc.body) : (doc as never)[f]),
     processTerm: (term) => normalize(term) || null,
     searchOptions: { boost: { title: 3, tagText: 2 }, prefix: true, fuzzy: 0.2, combineWith: "AND", processTerm: (term) => normalize(term) || null },
   });
@@ -147,7 +148,7 @@ export function search(q: Query, notes: Map<string, Note>, filter: (n: Note) => 
     .map((r) => notes.get(r.id as string))
     .filter((n): n is Note => !!n && !n.deleted && filter(n))
     .slice(0, limit)
-    .map((note) => ({ note, score: 1, snippet: snippetFor(note.type === "canvas" ? canvasText(note.body) : note.type === "whiteboard" ? sceneText(note.body) : note.body, terms) }));
+    .map((note) => ({ note, score: 1, snippet: snippetFor(note.type === "canvas" ? canvasText(note.body) : isWbType(note.type) ? sceneText(note.body) : note.body, terms) }));
 }
 
 /** Every note matching the query (no snippets, no limit): totals for "Showing 50 of 1,240" (Lumen 22). */

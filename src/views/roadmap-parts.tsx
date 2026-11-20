@@ -10,6 +10,7 @@ import { Glyph } from "../components/Glyph";
 import { cx } from "../components/ui";
 import { endDrag, startDrag } from "./dnd-parts";
 import { t as tr, tk } from "../lib/i18n";
+import { isWbType } from "../../shared/types";
 
 export const STATUS_LABEL: Record<TopicStatus, string> = { todo: tk("Todo"), learning: tk("Learning"), done: tk("Done"), skipped: tk("Skipped") };
 export const finished = (t?: Topic) => t?.status === "done" || t?.status === "skipped";
@@ -92,8 +93,8 @@ export function useModuleFold(noteId: string, mods: Module[], cur?: number) {
 }
 
 // ------------------------------------------------------------------ notes tray
-const noteGlyph = (n: Note): GlyphName => (n.type === "lesson" ? "lesson" : n.type === "pdf" ? "pdf" : n.type === "whiteboard" ? "whiteboard" : n.type === "canvas" ? "canvas" : n.type === "slides" ? "slides" : n.type === "flashcards" ? "flashcards" : "note");
-const noteKind = (n: Note) => (n.type === "pdf" ? tk("pdf") : n.type === "whiteboard" ? tk("board") : n.type === "canvas" ? tk("canvas") : n.type === "slides" ? tk("slides") : tk("new"));
+const noteGlyph = (n: Note): GlyphName => (n.type === "lesson" ? "lesson" : n.type === "pdf" ? "pdf" : isWbType(n.type) ? "whiteboard" : n.type === "canvas" ? "canvas" : n.type === "slides" ? "slides" : n.type === "flashcards" ? "flashcards" : "note");
+const noteKind = (n: Note) => (n.type === "pdf" ? tk("pdf") : isWbType(n.type) ? tk("board") : n.type === "canvas" ? tk("canvas") : n.type === "slides" ? tk("slides") : tk("new"));
 
 /** Notes of the space that can become topics (not roadmaps/paths), newest first; used ones last. */
 export function useTrayNotes(spaceId: string | null, used: Set<string>, q: string) {

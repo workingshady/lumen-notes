@@ -47,7 +47,7 @@ export function resolveSubject(th: Pick<ChatThread, "title" | "pathId" | "concep
   }
   const note = th.noteId ? v.byId.get(th.noteId) : undefined;
   if (note) {
-    const linked = [...(v.outlinks.get(note.id) ?? [])].map((id) => v.byId.get(id)).filter((n): n is Note => !!n && !n.deleted && !["canvas", "whiteboard", "diagram", "path"].includes(n.type)).slice(0, 3);
+    const linked = [...(v.outlinks.get(note.id) ?? [])].map((id) => v.byId.get(id)).filter((n): n is Note => !!n && !n.deleted && !["canvas", "whiteboard", "board", "diagram", "path"].includes(n.type)).slice(0, 3);
     const space = v.spaceMap.get(note.spaceId);
     return { name: note.title, note, notes: [note, ...linked], courses: space ? [{ key: space.id, title: space.name, note: null, color: space.color ?? "var(--muted)", spaceName: space.name, spaceIcon: space.icon, spaceId: space.id }] : [] };
   }

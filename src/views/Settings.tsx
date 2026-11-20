@@ -101,7 +101,7 @@ const FONT: Record<S["readingFont"], string> = { sans: "Inter, system-ui, sans-s
 function usePreviewNote() {
   const v = useVault();
   return useMemo(() => {
-    const n = [...v.notes].filter((x) => !["canvas", "whiteboard", "slides", "flashcards", "roadmap"].includes(x.type) && x.body.trim()).sort((a, b) => b.updatedAt - a.updatedAt)[0];
+    const n = [...v.notes].filter((x) => !["canvas", "whiteboard", "board", "slides", "flashcards", "roadmap"].includes(x.type) && x.body.trim()).sort((a, b) => b.updatedAt - a.updatedAt)[0];
     if (!n) return null;
     const para = n.body.replace(/^---[\s\S]*?\n---\n?/, "").split(/\n\s*\n/).map((p) => p.trim()).find((p) => p && !/^(#|```|\$\$|>|-|\*|\d+\.|!\[|\||<)/.test(p)) ?? "";
     const where = (n.folderId && v.folderMap.get(n.folderId)?.name) || v.spaceMap.get(n.spaceId)?.name || t("Inbox");
@@ -320,8 +320,8 @@ export function SyncSection() {
 }
 
 // ------------------------------------------------------------------ sharing
-const NOTE_ICON: Partial<Record<Note["type"], LucideIcon>> = { slides: Presentation, flashcards: Layers, whiteboard: Pencil, canvas: LayoutDashboard };
-const NOTE_KIND: Partial<Record<Note["type"], string>> = { slides: tk("Slides"), flashcards: tk("Flashcards"), whiteboard: tk("Whiteboard"), canvas: tk("Canvas"), roadmap: tk("Roadmap") };
+const NOTE_ICON: Partial<Record<Note["type"], LucideIcon>> = { slides: Presentation, flashcards: Layers, whiteboard: Pencil, board: Pencil, canvas: LayoutDashboard };
+const NOTE_KIND: Partial<Record<Note["type"], string>> = { slides: tk("Slides"), flashcards: tk("Flashcards"), whiteboard: tk("Whiteboard"), board: tk("Board"), canvas: tk("Canvas"), roadmap: tk("Roadmap") };
 /** "12 min ago" · "2 h ago" · "Mon" · "7 Nov" (Lumen 09 Settings › Sharing). */
 function ago(at: number) {
   const d = Date.now() - at;

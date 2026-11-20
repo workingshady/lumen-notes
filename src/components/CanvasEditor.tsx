@@ -1,12 +1,12 @@
 import {
-  addEdge, Background, BackgroundVariant, ConnectionMode, Handle, MarkerType, MiniMap, NodeResizer, Position, ReactFlow, ReactFlowProvider,
+  addEdge, Background, BackgroundVariant, ConnectionMode, Handle, MiniMap, NodeResizer, Position, ReactFlow, ReactFlowProvider,
   useEdgesState, useNodesState, useReactFlow, useViewport, type Connection, type Edge, type Node as RFNode, type NodeChange, type NodeProps,
 } from "@xyflow/react";
 import {
   ArrowRight, Code2, CornerUpLeft, Copy, Download, Ellipsis, Pin, RotateCw, FilePlus, FileText, GitFork, Group, LayoutDashboard, LayoutGrid, Link2, ListTree, Minus, Network, Orbit, Pencil, Plus, Scan,
   Image as ImageIcon, Search, SquareTerminal, Trash2, Type, Waypoints, Workflow,
   AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignHorizontalSpaceAround, AlignStartHorizontal, AlignStartVertical, AlignVerticalSpaceAround,
-  BringToFront, Check, ClipboardPaste, CopyPlus, Focus, Grid3x3, Keyboard, Lock, Map as MapIcon, Redo2, Scissors, SendToBack, Undo2,
+  BringToFront, Check, ChevronDown, ClipboardPaste, CopyPlus, Focus, Grid3x3, Keyboard, Lock, Map as MapIcon, Redo2, Scissors, SendToBack, SlidersHorizontal, Undo2,
 } from "lucide-react";
 import { createContext, memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { CanvasEdge, CanvasNode, JsonCanvas, Note, Side } from "../../shared/types";
@@ -17,6 +17,12 @@ import {
   type AlignMode,
 } from "../lib/canvas";
 import { CanvasHistory } from "../lib/canvas-history";
+import {
+  bgColorOf, bgPatternOf, borderOf, collapsibleOf, dashFor, edgePathOf, edgeStyleOf, fillOf, headOf, isCollapsed, labelStyleOf, lineOf, markerId, markerSvg, membersOf, nodeStyleOf, patternCss, patternOf,
+  pickMeta, setBorder, setCollapsed, setEdgePath, setFill, setHead, setLabelStyle, setLine, setPattern, setShape, setWidth, shapeOf, shapePath, shapeInsetPct, widthOf,
+  type CanvasMeta, type HeadKind, type NodeShape, type BorderStyle, type FillStyle, type PathKind, type Pattern,
+} from "../lib/canvas-style";
+import { CanvasOptions } from "./CanvasOptions";
 import { checkNewEdge } from "../lib/graph-checks";
 import { EdgeSeg, isTidyKey, TidyBanner, type EdgeShape, type TidyStats } from "./graph-display";
 import { Glyph } from "./Glyph";
@@ -24,8 +30,8 @@ import { CanvasKeys } from "./CanvasKeys";
 import { diagramFocus, diagramFolderFor, diagramHash, diagramKind, diagramText, fenced, mermaidBlocks, metaOf, migrateDiagramCards, newDiagramFile, parseDiagramText, type DiagramNode } from "../lib/diagrams";
 import { getSettings } from "../lib/settings";
 import { download } from "../lib/io";
-import { openExport } from "../lib/diagram-export";
-import { canvasSvg } from "../lib/visual-export";
+import { openExportJob } from "../lib/export-job";
+import { canvasJob } from "../lib/export-jobs";
 import { fmtNum, t, tk, tx, useLang } from "../lib/i18n";
 import { openNote, setUI, toast, useVault } from "../lib/store";
 import { canvasToSkeleton, type Skeleton } from "../lib/whiteboard";
@@ -71,16 +77,36 @@ function toFlow(c: JsonCanvas): { nodes: FlowNode[]; edges: Edge[] } {
 /** A locked card can't be dragged or deleted on the board (it can still be selected, edited and connected). */
 const lockFlags = (n: CanvasNode) => (isLocked(n) ? { draggable: false, deletable: false } : { draggable: undefined, deletable: undefined });
 function toFlowEdge(e: CanvasEdge): Edge {
-  const color = colorOf(e.color) ?? "var(--muted)";
+  return { id: e.id, type: "straight", source: e.fromNode, target: e.toNode, sourceHandle: e.fromSide ?? null, targetHandle: e.toSide ?? null, label: e.label, data: { edge: e }, labelBgPadding: [8, 3], labelBgBorderRadius: 6 };
+}
+/** The look of an edge, derived from its `lumen*` fields every render (type, line, heads, label style). */
+function decorateEdge(e: Edge, def: PathKind): Edge {
+  const ed = (e.data?.edge ?? {}) as CanvasEdge;
+  const color = colorOf(ed.color) ?? "var(--muted)";
+  const w = widthOf(ed), dash = dashFor(lineOf(ed), w), he = headOf(ed, "to"), hs = headOf(ed, "from"), ls = labelStyleOf(ed);
   return {
-    id: e.id, type: "straight", source: e.fromNode, target: e.toNode, sourceHandle: e.fromSide ?? null, targetHandle: e.toSide ?? null, label: e.label,
-    data: { edge: e },
-    markerEnd: e.toEnd === "none" ? undefined : { type: MarkerType.ArrowClosed, color, width: 18, height: 18 },
-    markerStart: e.fromEnd === "arrow" ? { type: MarkerType.ArrowClosed, color, width: 18, height: 18 } : undefined,
-    style: { stroke: color, strokeWidth: 2 },
-    labelBgPadding: [8, 3], labelBgBorderRadius: 6,
+    ...e, type: EDGE_RF[edgePathOf(ed) ?? def],
+    markerEnd: he === "none" ? undefined : markerId(he, color), markerStart: hs === "none" ? undefined : markerId(hs, color),
+    style: { stroke: color, strokeWidth: w, strokeDasharray: dash, strokeLinecap: dash ? "round" : undefined },
+    label: ls === "hidden" ? undefined : e.label, labelShowBg: ls === "pill", labelBgPadding: [8, 3], labelBgBorderRadius: 6,
   };
 }
+/** Hidden SVG with the arrowhead markers the board's edges use. */
+function MarkerDefs({ edges }: { edges: Edge[] }) {
+  const defs = new Map<string, string>();
+  for (const e of edges) {
+    const ed = (e.data?.edge ?? {}) as CanvasEdge, color = colorOf(ed.color) ?? "var(--muted)";
+    for (const k of [headOf(ed, "to"), headOf(ed, "from")] as HeadKind[]) if (k !== "none") { const id = markerId(k, color); if (!defs.has(id)) defs.set(id, markerSvg(k, id, color)); }
+  }
+  return <svg width="0" height="0" className="pointer-events-none absolute" aria-hidden><defs dangerouslySetInnerHTML={{ __html: [...defs.values()].join("") }} /></svg>;
+}
+const edgeOf = (e: Edge): CanvasEdge => {
+  const out: CanvasEdge = { ...((e.data?.edge ?? {}) as CanvasEdge), id: e.id, fromNode: e.source, toNode: e.target };
+  if (e.sourceHandle) out.fromSide = e.sourceHandle as Side; else delete out.fromSide;
+  if (e.targetHandle) out.toSide = e.targetHandle as Side; else delete out.toSide;
+  return out;
+};
+
 function fromFlow(nodes: FlowNode[], edges: Edge[]): JsonCanvas {
   return {
     nodes: [...nodes].sort((a, b) => (a.data.node.type === "group" ? 0 : 1) - (b.data.node.type === "group" ? 0 : 1)).map((n) => ({
@@ -109,17 +135,42 @@ function Handles({ n }: { n?: CanvasNode }) {
     </>
   );
 }
-/** Card shell: 10px radius, 1px border in the card colour; selected = 2px amber + soft amber ring. */
-function shell(n: CanvasNode, selected: boolean, base = "var(--surface)") {
-  const c = colorOf(n.color);
-  return {
-    className: "box-border flex h-full w-full flex-col overflow-hidden rounded-[10px]",
-    style: {
-      border: selected ? "2px solid var(--accent)" : `1px solid ${c ?? "var(--border)"}`,
-      boxShadow: selected ? "0 0 0 4px color-mix(in srgb,var(--accent) 16%,transparent)" : "none",
-      background: c ? `color-mix(in srgb, ${c} 14%, var(--surface))` : base,
-    },
-  };
+/**
+ * Card shell: 1px border in the card colour (selected = 2px amber + soft ring), shape / border style / background from
+ * the card's lumen* options (lib/canvas-style.ts). Diamond, parallelogram and cylinder are drawn as an SVG behind the
+ * content; every shape insets its content so text stays inside the outline.
+ */
+function CardShell({ n, selected, base = "var(--surface)", children, ...rest }: { n: CanvasNode; selected: boolean; base?: string; children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
+  const shape = shapeOf(n), border = borderOf(n), fill = fillOf(n), c = colorOf(n.color);
+  const bg = fill === "none" ? "transparent" : fill === "solid" ? c ?? "var(--surface-2)" : c ? `color-mix(in srgb, ${c} 14%, var(--surface))` : base;
+  const solid = fill === "solid" && !!c;
+  const inset = shapeInsetPct(shape);
+  const svgShape = shape === "diamond" || shape === "parallelogram" || shape === "cylinder";
+  const radius = shape === "rect" ? 4 : shape === "pill" ? 9999 : shape === "circle" ? "50%" : 10;
+  const stroke = selected ? "var(--accent)" : c ?? "var(--border)";
+  const style: React.CSSProperties = { ...(solid ? { ["--text" as string]: "#0F1115", ["--muted" as string]: "#3A3D44", color: "#0F1115" } : {}), isolation: "isolate" };
+  const inner = inset ? <div className="absolute flex flex-col overflow-hidden" style={{ left: `${inset.l}%`, right: `${inset.r}%`, top: `${inset.t}%`, bottom: `${inset.b}%` }}>{children}</div> : children;
+  if (svgShape) {
+    const { d, rim } = shapePath(shape, 0, 0, 100, 100);
+    const dash = dashFor(border, 1.5);
+    const sp = { fill: "none", stroke: border === "none" && !selected ? "none" : stroke, strokeWidth: selected ? 2 : 1.2, strokeDasharray: dash, vectorEffect: "non-scaling-stroke" as const, strokeLinecap: dash ? ("round" as const) : undefined };
+    return (
+      <div {...rest} className="relative box-border flex h-full w-full flex-col" style={style}>
+        <svg className="absolute inset-0 -z-10" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ overflow: "visible", filter: selected ? "drop-shadow(0 0 4px color-mix(in srgb,var(--accent) 45%,transparent))" : undefined }}>
+          {fill !== "none" && <path d={d} style={{ fill: solid ? c : base }} />}
+          {fill === "tint" && c && <path d={d} style={{ fill: c, fillOpacity: 0.14 }} />}
+          <path d={d} {...sp} />{rim && <path d={rim} {...sp} />}
+        </svg>
+        {inner}
+      </div>
+    );
+  }
+  return (
+    <div {...rest} className="relative box-border flex h-full w-full flex-col overflow-hidden" style={{
+      ...style, borderRadius: radius, borderWidth: selected ? 2 : 1, borderStyle: border === "none" ? "solid" : border, borderColor: border === "none" && !selected ? "transparent" : stroke,
+      boxShadow: selected ? "0 0 0 4px color-mix(in srgb,var(--accent) 16%,transparent)" : "none", background: bg,
+    }}>{inner}</div>
+  );
 }
 const RESIZER = { lineStyle: { borderColor: "transparent" } };
 
@@ -138,7 +189,6 @@ function DiagramBody({ id, n, name, src, selected, onEdit }: { id: string; n: Di
   const v = useVault();
   const { updateNodeData } = useReactFlow();
   const { spaceId } = useContext(Ctx);
-  const s = shell(n, selected);
   const ref = n.lumenDiagram;
   const source = ref ? v.byId.get(ref.note) : undefined;
   const now = source && !source.deleted ? mermaidBlocks(source.body) : [];
@@ -148,7 +198,7 @@ function DiagramBody({ id, n, name, src, selected, onEdit }: { id: string; n: Di
   const pull = () => { if (!cur || !ref) return; updateNodeData(id, { node: { ...n, text: diagramText(name, cur.src), lumenDiagram: { ...ref, line: cur.line, hash: diagramHash(cur.src) } } }); toast(t("Diagram updated from the note")); };
   const body = useMemo(() => `\`\`\`mermaid\n${src}\n\`\`\``, [src]);
   return (
-    <div {...s}>
+    <CardShell n={n} selected={selected}>
       <div className="flex h-[30px] shrink-0 cursor-grab items-center gap-1.5 border-b border-line px-2.5 text-[11.5px] text-muted" onDoubleClick={onEdit} title={t("Drag to move · double-click to edit the source")}>
         <Waypoints size={12} className="shrink-0 text-accent" />
         <span className="min-w-0 flex-1 truncate font-mono text-ink">{name}</span>
@@ -157,7 +207,7 @@ function DiagramBody({ id, n, name, src, selected, onEdit }: { id: string; n: Di
         {ref && !source && <span className="shrink-0 text-[11px]" title={t("The source note was deleted or renamed")}>{t("source missing")}</span>}
       </div>
       <div className="nodrag nowheel diagram-node min-h-0 flex-1 overflow-hidden"><Preview note={{ id, body, spaceId }} className="!m-0 !max-w-none" /></div>
-    </div>
+    </CardShell>
   );
 }
 
@@ -184,14 +234,13 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
       <div className="h-full w-full" onDoubleClick={() => setEdit(true)}><PdfHighlightCard n={n} card={hl} selected={!!selected} /></div>
     </>
   );
-  const s = shell(n, !!selected);
   const { title, body } = splitTitle(n.text);
   const rich = /\$|\*\*|`|\[\[|^\s*([-*>]|\d+\.)\s/m.test(body);
   return (
     <>
       <NodeResizer isVisible={!!selected && !isLocked(n)} minWidth={120} minHeight={50} {...RESIZER} />
       <Handles n={n} />
-      <div {...s} onDoubleClick={() => setEdit(true)}>
+      <CardShell n={n} selected={!!selected} onDoubleClick={() => setEdit(true)}>
         {edit ? (
           <textarea
             autoFocus
@@ -210,7 +259,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
             ) : !title && <span className="text-[13px] text-muted">{t("Double-click to edit")}</span>}
           </div>
         )}
-      </div>
+      </CardShell>
     </>
   );
 });
@@ -218,13 +267,12 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
 /** A file card pointing at a `.mermaid` file: name + type header (drag handle), the zoomable diagram, and where it came from. */
 function DiagramFileCard({ n, note, selected }: { n: CanvasNode; note: Note; selected: boolean }) {
   const v = useVault();
-  const s = shell(n, selected);
   const meta = metaOf(note);
   const src = meta ? v.byId.get(meta.from) : undefined;
   const back = () => { if (!src || !meta) return; const b = mermaidBlocks(src.body).find((x) => diagramHash(x.src) === meta.hash); diagramFocus.note = { noteId: src.id, line: b?.line ?? meta.line, hash: b ? diagramHash(b.src) : meta.hash }; openNote(src.id, "read"); };
   const body = useMemo(() => fenced(note.body), [note.body]);
   return (
-    <div {...s}>
+    <CardShell n={n} selected={selected}>
       <div className="flex h-[30px] shrink-0 cursor-grab items-center gap-1.5 border-b border-line px-2.5 text-[11.5px] text-muted" title={t("Drag to move")}>
         <Waypoints size={12} className="shrink-0 text-accent" />
         <button className="nodrag min-w-0 flex-1 truncate text-left font-mono text-ink hover:text-accent" title={t("Open the .mermaid file")} onClick={() => openNote(note.id, "read")}>{note.title}</button>
@@ -235,7 +283,7 @@ function DiagramFileCard({ n, note, selected }: { n: CanvasNode; note: Note; sel
         {src && !src.deleted ? <button className="nodrag min-w-0 truncate hover:text-ink" title={t("Open the source note at this diagram")} onClick={back}><CornerUpLeft size={11} className="mr-1 inline align-[-1px]" />{src.title}{meta?.heading ? ` › ${meta.heading}` : ""}</button> : <span className="truncate">{meta ? t("from “{title}”", { title: meta.fromTitle }) : t("standalone diagram")}</span>}
         <span className="ms-auto shrink-0">{t("updated {when}", { when: relTime(note.updatedAt) })}</span>
       </div>
-    </div>
+    </CardShell>
   );
 }
 
@@ -261,12 +309,11 @@ const FileNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
     </>
   );
   const folder = note ? (note.folderId ? v.folderMap.get(note.folderId)?.name : v.spaceMap.get(note.spaceId)?.name) : n.file.split("/").slice(-2, -1)[0];
-  const s = shell(n, !!selected);
   return (
     <>
       <NodeResizer isVisible={!!selected && !isLocked(n)} minWidth={140} minHeight={60} {...RESIZER} />
       <Handles n={n} />
-      <div {...s}>
+      <CardShell n={n} selected={!!selected}>
         <div className="flex h-[30px] shrink-0 items-center gap-1.5 border-b border-line px-2.5 text-[11.5px] text-muted">
           <FileText size={12} className="shrink-0" /><span className="flex-1 truncate" dir="auto">{folder ?? t("Note")}</span>
           <span className="size-[7px] shrink-0 rounded-full" style={{ background: note?.status ? STATUS_COLOR[note.status] : note ? "var(--info)" : "var(--border)" }} />
@@ -277,7 +324,7 @@ const FileNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
           </button>
           <span dir="auto" className="nowheel overflow-hidden text-[12px] leading-[17px] text-muted">{note ? plainExcerpt(note.body, 90) : t("Note not found. Click the title to create it.")}</span>
         </div>
-      </div>
+      </CardShell>
     </>
   );
 });
@@ -285,7 +332,6 @@ const FileNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
 const BADGE = "#8C1515";
 const LinkNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
   const n = data.node as Extract<CanvasNode, { type: "link" }>;
-  const s = shell(n, !!selected);
   const [meta, setMeta] = useState<Unfurl | null>(null);
   useEffect(() => { let live = true; void unfurl(n.url).then((m) => live && setMeta(m)); return () => { live = false; }; }, [n.url]);
   let host = n.url;
@@ -295,7 +341,7 @@ const LinkNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
     <>
       <NodeResizer isVisible={!!selected && !isLocked(n)} minWidth={140} minHeight={50} {...RESIZER} />
       <Handles n={n} />
-      <div {...s}>
+      <CardShell n={n} selected={!!selected}>
         <a href={n.url} target="_blank" rel="noopener noreferrer" className="nodrag flex h-full items-center gap-3 p-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-[8px] text-[13px] font-bold text-white" style={{ background: BADGE }}>{badge}</span>
           <span className="flex min-w-0 flex-col gap-[3px]">
@@ -303,29 +349,49 @@ const LinkNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
             <span className="flex min-w-0 items-center gap-1 text-[12px] text-link"><Link2 size={12} className="shrink-0" /><span className="truncate">{n.url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}</span></span>
           </span>
         </a>
-      </div>
+      </CardShell>
     </>
   );
 });
+
+/** Board-level group options (collapsible, "N cards" counts, toggling) shared with every group card. */
+const GroupCtx = createContext<{ counts: Map<string, number>; collapsible: boolean }>({ counts: new Map(), collapsible: true });
+const GROUP_HEAD = 44;
 
 const GroupNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
   useLang();
   const n = data.node as Extract<CanvasNode, { type: "group" }>;
   const { updateNodeData } = useReactFlow();
   const { mark } = useContext(Ctx);
+  const g = useContext(GroupCtx);
   const c = colorOf(n.color) ?? "var(--muted)";
+  const collapsed = isCollapsed(n), count = g.counts.get(id) ?? 0, pat = patternOf(n);
+  const label = (
+    <input
+      className="group-handle h-6 min-w-0 cursor-move outline-none"
+      style={g.collapsible ? { flex: 1, background: "transparent", fontSize: 12, fontWeight: 600, color: "var(--text)", padding: 0 } : { position: "absolute", top: -30, left: 0, borderRadius: 6, padding: "0 10px", fontSize: 12.5, fontWeight: 600, color: "#0F1115", background: c, width: `${Math.max(6, (n.label ?? "Group").length + 3)}ch` }}
+      defaultValue={n.label ?? ""}
+      placeholder={t("Group@@noun")}
+      onBlur={(e) => { if (e.target.value !== (n.label ?? "")) { mark(`label:${id}`); updateNodeData(id, { node: { ...n, label: e.target.value } }); } }}
+    />
+  );
   return (
     <>
-      <NodeResizer isVisible={!!selected && !isLocked(n)} minWidth={160} minHeight={100} {...RESIZER} />
+      <NodeResizer isVisible={!!selected && !isLocked(n) && !collapsed} minWidth={160} minHeight={100} {...RESIZER} />
       <Handles n={n} />
-      <div className="relative h-full w-full rounded-[14px]" style={{ border: `1.5px solid ${selected ? "var(--accent)" : c}`, background: `color-mix(in srgb, ${c} 8%, transparent)` }}>
-        <input
-          className="group-handle absolute -top-[30px] left-0 h-6 cursor-move rounded-[6px] px-2.5 text-[12.5px] font-semibold text-[#0F1115] outline-none"
-          style={{ background: c, width: `${Math.max(6, (n.label ?? "Group").length + 3)}ch` }}
-          defaultValue={n.label ?? ""}
-          placeholder={t("Group@@noun")}
-          onBlur={(e) => { if (e.target.value !== (n.label ?? "")) { mark(`label:${id}`); updateNodeData(id, { node: { ...n, label: e.target.value } }); } }}
-        />
+      <div className="pointer-events-auto relative w-full rounded-[14px]" style={{
+        height: collapsed ? GROUP_HEAD : "100%", border: `1.5px solid ${selected ? "var(--accent)" : c}`, backgroundColor: `color-mix(in srgb, ${c} 8%, transparent)`,
+        ...(pat !== "none" && !collapsed ? patternCss(pat, `color-mix(in srgb, ${c} 35%, transparent)`, 16) : {}),
+      }}>
+        {g.collapsible ? (
+          <div className="absolute inset-x-3.5 top-2 flex h-6 items-center gap-1.5">
+            <button className="nodrag flex size-5 shrink-0 items-center justify-center text-ink" aria-label={collapsed ? t("Expand group") : t("Collapse group")} aria-expanded={!collapsed} onClick={() => updateNodeData(id, { node: setCollapsed(n, !collapsed) })}>
+              <ChevronDown size={13} className={collapsed ? "-rotate-90 rtl:rotate-90" : ""} />
+            </button>
+            {label}
+            <span className="shrink-0 whitespace-nowrap rounded-full border border-line bg-surface-2 px-3 text-[11.5px] font-medium leading-6 text-ink">{t("{n} card|{n} cards", { n: count })}</span>
+          </div>
+        ) : label}
       </div>
     </>
   );
@@ -441,12 +507,29 @@ function Inner({ note }: { note: Note }) {
   const [connecting, setConnecting] = useState(false);
   // Tidy up preview (14b): the board shows the tidied layout; Cancel restores, Apply keeps it with an Undo toast.
   const [tidyPrev, setTidyPrev] = useState<null | { prev: JsonCanvas; stats: TidyStats }>(null);
-  // Edge shape is a view choice per canvas (not stored in the JSON Canvas file).
-  const edgeKey = `lumen.canvasEdges.${note.id}`;
-  const [edgeShape, setEdgeShapeRaw] = useState<EdgeShape>(() => { try { const v = localStorage.getItem(edgeKey); return v === "curved" || v === "elbow" ? v : "straight"; } catch { return "straight"; } });
-  const setEdgeShape = (e: EdgeShape) => { setEdgeShapeRaw(e); try { localStorage.setItem(edgeKey, e); } catch { /* ignore */ } };
-  const shownEdges = useMemo(() => edges.map((e) => (e.type === EDGE_RF[edgeShape] ? e : { ...e, type: EDGE_RF[edgeShape] })), [edges, edgeShape]);
-  const lastSaved = useRef(stringify(initial.canvas));
+  // Canvas-level lumen* options (background, default edge path, group options). Older boards kept the edge path in localStorage.
+  const [meta, setMetaRaw] = useState<CanvasMeta>(() => {
+    const m = pickMeta(initial.canvas);
+    if (!m.lumenEdgePath) { try { const v = localStorage.getItem(`lumen.canvasEdges.${note.id}`); if (v === "curved" || v === "elbow") m.lumenEdgePath = v; } catch { /* ignore */ } }
+    return m;
+  });
+  const metaRef = useRef(meta);
+  metaRef.current = meta;
+  const setMeta = (p: Partial<CanvasMeta>) => setMetaRaw((o) => ({ ...o, ...p }));
+  const edgeShape: EdgeShape = meta.lumenEdgePath ?? "straight";
+  /** The "Edges" segment in the menu = every edge: set the board default and clear per-edge overrides. */
+  const setEdgeShape = (e: EdgeShape) => { setMeta({ lumenEdgePath: e }); setEdges((es) => es.map((x) => (x.data?.edge && edgePathOf(x.data.edge as CanvasEdge) ? { ...x, data: { edge: setEdgePath(x.data.edge as CanvasEdge, undefined) } } : x))); };
+  const [optsOpen, setOptsOpen] = useState(false);
+  const [defNode, setDefNode] = useState<{ shape: NodeShape; border: BorderStyle; fill: FillStyle }>({ shape: "rounded", border: "solid", fill: "tint" });
+  const [defEdge, setDefEdge] = useState<CanvasEdge>({ id: "", fromNode: "", toNode: "" });
+  const snap = (n: FlowNode[] = nodes, e: Edge[] = edges): JsonCanvas => ({ ...fromFlow(n, e), ...pickMeta(meta) });
+  /** Shared Export dialog (lib/export-job.ts): scopes whole / selection / visible area / groups. */
+  const openCanvasExport = () => {
+    const pane = document.querySelector(".lumen-canvas .react-flow__pane")?.getBoundingClientRect();
+    const a = pane ? rf.screenToFlowPosition({ x: pane.left, y: pane.top }) : null, b = pane ? rf.screenToFlowPosition({ x: pane.right, y: pane.bottom }) : null;
+    openExportJob(canvasJob({ title: note.title, canvas: () => snap(), notes: v.notes, selectedIds: nodes.filter((n) => n.selected).map((n) => n.id), view: a && b ? { x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y } : undefined }));
+  };
+  const lastSaved = useRef(stringify({ ...initial.canvas, ...pickMeta(meta) }));
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const parseT = useRef<ReturnType<typeof setTimeout>>(undefined);
   const jsonFocus = useRef(false);
@@ -460,7 +543,7 @@ function Inner({ note }: { note: Note }) {
   // ------------------------------------------------------------ undo / redo (lib/canvas-history.ts)
   // One snapshot per settled change; the component is keyed by note id, so opening another note starts a new history.
   const hist = useRef<CanvasHistory | null>(null);
-  if (!hist.current) hist.current = new CanvasHistory(stringify(fromFlow(flow.nodes, flow.edges)));
+  if (!hist.current) hist.current = new CanvasHistory(stringify({ ...fromFlow(flow.nodes, flow.edges), ...pickMeta(meta) }));
   const [, setHistV] = useState(0);
   const nextKey = useRef<string | undefined>(undefined); // coalescing key for the next step
   const silent = useRef(false); // the next settled state isn't a user step (sync, undo/redo)
@@ -468,6 +551,7 @@ function Inner({ note }: { note: Note }) {
   const tidyOn = useRef(false); // Tidy up preview showing: Apply makes the step, Cancel makes none
   const histT = useRef<ReturnType<typeof setTimeout>>(undefined);
   const nodesRef = useRef(nodes), edgesRef = useRef(edges);
+  const memberMapRef = useRef(new Map<string, string[]>());
   nodesRef.current = nodes; edgesRef.current = edges;
   const selIds = () => [...nodesRef.current.filter((n) => n.selected).map((n) => n.id), ...edgesRef.current.filter((e) => e.selected).map((e) => e.id)];
   const mark = useCallback((k: string) => { nextKey.current = k; }, []);
@@ -476,14 +560,14 @@ function Inner({ note }: { note: Note }) {
     clearTimeout(histT.current);
     if (busy.current || tidyOn.current) return;
     const h = hist.current!;
-    const body = stringify(fromFlow(nodesRef.current, edgesRef.current));
+    const body = stringify({ ...fromFlow(nodesRef.current, edgesRef.current), ...pickMeta(metaRef.current) });
     const sel = [...nodesRef.current.filter((n) => n.selected).map((n) => n.id), ...edgesRef.current.filter((e) => e.selected).map((e) => e.id)];
     if (silent.current) { silent.current = false; h.absorb(body, sel); }
     else if (h.record(body, sel, nextKey.current)) setHistV((x) => x + 1);
     nextKey.current = undefined;
   }, []);
   const scheduleCommit = useCallback(() => { clearTimeout(histT.current); histT.current = setTimeout(commit, 80); }, [commit]);
-  useEffect(scheduleCommit, [nodes, edges, scheduleCommit]);
+  useEffect(scheduleCommit, [nodes, edges, meta, scheduleCommit]);
   useEffect(() => () => clearTimeout(histT.current), []);
 
   const load = useCallback((c: JsonCanvas, only?: string[]) => {
@@ -491,7 +575,7 @@ function Inner({ note }: { note: Note }) {
     setNodes((old) => { const sel = new Set(only ?? old.filter((n) => n.selected).map((n) => n.id)); return toFlow(c).nodes.map((n) => (sel.has(n.id) ? { ...n, selected: true } : n)); });
     setEdges((old) => { const sel = new Set(only ?? old.filter((e) => e.selected).map((e) => e.id)); return toFlow(c).edges.map((e) => (sel.has(e.id) ? { ...e, selected: true } : e)); });
   }, [setNodes, setEdges]);
-  const restore = (body: string, sel: string[]) => { silent.current = true; load(parseCanvas(body).canvas, sel); setHistV((x) => x + 1); };
+  const restore = (body: string, sel: string[]) => { silent.current = true; const c = parseCanvas(body).canvas; load(c, sel); setMetaRaw(pickMeta(c)); setHistV((x) => x + 1); };
   const undo = () => {
     if (busy.current || tidyOn.current) return;
     commit(); // a change still settling becomes its own step first
@@ -509,14 +593,14 @@ function Inner({ note }: { note: Note }) {
   useEffect(() => {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      const s = stringify(fromFlow(nodes, edges));
+      const s = stringify(snap());
       if (!jsonFocus.current && !codeErr) setCodeText(s);
       if (s === lastSaved.current) return;
       lastSaved.current = s;
       void updateNote(note.id, { body: s });
     }, code ? 150 : 500);
     return () => clearTimeout(timer.current);
-  }, [nodes, edges, note.id, code, codeErr]);
+  }, [nodes, edges, meta, note.id, code, codeErr]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // External change (sync, REST API, another tab) → reload.
   useEffect(() => {
@@ -529,6 +613,7 @@ function Inner({ note }: { note: Note }) {
     if (!jsonFocus.current) setCodeText(s);
     silent.current = true; // not the owner's step: it becomes the new base
     load(canvas);
+    setMetaRaw(pickMeta(canvas));
   }, [note.body, load]);
 
   // Board ↔ JSON: the selected node/edge's object gets the amber band; a cursor inside an object selects it.
@@ -549,7 +634,7 @@ function Inner({ note }: { note: Note }) {
         const c = JSON.parse(t);
         const err = validate(c);
         setCodeErr(err);
-        if (!err) { nextKey.current = "json"; load({ nodes: c.nodes ?? [], edges: c.edges ?? [] }); }
+        if (!err) { nextKey.current = "json"; load({ nodes: c.nodes ?? [], edges: c.edges ?? [] }); setMetaRaw(pickMeta(c)); }
       } catch (e) { setCodeErr(`JSON: ${(e as Error).message}`); }
     }, 300);
   };
@@ -563,7 +648,8 @@ function Inner({ note }: { note: Note }) {
   const addNode = (n: Partial<CanvasNode> & { type: CanvasNode["type"] }, at?: { x: number; y: number }) => {
     const id = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
     const p = at ?? center();
-    const node = { id, x: p.x, y: p.y, width: 260, height: 120, ...(defColor ? { color: defColor } : {}), ...n } as CanvasNode;
+    let node = { id, x: p.x, y: p.y, width: 260, height: 120, ...(defColor ? { color: defColor } : {}), ...n } as CanvasNode;
+    if (node.type !== "group") node = setFill(setBorder(setShape(node, defNode.shape), defNode.border), defNode.fill);
     setNodes((ns) => [...ns.map((x) => ({ ...x, selected: false })), { ...toFlow({ nodes: [node] }).nodes[0], selected: true }]);
   };
   const selected = nodes.filter((n) => n.selected);
@@ -571,8 +657,64 @@ function Inner({ note }: { note: Note }) {
   const setColor = (c: string | undefined) => {
     if (!anySel) { setDefColor(c); return; }
     setNodes((ns) => ns.map((n) => (n.selected ? { ...n, data: { node: { ...n.data.node, color: c } } } : n)));
-    setEdges((es) => es.map((e) => (e.selected ? { ...toFlowEdge({ ...((e.data?.edge ?? {}) as CanvasEdge), id: e.id, fromNode: e.source, toNode: e.target, fromSide: (e.sourceHandle ?? undefined) as Side | undefined, toSide: (e.targetHandle ?? undefined) as Side | undefined, label: e.label as string | undefined, color: c }), selected: true } : e)));
+    setEdges((es) => es.map((e) => { if (!e.selected) return e; const ed = edgeOf(e); if (c) ed.color = c; else delete ed.color; return { ...e, data: { edge: ed } }; }));
   };
+  // ------------------------------------------------------------ canvas options (CanvasOptions.tsx)
+  const selNodes = selected.filter((n) => n.data.node.type !== "group");
+  const selEdges = edges.filter((e) => e.selected);
+  const selGroups = selected.filter((n) => n.data.node.type === "group");
+  const nodeStyle = selNodes.length ? nodeStyleOf(selNodes[0].data.node) : defNode;
+  const onNodeStyle = (p: Partial<{ shape: NodeShape; border: BorderStyle; fill: FillStyle }>) => {
+    const fn = (n: CanvasNode) => { let o = n; if (p.shape) o = setShape(o, p.shape); if (p.border) o = setBorder(o, p.border); if (p.fill) o = setFill(o, p.fill); return o; };
+    if (!selNodes.length) return setDefNode((d) => ({ ...d, ...p }));
+    setNodes((ns) => ns.map((n) => (n.selected && n.data.node.type !== "group" ? { ...n, data: { node: fn(n.data.node) } } : n)));
+  };
+  const edgeNow: CanvasEdge = selEdges.length ? edgeOf(selEdges[0]) : defEdge;
+  const edgeStyle = { path: edgePathOf(edgeNow) ?? (selEdges.length ? edgeShape : edgeShape), line: lineOf(edgeNow), width: widthOf(edgeNow), from: headOf(edgeNow, "from"), to: headOf(edgeNow, "to"), label: labelStyleOf(edgeNow) };
+  const onEdgeStyle = (p: Partial<typeof edgeStyle>) => {
+    const fn = (e: CanvasEdge) => { let o = e; if (p.path) o = setEdgePath(o, p.path); if (p.line) o = setLine(o, p.line); if (p.width) o = setWidth(o, p.width); if (p.from) o = setHead(o, "from", p.from); if (p.to) o = setHead(o, "to", p.to); if (p.label) o = setLabelStyle(o, p.label); return o; };
+    if (!selEdges.length) { if (p.path) setMeta({ lumenEdgePath: p.path }); const { path: _p, ...rest } = p; if (Object.keys(rest).length) setDefEdge((d) => fn(d)); return; }
+    setEdges((es) => es.map((e) => (e.selected ? { ...e, data: { edge: fn(edgeOf(e)) } } : e)));
+  };
+  const groupNodes = nodes.filter((n) => n.data.node.type === "group");
+  const groupPattern: Pattern = patternOf((selGroups[0] ?? groupNodes[0])?.data.node ?? ({} as CanvasNode));
+  const memberMap = useMemo(() => {
+    const flat = nodes.map((n) => ({ id: n.id, x: n.position.x, y: n.position.y, width: n.width ?? n.measured?.width ?? n.data.node.width, height: n.height ?? n.measured?.height ?? n.data.node.height, type: n.data.node.type }));
+    const m = new Map<string, string[]>();
+    for (const g of flat) if (g.type === "group") m.set(g.id, membersOf(g as unknown as CanvasNode, flat));
+    return m;
+  }, [nodes]);
+  memberMapRef.current = memberMap;
+  const groupCtx = useMemo(() => ({ counts: new Map([...memberMap].map(([k, v]) => [k, v.length] as [string, number])), collapsible: collapsibleOf(meta) }), [memberMap, meta]);
+  const shownNodes = useMemo(() => {
+    const hide = new Set<string>();
+    for (const n of nodes) if (isCollapsed(n.data.node)) for (const id of memberMap.get(n.id) ?? []) hide.add(id);
+    return nodes.map((n) => (hide.has(n.id) ? { ...n, hidden: true } : isCollapsed(n.data.node) ? { ...n, height: GROUP_HEAD, style: { ...n.style, pointerEvents: "none" as const } } : n));
+  }, [nodes, memberMap]);
+  // Edges to or from a card hidden in a collapsed group are drawn to the group itself (its summary edge); both ends in one group: hidden.
+  const shownEdges = useMemo(() => {
+    const owner = new Map<string, string>();
+    for (const n of nodes) if (isCollapsed(n.data.node)) for (const id of memberMap.get(n.id) ?? []) owner.set(id, n.id);
+    const out: Edge[] = [];
+    for (const e of edges) {
+      const a = owner.get(e.source), b = owner.get(e.target);
+      const d = decorateEdge(e, edgeShape);
+      if (!a && !b) { out.push(d); continue; }
+      if (a && a === b) continue;
+      out.push({ ...d, id: e.id, source: a ?? e.source, target: b ?? e.target, sourceHandle: a ? "right" : e.sourceHandle, targetHandle: b ? "left" : e.targetHandle, selectable: false, focusable: false });
+    }
+    return out;
+  }, [edges, edgeShape, nodes, memberMap]);
+  const onGroups = (p: Partial<{ collapsible: boolean; pattern: Pattern }>) => {
+    if (p.collapsible !== undefined) setMeta({ lumenGroups: { collapsible: p.collapsible } });
+    if (p.pattern) { const all = !selGroups.length; setNodes((ns) => ns.map((n) => (n.data.node.type === "group" && (all || n.selected) ? { ...n, data: { node: setPattern(n.data.node, p.pattern!) } } : n))); }
+  };
+  const onBg = (p: { pattern?: Pattern; color?: string | null }) => setMeta({ lumenBackground: { ...meta.lumenBackground, ...(p.pattern ? { pattern: p.pattern } : {}), ...(p.color === null ? { color: undefined } : p.color ? { color: p.color } : {}) } });
+  const bgPat = bgPatternOf(meta), bgCol = bgColorOf(meta);
+  const exampleCount = groupCtx.counts.get((selGroups[0] ?? groupNodes[0])?.id ?? "") ?? 7;
+  // Moving a collapsed group carries the cards it hides.
+  const groupDrag = useRef<{ id: string; x: number; y: number } | null>(null);
+
   const delSelected = () => {
     const ids = new Set(nodesRef.current.filter((n) => n.selected && !isLocked(n.data.node)).map((n) => n.id));
     setNodes((ns) => ns.filter((n) => !ids.has(n.id)));
@@ -668,6 +810,7 @@ function Inner({ note }: { note: Note }) {
   const nudge = (dx: number, dy: number) => {
     const ids = new Set(selected.filter((n) => !isLocked(n.data.node)).map((n) => n.id));
     if (!ids.size) return;
+    for (const id of [...ids]) if (isCollapsed(nodesRef.current.find((n) => n.id === id)?.data.node ?? ({} as CanvasNode))) for (const m of memberMap.get(id) ?? []) ids.add(m);
     nextKey.current = `nudge:${[...ids].sort().join()}`; // a run of arrow presses = one step
     setNodes((ns) => ns.map((n) => (ids.has(n.id) ? { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } } : n)));
   };
@@ -698,20 +841,31 @@ function Inner({ note }: { note: Note }) {
     commit(); // settle anything pending first, then remember what the drag picked up (restored on undo)
     busy.current = true;
     const dragged = Array.isArray(a) ? a : b ?? [a];
+    const gd = dragged.find((n) => n.data.node.type === "group" && isCollapsed(n.data.node));
+    groupDrag.current = gd ? { id: gd.id, x: gd.position.x, y: gd.position.y } : null;
     hist.current!.select([...new Set([...dragged.map((n) => n.id), ...edgesRef.current.filter((e) => e.selected).map((e) => e.id)])]);
   }, [commit]);
-  const dragStop = useCallback(() => { busy.current = false; scheduleCommit(); }, [scheduleCommit]);
+  const dragStop = useCallback((_e?: unknown, nodeOrList?: FlowNode | FlowNode[]) => {
+    const node = Array.isArray(nodeOrList) ? undefined : nodeOrList;
+    const gd = groupDrag.current;
+    groupDrag.current = null;
+    if (gd && node && node.id === gd.id) {
+      const dx = node.position.x - gd.x, dy = node.position.y - gd.y, ids = new Set(memberMapRef.current.get(gd.id) ?? []);
+      if (ids.size && (dx || dy)) setNodes((ns) => ns.map((n) => (ids.has(n.id) ? { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } } : n)));
+    }
+    busy.current = false; scheduleCommit();
+  }, [scheduleCommit, setNodes]);
   const onConnect = (c: Connection) => {
     // Connection check (14b-K): no self links, no second edge between the same two cards.
     const name = (id: string) => { const n = nodes.find((x) => x.id === id)?.data.node; return !n ? id : n.type === "text" ? (splitTitle(n.text).title || n.text.split("\n")[0] || "Card").slice(0, 40) : n.type === "file" ? n.file.replace(/\.md$/i, "") : n.type === "link" ? n.url : n.label ?? "Group"; };
     const chk = checkNewEdge(edges.map((e) => ({ from: e.source, to: e.target })), c.source, c.target, name);
     if (!chk.ok) { toast(chk.title, undefined, { sub: chk.body }); return; }
-    setEdges((es) => addEdge({ ...c, id: crypto.randomUUID().slice(0, 12), type: "straight", markerEnd: { type: MarkerType.ArrowClosed, color: "var(--muted)", width: 18, height: 18 }, style: { stroke: "var(--muted)", strokeWidth: 2 }, labelBgPadding: [8, 3], labelBgBorderRadius: 6 }, es));
+    setEdges((es) => addEdge({ ...c, id: crypto.randomUUID().slice(0, 12), type: "straight", data: { edge: { id: "", fromNode: c.source, toNode: c.target, ...edgeStyleOf(defEdge) } }, labelBgPadding: [8, 3], labelBgBorderRadius: 6 }, es));
   };
   const refit = () => setTimeout(() => rf.fitView({ padding: 0.12, maxZoom: 1, duration: 200 }), 60);
-  const togglePanel = (t: CodeTab) => { if (t === "json") setCodeText(stringify(fromFlow(nodes, edges))); setPanel((p) => (p === t ? null : t)); refit(); };
-  const switchTab = (t: CodeTab) => { if (t === "json") setCodeText(stringify(fromFlow(nodes, edges))); setPanel(t); };
-  const exportCanvas = () => download(`${note.title}.canvas`, stringify(fromFlow(nodes, edges)), "application/json");
+  const togglePanel = (t: CodeTab) => { if (t === "json") setCodeText(stringify(snap())); setPanel((p) => (p === t ? null : t)); refit(); };
+  const switchTab = (t: CodeTab) => { if (t === "json") setCodeText(stringify(snap())); setPanel(t); };
+  const exportCanvas = () => download(`${note.title}.canvas`, stringify(snap()), "application/json");
 
   // ⌘` toggles the script console.
   useEffect(() => {
@@ -841,7 +995,7 @@ function Inner({ note }: { note: Note }) {
     ["JSON", <Code2 size={15} />, t("Code: edit as JSON Canvas"), () => togglePanel("json"), panel === "json"],
     [tk("Script"), <SquareTerminal size={15} />, t("Script console (Ctrl `)"), () => togglePanel("script"), panel === "script"],
     [tk("Export"), <Download size={15} />, t("Download .canvas"), exportCanvas],
-    [tk("Image"), <ImageIcon size={15} />, t("Export as image: SVG, PNG, JPEG, WebP (diagram cards included)"), () => openExport({ name: note.title, title: t("Export canvas"), themable: true, build: (pr) => canvasSvg(fromFlow(nodes, edges), v.notes, pr) })],
+    [tk("Image"), <ImageIcon size={15} />, t("Export as image: SVG, PNG, JPEG, WebP (diagram cards included)"), () => openCanvasExport()],
   ];
   const histTools: Tool[] = [
     [tk("Undo"), <Undo2 size={15} />, t("Undo ({keys})", { keys: `${MOD} Z` }), undo, false, !hist.current.canUndo || !!tidyPrev],
@@ -923,6 +1077,7 @@ function Inner({ note }: { note: Note }) {
             <span className={MENU_HEAD}>{t("View")}</span>
             <MenuRow icon={<Grid3x3 />} label={t("Snap to grid")} on={view.snap} onClick={() => setView({ snap: !view.snap })} />
             <MenuRow icon={<MapIcon />} label={t("Minimap")} on={view.minimap} onClick={() => setView({ minimap: !view.minimap })} />
+            <MenuRow icon={<SlidersHorizontal />} label={t("Canvas options")} on={optsOpen} onClick={() => { setMenu(null); setOptsOpen(true); }} />
             <MenuRow icon={<Keyboard />} label={t("Keyboard shortcuts")} keys="?" onClick={() => { setMenu(null); setKeysOpen(true); }} />
             <div className="m-1 h-px shrink-0 bg-line" />
             <span className={MENU_HEAD}>{t("Convert")}</span>
@@ -947,6 +1102,7 @@ function Inner({ note }: { note: Note }) {
 
   return (
     <Ctx.Provider value={ctx}>
+    <GroupCtx.Provider value={groupCtx}>
     <div className="flex h-full min-h-0 flex-col md:flex-row">
       <style>{CANVAS_CSS}</style>
       <div ref={boardRef} className={cx("lumen-canvas relative min-h-0 flex-1", connecting && "connecting")}
@@ -961,17 +1117,18 @@ function Inner({ note }: { note: Note }) {
           addNode({ type: "text", text: "" }, { x: Math.round(p.x / 20) * 20, y: Math.round(p.y / 20) * 20 });
         }}>
         <ReactFlow
-          nodes={nodes} edges={shownEdges} onNodesChange={onNodesChangeH} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={nodeTypes}
+          nodes={shownNodes} edges={shownEdges} onNodesChange={onNodesChangeH} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={nodeTypes}
           onNodeDragStart={dragStart} onNodeDragStop={dragStop} onSelectionDragStart={dragStart} onSelectionDragStop={dragStop}
           onConnectStart={() => setConnecting(true)} onConnectEnd={() => setConnecting(false)}
           connectionMode={ConnectionMode.Loose} fitView fitViewOptions={{ padding: 0.15, maxZoom: 1, ...(typeof innerWidth === "number" && innerWidth < 768 ? { minZoom: 0.62 } : {}) }} minZoom={0.05} maxZoom={3} snapToGrid={view.snap} snapGrid={[20, 20]} zoomOnDoubleClick={false}
           deleteKeyCode={["Delete", "Backspace"]} multiSelectionKeyCode={["Shift", "Meta", "Control"]} proOptions={{ hideAttribution: true }}
-          connectionLineStyle={{ stroke: "var(--accent)", strokeWidth: 2 }}
+          connectionLineStyle={{ stroke: "var(--accent)", strokeWidth: 2 }} style={bgCol ? { background: `color-mix(in srgb, ${colorOf(bgCol)} 10%, var(--bg))` } : undefined}
           onEdgeDoubleClick={(_, e) => { const l = prompt(t("Edge label"), (e.label as string) ?? ""); if (l !== null) setEdges((es) => es.map((x) => (x.id === e.id ? { ...x, label: l || undefined } : x))); }}
         >
-          <Background variant={BackgroundVariant.Dots} gap={22} size={1.1} color="color-mix(in srgb, var(--muted) 35%, transparent)" />
+          {bgPat !== "none" && <Background variant={bgPat === "grid" ? BackgroundVariant.Lines : BackgroundVariant.Dots} gap={22} size={bgPat === "grid" ? 1 : 1.1} color={bgPat === "grid" ? "color-mix(in srgb, var(--muted) 16%, transparent)" : "color-mix(in srgb, var(--muted) 35%, transparent)"} />}
           <ZoomPill />
-          {!panel && view.minimap && <MiniMap pannable zoomable className="!hidden lg:!block" style={{ width: 176, height: 112 }} nodeBorderRadius={3}
+          <MarkerDefs edges={edges} />
+          {!panel && !optsOpen && view.minimap && <MiniMap pannable zoomable className="!hidden lg:!block" style={{ width: 176, height: 112 }} nodeBorderRadius={3}
             nodeColor={(n) => { const c = colorOf((n.data as Data).node.color); return c ? `color-mix(in srgb, ${c} 45%, transparent)` : "color-mix(in srgb, var(--muted) 45%, transparent)"; }}
             maskColor="color-mix(in srgb, var(--surface) 55%, transparent)" maskStrokeColor="var(--accent)" maskStrokeWidth={2} />}
         </ReactFlow>
@@ -986,12 +1143,21 @@ function Inner({ note }: { note: Note }) {
           {SEP}
           {lvl < 1 && <span className={CAPTION}>{t("Arrange")}</span>}
           {shownArrange.map(([name, icon, label, fn, on]) => <button key={name} title={label} aria-label={label} onClick={fn} className={cx(TOOL, "shrink-0 whitespace-nowrap px-2 text-[12px]", on && "bg-surface-2 text-accent", name === "Tidy up" && "font-semibold")}>{icon}{(name === "Tidy up" ? lvl < 3 : lvl < 2) && <span>{t(name)}</span>}</button>)}
-          {lvl < 5 && <>{SEP}{lvl < 1 && <span className={CAPTION}>{t("Style")}</span>}{swatches("size-4")}</>}
+          {lvl < 5 && <>{SEP}{lvl < 1 && <span className={CAPTION}>{t("Style")}</span>}{swatches("size-4")}<button title={t("Canvas options: shapes, borders, edges, groups, background")} aria-label={t("Canvas options")} aria-pressed={optsOpen} onClick={() => setOptsOpen((o) => !o)} className={cx(TOOL, "w-8 shrink-0", optsOpen && "bg-surface-2 text-accent")}><SlidersHorizontal size={15} /></button></>}
           {lvl < 4 && <>{SEP}{lvl < 1 && <span className={CAPTION}>{t("Code")}</span>}{codeTools.map(([, icon, label, fn, on]) => <button key={label} title={label} aria-label={label} onClick={fn} className={cx(TOOL, "w-8 shrink-0", on && "bg-surface-2 text-accent")}>{icon}</button>)}</>}
           {SEP}
           <button title={lvl >= 4 ? t("More: tools, edit, view, convert, export") : t("More: edit, view, convert, export")} aria-label={t("Canvas menu")} onClick={() => setMenu((m) => (m === "main" ? null : "main"))} className={cx(TOOL, "w-8 shrink-0", menu === "main" && "bg-surface-2")}><Ellipsis size={16} /></button>
         </div>
         {menuEl}
+        {optsOpen && (
+          <div className="fade-in absolute inset-0 z-30 overflow-y-auto bg-bg p-4 md:inset-auto md:bottom-3 md:end-3 md:top-[64px] md:w-[372px] md:bg-transparent md:p-0 md:pe-0.5">
+            <CanvasOptions selNodes={selNodes.length} selEdges={selEdges.length} node={nodeStyle} onNode={onNodeStyle} edge={edgeStyle} onEdge={onEdgeStyle}
+              color={curColor} anySel={anySel} onColor={setColor} groups={{ collapsible: collapsibleOf(meta), pattern: groupPattern, example: exampleCount }} onGroups={onGroups}
+              bg={{ pattern: bgPat, color: bgCol }} onBg={onBg} onClose={() => setOptsOpen(false)}
+              onPresent={() => toast(t("Presenting groups as slides arrives with the presentation update"))}
+              onExport={() => { setOptsOpen(false); openCanvasExport(); }} />
+          </div>
+        )}
         {keysOpen && <CanvasKeys mod={MOD} onClose={() => setKeysOpen(false)} />}
         {tidyPrev && <TidyBanner stats={tidyPrev.stats} onCancel={cancelTidy} onApply={applyTidy} top={64} />}
 
@@ -1010,7 +1176,7 @@ function Inner({ note }: { note: Note }) {
             </div>
             <div className="grid h-[60px] items-center" style={{ gridTemplateColumns: `repeat(${phoneTab === "arrange" ? arrangeTools.length + 1 : phoneTab === "add" ? addTools.length : 4},minmax(0,1fr))` }}>
               {phoneTab === "style" ? (
-                <div className="col-span-4 flex items-center justify-center gap-2">{swatches("size-7")}{anySel && <button aria-label={t("Delete selected")} onClick={delSelected} className="flex size-11 items-center justify-center text-bad"><Trash2 size={20} /></button>}</div>
+                <div className="col-span-4 flex items-center justify-center gap-2">{swatches("size-7")}<button aria-label={t("Canvas options")} onClick={() => setOptsOpen(true)} className="flex size-11 items-center justify-center"><SlidersHorizontal size={20} /></button>{anySel && <button aria-label={t("Delete selected")} onClick={delSelected} className="flex size-11 items-center justify-center text-bad"><Trash2 size={20} /></button>}</div>
               ) : (
                 (phoneTab === "add" ? addTools : phoneTab === "arrange" ? [...arrangeTools, [tk("Fit"), <Scan size={15} />, t("Fit to screen"), fit] as Tool] : [...codeTools, [tk("More"), <Ellipsis size={15} />, t("Convert, duplicate, delete"), () => setMenu("main")] as Tool]).map(([name, icon, label, fn, on]) => (
                   <button key={name} aria-label={label} onClick={fn} className={cx("flex h-full flex-col items-center justify-center gap-0.5 text-[10.5px] [&>svg]:size-5", on && "text-accent")}>{icon}{t(name)}</button>
@@ -1067,6 +1233,7 @@ function Inner({ note }: { note: Note }) {
         </CodePanel>
       )}
     </div>
+    </GroupCtx.Provider>
     </Ctx.Provider>
   );
 }

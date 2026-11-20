@@ -20,6 +20,7 @@ import { TodayCard } from "../components/today-card";
 import { Avatar } from "./Welcome";
 import { SpaceIcon } from "../components/SpaceIcon";
 import { digits, fmtDate, fmtNum, fmtRelative, getLang, isRtl, t, tk } from "../lib/i18n";
+import { isWbType } from "../../shared/types";
 
 /** Compact "5m ago" in English, the Intl relative time in Arabic. */
 const relTime = (ts: number) => (getLang() === "ar" ? fmtRelative(ts) : relTimeEn(ts));
@@ -307,9 +308,9 @@ export function Home() {
     </div>
   );
 
-  const pinIcon = (n: Note) => n.type === "roadmap" ? <MapIcon size={16} /> : n.type === "canvas" ? <LayoutDashboard size={16} /> : n.type === "whiteboard" ? <PenTool size={16} /> : flashcards(n.body).length ? <Layers size={16} /> : <FileText size={16} />;
+  const pinIcon = (n: Note) => n.type === "roadmap" ? <MapIcon size={16} /> : n.type === "canvas" ? <LayoutDashboard size={16} /> : isWbType(n.type) ? <PenTool size={16} /> : flashcards(n.body).length ? <Layers size={16} /> : <FileText size={16} />;
   const pinSub = (n: Note) => {
-    const fc = n.type === "canvas" || n.type === "whiteboard" ? 0 : flashcards(n.body).length;
+    const fc = n.type === "canvas" || isWbType(n.type) ? 0 : flashcards(n.body).length;
     return fc ? `${t("Flashcards")} · ${t("{n} card|{n} cards", { n: fc })}` : pathOf(n) || n.type;
   };
   const pinnedCard = pinned.length > 0 && (

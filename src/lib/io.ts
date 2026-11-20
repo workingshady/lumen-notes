@@ -5,6 +5,7 @@ import { attUrl } from "./api";
 import { db, newFolder, save } from "./db";
 import { splitFrontMatter, toFrontMatter } from "./parse";
 import { activeTheme } from "./settings";
+import { isWbType } from "../../shared/types";
 
 const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "-").trim().slice(0, 120) || "Untitled";
 
@@ -18,11 +19,11 @@ export function download(name: string, data: Blob | string, mime = "text/plain")
 }
 
 export function noteToMarkdown(n: Note) {
-  if (n.type === "canvas" || n.type === "whiteboard") return n.body;
+  if (n.type === "canvas" || isWbType(n.type)) return n.body;
   const fm = toFrontMatter({ title: n.title, type: n.type !== "note" ? n.type : undefined, status: n.status ?? undefined, tags: n.tags, created: new Date(n.createdAt).toISOString(), slug: n.slug || undefined, ...n.props });
   return fm + splitFrontMatter(n.body).body;
 }
-const fileName = (n: Note) => n.type === "diagram" ? safe(n.title.replace(/\.mermaid$/i, "")) + ".mermaid" : safe(n.title) + (n.type === "canvas" ? ".canvas" : n.type === "whiteboard" ? ".excalidraw" : ".md");
+const fileName = (n: Note) => n.type === "diagram" ? safe(n.title.replace(/\.mermaid$/i, "")) + ".mermaid" : safe(n.title) + (n.type === "canvas" ? ".canvas" : isWbType(n.type) ? ".excalidraw" : ".md");
 
 export const exportNoteMd = (n: Note) => download(fileName(n), noteToMarkdown(n), "text/markdown");
 
@@ -108,8 +109,8 @@ export async function estimateVaultExport(): Promise<ExportEstimate> {
   const local = new Set(blobs as string[]);
   const liveAtts = atts.filter((a) => !a.deleted);
   return {
-    notes: live.filter((n) => n.type !== "canvas" && n.type !== "whiteboard").length,
-    canvases: live.filter((n) => n.type === "canvas" || n.type === "whiteboard").length,
+    notes: live.filter((n) => n.type !== "canvas" && !isWbType(n.type)).length,
+    canvases: live.filter((n) => n.type === "canvas" || isWbType(n.type)).length,
     attachments: liveAtts.length,
     missing: liveAtts.filter((a) => !local.has(a.id)).length,
     bytes: live.reduce((s, n) => s + enc.encode(noteToMarkdown(n)).length, 0) + liveAtts.reduce((s, a) => s + (a.size || 0), 0),
@@ -161,10 +162,10 @@ export async function exportVaultZip(opts: ExportOptions = {}): Promise<ExportRe
   const used = new Set<string>();
   for (const n of live) {
     let p = `${pathOf(n)}/${fileName(n)}`;
-    for (let i = 2; used.has(p.toLowerCase()); i++) p = `${pathOf(n)}/${safe(n.title.replace(/\.mermaid$/i, ""))} ${i}${n.type === "canvas" ? ".canvas" : n.type === "whiteboard" ? ".excalidraw" : n.type === "diagram" ? ".mermaid" : ".md"}`;
+    for (let i = 2; used.has(p.toLowerCase()); i++) p = `${pathOf(n)}/${safe(n.title.replace(/\.mermaid$/i, ""))} ${i}${n.type === "canvas" ? ".canvas" : isWbType(n.type) ? ".excalidraw" : n.type === "diagram" ? ".mermaid" : ".md"}`;
     used.add(p.toLowerCase());
     // Whiteboards keep images as attachment refs; the exported .excalidraw gets them inlined so it opens anywhere.
-    zip.file(p, n.type === "whiteboard" ? await (await import("./wb-files")).inlineSceneFiles(n.body, attachmentBytes) : noteToMarkdown(n));
+    zip.file(p, isWbType(n.type) ? await (await import("./wb-files")).inlineSceneFiles(n.body, attachmentBytes) : noteToMarkdown(n));
     opts.onProgress?.(++done, total, p);
   }
   const skipped: ExportResult["skipped"] = [];
@@ -182,8 +183,8 @@ export async function exportVaultZip(opts: ExportOptions = {}): Promise<ExportRe
   await writeTo(target, out);
   return {
     file: target.name, bytes: out.size, attachments, skipped, target,
-    notes: live.filter((n) => n.type !== "canvas" && n.type !== "whiteboard").length,
-    canvases: live.filter((n) => n.type === "canvas" || n.type === "whiteboard").length,
+    notes: live.filter((n) => n.type !== "canvas" && !isWbType(n.type)).length,
+    canvases: live.filter((n) => n.type === "canvas" || isWbType(n.type)).length,
   };
 }
 
@@ -212,8 +213,8 @@ export async function exportBackup(opts: ExportOptions = {}): Promise<ExportResu
   const live = data.notes.filter((n) => !n.deleted);
   return {
     file: target.name, bytes: blob.size, skipped: [], target, attachments: data.attachments.filter((a) => !a.deleted).length,
-    notes: live.filter((n) => n.type !== "canvas" && n.type !== "whiteboard").length,
-    canvases: live.filter((n) => n.type === "canvas" || n.type === "whiteboard").length,
+    notes: live.filter((n) => n.type !== "canvas" && !isWbType(n.type)).length,
+    canvases: live.filter((n) => n.type === "canvas" || isWbType(n.type)).length,
   };
 }
 

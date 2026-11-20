@@ -28,6 +28,7 @@ import { NewPathDialog } from "./NewPathDialog";
 import { openTag, tagTree, useTagMeta, type TagNode } from "../lib/tag-tree";
 import { openTagMenu } from "./TagPage";
 import { ITEMS, SECTIONS, SidebarOverlays, WIDTH, getSb, openSidebarCustomise, setSb, useSb, type ItemKey, type SectionKey } from "./sidebar-r6";
+import { isWbType } from "../../shared/types";
 import "../lib/ai-usage"; // registers the AI usage listener at startup (Settings › AI meter)
 
 /** Space kind labels, translated on read (getters), so `KIND_LABEL[k]` is already in the interface language. */
@@ -62,7 +63,7 @@ function useCounts() {
     return { open, dueT };
   }, [v.notes, today]);
   const inbox = v.notes.filter((n) => n.spaceId === "inbox").length;
-  const canvases = v.notes.filter((n) => n.type === "canvas" || n.type === "whiteboard").length;
+  const canvases = v.notes.filter((n) => n.type === "canvas" || isWbType(n.type)).length;
   return { review: due, tasks: t2.dueT, openTasks: t2.open, inbox, canvases, trash: 0 };
 }
 
@@ -402,7 +403,7 @@ function Section({ id, kbd, onNewPath }: { id: SectionKey; kbd: boolean; onNewPa
 function NoteRow({ n, indent = 0 }: { n: Note; indent?: number }) {
   const ui = useUI();
   const on = ui.noteId === n.id && ui.view === "notes";
-  const g = n.type === "whiteboard" ? "whiteboard" : n.type === "canvas" ? "canvas" : n.type === "path" ? "path" : "lesson";
+  const g = isWbType(n.type) ? "whiteboard" : n.type === "canvas" ? "canvas" : n.type === "path" ? "path" : "lesson";
   return <Row glyph={g} label={n.title || t("Untitled")} title={n.title} active={on} indent={indent} onClick={() => openNote(n.id)} dragProps={{ draggable: true, onDragStart: (e) => dragNote(e, n.id) }} />;
 }
 

@@ -1,141 +1,153 @@
-// "New visual workspace" chooser (design round 4, Lumen 17 · A5): four options with silhouette previews and glyphs,
-// the format each one makes and what it can be edited with; says where it will be created ("in Inbox ▾", a picker).
+// "New visual" chooser (design round 7, Lumen 40 · A–C; markup ported from R6Parts.dc.html part "chooser"):
+// six cards (Canvas, Whiteboard, Board, Mermaid, Architecture, Graph), a "From template" row (opens the templates gallery),
+// an "Import" row (each chip imports a file) and a "Save in" picker.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createNote } from "../lib/actions";
-import { isRtl, t, tk, tx } from "../lib/i18n";
+import { isRtl, t, tk } from "../lib/i18n";
 import { newDiagramFile } from "../lib/diagrams";
 import { go, openNote, useUI, useVault } from "../lib/store";
+import { CHIP_TEMPLATES, MINDMAP_SRC, templateById } from "../lib/templates-visual";
 import { Glyph } from "./Glyph";
 import { SpaceIcon } from "./SpaceIcon";
+import { createFromTemplate, TemplatesGallery } from "./TemplatesGallery";
 import { cx } from "./ui";
 
-type Kind = "canvas" | "whiteboard" | "mermaid" | "graph";
-interface Shape { x: number; y: number; w: number; h: number; f: string; r?: number; b?: string; rot?: string }
-const R = (x: number, y: number, w: number, h: number, f: string, o: { b?: string; r?: number; rot?: string } = {}): Shape => ({ x, y, w, h, f, r: o.r ?? 4, b: o.b, rot: o.rot });
-const KINDS: { k: Kind; g: string; n: string; d: string; f: string; caps: string[]; cta: string; prev: Shape[] }[] = [
-  { k: "canvas", g: "canvas", n: tk("Canvas"), d: tk("Cards, notes and links joined by arrows."), f: ".canvas", caps: [tk("Drag & drop"), "JSON", tk("Script"), "REST"], cta: tk("Create canvas"),
-    prev: [R(16, 20, 70, 40, "var(--surface-2)", { b: "1px solid var(--border)" }), R(130, 60, 70, 40, "var(--surface-2)", { b: "1.5px solid #A371F7" }), R(86, 40, 44, 2, "var(--muted)", { r: 1 }), R(30, 80, 60, 26, "var(--surface-2)", { b: "1px solid var(--border)" })] },
-  { k: "whiteboard", g: "whiteboard", n: tk("Whiteboard"), d: tk("Sketch freely: pen, shapes, stickies."), f: ".excalidraw", caps: [tk("Draw"), "JSON", tk("Mermaid → shapes")], cta: tk("Create whiteboard"),
-    prev: [R(18, 18, 52, 46, "#fff3bf", { r: 2, rot: "-4deg" }), R(80, 24, 52, 46, "#d0ebff", { r: 2, rot: "3deg" }), R(150, 30, 46, 46, "transparent", { b: "2px solid var(--text)", r: 23 }), R(40, 82, 120, 2, "var(--text)", { r: 1, rot: "-6deg" })] },
-  { k: "mermaid", g: "diagram", n: tk("Mermaid diagram"), d: tk("Write text, get a flowchart or sequence."), f: ".mermaid", caps: [tk("Live preview"), tk("Export"), tk("On canvases")], cta: tk("Create diagram"),
-    prev: [R(16, 46, 40, 22, "var(--surface-2)", { b: "1px solid var(--border)" }), R(56, 56, 20, 2, "var(--muted)"), R(76, 46, 40, 22, "var(--surface-2)", { b: "1px solid var(--border)" }), R(116, 56, 20, 2, "var(--muted)"), R(136, 44, 46, 26, "transparent", { b: "1.5px solid var(--warning)", r: 13 })] },
-  { k: "graph", g: "graph", n: tk("Graph from note"), d: tk("See how this note connects."), f: tk("not saved"), caps: [tk("Filters"), tk("Local or whole vault")], cta: tk("Open graph"),
-    prev: [R(90, 48, 14, 14, "var(--text)", { r: 7 }), R(40, 24, 9, 9, "#39C5CF", { r: 5 }), R(150, 30, 9, 9, "#E8893A", { r: 5 }), R(60, 86, 9, 9, "#A371F7", { r: 5 }), R(140, 84, 9, 9, "#57AB5A", { r: 5 })] },
+type Kind = "canvas" | "whiteboard" | "board" | "mermaid" | "arch" | "graph";
+const KINDS: { k: Kind; g: string; n: string; hand: string; d: string; chips: string[]; f: string; conv: string; col: string }[] = [
+  { k: "canvas", g: "canvas", n: tk("Canvas"), hand: tk("Arrange notes and ideas"), d: tk("Best for linking notes into maps and outlines."), chips: [tk("note cards"), tk("groups"), tk("edges"), tk("present")], f: ".canvas", conv: tk("Board · Architecture · Mermaid"), col: "#39C5CF" },
+  { k: "whiteboard", g: "whiteboard", n: tk("Whiteboard"), hand: tk("Sketch and handwrite"), d: tk("Best for free drawing with a pen or stylus."), chips: [tk("pens"), tk("shapes"), tk("layers"), tk("AI convert")], f: ".excalidraw", conv: tk("Board · Canvas · Note"), col: "#E8893A" },
+  { k: "board", g: "board", n: tk("Board"), hand: tk("Draw, link notes, drop media"), d: tk("Everything on one surface: ink, live notes, diagrams, media."), chips: [tk("ink"), tk("note cards"), tk("Mermaid"), tk("media"), tk("frames")], f: ".excalidraw", conv: tk("Canvas · Architecture · Note"), col: "#F2A93B" },
+  { k: "mermaid", g: "mermaid", n: tk("Mermaid diagram"), hand: tk("Type a diagram"), d: tk("Best when text is faster than dragging."), chips: [tk("code"), tk("live preview"), tk("14 kinds")], f: ".mermaid", conv: tk("Whiteboard · Canvas"), col: "#A371F7" },
+  { k: "arch", g: "diagram", n: tk("Architecture & diagrams"), hand: tk("Drag or type a system"), d: tk("Systems, flowcharts, ERDs and C4 with code kept in sync."), chips: [tk("library"), tk("code ⇄ canvas"), tk("auto layout"), "AI"], f: ".canvas + lumenArch", conv: tk("Mermaid · draw.io · SQL"), col: "#57AB5A" },
+  { k: "graph", g: "graph", n: tk("Graph from note"), hand: tk("See connections"), d: tk("Read-only map of a note's links; drag nodes out."), chips: [tk("read-only"), tk("drag out"), tk("Open as canvas")], f: tk("view"), conv: tk("Canvas · Board"), col: "#7AA2F7" },
 ];
+type ImportKind = "mermaid" | "drawio" | "excalidraw" | "canvas" | "terraform" | "sql";
+const IMPORTS: { k: ImportKind; g: string; l: string; accept: string }[] = [
+  { k: "mermaid", g: "mermaid", l: "Mermaid", accept: ".mmd,.mermaid,.md,.txt" }, { k: "drawio", g: "diagram", l: "draw.io", accept: ".drawio,.xml" },
+  { k: "excalidraw", g: "whiteboard", l: ".excalidraw", accept: ".excalidraw,.json" }, { k: "canvas", g: "canvas", l: ".canvas", accept: ".canvas,.json" },
+  { k: "terraform", g: "code", l: "Terraform", accept: ".tf,.hcl,.txt" }, { k: "sql", g: "database", l: "SQL", accept: ".sql,.txt" },
+];
+const chip = "flex h-[30px] items-center gap-1.5 whitespace-nowrap rounded-[8px] border border-line px-2.5 text-[12px] hover:bg-surface-2";
 
-function Preview({ shapes }: { shapes: Shape[] }) {
-  return (
-    <div className="relative h-[120px] overflow-hidden border-b border-line bg-bg">
-      {shapes.map((r, i) => <span key={i} className="absolute box-border" style={{ left: r.x, top: r.y, width: r.w, height: r.h, borderRadius: r.r, background: r.f, border: r.b ?? "none", transform: `rotate(${r.rot ?? "0deg"})` }} />)}
-    </div>
-  );
+type W = { spaceId: string; folderId: string | null };
+/** "Architecture & diagrams" opens W1-D's chooser when it exists (src/components/arch/*, export openArchitectureChooser(where)); until then a starter architecture canvas. */
+async function openArch(where: W) {
+  const mods = import.meta.glob("./arch/*.{ts,tsx}") as Record<string, () => Promise<Record<string, unknown>>>;
+  for (const load of Object.values(mods)) {
+    try { const m = await load(); if (typeof m.openArchitectureChooser === "function") { (m.openArchitectureChooser as (w: W) => void)(where); return; } } catch { /* try the next module */ }
+  }
+  const tpl = templateById("three-tier")!;
+  await createFromTemplate({ ...tpl, title: "New architecture" }, where);
 }
 
 export function NewVisualChooser({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ui = useUI();
   const v = useVault();
-  const [sel, setSel] = useState(0);
-  const selRef = useRef(0);
-  selRef.current = sel;
-  const [where, setWhere] = useState<{ spaceId: string; folderId: string | null }>({ spaceId: "inbox", folderId: null });
+  const [where, setWhere] = useState<W>({ spaceId: "inbox", folderId: null });
   const [picking, setPicking] = useState(false);
+  const [gallery, setGallery] = useState(false);
+  const [err, setErr] = useState("");
   const whereRef = useRef(where);
   whereRef.current = where;
+  const fileRef = useRef<HTMLInputElement>(null);
+  const importKind = useRef<ImportKind>("mermaid");
   const space = v.spaceMap.get(where.spaceId);
   const folder = where.folderId ? v.folderMap.get(where.folderId) : null;
   const isInbox = where.spaceId === "inbox" && !folder;
   const label = folder?.name ?? (where.spaceId === "inbox" ? t("Inbox") : space?.name ?? t("Inbox"));
 
-  async function create(i = sel) {
-    const k = KINDS[i].k;
+  async function create(k: Kind) {
     const w = whereRef.current;
     onClose();
     if (k === "graph") {
       // GraphView is lazy-loaded; hand it the "start local" request through sessionStorage.
       try { if (ui.noteId) sessionStorage.setItem("lumen.graphLocal", ui.noteId); } catch { /* ignore */ } // no note open → the whole graph
       go("graph");
-      return;
-    }
-    if (k === "mermaid") {
-      const d = await newDiagramFile({ spaceId: w.spaceId, folderId: w.folderId }, v.notes);
-      openNote(d.id, "split");
-      return;
-    }
-    const n = await createNote({ template: k, spaceId: w.spaceId, folderId: w.folderId });
-    openNote(n.id);
+    } else if (k === "mermaid") openNote((await newDiagramFile({ spaceId: w.spaceId, folderId: w.folderId }, v.notes)).id, "split");
+    else if (k === "arch") await openArch(w);
+    else if (k === "board") openNote((await createNote({ type: "board", title: "New board", body: "", spaceId: w.spaceId, folderId: w.folderId })).id);
+    else openNote((await createNote({ template: k, spaceId: w.spaceId, folderId: w.folderId })).id);
+  }
+  async function chipTemplate(id: string) {
+    const w = whereRef.current;
+    onClose();
+    if (id === "mindmap") { openNote((await newDiagramFile(w, v.notes, "mindmap", MINDMAP_SRC)).id, "split"); return; }
+    await createFromTemplate(templateById(id)!, w);
+  }
+  async function importFile(f: File) {
+    const w = whereRef.current, k = importKind.current;
+    const title = f.name.replace(/\.[^.]+$/, "") || "Imported";
+    try {
+      const text = await f.text();
+      let n;
+      if (k === "mermaid") n = await newDiagramFile(w, v.notes, "imported", text.replace(/^```mermaid\s*\n?|```\s*$/g, ""));
+      else if (k === "excalidraw") { const { parseScene } = await import("../lib/whiteboard"); const r = parseScene(text); if (r.error) throw new Error(r.error); n = await createNote({ type: "whiteboard", title, body: text, spaceId: w.spaceId, folderId: w.folderId }); }
+      else if (k === "canvas") { const { parseCanvas } = await import("../lib/canvas"); const r = parseCanvas(text); if (r.error) throw new Error(r.error); n = await createNote({ type: "canvas", title, body: text, spaceId: w.spaceId, folderId: w.folderId }); }
+      else {
+        const m = await import("../lib/visual-import");
+        const body = k === "drawio" ? m.drawioToCanvas(text) : k === "terraform" ? m.terraformToCanvas(text) : m.sqlToCanvas(text);
+        n = await createNote({ type: "canvas", title, body, spaceId: w.spaceId, folderId: w.folderId });
+      }
+      onClose();
+      openNote(n.id);
+    } catch (e) { setErr(`${f.name}: ${(e as Error).message}`); }
   }
 
   useEffect(() => {
     if (!open) return;
-    setSel(0);
-    setPicking(false);
+    setPicking(false); setGallery(false); setErr("");
     setWhere({ spaceId: ui.spaceId === "all" ? "inbox" : ui.spaceId, folderId: ui.spaceId === "all" ? null : ui.folderId });
-    const openedAt = performance.now();
-    const key = (e: KeyboardEvent) => {
-      if (e.timeStamp <= openedAt) return; // the Enter that opened us (palette) is still bubbling
-      if ((e.target as HTMLElement)?.closest?.("input")) { if (e.key === "Escape") setPicking(false); return; }
-      const next = isRtl() ? "ArrowLeft" : "ArrowRight", prev = isRtl() ? "ArrowRight" : "ArrowLeft"; // the cards flow with the interface direction
-      if (e.key === next || e.key === "ArrowDown") { e.preventDefault(); setSel((s) => Math.min(KINDS.length - 1, s + 1)); }
-      else if (e.key === prev || e.key === "ArrowUp") { e.preventDefault(); setSel((s) => Math.max(0, s - 1)); }
-      else if (e.key === "Enter") { e.preventDefault(); void create(selRef.current); }
-      else if (e.key === "Escape") onClose();
-    };
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape" && !(e.target as HTMLElement)?.closest?.("input")) onClose(); };
     addEventListener("keydown", key);
     return () => removeEventListener("keydown", key);
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!open) return null;
   const whereIcon = isInbox ? <Glyph name="inbox" size={14} /> : folder ? <Glyph name="folder" size={14} /> : <SpaceIcon space={space} size={14} />;
-  const whereBtn = (cls: string, caret: boolean) => (
-    <span className={cx("relative", cls)}>
-      <button onClick={() => setPicking((p) => !p)} aria-haspopup="listbox" aria-expanded={picking} title={t("Where it will be created")} className="flex items-center gap-1.5 text-muted hover:text-ink">
-        {tx("in {place}", { place: <>{whereIcon}<b className="font-medium text-ink" dir="auto">{label}</b></> })}{caret && " ▾"}
-      </button>
-      {picking && <WherePicker value={where} onPick={(w) => { setWhere(w); setPicking(false); }} onClose={() => setPicking(false)} />}
-    </span>
-  );
-  const k = KINDS[sel];
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(5,6,8,.55)] text-[13px] text-ink md:items-center fade-in" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-label={t("New visual workspace")} className="sheet-in safe-b flex max-h-[92dvh] w-full flex-col rounded-t-[14px] bg-surface px-4 pt-2.5 md:w-[980px] md:max-w-[calc(100vw-32px)] md:rounded-[14px] md:border md:border-line md:p-0">
-        {/* Phone sheet header */}
-        <div className="flex flex-col gap-2.5 md:hidden">
-          <div className="flex justify-center"><button aria-label={t("Close")} onClick={onClose} className="h-1 w-9 rounded-[2px] bg-line" /></div>
-          <span className="text-[18px] font-[650]">{t("New…")}</span>
-          {whereBtn("self-start", false)}
+    <div role="dialog" aria-label={t("New visual")} dir={isRtl() ? "rtl" : "ltr"} className="fixed inset-0 z-50 overflow-y-auto bg-bg text-[13px] text-ink fade-in">
+      <button aria-label={t("Close")} onClick={onClose} className="absolute end-2 top-2 flex h-8 w-8 items-center justify-center rounded-[8px] text-muted hover:bg-surface-2 hover:text-ink"><Glyph name="x" size={16} /></button>
+      <input ref={fileRef} type="file" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void importFile(f); }} />
+      <div className="mx-auto flex w-full max-w-[1360px] flex-col gap-[18px] px-4 pb-8 pt-[26px] md:px-[60px] md:py-[48px]">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="flex-1 text-[22px] font-[650] leading-[34px] tracking-[-.02em] md:text-[28px] md:leading-[36px]">{t("New visual")}</span>
+          <span className="relative">
+            <button onClick={() => setPicking((p) => !p)} aria-haspopup="listbox" aria-expanded={picking} title={t("Where it will be created")} className="flex h-[34px] items-center gap-2 whitespace-nowrap rounded-[9px] border border-line px-3 text-[12.5px]">
+              <span className="text-muted">{t("Save in")}</span>{whereIcon}<span dir="auto">{label}</span><span className="text-[9px]">▾</span>
+            </button>
+            {picking && <WherePicker value={where} onPick={(w) => { setWhere(w); setPicking(false); }} onClose={() => setPicking(false)} />}
+          </span>
         </div>
-        {/* Desktop header */}
-        <div className="hidden items-center gap-2.5 px-[22px] pb-1 pt-[18px] md:flex">
-          <span className="flex-1 text-[18px] font-[650]">{t("New visual workspace")}</span>
-          {whereBtn("", true)}
-        </div>
-        <span className="hidden px-[22px] pb-4 text-muted md:block">{t("Pick by what you want to do with your hands.")}</span>
-        <div className="mt-2.5 flex min-h-0 flex-col gap-2.5 overflow-y-auto md:mt-0 md:grid md:grid-cols-4 md:gap-3 md:overflow-visible md:px-[22px]">
-          {KINDS.map((c, i) => {
-            const on = sel === i;
-            const gc = on ? "var(--accent)" : "var(--text)";
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {KINDS.map((c) => {
+            const rec = c.k === "board";
             return (
-              <button key={c.k} onClick={() => setSel(i)} onDoubleClick={() => void create(i)} aria-pressed={on}
-                className="box-border flex min-h-16 shrink-0 items-center gap-3 overflow-hidden rounded-[12px] px-3.5 text-start md:min-h-0 md:flex-col md:items-stretch md:gap-0 md:px-0"
-                style={{ border: on ? "1.5px solid var(--accent)" : "1px solid var(--border)", background: on ? "color-mix(in srgb,var(--accent) 6%,var(--surface))" : "var(--surface)" }}>
-                <span className="flex md:hidden"><Glyph name={c.g} size={22} color={gc} tile={gc} /></span>
-                <span className="hidden md:block"><Preview shapes={c.prev} /></span>
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5 md:gap-1.5 md:p-3">
-                  <span className="flex items-center gap-2 font-semibold md:font-[650]"><span className="hidden md:inline-flex"><Glyph name={c.g} size={18} color={gc} /></span>{t(c.n)}</span>
-                  <span className="text-[12.5px] text-muted md:leading-[18px]">{t(c.d)}</span>
-                  <code className="hidden font-mono text-[11px] text-muted md:block">{t(c.f)}</code>
-                  <span className="hidden flex-wrap gap-1 md:flex">{c.caps.map((cap) => <span key={cap} className="rounded-[5px] border border-line px-1.5 text-[10.5px] leading-[17px] text-muted">{t(cap)}</span>)}</span>
-                </div>
+              <button key={c.k} onClick={() => void create(c.k)} className="flex min-w-0 flex-col gap-2.5 rounded-[14px] bg-surface p-4 text-start transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[.99]"
+                style={{ border: `1px solid ${rec ? "var(--accent)" : "var(--border)"}`, boxShadow: rec ? "0 0 0 1px var(--accent)" : "none" }}>
+                <span className="flex items-center gap-3">
+                  <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[11px]" style={{ background: `color-mix(in srgb,${c.col} 14%,transparent)`, color: c.col }}><Glyph name={c.g as never} size={22} /></span>
+                  <span className="flex min-w-0 flex-col gap-0.5"><span className="text-[15px] font-[650]">{t(c.n)}</span><span className="text-[12.5px]" style={{ color: rec ? "var(--accent)" : "var(--text)" }}>{t(c.hand)}</span></span>
+                </span>
+                <span className="hidden text-[12.5px] leading-[18px] text-muted md:block">{t(c.d)}</span>
+                <span className="flex flex-wrap gap-[5px]">{c.chips.map((x) => <span key={x} className="whitespace-nowrap rounded-full bg-surface-2 px-2 py-[2px] text-[11px]">{t(x)}</span>)}</span>
+                <span className="flex justify-between gap-2 border-t border-line pt-2 font-mono text-[11px] font-medium text-muted" dir="ltr"><span>{t(c.f)}</span><span className="truncate">→ {t(c.conv)}</span></span>
               </button>
             );
           })}
         </div>
-        <div className="flex shrink-0 justify-end gap-2 pt-2.5 md:px-[22px] md:py-4">
-          <button className="hidden h-[34px] items-center px-3.5 text-muted hover:text-ink md:flex" onClick={onClose}>{t("Cancel")}</button>
-          <button className="mt-1 flex h-[52px] flex-1 items-center justify-center rounded-[12px] bg-accent font-semibold text-accent-fg hover:brightness-110 md:mt-0 md:h-[34px] md:flex-none md:rounded-[10px] md:px-4" onClick={() => void create()}>{t(k.cta)}</button>
+        <span className="text-center text-[12.5px] text-muted">{t("Not sure? Start with")} <b className="text-ink">{t("Board")}</b>{t(". You can convert any workspace later.")}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="w-full text-[11px] font-semibold tracking-[.06em] text-muted md:w-[110px]">{t("FROM TEMPLATE")}</span>
+          {CHIP_TEMPLATES.map((c) => <button key={c.id} className={chip} onClick={() => void chipTemplate(c.id)}><Glyph name={c.g as never} size={14} color="var(--muted)" />{t(c.l)}</button>)}
+          <button className={chip} onClick={() => setGallery(true)}><Glyph name="template" size={14} color="var(--muted)" />{t("All templates…")}</button>
         </div>
-        <div className="h-6 shrink-0 md:hidden" />
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="w-full text-[11px] font-semibold tracking-[.06em] text-muted md:w-[110px]">{t("IMPORT")}</span>
+          {IMPORTS.map((c) => <button key={c.k} className={chip} onClick={() => { importKind.current = c.k; setErr(""); if (fileRef.current) { fileRef.current.accept = c.accept; fileRef.current.click(); } }}><Glyph name={c.g as never} size={14} color="var(--muted)" />{c.l}</button>)}
+        </div>
+        {err && <span role="alert" className="text-[12.5px] text-[var(--danger,#EF6B6B)]" dir="auto">{err}</span>}
       </div>
+      <TemplatesGallery open={gallery} where={where} onClose={() => setGallery(false)} onPicked={onClose} />
     </div>
   );
 }

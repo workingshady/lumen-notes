@@ -1,6 +1,7 @@
 import { Download, LayoutDashboard, Loader2, Sparkles, Undo2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { openDiagramExport } from "../lib/diagram-export";
+import { openExportJob } from "../lib/export-job";
+import { mermaidJob } from "../lib/export-jobs";
 import type { Note } from "../../shared/types";
 import { canvasesWith, diagramFocus, diagramHash, diagramKind, mermaidBlocks, metaOf, placeOnCanvas, renameDiagramWithAI } from "../lib/diagrams";
 import { t, tx } from "../lib/i18n";
@@ -74,7 +75,7 @@ function DiagramPreview({ note }: { note: Note }) {
         ))}
         {!where.length && <button className={chip} onClick={() => void toCanvas().catch(() => toast(t("Couldn't add it to a canvas")))}><LayoutDashboard size={12} />{t("Add to canvas")}</button>}
         <button className={chip} onClick={() => void suggest()} disabled={naming} title={t("Ask the AI for a short descriptive file name")}>{naming ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}{t("Suggest name")}</button>
-        <button className="pointer-events-auto inline-flex h-[30px] items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-semibold text-accent-fg hover:brightness-110" onClick={() => openDiagramExport(note.body, note.title)} title={t("Export: SVG, PNG, JPEG, WebP")}><Download size={13} />{t("Export")}</button>
+        <button className="pointer-events-auto inline-flex h-[30px] items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-semibold text-accent-fg hover:brightness-110" onClick={() => openExportJob(mermaidJob(note.body, note.title))} title={t("Export: SVG, PNG, JPEG, WebP")}><Download size={13} />{t("Export")}</button>
       </div>
     </div>
   );

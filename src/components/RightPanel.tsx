@@ -113,7 +113,7 @@ function Backlinks({ note }: { note: Note }) {
 
 // ------------------------------------------------------------------ unlinked mentions (design 04 §D6; logic in lib/mentions.ts)
 type MentionGroup = { src: Note; ms: Mention[] };
-const NON_MD = ["canvas", "whiteboard", "diagram"];
+const NON_MD = ["canvas", "whiteboard", "board", "diagram"];
 function UnlinkedMentions({ note }: { note: Note }) {
   const v = useVault();
   const [confirm, setConfirm] = useState(false);
@@ -258,7 +258,7 @@ function Properties({ note }: { note: Note }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [adv, setAdv] = useState(false);
-  const md = !["canvas", "whiteboard", "diagram"].includes(note.type);
+  const md = !["canvas", "whiteboard", "board", "diagram"].includes(note.type);
 
   /** Write a property to the record and (for Markdown notes) to the YAML front-matter. */
   const setProp = (key: string, val: string | null) => {
@@ -326,7 +326,7 @@ function Properties({ note }: { note: Note }) {
           {valBtn("status", note.status ? valLabel(note.status) : <span className="text-muted">{t("None")}</span>, note.status ? STATUS_COLOR[note.status] : undefined)}
         </Row>
       ) : null}
-      <Row id="type" k="type" icon={<Tag size={13} />} edit={<Chips opts={NOTE_TYPES.filter((t) => md ? !["canvas", "whiteboard", "diagram"].includes(t) : t === note.type)} cur={note.type} onPick={(t) => void updateNote(note.id, { type: t as Note["type"] })} />}>
+      <Row id="type" k="type" icon={<Tag size={13} />} edit={<Chips opts={NOTE_TYPES.filter((t) => md ? !["canvas", "whiteboard", "board", "diagram"].includes(t) : t === note.type)} cur={note.type} onPick={(t) => void updateNote(note.id, { type: t as Note["type"] })} />}>
         {valBtn("type", valLabel(note.type))}
       </Row>
       <Row id="tags" k="tags" icon={<Hash size={13} />} edit={<NoteTagPicker note={note} onDone={() => setEditing(null)} />}>

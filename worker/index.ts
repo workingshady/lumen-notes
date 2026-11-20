@@ -17,9 +17,11 @@ import registerAccess from "./ext/access";
 import extOg, { ogPages } from "./ext/og"; // OG images + share/blog page meta (round 4 assets)
 import { accountRouter } from "./accounts";
 import registerAuth, { authGate } from "./ext/auth"; // user accounts, behind ACCOUNTS_ENABLED (off) — docs/ACCOUNTS.md
+import registerAiVisual from "./ext/ai-visual"; // vision convert + architecture AI (round 7)
 import registerAiUsage from "./ext/ai-usage"; // AI usage meter + daily limit (Settings › AI, round 6)
 import registerAccountData from "./ext/account-data"; // Settings › Account › Delete account and all data (round 6)
 import registerLinks from "./ext/links";
+import { isWbType } from "../shared/types";
 import registerRest from "./ext/rest"; // REST API for scripts and agents (docs/API.md) // Note › Links tab: page snapshots + link check (round 6)
 
 export type Env = {
@@ -251,7 +253,7 @@ api.put("/canvas/:id", auth, async (c) => {
 // Whiteboards: full .excalidraw JSON in/out, or append element skeletons (converted by the app on next open).
 api.get("/whiteboard/:id", auth, async (c) => {
   const n = await getNote(c.env.DB, c.req.param("id")!);
-  if (!n || n.type !== "whiteboard") return c.json({ error: "Not found" }, 404);
+  if (!n || !isWbType(n.type)) return c.json({ error: "Not found" }, 404);
   return c.body(n.body || '{"type":"excalidraw","version":2,"elements":[]}', 200, { "content-type": "application/json" });
 });
 async function saveBoard(c: Context<Env>, id: string, mutate: (scene: Record<string, unknown> & { elements: unknown[] }) => void) {
@@ -262,7 +264,7 @@ async function saveBoard(c: Context<Env>, id: string, mutate: (scene: Record<str
   mutate(scene);
   const note: Note = {
     title: c.req.query("title") ?? "Whiteboard", spaceId: "inbox", folderId: null, tags: [], status: null, pinned: 0, favorite: 0, published: 0, slug: "",
-    props: {}, createdAt: now, deleted: 0, ...old, type: "whiteboard", body: JSON.stringify(scene), id, updatedAt: now,
+    props: {}, createdAt: now, deleted: 0, ...old, type: old?.type === "board" ? "board" : "whiteboard", body: JSON.stringify(scene), id, updatedAt: now,
   };
   await putNote(c.env.DB, note);
   return scene;
@@ -572,7 +574,7 @@ for (const ext of [extHome, extSpaces, extNavigate, extStudy, extSettings, extWo
 registerAsk(api, helpers); // "Ask your vault" (worker/ext/ask.ts)
 registerChat(api, helpers); registerTutor(api, helpers); // Ask chat + AI tutor (worker/ext/chat.ts, tutor.ts)
 registerHub(api, helpers); // project hub "Ask" (worker/ext/hub.ts)
-registerAccess(api, helpers); // devices that sync (worker/ext/access.ts)
+registerAccess(api, helpers); registerAiVisual(api, helpers); // devices that sync (worker/ext/access.ts)
 registerAccountData(api, helpers); registerLinks(api, helpers); registerRest(api, helpers); // POST /api/vault/wipe (worker/ext/account-data.ts)
 registerAuth(api, helpers); // /api/accounts/config + /api/auth/* (worker/ext/auth.ts; 404 while accounts are off)
 extOg(api, helpers); ogPages(app); // OG image routes + /s/:token, /blog/:slug meta (worker/ext/og.ts)

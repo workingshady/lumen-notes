@@ -94,7 +94,8 @@ export const meter: MiddlewareHandler<Env> = async (c: Context<Env>, next: Next)
   if (isVoice) audioBytes = Number(c.req.header("content-length") ?? 0) || (await c.req.raw.clone().arrayBuffer().catch(() => new ArrayBuffer(0))).byteLength;
   else {
     const body = await c.req.raw.clone().text().catch(() => "");
-    inChars = body.length;
+    // Vision routes carry a base64 image: count the text only (the image is a flat ~1,100 tokens).
+    inChars = path.startsWith("/api/ai/visual/") ? body.replace(/[A-Za-z0-9+/=]{2000,}/g, "").length + 4400 : body.length;
     try { action = String((JSON.parse(body) as { action?: string }).action ?? ""); } catch { /* not JSON */ }
   }
   const feature = featureOf(path, action);

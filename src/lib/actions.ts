@@ -10,7 +10,7 @@ export async function createNote(p: Partial<Note> & { template?: string; fm?: Re
   const t: Template | undefined = TEMPLATES.find((x) => x.id === (template ?? "blank"));
   const base = newNote({ type: t?.type ?? "note", status: t?.status ?? null, title: t?.title ?? "Untitled", body: t?.body ?? "", ...rest });
   // Markdown notes carry their title as `# H1` and type/status/tags in front-matter (design: ScreenWorkspace).
-  const md = !["canvas", "whiteboard", "roadmap", "diagram"].includes(base.type);
+  const md = !["canvas", "whiteboard", "board", "roadmap", "diagram"].includes(base.type);
   const n0 = md && rest.body === undefined ? { ...base, body: withMeta(`# ${base.title}\n\n${base.body}`, base) } : base;
   const n = fm ? { ...n0, body: setFrontMatter(n0.body, fm) } : n0;
   await save("note", n);
@@ -22,7 +22,7 @@ export async function createNote(p: Partial<Note> & { template?: string; fm?: Re
 function withMeta(body: string, n: Pick<Note, "type" | "status" | "tags">) {
   return setFrontMatter(body, { type: n.type === "note" ? null : n.type, status: n.status ?? null, tags: n.tags.filter((t) => !inlineTags(splitFrontMatter(body).body).includes(t)) });
 }
-const isMarkdown = (t: NoteType) => !["canvas", "whiteboard", "diagram"].includes(t);
+const isMarkdown = (t: NoteType) => !["canvas", "whiteboard", "board", "diagram"].includes(t);
 
 /** opts.keepTime: an automatic conversion (not a user edit) keeps the note's "updated" time. */
 export async function updateNote(id: string, changes: Partial<Note>, opts: { keepTime?: boolean } = {}) {

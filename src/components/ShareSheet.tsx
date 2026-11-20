@@ -83,7 +83,7 @@ export function ShareSheet({ target, open, onClose }: { target: ShareTarget; ope
   };
   const url = shareId ? shareUrl(shareId) : "";
   const copy = async () => { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); };
-  const canPublish = isNote && !["canvas", "whiteboard"].includes(target.note.type);
+  const canPublish = isNote && !["canvas", "whiteboard", "board"].includes(target.note.type);
   const off = !synced;
 
   const btn = "flex h-[46px] md:h-[38px] items-center justify-center gap-1.5 rounded-[10px] border border-line px-3 max-md:flex-1";

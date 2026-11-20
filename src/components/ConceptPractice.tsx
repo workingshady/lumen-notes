@@ -39,7 +39,7 @@ export function gatherMaterial(concept: BuiltConcept, byTitle: Map<string, Note>
   const notes: Note[] = [];
   for (const t of titles) {
     const n = byTitle.get(t.trim().toLowerCase());
-    if (n && !n.deleted && !notes.includes(n) && !["canvas", "whiteboard", "diagram"].includes(n.type)) notes.push(n);
+    if (n && !n.deleted && !notes.includes(n) && !["canvas", "whiteboard", "board", "diagram"].includes(n.type)) notes.push(n);
   }
   const per = notes.length ? Math.floor(MAX_CHARS / notes.length) : 0;
   const courses = [...new Set(concept.coverage.map((c) => `${c.course.spaceName} (${c.module} › ${c.topic.name})`))];

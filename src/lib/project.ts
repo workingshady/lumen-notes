@@ -13,6 +13,7 @@ import type { Note } from "../../shared/types";
 import type { GlyphName } from "./glyphs";
 import { setFrontMatter, splitFrontMatter } from "./parse";
 import { t, tk } from "./i18n";
+import { isWbType } from "../../shared/types";
 
 export type DocKind = "prd" | "rfc" | "adr" | "requirements" | "plan" | "meeting" | "draft" | "spec";
 export type DocStatus = "draft" | "review" | "approved" | "superseded" | "rejected";
@@ -33,7 +34,7 @@ export const DOC_STATUS_GLYPH: Record<DocStatus, GlyphName> = { draft: "d-draft"
 
 export interface ProjectDoc { note: Note; kind: DocKind; status: DocStatus; owner: string; supersededBy: string; reason: string; approved: string }
 export function docOf(n: Note): ProjectDoc | null {
-  if (n.type === "canvas" || n.type === "whiteboard") return null;
+  if (n.type === "canvas" || isWbType(n.type)) return null;
   const fm = splitFrontMatter(n.body).data;
   const kind = fm.doc as DocKind;
   if (!kind || !DOC_KINDS.some((d) => d.kind === kind)) return null;
@@ -86,7 +87,7 @@ export function parseTaskText(t: string) {
 export function projectTasks(notes: Note[]): TaskCard[] {
   const out: TaskCard[] = [];
   for (const n of notes) {
-    if (n.type === "canvas" || n.type === "whiteboard" || n.type === "roadmap") continue;
+    if (n.type === "canvas" || isWbType(n.type) || n.type === "roadmap") continue;
     let fence = false;
     n.body.split("\n").forEach((l, line) => {
       if (/^\s*```/.test(l)) fence = !fence;
@@ -122,7 +123,7 @@ const REQ_RE = /^\s*[-*+]\s+(?:\[[ xX/?>-]\]\s+)?(REQ-\d+)\s*(?:\((must|should|c
 export function requirements(notes: Note[], tasks: TaskCard[]): Requirement[] {
   const out: Requirement[] = [];
   for (const n of notes) {
-    if (n.type === "canvas" || n.type === "whiteboard") continue;
+    if (n.type === "canvas" || isWbType(n.type)) continue;
     n.body.split("\n").forEach((l, line) => {
       const m = REQ_RE.exec(l);
       if (!m) return;
