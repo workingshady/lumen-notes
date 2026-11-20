@@ -1,4 +1,43 @@
-# Checkpoint: where work stopped (2026-11-20, updated after rounds 5 + 6)
+# Checkpoint: where work stopped (2026-11-20, round 7 wave 1 done)
+
+## Latest: round 7 (Claude Design pages 33–52), paused after wave 1
+Live: deploy `c012e97c` · commit `f3a4d49` on `main`. Everything deployed, committed and pushed; no agents running.
+
+- **Handoff:** `design/handoffs/2026-11-20-round-7/` (from `Lumen Index Design Rounds (2).zip`). Reference PNG per artboard in `frames/` (141, with `frames/index.json` = labels + designer notes). Serve the pages with `node design/tools/serve-design.mjs 5397 design/handoffs/2026-11-20-round-7`. Frames are re-rendered by `design-frames.mjs` (in the old session scratchpad); rewrite it if needed: it screenshots each themed box under the `NNx` captions.
+- **Build brief:** `design/ROUND7_BRIEF.md`. Every agent reads it first. It holds the owner's rules: identical to Claude Design in everything (UI, UX, animations, every click/flow, real logic + backend); port the `.dc.html` markup 1:1 into JSX; nothing static; fast with minimal testing; Node helper scripts, not Python; deploy after each wave. It also has the package table with file ownership and models (Opus for hard parts, Sonnet for the rest).
+- **Glyphs:** `src/lib/glyphs.ts` was ported by script from the handoff's `lumen-glyphs.js` (473 names).
+
+### Wave 1: done and live
+| Pkg | Frames | Main files | Known gaps |
+|---|---|---|---|
+| W1-A Whiteboard shell | 33A–K, 44A/G/H/K/L, 45A–B | `src/components/wb/*` (hooks.ts = `registerWb` / `registerPanel` slots), `Whiteboard.tsx`, `WhiteboardView.tsx` | Shared-link page (`src/views/Shared.tsx`) still uses its old viewer; it should render `<WhiteboardView header … />` (33H). Large-board mode keeps sloppiness on. Lasso, pens, palette, layers, frames, present, settings, convert and handwriting are slots that show "not available yet" toasts until wave 2/3 registers them. |
+| W1-B Export dialog | 42A–I, 43C | `DiagramExport.tsx`, `src/lib/export-job.ts` (job API, whiteboard example in the header), `export-jobs.ts`, `export-worker.ts`, `export-run.ts`, `export-encode.ts`; pdf-lib (lazy) | Checked only against 43C. PDF and ZIP never run in a browser. PDF is raster, not vector. The whiteboard isn't wired to it yet. |
+| W1-C Canvas options | 43A/B/D | `CanvasOptions.tsx`, `src/lib/canvas-style.ts`, `canvas-render.ts`, `CanvasEditor.tsx` | Has a custom-palettes hook (`customPalettes` prop); "Present groups" is only a toast. |
+| W1-D Architecture studio | 46A–Q, 47A–D, 48A–B, 48G–I | `src/components/arch/*`, `src/lib/arch-*.ts`, elkjs; demo note "Payments platform" | AI buttons call stubs in `arch/ai-hooks.ts` (`archAiDescribe` / `archAiEdit` / `archAiReview`). Vendor icon packs aren't there; the toggle only saves the preference. No project-hub status ring. `registerArchIcons()` is never called. |
+| W1-E Chooser, templates, Board type | 40A–C, 51A–B | `NewVisualChooser.tsx`, `TemplatesGallery.tsx`, `src/lib/templates-visual.ts`, `src/lib/visual-import.ts`; note type `board` + `isWbType` | The interview "hide labels" mode is only drawn. `board` isn't handled in `ImportDialog` badges, `ws-phone.tsx` or the sim files. |
+| W1-F AI convert + review | 35A–H, 44J, 48C–E, 48J | `worker/ext/ai-visual.ts` (`/api/ai/visual/{convert,arch,edit,review}`), `src/lib/ai-convert.ts`, `AIReview.tsx`, `ArchAIPanel.tsx` | **The real AI call is untested.** Llama 3.2 Vision gets the image in a top-level `image` field; Scout gets an `image_url` fallback; a Meta licence "agree" retry is built in. Unsure words are highlighted on the result side only. |
+
+### Next: wave 2, then wave 3, then final review (prompts for each package are in the brief's table)
+1. **W2-A Pens, palettes, lasso** (Opus; owns `Whiteboard.tsx` + `wb/*`): 34A–H, 37A–F, 44B/C/I.
+   - Pen types, settings, synced presets, pen mode, erasers, ruler, auto-shape + undo chip.
+   - Lasso actions + AI convert via `AIReview`; handwriting search badge.
+   - Palettes + custom palette editor (also pass them to `CanvasOptions` `customPalettes`).
+   - Wire whiteboard Export to `openExportJob`.
+   - The full prompt was drafted (it was cancelled when the owner paused); rebuild it from this list + the brief.
+2. **W2-B Shared library, stamps, icon insert** (Sonnet; new `src/components/library/*`): 36A–G, 49A–F, 44D, 45C–D. Registers `registerWb('shapes')` and replaces the studio's library panel.
+3. **W2-C Drag and drop** (Sonnet; new `src/lib/dnd.ts`): 50A–C, sources everywhere (sidebar, list, search, backlinks, Ask, PDF, Graph), drop targets in whiteboard, Board, canvas and arch, touch + keyboard.
+4. **Wave 3:**
+   - W3-A layers / board settings / frames / presentation (38, 39, 41, 44E/F).
+   - W3-B Mixed Board cards + conversions (40D–H, 45E, 52).
+   - W3-C architecture AI hook-up (connect `arch/ai-hooks.ts` to `ArchAIPanel`; 48C–F).
+   - Plus the Shared.tsx view-only hook.
+5. **Final:** a fresh Opus review against the frames, then the first real AI-convert test on the live site.
+
+Flow per wave: launch the agents in parallel (disjoint files) → `npx tsc -b` + `npx vite build` → one quick smoke (open "Study plan", "Backprop study board" and "Payments platform"; note that Ctrl+K + Enter may pick "Ask", so click the note result) → `npm run deploy` → commit (no Co-Authored-By) + push.
+
+---
+
+# Earlier checkpoint (2026-11-20, after rounds 5 + 6)
 
 Live: https://lumen-notes.workingshady.workers.dev · deploy `1645b33d` · commit `2f2fe69` on `main` (everything deployed, committed and pushed; nothing running).
 
