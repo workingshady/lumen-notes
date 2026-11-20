@@ -14,9 +14,11 @@ let s: S = { running: false, endsAt: 0, left: LEN.focus, phase: "focus", noteId:
 const subs = new Set<() => void>();
 const set = (p: Partial<S>) => { s = { ...s, ...p }; subs.forEach((f) => f()); };
 /** Start (or resume) the global study timer for a note, from outside the timer UI (e.g. Today › Start). */
-export function startStudyTimer(noteId: string | null = null) {
+export function startStudyTimer(noteId: string | null = null, minutes?: number) {
   if (s.running) return;
-  set({ running: true, endsAt: Date.now() + s.left, noteId, startedAt: Date.now() });
+  // Round 8 (Today › Start · 90 min): a block's own length replaces the focus length for this run.
+  const left = minutes && minutes > 0 ? minutes * 60_000 : s.left;
+  set({ running: true, phase: minutes ? "focus" : s.phase, left, endsAt: Date.now() + left, noteId, startedAt: Date.now() });
 }
 const useTimer = () => useSyncExternalStore((f) => (subs.add(f), () => subs.delete(f)), () => s);
 

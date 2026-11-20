@@ -1,34 +1,28 @@
 import { Glyph } from "../components/Glyph";
+import { TasksScreen } from "../components/calendar/TasksScreen";
+import { CalendarScreen } from "../components/calendar/CalendarScreen";
 import { BacklogCard, BACKLOG } from "../components/review-backlog";
 import { SpaceIcon } from "../components/SpaceIcon";
 import { EmptyState } from "../components/EmptyState";
-import { ArrowDown, ArrowUp, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Columns3, FileText, GripVertical, Layers, ListChecks, NotebookPen, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarDays, Check, Columns3, GripVertical, Layers, ListChecks, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NOTE_TYPES, STATUSES, type Note, type NoteType } from "../../shared/types";
 import { createNote, purgeNote, restoreNote, updateNote } from "../lib/actions";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../lib/db";
-import { flashcards, tasks, toggleTask, words } from "../lib/parse";
+import { flashcards, words } from "../lib/parse";
 import { matcher, parseQuery } from "../lib/search";
-import { go, openNote, scoped, setUI, useUI, useVault, type View } from "../lib/store";
-import { openNoteAtLine } from "../components/study-nav";
+import { go, openNote, scoped, useUI, useVault, type View } from "../lib/store";
 import { ReviewSession, useDueCards } from "../components/Review";
 import { Button, cx, relTime, STATUS_COLOR, StatusDot } from "../components/ui";
 import { dragNote } from "../components/Sidebar";
-import { fmtDate, fmtNum, fmtRelative, getLang, locale, t, tk, tx } from "../lib/i18n";
+import { fmtDate, fmtNum, fmtRelative, getLang, t, tk } from "../lib/i18n";
 import { isWbType } from "../../shared/types";
 
 /** Learning status labels (the ids are stored values). */
 const STATUS_NAME: Record<string, string> = { todo: tk("Todo"), learning: tk("Learning"), review: tk("Review"), mastered: tk("Mastered"), none: tk("No status") };
 const statusName = (st: string) => (STATUS_NAME[st] ? t(STATUS_NAME[st]) : st.charAt(0).toUpperCase() + st.slice(1));
-/** First day of the week (JS day, 0 = Sunday): Monday in English (design), the locale's own in Arabic. */
-function weekFirstDay() {
-  if (getLang() !== "ar") return 1;
-  try { const wi = (new Intl.Locale(locale() ?? "ar") as unknown as { weekInfo?: { firstDay: number }; getWeekInfo?: () => { firstDay: number } }); const fd = (wi.getWeekInfo?.() ?? wi.weekInfo)?.firstDay; return fd ? fd % 7 : 6; } catch { return 6; }
-}
 
-const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const today = () => iso(new Date());
 const Header = ({ title, sub, count, children }: { title: React.ReactNode; sub?: string; count?: React.ReactNode; children?: React.ReactNode }) => (
   <div className="mt-[env(safe-area-inset-top)] flex shrink-0 flex-wrap items-center gap-3.5 px-4 pb-3 pt-4 md:px-8 md:pt-6">
     <div className="flex min-w-0 items-baseline gap-3">
@@ -52,47 +46,6 @@ function Lens({ value }: { value: View }) {
       ))}
     </div>
   );
-}
-
-const Box = ({ done, onClick }: { done: boolean; onClick?: () => void }) => (
-  <button onClick={onClick} aria-label={done ? t("Mark not done") : t("Mark done")} className={cx("flex size-4 shrink-0 items-center justify-center rounded-[5px]", done ? "bg-ok" : "border-[1.5px] border-muted hover:border-accent")}>
-    {done && <Check size={11} strokeWidth={3} className="text-bg" />}
-  </button>
-);
-
-function dueLabel(d: string, t0: string) {
-  if (d === t0) return t("Today");
-  const dt = new Date(d + "T12:00");
-  const days = Math.round((dt.getTime() - new Date(t0 + "T12:00").getTime()) / 86_400_000);
-  if (days === 1) return t("Tomorrow");
-  if (getLang() === "ar") return fmtDate(dt, days > 1 && days < 7 ? { weekday: "short", day: "numeric" } : { day: "numeric", month: "short", ...(dt.getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}) });
-  const mon = dt.toLocaleDateString("en-GB", { month: "short" });
-  if (days > 1 && days < 7) return `${dt.toLocaleDateString("en-GB", { weekday: "short" })} ${dt.getDate()}`;
-  return `${dt.getDate()} ${mon}${dt.getFullYear() !== new Date().getFullYear() ? " " + dt.getFullYear() : ""}`;
-}
-
-/** `📅 fri`, `📅 tomorrow`, `📅 today` → `📅 YYYY-MM-DD`. */
-function expandDate(text: string) {
-  return text.replace(/📅\s*(today|tomorrow|mon|tue|wed|thu|fri|sat|sun)\w*/i, (_m, w: string) => {
-    const d = new Date();
-    const k = w.toLowerCase();
-    if (k === "tomorrow") d.setDate(d.getDate() + 1);
-    else if (k !== "today") { const target = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].indexOf(k); d.setDate(d.getDate() + (((target - d.getDay() + 7) % 7) || 7)); }
-    return "📅 " + iso(d);
-  });
-}
-
-// ------------------------------------------------------------------ Tasks
-type TaskRow = ReturnType<typeof tasks>[number] & { note: Note };
-const taskKey = (t: TaskRow) => `${t.note.id}:${t.line}`;
-
-/** Replace (or add / remove) the `📅 YYYY-MM-DD` date on one task line. */
-function setTaskDue(md: string, line: number, date: string | null) {
-  const lines = md.split("\n");
-  let l = (lines[line] ?? "").replace(/\s*(📅\s*\d{4}-\d{2}-\d{2}|@due\(\d{4}-\d{2}-\d{2}\))/u, "");
-  if (date) l = l.replace(/\s*$/, "") + " 📅 " + date;
-  lines[line] = l;
-  return lines.join("\n");
 }
 
 /** Fixed-position popover anchored under an element (escapes overflow-hidden tables and lists). */
@@ -119,141 +72,8 @@ const MenuItem = ({ on, children, onClick }: { on?: boolean; children: React.Rea
   </button>
 );
 
-function DuePicker({ anchor, value, onPick, onClose }: { anchor: HTMLElement; value: string | null; onPick: (d: string | null) => void; onClose: () => void }) {
-  const [d, setD] = useState(value ?? today());
-  const add = (n: number) => { const x = new Date(); x.setDate(x.getDate() + n); return iso(x); };
-  const nextMon = () => { const x = new Date(); x.setDate(x.getDate() + (((8 - x.getDay()) % 7) || 7)); return iso(x); };
-  return (
-    <Pop anchor={anchor} onClose={onClose} width={220} align="right">
-      <span className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("Due date")}</span>
-      <MenuItem onClick={() => onPick(today())}>{t("Today")}</MenuItem>
-      <MenuItem onClick={() => onPick(add(1))}>{t("Tomorrow")}</MenuItem>
-      <MenuItem onClick={() => onPick(nextMon())}>{t("Next week")}</MenuItem>
-      <div className="flex items-center gap-1.5 px-1 py-1">
-        <input autoFocus type="date" value={d} onChange={(e) => setD(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && d) onPick(d); }} className="h-7 min-w-0 flex-1 rounded-[6px] border border-line bg-surface px-1.5 text-[12.5px] [color-scheme:dark] focus:border-accent focus:outline-none" />
-        <button onClick={() => d && onPick(d)} className="h-7 rounded-[6px] bg-accent px-2 text-[12px] font-semibold text-accent-fg">{t("Set")}</button>
-      </div>
-      {value && <MenuItem onClick={() => onPick(null)}><span className="text-bad">{t("Remove date")}</span></MenuItem>}
-    </Pop>
-  );
-}
-
-function SpacePicker() {
-  const v = useVault();
-  const ui = useUI();
-  const [open, setOpen] = useState<HTMLElement | null>(null);
-  const sp = ui.spaceId !== "all" ? v.spaceMap.get(ui.spaceId) : null;
-  return (
-    <>
-      <button onClick={(e) => setOpen(open ? null : e.currentTarget)} className="flex h-[30px] items-center gap-1.5 rounded-[8px] border border-line px-2.5 text-[13px] text-muted hover:text-ink">
-        {sp ? <><SpaceIcon space={sp} size={15} /><bdi>{sp.name}</bdi></> : <><Glyph name="globe" size={15} color="#57AB5A" />{t("All spaces")}</>}<ChevronDown size={12} />
-      </button>
-      {open && (
-        <Pop anchor={open} onClose={() => setOpen(null)} align="right" width={220}>
-          <MenuItem on={!sp} onClick={() => { setUI({ spaceId: "all", folderId: null }); setOpen(null); }}><span className="flex items-center gap-1.5"><Glyph name="globe" size={15} color="#57AB5A" />{t("All spaces")}</span></MenuItem>
-          {v.spaces.filter((s) => !s.archived).map((s) => <MenuItem key={s.id} on={sp?.id === s.id} onClick={() => { setUI({ spaceId: s.id, folderId: null }); setOpen(null); }}><span className="flex min-w-0 items-center gap-1.5"><SpaceIcon space={s} size={15} /><span className="truncate" dir="auto">{s.name}</span></span></MenuItem>)}
-        </Pop>
-      )}
-    </>
-  );
-}
-
-export function TasksView() {
-  const v = useVault();
-  const ui = useUI();
-  const [folded, setFolded] = useState<Set<string>>(() => new Set(["Done"]));
-  const [draft, setDraft] = useState("");
-  const [sel, setSel] = useState<string | null>(null);
-  const [dating, setDating] = useState<{ key: string; el: HTMLElement } | null>(null);
-  const rowRefs = useRef(new Map<string, HTMLElement>());
-  const all = useMemo<TaskRow[]>(() => scoped(v, { ...ui, folderId: null, tag: null }).filter((n) => n.type !== "roadmap").flatMap((n) => tasks(n.body).map((t) => ({ ...t, note: n }))), [v, ui]);
-  const t0 = today();
-  const open = all.filter((t) => !t.done);
-  const groups: [string, TaskRow[]][] = [
-    [tk("Overdue"), open.filter((t) => t.due && t.due < t0).sort((a, b) => a.due!.localeCompare(b.due!))],
-    [tk("Today"), open.filter((t) => t.due === t0)],
-    [tk("Upcoming"), open.filter((t) => t.due && t.due > t0).sort((a, b) => a.due!.localeCompare(b.due!))],
-    [tk("No date"), open.filter((t) => !t.due)],
-    [tk("Done"), all.filter((t) => t.done)],
-  ];
-  const visible = groups.flatMap(([g, ts]) => (folded.has(g) ? [] : ts));
-  const toggle = (t: TaskRow) => updateNote(t.note.id, { body: toggleTask(t.note.body, t.line) });
-  const setDue = (t: TaskRow, d: string | null) => updateNote(t.note.id, { body: setTaskDue(t.note.body, t.line, d) });
-  async function add() {
-    const text = expandDate(draft.trim());
-    if (!text) return;
-    setDraft("");
-    let daily = v.notes.find((n) => n.type === "journal" && n.title.includes(t0));
-    daily ??= await createNote({ template: "journal", title: `Journal ${t0}`, spaceId: ui.spaceId === "all" ? "inbox" : ui.spaceId });
-    const body = daily.body.replace(/\s*$/, "");
-    await updateNote(daily.id, { body: `${body}${body ? "\n" : ""}- [ ] ${text}\n` });
-  }
-  // Keyboard: ↑/↓ (or J/K) select, X toggles, D sets a date, Enter opens the source line.
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest("input,textarea,select,.cm-editor") || e.metaKey || e.ctrlKey || e.altKey || dating) return;
-      const key = e.key.toLowerCase();
-      const idx = visible.findIndex((t) => taskKey(t) === sel);
-      const cur = idx >= 0 ? visible[idx] : null;
-      if (key === "arrowdown" || key === "j" || key === "arrowup" || key === "k") {
-        e.preventDefault();
-        const d = key === "arrowdown" || key === "j" ? 1 : -1;
-        const nx = visible[Math.max(0, Math.min(visible.length - 1, idx < 0 ? 0 : idx + d))];
-        if (nx) { setSel(taskKey(nx)); rowRefs.current.get(taskKey(nx))?.scrollIntoView({ block: "nearest" }); }
-      } else if (key === "x" && cur) { e.preventDefault(); void toggle(cur); }
-      else if (key === "d" && cur) { e.preventDefault(); const el = rowRefs.current.get(taskKey(cur))?.querySelector<HTMLElement>("[data-due]"); if (el) setDating({ key: taskKey(cur), el }); }
-      else if (key === "enter" && cur) { e.preventDefault(); openNoteAtLine(cur.note.id, cur.line, cur.note.body); }
-    };
-    addEventListener("keydown", k);
-    return () => removeEventListener("keydown", k);
-  });
-  const datingTask = dating ? all.find((t) => taskKey(t) === dating.key) : null;
-  return (
-    <div className="flex h-full flex-col">
-      <div className="mt-[env(safe-area-inset-top)] flex shrink-0 flex-wrap items-center gap-3.5 px-4 pb-[18px] pt-4 md:px-12 md:pt-6">
-        <span className="text-[22px] font-[650] tracking-[-.02em]">{t("Tasks")}</span>
-        <Lens value="tasks" />
-        <span className="flex-1" />
-        <SpacePicker />
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-6 md:px-12">
-        <label className="mb-[18px] flex h-11 items-center gap-2.5 rounded-[10px] border border-line bg-surface px-3.5 text-[13px] text-muted focus-within:border-accent">
-          <Plus size={15} className="shrink-0" />
-          <span className="relative min-w-0 flex-1">
-            <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} id="lumen-add-task" aria-label={t("Add a task")} className="w-full bg-transparent text-ink focus:outline-none" />
-            {!draft && <span className="pointer-events-none absolute inset-y-0 start-0 flex items-center truncate">{tx("Add a task… {date} sets a date", { date: <span className="mx-1 inline-flex items-center gap-1 font-mono text-[12px]" dir="ltr"><Glyph name="date" size={12} />fri</span> })}</span>}
-          </span>
-          <span className="hidden shrink-0 text-[12px] sm:inline">{t("goes to today's daily note")}</span>
-        </label>
-        <div className="flex max-w-[900px] flex-col gap-[18px]">
-          {groups.map(([g, ts]) => ts.length ? (
-            <section key={g} className="flex flex-col gap-0.5">
-              <button onClick={() => setFolded((f) => { const n = new Set(f); n.has(g) ? n.delete(g) : n.add(g); return n; })} className={cx("flex items-center gap-2 px-1 pb-1.5 text-start text-[13px] font-semibold", g === "Overdue" ? "text-bad" : "text-ink")}>
-                {folded.has(g) ? <ChevronRight size={13} className="text-muted" /> : <ChevronDown size={13} className="text-muted" />}{t(g)}<span className="font-normal text-muted">{fmtNum(ts.length)}</span>
-              </button>
-              {!folded.has(g) && ts.map((tsk) => {
-                const k = taskKey(tsk);
-                return (
-                  <div key={k} ref={(el) => { if (el) rowRefs.current.set(k, el); else rowRefs.current.delete(k); }} onMouseEnter={() => setSel(k)}
-                    className={cx("flex min-h-10 items-center gap-3 rounded-[8px] px-3 py-1.5 text-[13px]", sel === k && "bg-surface")}>
-                    <Box done={tsk.done} onClick={() => toggle(tsk)} />
-                    <span className={cx("min-w-0 flex-1", tsk.done && "text-muted line-through")} dir="auto">{tsk.text}</span>
-                    <button onClick={() => openNoteAtLine(tsk.note.id, tsk.line, tsk.note.body)} title={t("Open the note at this line")} className="hidden max-w-[260px] items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-[6px] bg-surface px-2 py-0.5 text-[12px] text-muted hover:text-link sm:flex">
-                      <FileText size={12} className="shrink-0" /><span className="truncate" dir="auto">{tsk.note.title}</span>
-                    </button>
-                    <button data-due onClick={(e) => setDating({ key: k, el: e.currentTarget })} title={t("Set a date (D)")} className={cx("w-20 shrink-0 text-end text-[12px] hover:text-ink", !tsk.done && tsk.due && tsk.due < t0 ? "text-bad" : !tsk.done && tsk.due === t0 ? "text-warn" : "text-muted")}>{tsk.due ? dueLabel(tsk.due, t0) : ""}</button>
-                  </div>
-                );
-              })}
-            </section>
-          ) : null)}
-          {!all.length && <EmptyState glyph="task" text={t("No tasks yet. Write - [ ] in any note, or add one above.")} action={{ label: t("Add a task"), onClick: () => document.querySelector<HTMLInputElement>("#lumen-add-task")?.focus() }} />}
-        </div>
-      </div>
-      {dating && datingTask && <DuePicker anchor={dating.el} value={datingTask.due} onClose={() => setDating(null)} onPick={(d) => { void setDue(datingTask, d); setDating(null); }} />}
-    </div>
-  );
-}
+/** Tasks (round 8, page 55 I–K): components/calendar/TasksScreen. */
+export function TasksView() { return <TasksScreen />; }
 
 // ------------------------------------------------------------------ Kanban (notes by learning status)
 export function KanbanView() {
@@ -332,118 +152,8 @@ export function KanbanView() {
   );
 }
 
-// ------------------------------------------------------------------ Calendar
-/** Home can ask the calendar to open on a given day (sessionStorage "lumen.calendarDay" = YYYY-MM-DD). */
-function takeCalendarDay() {
-  try {
-    const raw = sessionStorage.getItem("lumen.calendarDay");
-    if (raw === null) return null;
-    sessionStorage.removeItem("lumen.calendarDay");
-    const m = /\d{4}-\d{2}-\d{2}/.exec(raw)?.[0] ?? (Number(raw) ? iso(new Date(Number(raw))) : null);
-    return m;
-  } catch { return null; }
-}
-
-export function CalendarView() {
-  const v = useVault();
-  const [start] = useState(() => takeCalendarDay() ?? today());
-  const [month, setMonth] = useState(() => { const d = new Date(start + "T12:00"); return new Date(d.getFullYear(), d.getMonth(), 1); });
-  const [sel, setSel] = useState(start);
-  const lk = (t: number) => iso(new Date(t));
-  const sessions = useLiveQuery(() => db.sessions.toArray(), []);
-  const studied = useMemo(() => { const m = new Map<string, number>(); for (const s of sessions ?? []) if (!s.deleted) m.set(lk(s.at), (m.get(lk(s.at)) ?? 0) + s.minutes); return m; }, [sessions]); // eslint-disable-line react-hooks/exhaustive-deps
-  const info = useMemo(() => {
-    const m = new Map<string, { created: Note[]; journal: Note[]; tasks: { text: string; note: Note; done: boolean; line: number }[] }>();
-    const get = (k: string) => m.get(k) ?? (m.set(k, { created: [], journal: [], tasks: [] }), m.get(k)!);
-    for (const n of v.notes) {
-      if (n.type === "journal") { const d = /\d{4}-\d{2}-\d{2}/.exec(n.title)?.[0] ?? lk(n.createdAt); get(d).journal.push(n); }
-      else get(lk(n.createdAt)).created.push(n);
-      if (n.type !== "roadmap") for (const t of tasks(n.body)) if (t.due) get(t.due).tasks.push({ text: t.text, note: n, done: t.done, line: t.line });
-    }
-    return m;
-  }, [v.notes]); // eslint-disable-line react-hooks/exhaustive-deps
-  const first = new Date(month);
-  const fd = weekFirstDay();
-  first.setDate(1 - ((first.getDay() - fd + 7) % 7)); // Monday start (English); the locale's week start in Arabic
-  const days = Array.from({ length: 42 }, (_, i) => new Date(first.getFullYear(), first.getMonth(), first.getDate() + i));
-  const day = info.get(sel);
-  const t0 = today();
-  const mins = studied.get(sel) ?? 0;
-  const sq = "flex size-7 items-center justify-center rounded-[6px] border border-line hover:bg-surface-2";
-  const Label = ({ children }: { children: React.ReactNode }) => <div className="mt-1.5 text-[12px] text-muted">{children}</div>;
-  return (
-    <div className="flex h-full flex-col">
-      <div className="mt-[env(safe-area-inset-top)] flex shrink-0 flex-wrap items-center gap-3.5 px-4 pb-4 pt-4 md:px-8 md:pt-6">
-        <span className="text-[22px] font-[650] leading-[normal] tracking-[-.02em]">{fmtDate(month, { month: "long", year: "numeric" })}</span>
-        <span className="flex gap-0.5">
-          <button aria-label={t("Previous month")} className={sq} onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft size={14} /></button>
-          <button aria-label={t("Next month")} className={sq} onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight size={14} /></button>
-        </span>
-        <button className="h-7 rounded-[6px] border border-line px-2.5 text-[13px] hover:bg-surface-2" onClick={() => { const d = new Date(); setMonth(new Date(d.getFullYear(), d.getMonth(), 1)); setSel(t0); }}>{t("Today")}</button>
-        <span className="md:hidden"><Lens value="calendar" /></span>
-        <span className="ms-auto hidden gap-3.5 text-[12px] text-muted lg:flex">
-          <span className="flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-ink" />{t("Daily note")}</span>
-          <span className="flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-info" />{t("Notes created")}</span>
-          <span className="flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-warn" />{t("Tasks due")}</span>
-        </span>
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-3 pb-6 md:flex-row md:px-8">
-        <div className="flex flex-col overflow-hidden rounded-[14px] border border-line md:min-h-0 md:flex-1">
-          <div className="grid grid-cols-7 bg-surface text-[12px] leading-[normal] text-muted">{days.slice(0, 7).map((d) => <span key={d.getDay()} className="px-2 py-2 md:px-3">{fmtDate(d, { weekday: "short" })}</span>)}</div>
-          <div className="grid flex-1 grid-cols-7 grid-rows-6">
-            {days.map((d, idx) => {
-              const k = iso(d);
-              const i = info.get(k);
-              const inMonth = d.getMonth() === month.getMonth();
-              const isToday = k === t0;
-              return (
-                <button key={k} onClick={() => setSel(k)}
-                  className={cx("flex min-h-12 flex-col gap-1.5 border-t border-line p-1.5 text-start md:min-h-0 md:px-2.5 md:py-2", idx % 7 !== 0 && "border-s", !inMonth && "bg-surface/50", sel === k && !isToday && "bg-surface-2", isToday ? "shadow-[inset_0_0_0_1.5px_var(--accent)]" : "hover:bg-surface-2")}>
-                  <span className={cx("flex size-6 items-center justify-center rounded-full text-[12.5px]", isToday ? "bg-accent font-bold text-accent-fg" : inMonth ? "text-ink" : "text-muted")}>{fmtNum(d.getDate())}</span>
-                  {inMonth && <span className="flex gap-1">
-                    {i?.journal.length ? <span className="size-1.5 rounded-full bg-ink" /> : null}
-                    {i?.created.length ? <span className="size-1.5 rounded-full bg-info" /> : null}
-                    {i?.tasks.some((t) => !t.done) ? <span className="size-1.5 rounded-full bg-warn" /> : null}
-                  </span>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-col gap-3 text-[13px] leading-[normal] md:w-[300px]">
-          <span className="text-[15px] font-semibold">{fmtDate(new Date(sel + "T12:00"), { weekday: "short", day: "numeric", month: "short" })}{sel === t0 ? ` · ${t("today")}` : ""}</span>
-          {day?.journal.length ? day.journal.map((n) => (
-            <button key={n.id} onClick={() => openNote(n.id)} className="flex items-center gap-2.5 rounded-[10px] border border-line bg-surface p-3 text-start hover:border-accent">
-              <NotebookPen size={16} className="shrink-0 text-muted" /><span className="flex-1 truncate font-medium" dir="auto">{n.title}</span><ChevronRight size={14} className="text-muted" />
-            </button>
-          )) : (
-            <button onClick={async () => openNote((await createNote({ template: "journal", title: `Journal ${sel}`, spaceId: "inbox" })).id, "edit")} className="flex items-center gap-2.5 rounded-[10px] border border-dashed border-line p-3 text-start text-muted hover:text-ink">
-              <Plus size={16} />{t("Daily note for this day")}
-            </button>
-          )}
-          {day?.tasks.length ? <>
-            <Label>{t("Tasks due · {n}", { n: day.tasks.length })}</Label>
-            {day.tasks.map((t, i) => (
-              <div key={i} className="flex items-center gap-2.5">
-                <Box done={t.done} onClick={() => updateNote(t.note.id, { body: toggleTask(t.note.body, t.line) })} />
-                <button onClick={() => openNoteAtLine(t.note.id, t.line, t.note.body)} className={cx("min-w-0 flex-1 truncate text-start hover:text-link", t.done && "text-muted line-through")} dir="auto">{t.text}</button>
-              </div>
-            ))}
-          </> : null}
-          {day?.created.length ? <>
-            <Label>{t("Created · {n}", { n: day.created.length })}</Label>
-            {day.created.map((n) => (
-              <button key={n.id} onClick={() => openNote(n.id)} className="flex items-center gap-2 text-start hover:text-link">
-                {n.status ? <StatusDot status={n.status} className="!size-[7px] shrink-0" /> : <span className="size-[7px] shrink-0 rounded-full bg-muted" />}<span className="truncate" dir="auto">{n.title}</span>
-              </button>
-            ))}
-          </> : null}
-          {mins > 0 && <Label>{t("Studied · {time}", { time: mins >= 60 ? t("{h} h {m} min", { h: Math.floor(mins / 60), m: mins % 60 }) : t("{n} min", { n: mins }) })}</Label>}
-        </div>
-      </div>
-    </div>
-  );
-}
+// ------------------------------------------------------------------ Calendar (round 8, page 55 D–H: components/calendar/CalendarScreen)
+export function CalendarView() { return <CalendarScreen />; }
 
 // ------------------------------------------------------------------ Database table
 type Col = "title" | "type" | "status" | "tags" | "folder" | "updated" | "words" | "created" | "cards";
