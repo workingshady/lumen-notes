@@ -6,12 +6,15 @@ import { Capacitor } from "@capacitor/core";
 import { ConflictSheet } from "./components/ws-conflict";
 import { createNote } from "./lib/actions";
 import { DEMO, setDemo, setMeta } from "./lib/db";
+import { trashWithUndo } from "./lib/trash-ui";
+import { IS_MAC } from "./lib/mod-label";
 import { dismissToast, getUI, openNote, runLatestUndo, setRailAuto, setUI, sidebarRail, toast, toggleSidebar, useToasts, useUI, useVaultSelector, sameNote, type Toast } from "./lib/store";
 import { currentIdx, installNavHistory, keepPlace, restoreFrom } from "./lib/nav-history";
 import { useDeviceHeartbeat } from "./lib/devices";
 import { useFaviconBadge } from "./lib/favicon";
 import { useAllPathMoments, useStreakMoment } from "./components/Moments";
 import { Sidebar } from "./components/Sidebar";
+import { AutoSidebar, useSidebarMode } from "./components/sidebar-auto";
 import { Skeleton } from "./components/Skeleton";
 import { NoteList } from "./components/NoteList";
 import { TagMenuHost, TagPage } from "./components/TagPage";
@@ -175,6 +178,7 @@ function Workspace() {
   const ready = useVaultSelector((v) => v.ready);
   const wide = useWide();
   const tablet = useTablet();
+  const sbMode = useSidebarMode();
   const rtl = useRtl();
   useBackGesture(wide);
   useDeviceHeartbeat(); // Settings › Sync › Devices (lib/devices.ts)
@@ -185,6 +189,13 @@ function Workspace() {
       if ((e.ctrlKey || e.metaKey) && e.key === "\\") { e.preventDefault(); toggleSidebar(); }
       // ⌘Z / Ctrl Z outside text fields runs the newest Undo toast
       const el = e.target as HTMLElement;
+      // Shift+Delete (⌘Backspace on Mac) moves the open note to Trash, but never inside text fields, the editor, canvases or whiteboards
+      // (Delete there removes shapes, cards or text) or the note list (it has its own Delete)
+      if (((e.key === "Delete" && e.shiftKey && !e.ctrlKey && !e.metaKey) || (IS_MAC && e.key === "Backspace" && e.metaKey && !e.shiftKey)) && !e.defaultPrevented
+        && !el.closest("input,textarea,select,[contenteditable=true],.cm-editor,.react-flow,.lumen-wb,.excalidraw,[data-note-list],[role=dialog]")) {
+        const id = getUI().noteId;
+        if (id) { e.preventDefault(); void trashWithUndo([id]); }
+      }
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z" && !el.closest("input,textarea,[contenteditable=true],.cm-editor") && runLatestUndo()) e.preventDefault();
     };
     addEventListener("keydown", f);
@@ -218,8 +229,8 @@ function Workspace() {
     <div className="flex h-full overflow-hidden">
       {/* sidebar: docked on desktop, drawer on phone */}
       {/* tablet (900–1199): rail docked, full sidebar opens as a drawer over the content */}
-      {wide && tablet && <Sidebar rail />}
-      {wide && !tablet ? <Sidebar rail={sidebarRail(ui)} /> : ui.sidebar && (
+      {wide && sbMode !== "open" ? <AutoSidebar mode={sbMode} tablet={tablet} /> : wide && tablet && <Sidebar rail />}
+      {wide && sbMode !== "open" ? null : wide && !tablet ? <Sidebar rail={sidebarRail(ui)} /> : ui.sidebar && (
         <div className="fixed inset-0 z-40 flex fade-in">
           <div className="sheet-in shadow-2xl"><Sidebar /></div>
           <div className="flex-1 bg-black/50" onClick={() => setUI({ sidebar: false })} />

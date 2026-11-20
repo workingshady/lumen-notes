@@ -4,7 +4,7 @@ import { openNewMenu } from "./NewMenu";
 import { NewPathDialog } from "./NewPathDialog";
 import { FileText, Globe, LayoutTemplate, Link2, Pin, Plus, X } from "lucide-react";
 import { PdfLibrary } from "./pdf-library";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Note } from "../../shared/types";
 import { createNote } from "../lib/actions";
 import { importFiles } from "../lib/io";
@@ -20,7 +20,8 @@ import { SpaceIcon } from "./SpaceIcon";
 import { PhoneChips, PhoneListHeader, SwipeRow, type PhoneFilter } from "./ws-phone";
 import { num, tr, useRtl } from "./ws-dir";
 import { filterByQuery, openSmartEditor, scopeQuery, SmartListHeader, smartListFor, SmartRow, useSmartFolders } from "./SmartFolders";
-import { BulkBar, DeskRow, Dropdown, FilterBox, FilterEmpty, GroupHeader, groupRows, useTagColors, type Group } from "./note-list-desk";
+import { BulkBar, DeskRow, Dropdown, FilterBox, FilterEmpty, GroupHeader, groupRows, NoteRowMenu, useTagColors, type Group, type RowMenuState } from "./note-list-desk";
+import { trashWithUndo } from "../lib/trash-ui";
 import { EmptyState } from "./EmptyState";
 import { indexLabel, LIST_PAGE, useIndexStatus } from "../lib/big-vault";
 import { fmtDate, t, useLang } from "../lib/i18n";
@@ -143,11 +144,12 @@ export function NoteList() {
     return () => removeEventListener("keydown", k);
   }, [selecting, order]);
   const onRow = (e: React.MouseEvent, n: Note) => {
-    if (!selecting && !e.shiftKey) return openNote(n.id);
+    const multi = e.shiftKey || e.ctrlKey || e.metaKey;
+    if (!selecting && !multi) return openNote(n.id);
     e.preventDefault();
     if (!selecting) setSelecting(true);
     const from = anchor.current ?? (selecting ? null : ui.noteId);
-    if (e.shiftKey && from) {
+    if (e.shiftKey && !e.ctrlKey && !e.metaKey && from) {
       const a = order.findIndex((x) => x.id === from), b = order.findIndex((x) => x.id === n.id);
       if (a >= 0 && b >= 0) { const [lo, hi] = a < b ? [a, b] : [b, a]; setSelected((s) => new Set([...s, ...order.slice(lo, hi + 1).map((x) => x.id)])); anchor.current = n.id; return; }
     }
@@ -157,6 +159,49 @@ export function NoteList() {
   // rows are memoized and keep their first handlers: route clicks through a ref so they always see current state
   const onRowRef = useRef(onRow);
   onRowRef.current = onRow;
+  // Right-click menu on a row (acts on the selection when the row is in it) + list keyboard (arrows, Enter, Del, Ctrl+A, Esc)
+  const [rowMenu, setRowMenu] = useState<RowMenuState | null>(null);
+  const closeRowMenu = useCallback(() => setRowMenu(null), []);
+  const selRef = useRef({ selecting, selected, order });
+  selRef.current = { selecting, selected, order };
+  const onRowMenu = (e: React.MouseEvent, n: Note) => {
+    e.preventDefault();
+    const { selecting: sl, selected: sd } = selRef.current;
+    setRowMenu({ ids: sl && sd.has(n.id) && sd.size > 1 ? [...sd] : [n.id], x: e.clientX, y: e.clientY });
+  };
+  const onRowMenuRef = useRef(onRowMenu);
+  onRowMenuRef.current = onRowMenu;
+  const onListKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const tgt = e.target as HTMLElement;
+    if (tgt.closest("input,textarea,select,[contenteditable=true],.cm-editor")) return;
+    const rowsEl = [...e.currentTarget.querySelectorAll<HTMLElement>("[data-note-row]")];
+    const cur = tgt.closest<HTMLElement>("[data-note-row]");
+    const idx = cur ? rowsEl.indexOf(cur) : -1;
+    const mod = e.ctrlKey || e.metaKey;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const next = rowsEl[e.key === "ArrowDown" ? Math.min(rowsEl.length - 1, idx + 1) : Math.max(0, idx < 0 ? 0 : idx - 1)];
+      next?.focus(); next?.scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Delete" || e.key === "Backspace") {
+      const { selecting: sl, selected: sd } = selRef.current;
+      const ids = sl && sd.size ? [...sd] : cur ? [cur.dataset.noteRow!] : [];
+      if (!ids.length) return;
+      e.preventDefault();
+      const gone = new Set(ids);
+      const nextId = rowsEl.slice(idx + 1).concat(rowsEl.slice(0, Math.max(idx, 0)).reverse()).map((r) => r.dataset.noteRow!).find((id) => !gone.has(id));
+      const one = ids.length === 1 ? v.byId.get(ids[0]) : undefined;
+      void trashWithUndo(ids, one?.title).then(() => { exitSelect(); if (nextId) setTimeout(() => document.querySelector<HTMLElement>(`[data-note-row="${nextId}"]`)?.focus(), 30); });
+    } else if (mod && e.key.toLowerCase() === "a") {
+      e.preventDefault(); setSelecting(true); setSelected(new Set(selRef.current.order.map((n) => n.id)));
+    } else if (e.key === "Escape") {
+      if (selRef.current.selecting) exitSelect();
+      else if (cur) cur.blur();
+    }
+  };
+  // phone: long-press a row to enter select mode, then tap rows to toggle them
+  const phoneToggle = (id: string) => { setSelecting(true); setSelected((s) => { const x = new Set(s); if (x.has(id)) x.delete(id); else x.add(id); return x; }); };
+  const phoneToggleRef = useRef(phoneToggle);
+  phoneToggleRef.current = phoneToggle;
   const setGroupSaved = (g: Group) => { setGroup(g); try { localStorage.setItem("lumen.group", g); } catch { /* ignore */ } };
   const setSortSaved = (s: Sort) => { setSort(s); try { localStorage.setItem("lumen.sort", s); } catch { /* ignore */ } };
   const hasPdfs = useMemo(() => wide && scoped(v, { spaceId: uiSpace, folderId: uiFolder, tag: null, filter: uiFilter }).some((n) => n.type === "pdf"), [wide, v, uiSpace, uiFolder, uiFilter]);
@@ -207,12 +252,13 @@ export function NoteList() {
         <PhoneChips filter={filter} setFilter={setFilter} onSort={cycleSort} sortLabel={sort} />
         {pdfs && <PdfLibrary spaceId={spaceId} folderId={ui.folderId} onClose={() => setPdfs(false)} />}
         <div className={cx("flex min-h-0 flex-1 flex-col overflow-y-auto", over && "bg-accent/5", pdfs && "hidden")}>
-          {shown.map((n) => <PhoneRow key={n.id} n={n} time={listTime(n.updatedAt)} />)}
+          {shown.map((n) => <PhoneRow key={n.id} n={n} time={listTime(n.updatedAt)} selecting={selecting} selected={selected.has(n.id)} toggle={(id) => phoneToggleRef.current(id)} />)}
           {more}
           {empty}
           <button onClick={() => setTpl(true)} className="mx-auto my-3 flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[13px] text-muted active:bg-surface"><LayoutTemplate size={14} />{t("New from template · base")}</button>
           <button onClick={() => setPdfs(true)} className="mx-auto -mt-2 mb-3 flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[13px] text-muted active:bg-surface"><FileText size={14} />{t("PDFs")}</button>
         </div>
+        {selecting && <BulkBar ids={selIds} onDone={exitSelect} onCancel={exitSelect} />}
         <TemplatePicker open={tpl} onClose={() => setTpl(false)} spaceId={spaceId} folderId={ui.folderId} />
         <NewVisualChooser open={chooser} onClose={() => setChooser(false)} />
         <NewPathDialog open={pathDlg} onClose={() => setPathDlg(false)} />
@@ -250,23 +296,24 @@ export function NoteList() {
             <span>·</span>
             <Dropdown label={t("Group:")} value={group} onChange={setGroupSaved} options={[{ value: "date", label: t("Date") }, { value: "status", label: t("Status") }, { value: "none", label: t("None") }]} />
             <span className="flex-1" />
-            <button onClick={() => (selecting ? exitSelect() : setSelecting(true))} aria-pressed={selecting} title={selecting ? t("Leave select mode (Esc)") : t("Select notes (or shift-click a note)")}
+            <button onClick={() => (selecting ? exitSelect() : setSelecting(true))} aria-pressed={selecting} title={selecting ? t("Leave select mode (Esc)") : t("Select notes (or Ctrl/Shift-click a note)")}
               className={cx("font-semibold", selecting ? "text-accent" : "text-muted opacity-0 hover:text-ink focus-visible:opacity-100 group-hover/head:opacity-100")}>{selecting ? t("Done") : t("Select")}</button>
           </div>
         </div>
       )}
       {pdfs && <PdfLibrary spaceId={spaceId} folderId={ui.folderId} onClose={() => setPdfs(false)} />}
-      <div className={cx("flex min-h-0 flex-1 flex-col overflow-y-auto", over && "bg-accent/5 ring-1 ring-inset ring-accent/40", pdfs && "hidden")} data-note-list>
+      <div className={cx("flex min-h-0 flex-1 flex-col overflow-y-auto", over && "bg-accent/5 ring-1 ring-inset ring-accent/40", pdfs && "hidden", "outline-none")} data-note-list tabIndex={-1} onKeyDown={onListKey}>
         {!smartSel?.sf && group === "date" && <DateScrubber notes={notes} timeOf={(n) => (sort === "created" ? n.createdAt : n.updatedAt)} />}
         {smartSel?.sf ? shown.map((n) => <SmartRow key={n.id} n={n} active={n.id === ui.noteId} onOpen={() => openNote(n.id)} />)
           : rows.map((r, i) => ("id" in r
             ? <DeskRow key={r.id} n={r} active={r.id === ui.noteId} selecting={selecting} selected={selected.has(r.id)} colors={colors} preview={preview(r)} time={listTime(sort === "created" ? r.createdAt : r.updatedAt)}
-                space={ui.spaceId === "all" ? v.spaceMap.get(r.spaceId) : undefined} onClick={(e) => onRowRef.current(e, r)} onDragStart={(e) => { if (selecting && selected.has(r.id) && selIds.length > 1) setDrag(e, { kind: "notes", ids: selIds }); else dragNote(e, r.id); }} />
+                space={ui.spaceId === "all" ? v.spaceMap.get(r.spaceId) : undefined} onClick={(e) => onRowRef.current(e, r)} onContextMenu={(e) => onRowMenuRef.current(e, r)} onDragStart={(e) => { if (selecting && selected.has(r.id) && selIds.length > 1) setDrag(e, { kind: "notes", ids: selIds }); else dragNote(e, r.id); }} />
             : <GroupHeader key={"h" + i + r.h} h={r.h} pin={r.pin} />))}
         {more}
         {deskEmpty}
       </div>
       {selecting && <BulkBar ids={selIds} onDone={exitSelect} />}
+      {rowMenu && <NoteRowMenu m={rowMenu} onClose={closeRowMenu} onOpen={(id) => openNote(id)} onSelect={(id) => { setSelecting(true); setSelected(new Set([id])); anchor.current = id; }} />}
       <TemplatePicker open={tpl} onClose={() => setTpl(false)} spaceId={spaceId} folderId={ui.folderId} />
       <NewVisualChooser open={chooser} onClose={() => setChooser(false)} />
       <NewPathDialog open={pathDlg} onClose={() => setPathDlg(false)} />
@@ -274,13 +321,21 @@ export function NoteList() {
   );
 }
 
-/** Phone list row. Memoized like DeskRow: a save re-renders only the edited note's row. */
-const PhoneRow = memo(function PhoneRow({ n, time }: { n: Note; time: string }) {
+/** Phone list row. Memoized like DeskRow: a save re-renders only the edited note's row. Long-press enters select mode. */
+const PhoneRow = memo(function PhoneRow({ n, time, selecting, selected, toggle }: { n: Note; time: string; selecting: boolean; selected: boolean; toggle: (id: string) => void }) {
   useLang();
+  const timer = useRef<number>(0);
+  const long = useRef(false);
+  const cancel = () => clearTimeout(timer.current);
   return (
     <SwipeRow n={n}>
-      <button onClick={() => openNote(n.id)} className="flex w-full flex-col gap-1.5 px-4 py-3.5 text-start active:bg-surface">
+      <button onClick={() => { if (long.current) { long.current = false; return; } if (selecting) toggle(n.id); else openNote(n.id); }}
+        onPointerDown={() => { long.current = false; cancel(); timer.current = window.setTimeout(() => { long.current = true; navigator.vibrate?.(15); toggle(n.id); }, 480); }}
+        onPointerUp={cancel} onPointerLeave={cancel} onPointerCancel={cancel} onPointerMove={(e) => { if (Math.abs(e.movementX) + Math.abs(e.movementY) > 3) cancel(); }}
+        onContextMenu={(e) => e.preventDefault()} aria-pressed={selecting ? selected : undefined}
+        className="flex w-full select-none flex-col gap-1.5 px-4 py-3.5 text-start active:bg-surface" style={selecting && selected ? { background: "color-mix(in srgb, var(--accent) 10%, transparent)" } : undefined}>
         <div className="flex w-full items-center gap-2">
+          {selecting && <span className="box-border flex size-[18px] shrink-0 items-center justify-center rounded-[5px]" style={{ background: selected ? "var(--accent)" : "transparent", border: selected ? "none" : "1.5px solid var(--muted)" }}>{selected && <Glyph name="check" size={12} color="var(--accent-fg)" stroke={3} />}</span>}
           <span className="size-2 shrink-0 rounded-full" style={{ background: n.status ? STATUS_COLOR[n.status] : "var(--muted)" }} />
           <span dir="auto" className="min-w-0 flex-1 truncate text-[15px] font-semibold">{n.title || t("Untitled")}</span>
           {n.shareId ? <Link2 size={13} className="text-info" /> : null}
@@ -292,7 +347,7 @@ const PhoneRow = memo(function PhoneRow({ n, time }: { n: Note; time: string }) 
       </button>
     </SwipeRow>
   );
-}, (a, b) => a.n.id === b.n.id && a.n.updatedAt === b.n.updatedAt && a.time === b.time);
+}, (a, b) => a.n.id === b.n.id && a.n.updatedAt === b.n.updatedAt && a.time === b.time && a.selecting === b.selecting && a.selected === b.selected);
 
 export function TemplatePicker({ open, onClose, spaceId, folderId }: { open: boolean; onClose: () => void; spaceId: string; folderId: string | null }) {
   return (

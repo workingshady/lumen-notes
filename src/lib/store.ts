@@ -1,4 +1,5 @@
 import { liveQuery } from "dexie";
+import { getSettings } from "./settings";
 import { useRef, useSyncExternalStore } from "react";
 import type { Folder, Note, Space } from "../../shared/types";
 import { db, DEFAULT_SPACE } from "./db";
@@ -69,14 +70,16 @@ export const setRailAuto = (on: boolean) => { railAuto = on; };
 export const pageKey = (u: Pick<UI, "view" | "noteId" | "spaceId" | "filter">) => `${u.view}|${u.noteId ?? ""}|${u.spaceId}|${u.filter ?? ""}`;
 /** Docked sidebar drawn as the rail? */
 export const sidebarRail = (u: UI) => !u.sidebar || (railAuto && u.railPeek !== pageKey(u));
+const autoSb = () => wide() && ((getSettings() as { sidebarMode?: string }).sidebarMode ?? "open") !== "open";
 export function toggleSidebar() {
+  if (autoSb()) { dispatchEvent(new Event("lumen:sidebar-toggle")); return; }
   setUI((u) => {
     if (!docked()) return { sidebar: !u.sidebar };
     if (sidebarRail(u)) return { sidebar: true, railPeek: railAuto ? pageKey(u) : null };
     return railAuto ? { railPeek: null } : { sidebar: false };
   });
 }
-export const expandSidebar = () => setUI((u) => (docked() ? { sidebar: true, railPeek: railAuto ? pageKey(u) : null } : { sidebar: true }));
+export const expandSidebar = () => autoSb() ? void dispatchEvent(new Event("lumen:sidebar-open")) : setUI((u) => (docked() ? { sidebar: true, railPeek: railAuto ? pageKey(u) : null } : { sidebar: true }));
 
 export function openNote(id: string, mode?: Mode) {
   setUI((u) => ({
