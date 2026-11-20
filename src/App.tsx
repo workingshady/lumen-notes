@@ -39,7 +39,7 @@ const TasksView = lazy(() => Productivity().then((m) => ({ default: m.TasksView 
 const KanbanView = lazy(() => Productivity().then((m) => ({ default: m.KanbanView })));
 const CalendarView = lazy(() => Productivity().then((m) => ({ default: m.CalendarView })));
 const TableView = lazy(() => Productivity().then((m) => ({ default: m.TableView })));
-const ReviewView = lazy(() => Productivity().then((m) => ({ default: m.ReviewView })));
+const ReviewView = lazy(() => import("./components/review/ReviewHub").then((m) => ({ default: m.ReviewView }))); // Lumen 57 review hub
 const FoldersView = lazy(() => import("./views/FoldersView").then((m) => ({ default: m.FoldersView })));
 const TrashView = lazy(() => Productivity().then((m) => ({ default: m.TrashView })));
 const PathsList = lazy(() => import("./views/path-list").then((m) => ({ default: m.PathsList })));
