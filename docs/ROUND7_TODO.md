@@ -56,7 +56,7 @@ For each feature: search for current best practice and benchmark apps (Excalidra
 - [ ] **Performance:** large boards (3,000+ elements), lazy chunks, workers, memory.
 - [ ] **Security:** SVG sanitising, API token scopes, input validation on the new routes.
 
-## Stage 4: regression, compatibility, consistency, small details: running (2 agents → docs/audit/r7-regression.md, r7-consistency.md)
+## Stage 4: regression, compatibility, consistency, small details: DONE and deployed (5b7ff3c8). All older features pass, old files open, 3 accounts + two-device sync OK, 0 missing Arabic. Results in docs/audit/r7-regression.md, r7-consistency.md
 - [ ] **Old features:** notes, editor/Read, review/flashcards, paths/roadmaps, project hub, PDF, slides, Ask/tutor, imports, share/blog, Android, Arabic.
 - [ ] **Compatibility:**
   - [ ] old `.canvas` / `.excalidraw` files and notes open;
