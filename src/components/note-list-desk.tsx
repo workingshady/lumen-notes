@@ -5,7 +5,9 @@
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Globe, Link2, Star } from "lucide-react";
 import type { Note, Space } from "../../shared/types";
-import { moveNote, restoreNote, trashNote } from "../lib/actions";
+import { duplicateNote, moveNote, restoreNote, trashNote, updateNote } from "../lib/actions";
+import { trashWithUndo } from "../lib/trash-ui";
+import { modLabel } from "../lib/mod-label";
 import { fmtDate, fmtNum, t, useLang } from "../lib/i18n";
 import { smartTokens } from "../lib/smart";
 import { toast, useVault } from "../lib/store";
@@ -162,19 +164,19 @@ export function monthName(ym: string, short = false) {
 type DeskRowProps = {
   n: Note; active: boolean; selecting: boolean; selected: boolean; space?: Space; preview: string; time: string; colors: Record<string, string>;
   /** Not compared by the memo: pass handlers that read current state through refs. */
-  onClick: (e: React.MouseEvent) => void; onDragStart: (e: React.DragEvent) => void;
+  onClick: (e: React.MouseEvent) => void; onContextMenu?: (e: React.MouseEvent) => void; onDragStart: (e: React.DragEvent) => void;
 };
 /** Same row content: Dexie hands out new note objects on every vault rebuild, so compare the note by id + version. */
 const sameDeskRow = (a: DeskRowProps, b: DeskRowProps) =>
   a.n.id === b.n.id && a.n.updatedAt === b.n.updatedAt && a.active === b.active && a.selecting === b.selecting && a.selected === b.selected
   && a.space === b.space && a.preview === b.preview && a.time === b.time && a.colors === b.colors;
 /** Memoized: a save re-renders only the edited note's row, not the whole list. */
-export const DeskRow = memo(function DeskRow({ n, active, selecting, selected, space, preview, time, colors, onClick, onDragStart }: DeskRowProps) {
+export const DeskRow = memo(function DeskRow({ n, active, selecting, selected, space, preview, time, colors, onClick, onContextMenu, onDragStart }: DeskRowProps) {
   useLang(); // memoized rows still follow a live language switch
   const on = selecting && selected;
   const shown = n.tags.slice(0, 3), more = n.tags.length - shown.length;
   return (
-    <div role="button" tabIndex={0} draggable={!selecting} onDragStart={onDragStart} onClick={onClick} aria-selected={selecting ? selected : active} data-note-row={n.id}
+    <div role="button" tabIndex={0} draggable={!selecting} onDragStart={onDragStart} onClick={onClick} onContextMenu={onContextMenu} aria-selected={selecting ? selected : active} data-note-row={n.id}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(e as unknown as React.MouseEvent); } }}
       className={cx("flex w-full shrink-0 cursor-pointer gap-2.5 border-b border-[color-mix(in_srgb,var(--border)_60%,transparent)] px-3 py-[9px] text-start outline-none focus-visible:bg-surface", !on && !(active && !selecting) && "hover:bg-surface")}
       style={{ background: on ? "color-mix(in srgb, var(--accent) 10%, transparent)" : active && !selecting ? "var(--surface)" : undefined, boxShadow: active && !selecting ? "inset 2px 0 0 var(--accent)" : undefined }}>
@@ -230,7 +232,7 @@ function tFill(s: string, vars: Record<string, ReactNode>): ReactNode[] {
 }
 
 // ------------------------------------------------------------------ bulk bar
-export function BulkBar({ ids, onDone }: { ids: string[]; onDone: () => void }) {
+export function BulkBar({ ids, onDone, onCancel }: { ids: string[]; onDone: () => void; onCancel?: () => void }) {
   const v = useVault();
   const [pop, setPop] = useState<null | "tag" | "move">(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -263,6 +265,7 @@ export function BulkBar({ ids, onDone }: { ids: string[]; onDone: () => void }) 
   return (
     <div ref={ref} className="relative flex h-11 shrink-0 items-center gap-1.5 border-t border-line bg-surface px-2.5" data-bulk-bar>
       <b className="flex-1 font-semibold">{t("{n} selected", { n })}</b>
+      {onCancel && <button className={btn} onClick={onCancel}>{t("Done")}</button>}
       <button className={btn} disabled={!n} aria-expanded={pop === "tag"} onClick={() => setPop(pop === "tag" ? null : "tag")}><Glyph name="tag" size={13} />{t("Tag")}</button>
       <button className={btn} disabled={!n} aria-expanded={pop === "move"} onClick={() => setPop(pop === "move" ? null : "move")}><Glyph name="folder" size={13} />{t("Move")}</button>
       <button className="flex h-7 items-center rounded-[6px] border border-[color-mix(in_srgb,var(--danger)_40%,transparent)] px-2 text-bad hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] disabled:opacity-50" disabled={!n} aria-label={t("Delete selected notes")} title={t("Delete")} onClick={() => void del()}><Glyph name="trash" size={13} /></button>
@@ -290,10 +293,87 @@ export function BulkBar({ ids, onDone }: { ids: string[]; onDone: () => void }) 
     </div>
   );
 }
-type F = ReturnType<typeof useVault>["folders"][number];
-function folderTree(list: F[]): [F, number][] {
+export type F = ReturnType<typeof useVault>["folders"][number];
+export function folderTree(list: F[]): [F, number][] {
   const out: [F, number][] = [];
   const walk = (parent: string | null, d: number) => { for (const f of list.filter((x) => (x.parentId ?? null) === parent).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || a.name.localeCompare(b.name))) { out.push([f, d]); if (d < 6) walk(f.id, d + 1); } };
   walk(null, 0);
   return out;
+}
+
+// ------------------------------------------------------------------ row context menu (right-click)
+export type RowMenuState = { ids: string[]; x: number; y: number };
+/** Right-click menu of a list row (acts on the selection when the row is part of it). Same style as the tag menu. */
+export function NoteRowMenu({ m, onClose, onOpen, onSelect }: { m: RowMenuState; onClose: () => void; onOpen: (id: string) => void; onSelect: (id: string) => void }) {
+  useLang();
+  const v = useVault();
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ x: m.x, y: m.y });
+  const [sub, setSub] = useState<null | "tag" | "move">(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (el) { const r = el.getBoundingClientRect(); setPos({ x: Math.max(8, Math.min(m.x, innerWidth - r.width - 8)), y: Math.max(8, Math.min(m.y, innerHeight - r.height - 8)) }); }
+  }, [m.x, m.y, sub]);
+  useEffect(() => {
+    const down = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) onClose(); };
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
+    addEventListener("mousedown", down); addEventListener("keydown", key, true); addEventListener("blur", onClose); addEventListener("resize", onClose);
+    return () => { removeEventListener("mousedown", down); removeEventListener("keydown", key, true); removeEventListener("blur", onClose); removeEventListener("resize", onClose); };
+  }, [onClose]);
+  const notes = m.ids.map((id) => v.byId.get(id)).filter((x): x is Note => !!x && !x.deleted);
+  if (!notes.length) return null;
+  const one = notes.length === 1 ? notes[0] : null;
+  const ids = notes.map((x) => x.id);
+  const pinned = notes.every((x) => x.pinned);
+  const run = (f: () => void | Promise<unknown>) => () => { onClose(); void f(); };
+  const items: ({ g: string; l: string; k?: string; danger?: boolean; on: () => void } | "sep")[] = [
+    ...(one ? [{ g: "note", l: t("Open"), k: "↵", on: run(() => onOpen(one.id)) }] : []),
+    ...(one ? [{ g: "check", l: t("Select"), k: `${modLabel}+${t("click")}`, on: run(() => onSelect(one.id)) }] : []),
+    { g: "pin", l: pinned ? t("Unpin") : t("Pin"), on: run(async () => { for (const n of notes) await updateNote(n.id, { pinned: pinned ? 0 : 1 }); toast(pinned ? t("Unpinned") : t("Pinned"), undefined, { icon: "check" }); }) },
+    { g: "folder", l: t("Move to…"), on: () => setSub("move") },
+    { g: "tag", l: t("Tag…"), on: () => setSub("tag") },
+    ...(one ? [{ g: "copy", l: t("Duplicate"), on: run(async () => { await duplicateNote(one.id); toast(t("Duplicated"), undefined, { icon: "check" }); }) }] : []),
+    "sep",
+    { g: "trash", l: t("Move to trash"), k: t("Del"), danger: true, on: run(() => trashWithUndo(ids, one?.title)) },
+  ];
+  const move = async (spaceId: string, folderId: string | null, name: string) => {
+    onClose();
+    const before = notes.map((x) => [x.id, x.spaceId, x.folderId] as const);
+    for (const id of ids) await moveNote(id, spaceId, folderId);
+    toast(t("Moved {n} notes to {name}", { n: ids.length, name }), { label: t("Undo"), run: () => { for (const [id, s, f] of before) void moveNote(id, s, f); } }, { icon: "check" });
+  };
+  const tag = async (tg: string) => {
+    onClose();
+    const r = await addTagToNotes(ids, tg);
+    toast(t("Tagged {n} notes #{tag}", { n: r.count, tag: tg }), { label: t("Undo"), run: () => void r.undo() });
+  };
+  return (
+    <div ref={ref} role="menu" aria-label={one?.title || t("Notes")} data-note-menu onContextMenu={(e) => e.preventDefault()}
+      className="fixed z-[60] flex max-h-[min(420px,calc(100vh-16px))] w-[240px] flex-col overflow-y-auto rounded-[12px] border border-line bg-surface-2 p-1 text-[13px] shadow-[0_16px_40px_rgba(0,0,0,.45)] fade-in" style={{ left: pos.x, top: pos.y }}>
+      {sub === "tag" ? (
+        <div className="flex flex-col gap-2 p-2">
+          <span className="text-[12px] text-muted">{t("Add a tag to {n} notes", { n: ids.length })}</span>
+          <TagInput onPick={(x) => void tag(x)} onCancel={() => setSub(null)} placeholder={t("Tag name")} />
+        </div>
+      ) : sub === "move" ? (
+        <>
+          <span className="px-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("Move {n} notes to", { n: ids.length })}</span>
+          {v.spaces.map((s) => (
+            <div key={s.id} className="flex flex-col">
+              <button role="menuitem" onClick={() => void move(s.id, null, s.name)} className="flex h-8 shrink-0 items-center gap-2 rounded-[7px] px-2 text-start hover:bg-bg"><SpaceIcon space={s} size={14} /><span dir="auto" className="truncate">{s.name}</span></button>
+              {folderTree(v.folders.filter((f) => f.spaceId === s.id)).map(([f, depth]) => (
+                <button key={f.id} role="menuitem" onClick={() => void move(s.id, f.id, f.name)} className="flex h-7 shrink-0 items-center gap-2 rounded-[7px] pe-2 text-start text-[12.5px] hover:bg-bg" style={{ paddingInlineStart: 14 + depth * 14 }}>
+                  <Glyph name="folder" size={13} color="var(--muted)" /><span dir="auto" className="truncate">{f.name}</span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </>
+      ) : items.map((it, i) => it === "sep" ? <div key={i} className="m-1 h-px bg-line" /> : (
+        <button key={i} role="menuitem" onClick={it.on} className={cx("flex h-8 shrink-0 items-center gap-2.5 rounded-[7px] px-2 text-start hover:bg-bg", it.danger ? "text-bad" : "text-ink")}>
+          <Glyph name={it.g} size={15} /><span className="flex-1">{it.l}</span>{it.k && <span className="text-[11.5px] text-muted" dir="ltr">{it.k}</span>}
+        </button>
+      ))}
+    </div>
+  );
 }

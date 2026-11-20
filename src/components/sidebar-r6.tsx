@@ -100,6 +100,9 @@ const KEYS: [string, string[]][] = [
   [tk("Open search"), [MOD, "K"]], [tk("New note"), [MOD, "N"]], [tk("Go to Home · Today · Inbox · Review · Tasks"), [MOD, "1–5"]],
   [tk("Collapse / expand sidebar"), [MOD, "\\"]], [tk("Move in the tree"), ["↑", "↓"]], [tk("Open / close a folder"), ["←", "→"]],
   [tk("Open the focused item"), ["↵"]], [tk("Rename"), ["F2"]], [tk("Move item up / down"), ["Alt", "↑ ↓"]], [tk("Jump to sidebar from note"), ["F6"]],
+  [tk("Move between notes in the list"), ["↑", "↓"]], [tk("Move the focused / selected notes to Trash"), ["Del"]], [tk("Select all notes in the list"), [MOD, "A"]],
+  [tk("Add or remove a note from the selection"), [MOD, "click"]], [tk("Select a range of notes"), ["Shift", "click"]], [tk("Clear the selection"), ["Esc"]],
+  [tk("Move the open note to Trash"), ["Shift", "Del"]],
 ];
 function KeyMap({ onClose }: { onClose: () => void }) {
   return (
