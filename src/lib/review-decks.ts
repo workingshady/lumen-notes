@@ -118,7 +118,9 @@ export function buildRows(group: Group, inp: DeckInput): Row[] {
     const known = new Set(order.map((s) => s.id));
     const sp = [...order.filter((s) => bySpace.has(s.id)).map((s) => ({ id: s.id, name: s.name, c: spaceColor(s) })), ...[...bySpace.keys()].filter((id) => !known.has(id)).map((id) => ({ id, name: t("Other"), c: "var(--mu)" }))];
     for (const s of sp) {
-      const ns = bySpace.get(s.id)!.sort((a, b) => a.title.localeCompare(b.title));
+      // Decks with cards to study first (so the smart decks aren't pushed off the screen by empty ones), then by title.
+      const busy = (n: Note) => { const x = statOf(byNote.get(n.id)!, cx); return x.d + x.l; };
+      const ns = bySpace.get(s.id)!.sort((a, b) => busy(b) - busy(a) || a.title.localeCompare(b.title));
       rows.push(head(`s:${s.id}`, s.name, s.c, t("{n} deck|{n} decks", { n: ns.length })));
       for (const n of ns) { const its = byNote.get(n.id)!; rows.push(deck(`n:${n.id}`, deckGlyph(its), n.title, cardsText(its.length), s.c, its)); }
     }

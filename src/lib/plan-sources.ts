@@ -204,7 +204,7 @@ export function planFromNote(note: Note, ctx: { notes?: Note[]; spaces?: Space[]
   }
   const trackOrder = owners ? Object.keys(people) : [...tracks, ...items.map((i) => i.track).filter((t) => !tracks.includes(t))];
   const kind = (["course", "project", "exam", "thesis"].includes(fm.plan) ? fm.plan : "plan") as PlanKind;
-  const mode = (["fixed", "pace", "deadline"].includes(fm.schedule) ? fm.schedule : "fixed") as ScheduleMode;
+  const mode = (["fixed", "pace", "deadline"].includes(fm.schedule) ? fm.schedule : kind === "course" && !items.some((i) => i.fixedStart != null) ? "pace" : "fixed") as ScheduleMode;
   const plan: Plan = {
     id: note.id, kind, title: note.title, sub: fm.sub ?? "", icon: fm.icon ?? KIND_ICON[kind], color: fm.color ?? PLAN_PALETTE[0], unit: fm.unit ?? (kind === "exam" ? "sessions" : "tasks"),
     groupBy: fm.groupby ?? "Group", groups, items, milestones, tracks: [...new Set(trackOrder)], owners, people,
@@ -281,11 +281,18 @@ export const isPlanNote = (n: Note) => n.type === "roadmap" && /^---[\s\S]*?\npl
  */
 export function allPlans(notes: Note[], spaces: Space[]): Plan[] {
   const out: Plan[] = [];
+  // A plan note wins over what it describes: its `from:` roadmap and the space it lives in are not listed again.
+  const covered = new Set<string>(), coveredSpaces = new Set<string>();
+  for (const n of notes) if (!n.deleted && isPlanNote(n)) {
+    const from = splitFrontMatter(n.body).data.from?.replace(/^[[|]]$/g, "").toLowerCase();
+    if (from) for (const r of notes) if (r.type === "roadmap" && !r.deleted && r.title.toLowerCase() === from) { covered.add(r.id); coveredSpaces.add(r.spaceId); }
+    coveredSpaces.add(n.spaceId);
+  }
   for (const n of notes) if (!n.deleted && isPlanNote(n)) { try { out.push(planFromNote(n, { notes, spaces })); } catch { /* a broken plan never breaks the list */ } }
   for (const s of spaces) {
     if (s.deleted || s.archived) continue;
-    if (s.kind === "course" && s.roadmapId) { const rm = notes.find((n) => n.id === s.roadmapId && !n.deleted); if (rm && !isPlanNote(rm)) out.push(planFromRoadmap(rm, { space: s })); }
-    if (s.kind === "project" && notes.some((n) => n.spaceId === s.id && /\[[ /?>]\]/.test(n.body))) out.push(planFromProject(s, notes));
+    if (s.kind === "course" && s.roadmapId && !coveredSpaces.has(s.id) && !covered.has(s.roadmapId)) { const rm = notes.find((n) => n.id === s.roadmapId && !n.deleted); if (rm && !isPlanNote(rm)) out.push(planFromRoadmap(rm, { space: s })); }
+    if (s.kind === "project" && !coveredSpaces.has(s.id) && notes.some((n) => n.spaceId === s.id && /\[[ /?>]\]/.test(n.body))) out.push(planFromProject(s, notes));
   }
   return out;
 }

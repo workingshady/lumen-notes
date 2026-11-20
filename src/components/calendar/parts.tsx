@@ -53,9 +53,9 @@ export function HBtn({ glyph, label, primary, onClick, title, pressed }: { glyph
 }
 export function DeskHeader({ title, sub, phone, children }: { title: ReactNode; sub?: ReactNode; phone: boolean; children?: ReactNode }) {
   return (
-    <div className="safe-t" style={{ display: "flex", alignItems: "center", gap: 12, padding: phone ? "6px 16px 10px" : "20px 28px 14px", flexWrap: "wrap", flexShrink: 0 }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: phone ? "auto" : 0 }}>
-        <h1 style={{ fontSize: phone ? 20 : 24, fontWeight: 650, letterSpacing: "-.02em", margin: 0, whiteSpace: "nowrap" }}>{title}</h1>
+    <div className="safe-t" style={{ display: "flex", alignItems: "center", gap: 12, padding: phone ? "6px 16px 10px" : "20px 28px 14px", flexWrap: phone ? "nowrap" : "wrap", flexShrink: 0 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 0 }}>
+        <h1 style={{ fontSize: phone ? 20 : 24, fontWeight: 650, letterSpacing: "-.02em", margin: 0, whiteSpace: "nowrap", overflow: phone ? "hidden" : undefined, textOverflow: "ellipsis" }}>{title}</h1>
         {sub ? <span style={{ fontSize: 13, color: V.mu }}>{sub}</span> : null}
       </div>
       {children}

@@ -160,6 +160,8 @@ export interface ChatMessage {
   action?: string;
   /** Milliseconds from sending to the finished answer ("Answered in 3.4 s"). */
   ms?: number;
+  /** The answer was stopped mid-stream ("Stopped" instead of "Answered"). */
+  stopped?: 1;
 }
 export interface ChatThread extends Synced {
   title: string;

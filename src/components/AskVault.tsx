@@ -352,7 +352,7 @@ function contextLine(thread: ChatThread | undefined, live: Live | null) {
   if (!turns) return "";
   const lastA = [...thread.messages].reverse().find((m) => m.role === "assistant");
   const passages = live?.sources.length || lastA?.sources?.length || 0;
-  return t("Using the last {turns} turns · {passages} passages", { turns: Math.min(turns, WINDOW_TURNS), passages });
+  return `${t("Using the last {n} turn|Using the last {n} turns", { n: Math.min(turns, WINDOW_TURNS) })} · ${t("{n} passage|{n} passages", { n: passages })}`;
 }
 
 // ------------------------------------------------------------------ thread list
@@ -384,7 +384,7 @@ function ThreadRow({ t: th, active }: { t: ChatThread; active: boolean }) {
   const [confirm, setConfirm] = useState(false);
   const lastA = [...th.messages].reverse().find((m) => m.role === "assistant" && m.sources?.length);
   const n = lastA ? new Set(lastA.sources!.map((s) => s.noteId)).size : 0;
-  const sub = th.mode === "ask" ? [scopeLabel(th.scope as Scope, v), n ? t("{n} sources", { n }) : ""].filter(Boolean).join(" · ") : t("Tutor");
+  const sub = th.mode === "ask" ? [scopeLabel(th.scope as Scope, v), n ? t("{n} source|{n} sources", { n }) : ""].filter(Boolean).join(" · ") : t("Tutor");
   if (renaming) return (
     <input autoFocus dir="auto" defaultValue={th.title} aria-label={t("Rename")} className="mx-2 h-9 rounded-[8px] border border-accent bg-bg px-2 text-[13px] outline-none"
       onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") { e.stopPropagation(); setRenaming(false); } }}

@@ -38,12 +38,13 @@ export function suggestBlocks(plans: CalPlan[], items: CalItem[], o: SuggestOpts
     for (const d of open) {
       const daysLeft = open.length - open.indexOf(d);
       // Plans with the most left to do first; each gets its share of the remaining days.
-      const order = [...plans].filter((p) => (need.get(p.id) ?? 0) >= 30).sort((a, b) => (need.get(b.id)! - need.get(a.id)!) || a.title.localeCompare(b.title));
+      const order = [...plans].filter((p) => (need.get(p.id) ?? 0) >= 15).sort((a, b) => (need.get(b.id)! - need.get(a.id)!) || a.title.localeCompare(b.title));
       for (const p of order) {
         const left = need.get(p.id)!;
-        let dur = Math.min(120, Math.max(30, round(left / daysLeft, 30)));
-        if (dayLoad(d) + dur > o.dailyMax) dur = Math.floor((o.dailyMax - dayLoad(d)) / 30) * 30;
-        if (dur < 30) break;
+        // One session of the plan's own length (sessionMinutes), longer only when the pace needs it.
+        let dur = Math.min(120, round(left), round(Math.max(p.session, left / daysLeft)));
+        if (dayLoad(d) + dur > o.dailyMax) dur = Math.floor((o.dailyMax - dayLoad(d)) / 15) * 15;
+        if (dur < 15) break;
         const from = Math.max(w0 + (o.reviewMin && d === o.today ? o.reviewMin : 0), d === o.today ? round(o.nowMin + GAP) : w0);
         const busy = timed(d);
         let start: number | null = null;

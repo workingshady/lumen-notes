@@ -3,6 +3,7 @@
 // Pure: the caller passes "today" and the raw data, so the same input always gives the same calendar.
 // Reviews are counts per day, never events (design 55 note). Times are minutes from local midnight.
 import { daysBetween, shiftDay, weekday, weekStart } from "./plan";
+import type { PlanItem } from "./plan-model";
 
 export { daysBetween, shiftDay, weekday, weekStart };
 
@@ -29,6 +30,8 @@ export interface CalItem {
   noteId?: string;
   line?: number;
   late?: boolean;
+  /** Plan-model item behind a `kind: "item"` entry (drag writes its dates). */
+  planItem?: PlanItem;
 }
 
 /** Fixed calendar ids for the non-plan calendars. */

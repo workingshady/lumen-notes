@@ -58,7 +58,7 @@ export function useCalendar(): CalData {
   const today = localISO(now);
   const studyDays = s.planStudyDays ?? PLAN_DEFAULTS.studyDays;
   const dailyMin = s.planDailyMinutes ?? PLAN_DEFAULTS.dailyMinutes;
-  const plans = useMemo(() => buildPlans(v.spaces, v.byId, today, dailyMin * Math.max(1, studyDays.length)), [v.spaces, v.byId, today, dailyMin, studyDays.length]);
+  const plans = useMemo(() => buildPlans(v.notes, v.spaces, today), [v.notes, v.spaces, today]);
   const planMap = useMemo(() => new Map(plans.map((p) => [p.id, p])), [plans]);
   const calNote = v.byId.get(CAL_NOTE_ID);
   const lines = useMemo(() => (calNote && !calNote.deleted ? parseCalNote(calNote.body) : []), [calNote]);
@@ -82,8 +82,8 @@ export function useCalendar(): CalData {
       out.push({ id: `task:${t.key}`, kind: "task", title: t.text, sub: p?.title ?? t.noteTitle, date: t.due, start: t.time, dur: t.est ?? (t.time != null ? 30 : 0), cal: CAL_TASKS, color: p?.color ?? "var(--text)", done: t.done, planId: t.planId, noteId: t.noteId, line: t.line, late: !t.done && t.due < today });
     }
     for (const p of plans) {
-      for (const m of p.milestones) out.push({ id: `ms:${p.id}:${m.date}:${m.title}`, kind: "milestone", title: m.title, sub: p.title, date: m.date, start: null, dur: 0, cal: p.id, color: p.color, planId: p.id, noteId: p.noteId ?? undefined, line: m.line >= 0 ? m.line : undefined });
-      for (const it of p.items) out.push({ id: `pi:${p.id}:${it.line}`, kind: "item", title: it.title, sub: p.title, date: it.date, start: null, dur: 0, cal: p.id, color: p.color, done: it.done, planId: p.id, noteId: p.noteId ?? undefined, line: it.line, late: !it.done && it.date < today });
+      for (const m of p.milestones) out.push({ id: `ms:${p.id}:${m.date}:${m.title}`, kind: "milestone", title: m.title, sub: p.title, date: m.date, start: null, dur: 0, cal: p.id, color: p.color, planId: p.id, noteId: m.noteId, line: m.line >= 0 ? m.line : undefined });
+      for (const it of p.items) out.push({ id: `pi:${p.id}:${it.item.key}`, kind: "item", title: it.title, sub: p.title, date: it.date, start: null, dur: 0, cal: p.id, color: p.color, done: it.done, planId: p.id, noteId: it.noteId, line: it.line, late: !it.done && it.date < today, planItem: it.item });
     }
     return out;
   }, [lines, tasks, plans, planMap, today]);

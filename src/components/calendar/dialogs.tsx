@@ -10,7 +10,7 @@ import type { CalTask } from "../../lib/calendar-tasks";
 import { db } from "../../lib/db";
 import { openNote, toast } from "../../lib/store";
 import { openNoteAtLine } from "../study-nav";
-import { moveItem, removeCalLine, setBlockDone, startItem, toggleTask } from "./actions";
+import { moveItem, removeCalLine, setBlockDone, setPlanItemStatus, startItem, toggleTask } from "./actions";
 import { hhmm, longDay, MItem, Pop, V } from "./parts";
 import { t } from "../../lib/i18n";
 
@@ -30,7 +30,8 @@ export function ItemPop({ it, anchor, onClose, today, tasks, plan, byTitle }: { 
       {it.kind !== "milestone" && it.kind !== "item" && <MItem onClick={run(() => startItem(it, { byTitle, plan }))}><Glyph name="play" size={14} />{t("Start focus")}</MItem>}
       {it.noteId && it.kind !== "block" && it.kind !== "event" && <MItem onClick={run(() => { if (it.line != null) void db.notes.get(it.noteId!).then((n) => openNoteAtLine(it.noteId!, it.line!, n?.body)); else openNote(it.noteId!); })}><Glyph name="note" size={14} />{t("Open note")}</MItem>}
       {(it.kind === "block" || task) && <MItem onClick={run(() => { if (task) void toggleTask(task, today); else void setBlockDone(it, !it.done); })}><Glyph name="check" size={14} />{it.done ? t("Mark not done") : t("Mark done")}</MItem>}
-      {it.noteId && it.line != null && <MItem onClick={run(() => { void moveItem(it, shiftDay(it.date < today ? today : it.date, 1), it.start); toast(t("Moved to the next day")); })}><Glyph name="calendar" size={14} />{t("Move to the next day")}</MItem>}
+      {it.kind === "item" && it.planItem && it.planItem.src !== "module" && <MItem onClick={run(() => void setPlanItemStatus(it, it.done ? "todo" : "done"))}><Glyph name="check" size={14} />{it.done ? t("Mark not done") : t("Mark done")}</MItem>}
+      {it.noteId && it.line != null && (it.kind !== "item" || it.planItem?.src !== "module") && <MItem onClick={run(() => { void moveItem(it, shiftDay(it.date < today ? today : it.date, 1), it.start); toast(t("Moved to the next day")); })}><Glyph name="calendar" size={14} />{t("Move to the next day")}</MItem>}
       {(it.kind === "block" || it.kind === "event") && <MItem danger onClick={run(() => void removeCalLine(it))}><Glyph name="trash" size={14} />{t("Remove from calendar")}</MItem>}
     </Pop>
   );

@@ -23,6 +23,7 @@ import { UndoRedo } from "./editor-tools";
 import { Preview } from "./Preview";
 import { ReviewSession } from "./Review";
 import { RightPanel } from "./RightPanel";
+import { ConflictBanner } from "./versions/ConflictBanner";
 import { Slides } from "./Slides";
 import { StudyTimer } from "./Timer";
 import { Button, cx, Segmented, Sheet, STATUS_COLOR } from "./ui";
@@ -349,6 +350,7 @@ export function NoteView({ note }: { note: Note }) {
             <div className="relative"><button aria-label={t("More")} className="flex h-12 w-11 items-center justify-center" onClick={() => setMenu((m) => !m)}><EllipsisVertical size={20} /></button>{menuEl}</div>
           </header>
         )}
+        {markdownNote && <ConflictBanner noteId={note.id} />}
         {/* note tabs (R6-31): Note · Diagrams · Media · Links · Outline, only the ones this note has content for */}
         {markdownNote && !isDiagram && !ownBar && !(isPath && !rmEdit) && effMode !== "focus" && effMode !== "slides" && effMode !== "review" && <NoteTabBar note={note} mode={effMode} wide={wide} />}
 

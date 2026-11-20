@@ -14,7 +14,7 @@ const A1G = ["Verb to be", "Pronouns and possessives", "Articles", "Plurals and 
 const A1V = ["Greetings and personal information", "Numbers, dates and time", "Family and friends", "Food and drink", "Daily routines", "Places in town"];
 const A1L = ["Alphabet and sounds", "Introducing yourself", "Asking simple questions"];
 export function englishRoadmap(iso: Iso): string {
-  const out = [`---`, `pace: 4`, `hours: 1.9`, `start: ${iso(3)}`, `levels: [${LEVELS.map(([k, n]) => `${k}=${n}`).join(", ")}]`, `levelrange: CEFR A1 – C2`, `---`, `# English A1 to C2`, ``];
+  const out = [`---`, `pace: 4`, `hours: 1.9`, `start: ${iso(0)}`, `levels: [${LEVELS.map(([k, n]) => `${k}=${n}`).join(", ")}]`, `levelrange: CEFR A1 – C2`, `---`, `# English A1 to C2`, ``];
   for (const [lv, , counts] of LEVELS) counts.forEach((n, mi) => {
     out.push(`## ${lv} · ${MODS[mi]}`);
     for (let k = 0; k < n; k++) {
@@ -25,7 +25,7 @@ export function englishRoadmap(iso: Iso): string {
       else if (mi === 4) name = k === 0 ? `${lv} checkpoint` : `${lv} review test`;
       else if (mi === 0) name = `${lv} grammar ${k + 1}`;
       let needs = "";
-      if (lv === "A1" && mi === 0) needs = k === 0 ? " (needs: Alphabet and sounds)" : k <= 6 ? " (needs: Verb to be)" : ` (needs: ${A1G[k - 1]})`;
+      if (lv === "A1" && mi === 0) needs = k === 0 ? "" : k <= 6 ? " (needs: Verb to be)" : ` (needs: ${A1G[k - 1]})`;
       if (lv === "A1" && mi === 2 && k === 1) needs = " (needs: Verb to be)";
       out.push(`- [ ] ${name}${needs}`);
     }

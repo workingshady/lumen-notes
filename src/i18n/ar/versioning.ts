@@ -2,6 +2,14 @@ import type { Catalog } from "../../lib/i18n";
 
 /** Arabic: versioning (round 8 · R8-58): history studio, compare, sync conflicts, PDF versions, Settings › Versions & history. */
 export const ar: Catalog = {
+  "Compare v{a} → current": "مقارنة v{a} ← الحالية",
+  "Deleted notes": "الملاحظات المحذوفة", "Trash · until you empty it": "سلة المحذوفات · حتى تفرغها", "Show fewer spaces": "عرض مساحات أقل", "Show all {n} spaces": "عرض كل المساحات ({n})",
+  "Rendered": "منسّق", "Source": "المصدر", "Properties changed": "تغيّرت الخصائص",
+  "Restored {n} line|Restored {n} lines": { zero: "تمت استعادة {n} سطرًا", one: "تمت استعادة سطر واحد", two: "تمت استعادة سطرين", few: "تمت استعادة {n} أسطر", many: "تمت استعادة {n} سطرًا", other: "تمت استعادة {n} سطرًا" },
+  "+{n} line|+{n} lines": { zero: "+{n} سطرًا", one: "+سطر واحد", two: "+سطران", few: "+{n} أسطر", many: "+{n} سطرًا", other: "+{n} سطرًا" },
+  "−{n} line|−{n} lines": { zero: "−{n} سطرًا", one: "−سطر واحد", two: "−سطران", few: "−{n} أسطر", many: "−{n} سطرًا", other: "−{n} سطرًا" },
+  "{n} block differs · the rest is the same on both|{n} blocks differ · the rest is the same on both": { zero: "{n} كتلة مختلفة · الباقي متطابق في الاثنين", one: "كتلة واحدة مختلفة · الباقي متطابق في الاثنين", two: "كتلتان مختلفتان · الباقي متطابق في الاثنين", few: "{n} كتل مختلفة · الباقي متطابق في الاثنين", many: "{n} كتلة مختلفة · الباقي متطابق في الاثنين", other: "{n} كتلة مختلفة · الباقي متطابق في الاثنين" },
+  "Edited on two devices · {device} has a different version": "عُدّلت على جهازين · لدى {device} نسخة مختلفة",
   "+{n} lines": "+{n} سطر", "−{n} lines": "−{n} سطر", "{n} changed": "{n} معدّل", "No differences": "لا فروق",
   "Compare": "مقارنة", "Comparing 2 versions": "مقارنة نسختين", "Compare v{a} → v{b}": "مقارنة v{a} ← v{b}", "Viewing v{n} · {when}": "عرض v{n} · {when}",
   "Pick any two in History": "اختر أي نسختين من السجل", "Double-click to name this version": "انقر مرتين لتسمية هذه النسخة",

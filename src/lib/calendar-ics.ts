@@ -79,5 +79,5 @@ export function downloadICS(text: string, name = "lumen-calendar.ics") {
   const a = document.createElement("a");
   a.href = url; a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }

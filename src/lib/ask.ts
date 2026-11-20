@@ -354,7 +354,7 @@ export function stopChat(slot: Slot = "ask") {
   const l = liveOf(slot);
   if (!l) return;
   if (l.text) {
-    const m = msg("assistant", l.text.trim(), { ...(l.sources.length && !l.general ? { sources: keepSources(l.sources) } : {}), ...(l.rewrite ? { rewrite: l.rewrite } : {}), ...(l.general ? { general: 1 as const } : {}) });
+    const m = msg("assistant", l.text.trim(), { stopped: 1 as const, ...(l.t0 ? { ms: Date.now() - l.t0 } : {}), ...(l.sources.length && !l.general ? { sources: keepSources(l.sources) } : {}), ...(l.rewrite ? { rewrite: l.rewrite } : {}), ...(l.general ? { general: 1 as const } : {}) });
     void updateThread(l.threadId, (t) => { t.messages.push(m); });
     set({ [LIVE[slot]]: null });
   } else set({ [LIVE[slot]]: { ...l, status: "error", error: "Stopped before an answer." } }); // Retry re-asks

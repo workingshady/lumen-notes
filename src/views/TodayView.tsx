@@ -5,6 +5,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Glyph } from "../components/Glyph";
 import { Sheet } from "../components/ui";
+import { StudyTimer, useTimerActive } from "../components/Timer";
 import { useTodayData } from "../components/today-data";
 import { addLearned, addTask, learnedLines, moveItem, removeCalLine, setBlockDone, startItem, toggleTask } from "../components/calendar/actions";
 import { QuickAdd } from "../components/calendar/QuickAdd";
@@ -28,6 +29,7 @@ export function TodayView() {
   const td = useTodayData();
   const v = useVault();
   const now = useNow();
+  const timerOn = useTimerActive();
   const { today } = cal;
   const nowMin = new Date(now).getHours() * 60 + new Date(now).getMinutes();
   const [planning, setPlanning] = useState<CalItem[] | null>(null);
@@ -88,6 +90,7 @@ export function TodayView() {
     const from = Math.max(nowMin + 5, dueN ? REVIEW_AT + reviewMinutes(dueN) : 0);
     let out = placeBlocks(reqs, busy, today, from);
     if (!out.length) out = suggestBlocks(cal.plans, busy, { days: [today], today, nowMin, studyDays: [], dailyMax: cal.dailyMin, reviewMin: dueN ? reviewMinutes(dueN) : 0 });
+    if (!out.length) { toast(t("No free slot or nothing left to plan today.")); return; }
     setPlanning(out);
   }
 
@@ -104,7 +107,8 @@ export function TodayView() {
 
   if (!cal.ready) return <div className="p-6 text-[13px] text-muted">{t("Loading…")}</div>;
   const sub = phone
-    ? `${longDay(today).split(",")[0].slice(0, 3)} · ${t("{n} blocks", { n: entries.length })} · ${t("{n} reviews", { n: dueN })}`
+    ? `${longDay(today).split(",")[0].slice(0, 3)} · ${entries.length === 1 ? t("1 block") : t("{n} blocks", { n: entries.length })} · ${t("{n} reviews", { n: dueN })}`
+    : entries.length === 1 ? t("{greet}. 1 block, {t} tasks left and {r} reviews. {s}-day streak.", { greet: greeting(nowMin), t: leftN, r: dueN, s: td.streak })
     : t("{greet}. {b} blocks, {t} tasks left and {r} reviews. {s}-day streak.", { greet: greeting(nowMin), b: entries.length, t: leftN, r: dueN, s: td.streak });
   const nTasks = phone ? 3 : 6;
 
@@ -112,6 +116,7 @@ export function TodayView() {
     <div style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", fontSize: 13, color: V.tx, background: V.bg }}>
       <DeskHeader phone={phone} title={phone ? t("Today") : longDay(today)} sub={sub}>
         {!phone && <HBtn glyph="plus" label={t("Quick add")} onClick={(e) => setAdding(e.currentTarget)} />}
+        {(!phone || timerOn) && <StudyTimer />}
         <HBtn glyph="timeline" label={t("Plan my day")} primary onClick={planMyDay} />
       </DeskHeader>
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "grid", gridTemplateColumns: phone ? "1fr" : "minmax(0,1fr) 300px", gap: 16, padding: phone ? "0 16px 16px" : "0 28px 24px", alignContent: "start" }}>
@@ -132,7 +137,7 @@ export function TodayView() {
           <div style={{ display: "grid", gridTemplateColumns: phone ? "1fr" : "1fr 1fr", gap: 14 }}>
             {/* Schedule */}
             <div style={{ ...card, gap: 2 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 8 }}><span style={{ fontWeight: 650, fontSize: 13.5, flex: 1 }}>{t("Schedule")}</span><span style={{ fontSize: 12, color: V.mu }}>{t("{n} blocks · {d}", { n: entries.length, d: durLabel(schedMin) })}</span></div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 8 }}><span style={{ fontWeight: 650, fontSize: 13.5, flex: 1 }}>{t("Schedule")}</span><span style={{ fontSize: 12, color: V.mu }}>{entries.length === 1 ? t("1 block · {d}", { d: durLabel(schedMin) }) : t("{n} blocks · {d}", { n: entries.length, d: durLabel(schedMin) })}</span></div>
               {!entries.length && <button onClick={planMyDay} style={{ minHeight: 50, borderRadius: 8, border: `1px dashed ${V.bd}`, color: V.mu, fontSize: 12.5 }}>{t("Nothing scheduled yet. Plan my day")}</button>}
               {entries.map((e) => {
                 const past = !e.done && e.start + e.dur <= nowMin;

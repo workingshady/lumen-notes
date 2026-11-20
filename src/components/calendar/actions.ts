@@ -6,6 +6,8 @@ import type { CalItem } from "../../lib/calendar";
 import { CAL_NOTE_ID, editNote, moveLine, removeLine } from "../../lib/calendar-store";
 import { addSubtask, completeTask, setField, setLane, setText, taskLine, type CalTask, type Lane, type Parsed } from "../../lib/calendar-tasks";
 import type { CalPlan } from "../../lib/calendar-plans";
+import { bodyWithDates, bodyWithStatus } from "../../lib/plan-sources";
+import { dayOf, type ItemStatus } from "../../lib/plan-model";
 import { go, openNote, toast } from "../../lib/store";
 import { startStudyTimer } from "../Timer";
 import { openNoteAtLine } from "../study-nav";
@@ -68,6 +70,12 @@ export const toggleCheck = (task: CalTask, line: number, done: boolean, today: s
 
 /** Move a calendar line or a task to another day / time. Plan items move their roadmap date. */
 export async function moveItem(it: CalItem, date: string, start?: number | null) {
+  if (it.kind === "item" && it.planItem && it.noteId) {
+    const pi = it.planItem, delta = dayOf(date) - pi.end;
+    if (!delta || pi.src === "module") return;
+    await editNote(it.noteId, (b) => bodyWithDates(b, pi, pi.fixedStart != null ? pi.fixedStart + delta : null, pi.end + delta));
+    return;
+  }
   if (it.noteId == null || it.line == null) return;
   if (it.kind === "task") {
     await editNote(it.noteId, (b) => { let x = setField(b, it.line!, "due", date); if (start != null) x = setField(x, it.line!, "time", start); return x; });
@@ -76,6 +84,8 @@ export async function moveItem(it: CalItem, date: string, start?: number | null)
   if (it.noteId === CAL_NOTE_ID) { await editNote(it.noteId, (b) => moveLine(b, it.line!, date, start)); return; }
   await editNote(it.noteId, (b) => { const ls = b.split("\n"); ls[it.line!] = ls[it.line!].replace(/(\u{1F4C5}\s*)\d{4}-\d{2}-\d{2}|((?<![\w/])due:\s*)\d{4}-\d{2}-\d{2}|(@due\()\d{4}-\d{2}-\d{2}/u, (_m, a, c, d) => `${a ?? c ?? d}${date}`); return ls.join("\n"); });
 }
+/** Set a plan item's status (Mark done) through the plan model. */
+export const setPlanItemStatus = (it: CalItem, s: ItemStatus) => it.planItem && it.noteId ? editNote(it.noteId, (b) => bodyWithStatus(b, it.planItem!, s)) : Promise.resolve();
 export const setBlockDone = (it: CalItem, done: boolean) => it.noteId === CAL_NOTE_ID && it.line != null ? editNote(CAL_NOTE_ID, (b) => { const ls = b.split("\n"); ls[it.line!] = ls[it.line!].replace(/\[( |x|X|\/)\]/, done ? "[x]" : "[ ]"); return ls.join("\n"); }) : Promise.resolve();
 
 // ------------------------------------------------------------------ start

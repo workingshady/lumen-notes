@@ -66,7 +66,7 @@ const NAV: { h: string; items: NavItem[] }[] = [
   ] },
 ];
 const ALL = NAV.flatMap((g) => g.items);
-const GOTO: [string, string, string][] = [["today", "date", tk("Today")], ["daily", "journal", tk("Daily note")], ["tasks", "task", tk("Tasks")], ["calendar", "v-calendar", tk("Calendar")], ["graph", "graph", tk("Graph")], ["canvas", "canvas", tk("Canvases")], ["paths", "path", tk("Learning paths")], ["drawer", "folder", tk("Spaces, folders & tags")]];
+const GOTO: [string, string, string][] = [["ask", "assistant", tk("Ask your notes")], ["home", "home", tk("Home")], ["notes", "note", tk("Notes")], ["daily", "journal", tk("Daily note")], ["graph", "graph", tk("Graph")], ["canvas", "canvas", tk("Canvases")], ["paths", "path", tk("Learning paths")], ["drawer", "folder", tk("Spaces, folders & tags")]];
 
 let lastRead: { v: string | null; at: number } | null = null; // StrictMode runs the initializer twice: keep the first read
 function readStoredSection(): SecId | null {
@@ -143,7 +143,7 @@ export function SettingsView() {
         <div className="flex flex-col gap-0.5" role="group" aria-label={t("Go to")}>
           <div className="px-2.5 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("Go to")}</div>
           {GOTO.map(([k, g, l]) => (
-            <button key={k} onClick={() => (k === "drawer" ? setUI({ sidebar: true }) : void runNav(k as never, getUI().spaceId))} className="flex h-12 items-center gap-2.5 rounded-[8px] px-2.5 text-start text-ink">
+            <button key={k} onClick={() => (k === "drawer" ? setUI({ sidebar: true }) : k === "home" || k === "notes" ? setUI({ view: k, noteId: null, sidebar: false }) : void runNav(k as never, getUI().spaceId))} className="flex h-12 items-center gap-2.5 rounded-[8px] px-2.5 text-start text-ink">
               <Glyph name={g} size={16} color="var(--muted)" /><span className="flex-1">{t(l)}</span><span className="text-muted rtl:-scale-x-100">›</span>
             </button>
           ))}

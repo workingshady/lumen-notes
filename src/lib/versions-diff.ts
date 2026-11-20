@@ -2,6 +2,7 @@
 // changed line paired with its replacement is compared word by word (jsdiff diffWords), so "the same" -> "shared" shows
 // as one struck and one added word inside an otherwise unchanged line.
 import { diffArrays, diffWords } from "diff";
+import { readable } from "./versions-text";
 
 export type Tok = { s: string; k: "=" | "+" | "-" };
 /** m: "" unchanged, "+" added line, "-" removed line, "~" changed line (tokens carry the word differences). */
@@ -20,9 +21,11 @@ export interface DLine {
 export interface DStat { added: number; removed: number; changed: number }
 
 const MAX_WORD_DIFF = 6000;
-const head = (s: string): [0 | 1 | 2, string] => {
+
+const headOf = (s: string, rendered: boolean): [0 | 1 | 2, string] => {
+  if (!rendered) return [0, s]; // source view: the raw line, front matter and all
   const m = /^(#{1,6})\s+(.*)$/.exec(s);
-  return m ? [m[1].length === 1 ? 1 : 2, m[2]] : [0, s];
+  return m ? [m[1].length === 1 ? 1 : 2, readable(m[2])] : [0, readable(s)];
 };
 
 function wordToks(a: string, b: string): Tok[] | null {
@@ -36,17 +39,20 @@ function wordToks(a: string, b: string): Tok[] | null {
 /** Blank lines stay in the comparison (so a restore keeps the text exact) but are never drawn. */
 const lines = (s: string) => s.replace(/\r\n?/g, "\n").split("\n");
 
-export function diffLines(oldText: string, newText: string): DLine[] {
+/** `rendered` draws readable prose (no table pipes, [[ ]], Markdown marks); a restore still uses the raw lines kept in a / b. */
+export function diffLines(oldText: string, newText: string, rendered = false): DLine[] {
   const out: DLine[] = [];
+  const head = (s: string) => headOf(s, rendered);
+  const empty = (s: string) => !(rendered ? readable(s) : s).trim();
   const row = (m: DLine["m"], text: string, a?: string, b?: string) => {
     const [h, body] = head(text);
-    out.push({ m, h, toks: [{ s: body, k: m === "+" ? "+" : m === "-" ? "-" : "=" }], a, b, blank: !text.trim(), i: 0 });
+    out.push({ m, h, toks: [{ s: body, k: m === "+" ? "+" : m === "-" ? "-" : "=" }], a, b, blank: empty(text), i: 0 });
   };
   const parts = diffArrays(lines(oldText), lines(newText));
   for (let i = 0; i < parts.length; i++) {
     const p = parts[i];
     if (!p.added && !p.removed) {
-      for (const l of p.value) { const [h, body] = head(l); out.push({ m: "", h, toks: [{ s: body, k: "=" }], a: l, b: l, blank: !l.trim(), i: 0 }); }
+      for (const l of p.value) { const [h, body] = head(l); out.push({ m: "", h, toks: [{ s: body, k: "=" }], a: l, b: l, blank: empty(l), i: 0 }); }
       continue;
     }
     const next = parts[i + 1];

@@ -226,7 +226,7 @@ export function Board({ plan, today, phone, items, writes, onItem }: ViewProps) 
   const [more, setMore] = useState<Set<Bucket>>(new Set());
   const [over, setOver] = useState<Bucket | null>(null);
   const [drag, setDrag] = useState<string | null>(null);
-  /** Drop = reschedule: Now starts today, Next in a week, Later in four weeks (duration kept), Done marks it done. */
+  /** Drop = reschedule: Now starts today, Next within the Next window, Later just past it (duration kept), Done marks it done. */
   const drop = (col: Bucket, e: DragEvent) => {
     e.preventDefault(); setOver(null);
     const it = items.find((i) => i.key === (e.dataTransfer.getData("text/plan-item") || drag));
@@ -234,7 +234,7 @@ export function Board({ plan, today, phone, items, writes, onItem }: ViewProps) 
     if (!it || col === "overdue") return;
     const dur = it.end - it.start;
     if (col === "done") return void writes.status(it, "done");
-    const s = col === "now" ? today : col === "next" ? today + 7 : today + 28;
+    const s = col === "now" ? today : col === "next" ? today + Math.max(1, Math.min(7, nextDays)) : today + nextDays + 7;
     void writes.both(it, col === "now" ? "doing" : "todo", s, s + dur);
   };
   const max = phone ? 5 : 4;
@@ -246,7 +246,7 @@ export function Board({ plan, today, phone, items, writes, onItem }: ViewProps) 
         const open = more.has(k);
         return (
           <div key={k} className={over === k ? "pl-drop" : undefined} onDragOver={(e) => { if (k !== "overdue") { e.preventDefault(); setOver(k); } }} onDragLeave={() => setOver((o) => (o === k ? null : o))} onDrop={(e) => drop(k, e)}
-            style={{ flex: 1, minWidth: phone ? 0 : 200, display: "flex", flexDirection: "column", gap: 8, background: "var(--sf)", border: "1px solid var(--bd)", borderRadius: 14, padding: 10, alignSelf: "flex-start", maxHeight: "100%", overflow: "auto" }}>
+            style={{ flex: 1, minWidth: phone ? 0 : 200, display: "flex", flexDirection: "column", gap: 8, background: "var(--sf)", border: "1px solid var(--bd)", borderRadius: 14, padding: 10, alignSelf: "stretch", maxHeight: "100%", overflow: "auto" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "2px 4px 4px" }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: c }} /><span style={{ fontWeight: 650, fontSize: 13 }}>{t(l)}</span><span style={{ color: "var(--mu)", fontSize: 12 }}>{fmtNum(its.length)}</span>
               <span style={{ flex: 1 }} /><span style={{ fontSize: 11.5, color: k === "now" && its.length > 3 ? "var(--da)" : "var(--mu)" }}>{k === "now" ? t("WIP {n}", { n: 3 }) : ""}</span>
@@ -322,7 +322,7 @@ export function Agenda({ plan, today, phone, items, writes, onItem }: ViewProps)
               <div style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 46, padding: "4px 0", borderBottom: "1px solid color-mix(in srgb,var(--bd) 50%,transparent)" }}>
                 <span style={{ width: 20, height: 20, flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontSize: 13.5, color: "var(--mu)" }}>{w.extra > 0 ? t("+ {n} more", { n: w.extra }) : t("{n} items continue from earlier weeks", { n: w.carried })}</span>
+                  <span style={{ fontSize: 13.5, color: "var(--mu)" }}>{w.extra > 0 ? t("+ {n} more", { n: w.extra }) : w.carried === 1 ? t("1 item continues from earlier weeks") : t("{n} items continue from earlier weeks", { n: w.carried })}</span>
                   <span style={{ fontSize: 11.5, color: "var(--mu)", display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 7, height: 7, borderRadius: 2, background: "var(--bd)" }} />{t("Carried over")}</span>
                 </div>
               </div>

@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { NOTE_TYPES, STATUSES, type Note, type Version } from "../../shared/types";
-import { snapshot, updateNote } from "../lib/actions";
+import { updateNote } from "../lib/actions";
 import { db } from "../lib/db";
 import { inlineTags, outline, setFrontMatter, splitFrontMatter } from "../lib/parse";
 import { noteDerived, openNote, setUI, toast, useUI, useVault, type Panel } from "../lib/store";
@@ -17,6 +17,7 @@ import { scrollEditorToLine } from "./Editor";
 import { AssistantPanel, AssistantRail, toggleAssistantRail, useAssistantRail } from "./Assistant";
 import { Glyph } from "./Glyph";
 import { HistoryPanel } from "./HistoryPanel";
+import { VersionStudio } from "./versions/VersionStudio";
 import { NoteTagPicker } from "./TagPicker";
 import { Button, cx, STATUS_COLOR } from "./ui";
 import { digits, fmtDate, fmtNum, t, tk, tx } from "../lib/i18n";
@@ -39,7 +40,7 @@ export function RightPanel({ note }: { note: Note }) {
   if (!panel) return null;
   // AI = the note Assistant (R6-31M…T): 360 px panel, phone sheet, or the collapsed rail
   if (panel === "ai") return railed && !phone ? <AssistantRail /> : <AssistantPanel note={note} phone={phone} />;
-  if (panel === "versions" && phone) return <PhoneVersions note={note} />;
+  if (panel === "versions" && phone) return <VersionStudio note={note} onClose={() => setUI({ panel: null })} />; // R8-58: the same diff studio as on desktop
   return (
     <aside className={cx("fixed inset-0 z-40 flex flex-col bg-surface text-[13px] md:static md:z-auto md:shrink-0 md:border-s md:border-line fade-in", panel === "versions" ? "md:w-[320px]" : "md:w-[300px]")}>
       {/* Icon tabs; the active one expands to icon + label */}
@@ -411,25 +412,7 @@ function when(ts: number) {
 }
 /** "Today 21:12" style for labels and the comparing bar. */
 const whenLong = (ts: number) => (sameDay(ts, Date.now()) ? t("Today {time}", { time: hm(ts) }) : when(ts));
-/** Version labels are stored in English; the known automatic ones are shown translated. */
-const storedLabel = (l: string) => (l === "Manual save" || l === "Before restore" || l === "Before keeping the other version" ? t(l) : l.startsWith("Restored from ") ? t("Restored from {when}", { when: l.slice(14) }) : l);
-const isRestore = (v: Version) => v.label.startsWith("Restored") || v.label === "Before restore";
-const labelOf = (v: Version) => (v.label ? (isRestore(v) || v.label === "Manual save" ? storedLabel(v.label) : `“${v.label}”`) : t("Auto-save"));
 
-function useVersions(note: Note) {
-  const versions = useLiveQuery(() => db.versions.where("noteId").equals(note.id).reverse().sortBy("createdAt"), [note.id]) ?? [];
-  const live = useMemo(() => versions.filter((v) => !v.deleted), [versions]);
-  const deltas = useMemo(() => live.map((v, i) => lineDelta(live[i + 1]?.body ?? "", v.body)), [live]);
-  return { live, deltas };
-}
-/** Restoring never overwrites: the current text is kept as a version, then the old text becomes a new version on top. */
-async function restore(note: Note, v: Version, live: Version[]) {
-  const before = { title: note.title, body: note.body };
-  if (live[0]?.body !== note.body) await snapshot(note, "");
-  await updateNote(note.id, { title: v.title, body: v.body });
-  await snapshot({ ...note, title: v.title, body: v.body }, `Restored from ${whenLong(v.createdAt)}`);
-  toast(t("Restored from {when}", { when: whenLong(v.createdAt) }), { label: t("Undo"), run: () => void updateNote(note.id, before) });
-}
 const copy = (s: string) => { void navigator.clipboard.writeText(s); toast(t("Copied")); };
 
 /** Full-width diff in the main pane (left of the side panel): Viewing version · read-only. */
@@ -475,39 +458,6 @@ export function DiffOverlay({ anchor, note, v, onClose, onRestore }: { anchor: R
       <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
         <Diff from={v.body} to={note.body} mode={mode} />
       </div>
-    </div>
-  );
-}
-
-/** Phone: full-screen sheet with version cards, the diff, Copy + Restore. */
-function PhoneVersions({ note }: { note: Note }) {
-  const { live, deltas } = useVersions(note);
-  const [selId, setSelId] = useState<string | null>(null);
-  const sel = live.find((v) => v.id === selId) ?? live[0] ?? null;
-  return (
-    <div className="safe-t safe-b fixed inset-0 z-40 flex flex-col bg-surface text-[14px] fade-in">
-      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-line pe-1 ps-5">
-        <div className="flex min-w-0 flex-1 flex-col"><span className="text-[17px] font-[650]">{t("Version history")}</span><span className="truncate text-[12px] text-muted"><span dir="auto">{note.title}</span> · {t("{n} version|{n} versions", { n: live.length })}</span></div>
-        <button aria-label={t("Close")} onClick={() => setUI({ panel: null })} className="flex size-12 items-center justify-center"><X size={20} /></button>
-      </div>
-      {live.length ? (
-        <>
-          <div className="flex shrink-0 gap-2 overflow-x-auto px-4 py-3">
-            {live.map((v, i) => (
-              <button key={v.id} onClick={() => setSelId(v.id)} className={cx("box-border flex w-[150px] shrink-0 flex-col gap-1 rounded-[12px] bg-bg px-3 py-2.5 text-start", v.id === sel?.id ? "border-[1.5px] border-accent" : "border border-line")}>
-                <span className="truncate text-[13.5px] font-semibold leading-[18px]">{sameDay(v.createdAt, Date.now() - 86400000) ? t("Yesterday") : when(v.createdAt)}</span>
-                <span className="truncate text-[12px] leading-[15px] text-muted">{labelOf(v).replace(/[“”]/g, "")}</span>
-                <span className="font-mono text-[11.5px] font-medium leading-[15px]"><span className="text-ok">{deltas[i].add ? `+${fmt(deltas[i].add)}` : ""}</span> <span className="text-bad">{deltas[i].del ? `−${fmt(deltas[i].del)}` : ""}</span></span>
-              </button>
-            ))}
-          </div>
-          <div className="mx-4 min-h-0 flex-1 overflow-auto rounded-[12px] border border-line bg-bg">{sel && <Diff from={sel.body} to={note.body} mode="phone" />}</div>
-          <div className="flex shrink-0 gap-2.5 px-4 py-3">
-            <button aria-label={t("Copy this version")} onClick={() => sel && copy(sel.body)} className="flex size-[52px] items-center justify-center rounded-[12px] border border-line"><Copy size={18} /></button>
-            <button onClick={async () => { if (sel) { await restore(note, sel, live); setUI({ panel: null }); } }} className="flex h-[52px] flex-1 items-center justify-center rounded-[12px] bg-accent text-[15px] font-semibold text-accent-fg">{t("Restore as new version")}</button>
-          </div>
-        </>
-      ) : <p className="p-5 text-[13px] text-muted">{t("No versions yet. They are saved automatically while you write (every 2 min at most).")}</p>}
     </div>
   );
 }

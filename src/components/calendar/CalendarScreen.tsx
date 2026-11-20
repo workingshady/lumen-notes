@@ -18,6 +18,7 @@ import { EVENT_COLOR, REVIEW_COLOR, toggleCalendar, useCalendar, useHidden, useN
 import { PlanSheet } from "./PlanSheet";
 import { WeekGrid as WeekGridLazy } from "./WeekGrid";
 import { fmtNum, t } from "../../lib/i18n";
+import { dayOf, weeklyLoad } from "../../lib/plan-model";
 
 type Mode = "day" | "week" | "month" | "agenda";
 const MODE_KEY = "lumen.cal.mode";
@@ -55,7 +56,13 @@ export function CalendarScreen() {
 
   // busy week (from this week on)
   const loads = useMemo(() => weekLoads(cal.items, cal.paceMin, today, 8), [cal.items, cal.paceMin, today]);
-  const busy = busyWeek(loads);
+  // Plans page agreement: a week is also busy when a plan's own weeklyLoad is over its pace.
+  const loadsM = useMemo(() => loads.map((w) => {
+    const t0 = dayOf(w.week);
+    const plan = cal.plans.filter((p) => !hid.has(p.id)).map((p) => ({ p, wl: weeklyLoad(p.model, t0, 1)[0] })).filter((x) => x.wl.over);
+    return plan.length ? { ...w, over: true, planned: Math.max(w.planned, Math.round(plan.reduce((a, x) => a + x.wl.hours * 60, 0))) } : w;
+  }), [loads, cal.plans, hid]);
+  const busy = busyWeek(loadsM);
   const doRebalance = async () => {
     if (!busy) return;
     const moves = rebalance(cal.items, busy, cal.studyDays, today);
@@ -94,7 +101,7 @@ export function CalendarScreen() {
   const inMonth = (d: string) => Number(d.slice(5, 7)) === mo + 1 && Number(d.slice(0, 4)) === y;
   const monthItems = visible.filter((x) => inMonth(x.date));
   const reviewsInMonth = [...cal.reviews.entries()].filter(([d]) => inMonth(d) && d >= today).reduce((a, [, n]) => a + n, 0);
-  const title = m === "month" ? fmtD(anchor, { month: "long", year: "numeric" })
+  const title = m === "month" ? fmtD(anchor, phone ? { month: "long" } : { month: "long", year: "numeric" })
     : m === "week" ? (phone ? `${fmtNum(Number(days[0].slice(8)))} – ${dayMon(days[days.length - 1])}` : t("Week of {d}", { d: `${fmtNum(Number(days[0].slice(8)))} ${fmtD(days[0], { month: "long" })}` }))
       : m === "day" ? longDay(anchor) : t("Agenda");
   const sub = phone ? "" : m === "month" ? t("{s} sessions · {m} milestones · {r} reviews scheduled", { s: monthItems.filter((x) => x.kind === "block").length, m: monthItems.filter((x) => x.kind === "milestone").length, r: reviewsInMonth })
@@ -127,7 +134,7 @@ export function CalendarScreen() {
 
       {auto && (m === "week" || m === "day") && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, margin: phone ? "0 12px 10px" : "0 28px 12px", padding: "8px 12px", borderRadius: 10, border: `1.5px dashed ${V.bd}`, fontSize: 12.5 }}>
-          <span style={{ flex: 1, color: V.mu }}>{suggestions.length ? t("{n} suggested blocks from your plans’ pace ({h}). Click or drag one to accept.", { n: suggestions.length, h: durLabel(suggestions.reduce((a, x) => a + x.dur, 0)) }) : t("Your plans’ pace is already covered this week.")}</span>
+          <span style={{ flex: 1, color: V.mu }}>{suggestions.length === 1 ? t("1 suggested block from your plans’ pace ({h}). Click or drag it to accept.", { h: durLabel(suggestions[0].dur) }) : suggestions.length ? t("{n} suggested blocks from your plans’ pace ({h}). Click or drag one to accept.", { n: suggestions.length, h: durLabel(suggestions.reduce((a, x) => a + x.dur, 0)) }) : t("Your plans’ pace is already covered this week.")}</span>
           {suggestions.length > 0 && <button onClick={() => setConfirm(suggestions)} style={{ height: 30, padding: "0 12px", borderRadius: 8, background: V.ac, color: V.af, fontWeight: 650 }}>{t("Accept all")}</button>}
           <button onClick={() => setAuto(false)} aria-label={t("Hide suggestions")} style={{ color: V.mu }}><Glyph name="x" size={14} /></button>
         </div>
@@ -218,7 +225,7 @@ function MonthGrid({ days, month, today, sel, phone, perDay, reviews, onSel, onI
                 : evs.slice(0, max).map((x) => {
                   const ms = x.kind === "milestone";
                   const c = x.color === "var(--text)" ? V.mu : x.color;
-                  const drag = x.noteId != null && x.line != null && !ms && x.kind !== "item";
+                  const drag = x.noteId != null && x.line != null && !ms && (x.kind !== "item" || (!!x.planItem && x.planItem.src !== "module"));
                   return (
                     <div key={x.id} draggable={drag} onDragStart={(e) => { e.dataTransfer.setData("application/x-lumen-cal", x.id); e.dataTransfer.effectAllowed = "move"; }}
                       onClick={(e) => { e.stopPropagation(); onItem(x, e.currentTarget); }} title={x.title}

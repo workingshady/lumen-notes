@@ -7,7 +7,7 @@ import { updateNote } from "../../lib/actions";
 import { useVault } from "../../lib/store";
 import { dateOf, type Day, type ItemStatus, type Plan, type PlanItem, type PlanPrefs } from "../../lib/plan-model";
 import { bodyWithDates, bodyWithPlanFm, bodyWithStatus, serializePrefs } from "../../lib/plan-sources";
-import { fmtDate, t } from "../../lib/i18n";
+import { fmtDate, getLang, t } from "../../lib/i18n";
 
 export const TOKENS = {
   "--sf": "var(--surface)", "--sf2": "var(--surface-2)", "--bd": "var(--border)", "--tx": "var(--text)", "--mu": "var(--muted)",
@@ -28,9 +28,12 @@ export const PLAN_CSS = `
 /** Short month labels, localized. */
 export const monthShort = (m: number) => fmtDate(new Date(Date.UTC(2026, m, 15)), { month: "short", timeZone: "UTC" });
 /** "29 Nov" (localized). */
-export const fmtDay = (d: Day) => fmtDate(dateOf(d), { day: "numeric", month: "short", timeZone: "UTC" });
+export const fmtDay = (d: Day) => {
+  const o = { timeZone: "UTC" } as const;
+  return getLang() === "ar" ? fmtDate(dateOf(d), { day: "numeric", month: "short", ...o }) : `${fmtDate(dateOf(d), { day: "numeric", ...o })} ${fmtDate(dateOf(d), { month: "short", ...o })}`; // day-month, as designed
+};
 /** "Sun 29 Nov". */
-export const fmtDow = (d: Day) => fmtDate(dateOf(d), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+export const fmtDow = (d: Day) => (getLang() === "ar" ? fmtDate(dateOf(d), { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : `${fmtDate(dateOf(d), { weekday: "short", timeZone: "UTC" })} ${fmtDay(d)}`);
 /** "Nov 2026". */
 export const fmtMonthYear = (d: Day) => fmtDate(dateOf(d), { month: "short", year: "numeric", timeZone: "UTC" });
 

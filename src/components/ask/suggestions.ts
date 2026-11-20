@@ -35,9 +35,10 @@ export function useSuggestions(max = 4): Suggestion[] {
     if (sp && top) out.push({ id: "quiz", glyph: "flashcards", kind: t("QUIZ ME"), color: "var(--warning)", text: t("Quiz me on {space}, {n} questions", { space: sp.name, n: Math.min(10, top[1]) }), src: t("{space} · {n} cards due", { space: sp.name, n: top[1] }), scope: { kind: "space", spaceId: sp.id }, pins: [...new Set((due ?? []).filter((d) => d.note.spaceId === sp.id).map((d) => d.note))].slice(0, 5).map((n) => pinOf(n, 900)) });
     // CONNECT: the most linked note and its best-linked neighbour
     const deg = (id: string) => (v.outlinks.get(id)?.length ?? 0) + (v.backlinks.get(id)?.length ?? 0);
-    const hub = [...live].sort((a, b) => deg(b.id) - deg(a.id))[0];
+    const plainTitle = (n: Note) => n.type !== "moc" && !/map of content|moc/i.test(n.title);
+    const hub = [...live].filter(plainTitle).sort((a, b) => deg(b.id) - deg(a.id))[0];
     if (hub && deg(hub.id) > 0) {
-      const nb = [...new Set([...(v.outlinks.get(hub.id) ?? []), ...(v.backlinks.get(hub.id) ?? [])])].map((id) => v.byId.get(id)).filter((n) => n && !n.deleted && n.id !== hub.id && !isWbType(n.type))
+      const nb = [...new Set([...(v.outlinks.get(hub.id) ?? []), ...(v.backlinks.get(hub.id) ?? [])])].map((id) => v.byId.get(id)).filter((n) => n && !n.deleted && n.id !== hub.id && !isWbType(n.type) && plainTitle(n))
         .sort((a, b) => deg(b!.id) - deg(a!.id))[0];
       if (nb) out.push({ id: "con", glyph: "graph", kind: t("CONNECT"), color: "var(--learn)", text: t("How does {a} relate to {b}?", { a: hub.title, b: nb.title }), src: t("{space} · these notes link each other", { space: v.spaceMap.get(hub.spaceId)?.name ?? "" }), scope: { kind: "vault", noteIds: [hub.id, nb.id] }, pins: [pinOf(hub, 1200), pinOf(nb!, 1200)] });
     }

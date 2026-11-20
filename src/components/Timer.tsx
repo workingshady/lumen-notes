@@ -10,16 +10,31 @@ const LEN_KEY = "lumen.timer.len";
 const LEN = (() => { try { const v = JSON.parse(localStorage.getItem(LEN_KEY) ?? "null"); if (v?.focus > 0 && v?.break > 0) return { focus: v.focus * 60_000, break: v.break * 60_000 }; } catch { /* ignore */ } return { focus: 25 * 60_000, break: 5 * 60_000 }; })();
 // One global study timer (survives switching notes).
 type S = { running: boolean; endsAt: number; left: number; phase: "focus" | "break"; noteId: string | null; startedAt: number; round: number };
-let s: S = { running: false, endsAt: 0, left: LEN.focus, phase: "focus", noteId: null, startedAt: 0, round: 1 };
+const ST_KEY = "lumen.timer.state";
+// The timer survives a reload: state is persisted and restored (a run that ended while away stops, unlogged).
+let s: S = (() => {
+  const d: S = { running: false, endsAt: 0, left: LEN.focus, phase: "focus", noteId: null, startedAt: 0, round: 1 };
+  try {
+    const v = JSON.parse(localStorage.getItem(ST_KEY) ?? "null") as S | null;
+    if (v && (v.phase === "focus" || v.phase === "break") && v.left > 0) {
+      if (v.running && v.endsAt <= Date.now()) return { ...d, round: v.round || 1 };
+      return { ...d, ...v };
+    }
+  } catch { /* ignore */ }
+  return d;
+})();
 const subs = new Set<() => void>();
-const set = (p: Partial<S>) => { s = { ...s, ...p }; subs.forEach((f) => f()); };
+const set = (p: Partial<S>) => { s = { ...s, ...p }; try { localStorage.setItem(ST_KEY, JSON.stringify(s)); } catch { /* ignore */ } subs.forEach((f) => f()); };
 /** Start (or resume) the global study timer for a note, from outside the timer UI (e.g. Today › Start). */
 export function startStudyTimer(noteId: string | null = null, minutes?: number) {
   if (s.running) return;
   // Round 8 (Today › Start · 90 min): a block's own length replaces the focus length for this run.
   const left = minutes && minutes > 0 ? minutes * 60_000 : s.left;
   set({ running: true, phase: minutes ? "focus" : s.phase, left, endsAt: Date.now() + left, noteId, startedAt: Date.now() });
+  toast(t("Timer started · {m} min", { m: Math.round(left / 60_000) }));
 }
+/** True while the timer is running or paused part-way (used to show the pill on narrow screens). */
+export const useTimerActive = () => { const v = useTimer(); return v.running || v.left !== LEN.focus || v.phase !== "focus"; };
 const useTimer = () => useSyncExternalStore((f) => (subs.add(f), () => subs.delete(f)), () => s);
 
 

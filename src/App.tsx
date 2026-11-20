@@ -1,5 +1,5 @@
 import { DndHost } from "./components/dnd/DndHost";
-import { CircleAlert, CircleCheck, CloudOff, Copy, FileText, GitMerge, Globe, History, House, Info, LayoutGrid, Layers, Link2, Menu, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, ListChecks, Sun, CircleAlert, CircleCheck, CloudOff, Copy, GitMerge, Globe, History, Info, LayoutGrid, Layers, Link2, Menu, Plus, Trash2 } from "lucide-react";
 import { FirstSyncCard } from "./components/first-sync"; // Lumen 22: first sync on a new device
 import { useEffect, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
@@ -19,7 +19,7 @@ import { Skeleton } from "./components/Skeleton";
 import { NoteList } from "./components/NoteList";
 import { TagMenuHost, TagPage } from "./components/TagPage";
 import { Palette } from "./components/Palette";
-import { NewMenuHost, openNewMenu } from "./components/NewMenu";
+import { NewMenuHost } from "./components/NewMenu";
 import { ImportExportDialog, NewSpaceDialog } from "./components/Dialogs";
 import { DiagramExport } from "./components/DiagramExport";
 import { useDueCount } from "./lib/due-cards";
@@ -161,9 +161,9 @@ function useBackGesture(wide: boolean) {
 }
 
 /** Pages the design draws with the collapsed sidebar rail (LumenSidebar `collapsed` in the R4 desks + Lumen 04/07/08/11/17/20). */
-const RAIL_TYPES = new Set(["path", "pdf", "base", "dashboard", "canvas", "whiteboard", "board"]);
+const RAIL_TYPES = new Set(["path", "pdf", "base", "dashboard", "canvas", "whiteboard", "board", "roadmap"]);
 function autoRail(ui: ReturnType<typeof getUI>, note: { type: string } | undefined, space: { kind: string; roadmapId: string | null } | undefined): boolean {
-  if (ui.view === "today" || ui.view === "graph" || ui.view === "settings") return true;
+  if (ui.view === "today" || ui.view === "calendar" || ui.view === "tasks" || ui.view === "graph" || ui.view === "settings") return true;
   if (ui.view === "space") return !!space && (space.kind === "project" || (space.kind === "course" && !!space.roadmapId));
   if (ui.view !== "notes" || !note) return false;
   return !ui.list || RAIL_TYPES.has(note.type) || ui.mode === "focus" || ui.mode === "slides";
@@ -204,7 +204,7 @@ function Workspace() {
 
   const notesView = ui.view === "notes";
   // the tag page (R6-30M) lists the tag's notes itself, so the list pane steps aside until a note is opened
-  const showList = notesView && (wide ? ui.list && !(ui.tag && !note && !ui.filter) : !note);
+  const showList = notesView && (wide ? ui.list && !(ui.tag && !note && !ui.filter) && note?.type !== "roadmap" : !note); // plans / roadmaps are full-width pages (R8 54)
   const showNote = notesView && (wide || !!note);
 
   let main: React.ReactNode = null;
@@ -257,7 +257,7 @@ function Workspace() {
         </div>
 
         {/* phone tab bar (design: LumenTabBar) */}
-        {!wide && !inNote && <TabBar rtl={rtl} onNew={async () => { /* phone: + on the Visual list opens the "New…" sheet (R4-17 A5), on Learning paths the new-path dialog */ if (ui.view === "notes" && (ui.filter === "visual" || ui.filter === "paths")) { dispatchEvent(new Event(ui.filter === "visual" ? "lumen:new-visual" : "lumen:new-path")); return; } openNewMenu(); }} />}
+        {!wide && !inNote && <TabBar rtl={rtl} />}
       </div>
 
       <Palette />
@@ -363,10 +363,10 @@ function Toasts() {
   );
 }
 
-function TabBar({ onNew, rtl }: { onNew: () => void; rtl: boolean }) {
+function TabBar({ rtl }: { rtl: boolean }) {
   const ui = useUI();
   const due = useDueCount();
-  const active = ui.sidebar || ui.view === "settings" ? "more" : ui.view === "home" ? "home" : ui.view === "notes" ? "notes" : ui.view === "review" ? "review" : "none";
+  const active = ui.sidebar || ui.view === "settings" ? "more" : ui.view === "today" ? "today" : ui.view === "calendar" ? "calendar" : ui.view === "tasks" ? "tasks" : ui.view === "review" ? "review" : "none";
   const tab = (k: string, icon: React.ReactNode, label: string, onClick: () => void, badge?: number) => {
     const on = active === k;
     return (
@@ -382,11 +382,9 @@ function TabBar({ onNew, rtl }: { onNew: () => void; rtl: boolean }) {
   return (
     <nav className="safe-b shrink-0 border-t border-line bg-surface">
       <div className="grid h-16 grid-cols-5 items-center">
-        {tab("home", <House size={20} />, t("Home"), () => setUI({ view: "home", sidebar: false }))}
-        {tab("notes", <FileText size={20} />, t("Notes"), () => setUI({ view: "notes", noteId: null, sidebar: false }))}
-        <div className="flex justify-center">
-          <button aria-label={t("New…")} onClick={onNew} className="-mt-[26px] flex size-14 items-center justify-center rounded-[18px] bg-accent text-accent-fg" style={{ boxShadow: "0 0 0 5px var(--bg)" }}><Plus size={26} /></button>
-        </div>
+        {tab("today", <Sun size={20} />, t("Today"), () => setUI({ view: "today", sidebar: false }))}
+        {tab("calendar", <CalendarDays size={20} />, t("Calendar"), () => setUI({ view: "calendar", sidebar: false }))}
+        {tab("tasks", <ListChecks size={20} />, t("Tasks"), () => setUI({ view: "tasks", sidebar: false }))}
         {tab("review", <Layers size={20} />, t("Review"), () => setUI({ view: "review", sidebar: false }), due)}
         {tab("more", <LayoutGrid size={20} />, t("More"), () => setUI({ view: "settings", sidebar: false }))}
       </div>

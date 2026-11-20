@@ -8,15 +8,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { watchVersions } from "../../lib/auto-versions";
 import { db } from "../../lib/db";
 import { blocksDiffer, mergeBlocks, onOpenConflict, openConflict, resolve, segments, useConflicts, type Choice, type ConflictRec } from "../../lib/conflicts";
-import { fmtDate, fmtNum, t } from "../../lib/i18n";
+import { fmtDate, t } from "../../lib/i18n";
 import { toast, useVault } from "../../lib/store";
 import type { DLine } from "../../lib/versions-diff";
+import { readable, splitFront } from "../../lib/versions-text";
 import { Glyph } from "../Glyph";
 import { DRow, Seg3, VBtn } from "./vs-ui";
 
 const usePhone = () => { const [p, setP] = useState(() => innerWidth < 768); useEffect(() => { const f = () => setP(innerWidth < 768); addEventListener("resize", f); return () => removeEventListener("resize", f); }, []); return p; };
 const hm = (ts: number) => fmtDate(ts, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-const line = (s: string, m: DLine["m"], i: number): DLine => {
+const line = (s: string, m: DLine["m"], i: number, rendered = true): DLine => {
+  if (!rendered) return { m, h: 0, toks: [{ s, k: "=" }], i };
+  s = readable(s);
   const h = /^(#{1,6})\s+(.*)$/.exec(s);
   return { m, h: h ? (h[1].length === 1 ? 1 : 2) : 0, toks: [{ s: h ? h[2] : s, k: "=" }], i };
 };
@@ -35,7 +38,12 @@ export function ConflictScreen({ c, index, total, onClose }: { c: ConflictRec; i
   const phone = usePhone();
   const vault = useVault();
   const note = useLiveQuery(() => db.notes.get(c.noteId), [c.noteId]);
-  const segs = useMemo(() => segments(c.mine.body, c.theirs.body), [c.mine.body, c.theirs.body]);
+  const [view, setView] = useState<"rendered" | "source">(() => { try { return localStorage.getItem("lumen.diffView") === "source" ? "source" : "rendered"; } catch { return "rendered"; } });
+  const rendered = view === "rendered";
+  const setV = (v: "rendered" | "source") => { setView(v); try { localStorage.setItem("lumen.diffView", v); } catch { /* ignore */ } };
+  const [open, setOpen] = useState<Set<number>>(new Set());
+  const ln = (x: string, m: DLine["m"], i: number) => line(x, m, i, rendered);
+  const segs = useMemo(() => (rendered ? segments(splitFront(c.mine.body).body, splitFront(c.theirs.body).body) : segments(c.mine.body, c.theirs.body)), [c.mine.body, c.theirs.body, rendered]);
   const n = blocksDiffer(segs);
   const [choices, setChoices] = useState<Record<number, Choice>>({});
   const [busy, setBusy] = useState(false);
@@ -57,12 +65,17 @@ export function ConflictScreen({ c, index, total, onClose }: { c: ConflictRec; i
     onClose();
   };
   const picked = Object.keys(choices).length;
-  const mergedText = () => { let k = 0; return mergeBlocks(segs, segs.filter((s) => s.kind === "diff").map(() => choices[k++] ?? "theirs")); };
+  const mergedText = () => { let k = 0; return (rendered ? splitFront(c.theirs.body).fm : "") + mergeBlocks(segs, segs.filter((s) => s.kind === "diff").map(() => choices[k++] ?? "theirs")); };
   const other = c.theirs.device;
   const pad = phone ? "14px" : "24px";
   const docPad = phone ? "12px 14px" : "22px 40px";
 
   let k = -1;
+  const sameBlock = (rows: string[], key: string | number) => phone
+    ? <div key={key} style={{ display: "flex", flexDirection: "column", gap: 2 }}>{rows.map((l, i) => <DRow key={i} l={ln(l, "", i)} phone mono={!rendered} />)}</div>
+    : <div key={key} style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+      {[0, 1].map((col) => <div key={col} style={{ display: "flex", flexDirection: "column", gap: 2, paddingInlineEnd: col ? 0 : 16, paddingInlineStart: col ? 16 : 0, borderInlineStart: col ? "1px solid var(--border)" : "none" }}>{rows.map((l, i) => <DRow key={i} l={ln(l, "", i)} phone={false} mono={!rendered} />)}</div>)}
+    </div>;
   const chip = (b: number, v: Choice, l: string) => {
     const on = (choices[b] ?? "") === v;
     return <button key={v} type="button" aria-pressed={on} onClick={() => setChoices((x) => (x[b] === v ? Object.fromEntries(Object.entries(x).filter(([i]) => Number(i) !== b)) : { ...x, [b]: v }))}
@@ -87,9 +100,9 @@ export function ConflictScreen({ c, index, total, onClose }: { c: ConflictRec; i
         <span style={{ display: "flex", alignItems: "center", gap: 8, height: 30, padding: "0 10px", borderRadius: 8, background: "var(--surface-2)", fontSize: 12.5, whiteSpace: "nowrap" }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--danger)" }} />{c.mine.device} · {hm(c.mine.at)}</span>
         <span style={{ color: "var(--muted)" }} className="rtl:-scale-x-100">→</span>
         <span style={{ display: "flex", alignItems: "center", gap: 8, height: 30, padding: "0 10px", borderRadius: 8, background: "var(--surface-2)", fontSize: 12.5, whiteSpace: "nowrap" }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--success)" }} />{other} · {hm(c.theirs.at)} ({t("edited offline")})</span>
-        <span style={{ fontSize: 12, color: "var(--muted)" }}>{n === 0 ? t("The texts are identical") : t("{n} blocks differ · the rest is the same on both", { n: fmtNum(n) })}</span>
+        <span style={{ fontSize: 12, color: "var(--muted)" }}>{n === 0 ? t("The texts are identical") : t("{n} block differs · the rest is the same on both|{n} blocks differ · the rest is the same on both", { n })}</span>
         <span style={{ flex: 1 }} />
-        <Seg3<"side"> value="side" onChange={() => {}} options={[{ v: "side", l: t("Side by side") }]} />
+        <Seg3<"rendered" | "source"> value={view} onChange={setV} options={[{ v: "rendered", l: t("Rendered") }, { v: "source", l: t("Source") }]} />
       </div>
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: docPad }}>
         {!phone && (
@@ -100,28 +113,32 @@ export function ConflictScreen({ c, index, total, onClose }: { c: ConflictRec; i
         )}
         {segs.map((s, si) => {
           if (s.kind === "same") {
-            const rows = s.lines.filter((l) => l.trim());
-            if (!rows.length) return null;
-            return phone
-              ? <div key={si} style={{ display: "flex", flexDirection: "column", gap: 2 }}>{rows.map((l, i) => <DRow key={i} l={line(l, "", i)} phone />)}</div>
-              : <div key={si} style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-                {[0, 1].map((col) => <div key={col} style={{ display: "flex", flexDirection: "column", gap: 2, paddingInlineEnd: col ? 0 : 16, paddingInlineStart: col ? 16 : 0, borderInlineStart: col ? "1px solid var(--border)" : "none" }}>{rows.map((l, i) => <DRow key={i} l={line(l, "", i)} phone={false} />)}</div>)}
-              </div>;
+            const all = s.lines.filter((l) => (rendered ? readable(l) : l).trim());
+            if (!all.length) return null;
+            const first = si === 0, last = si === segs.length - 1;
+            const keep = 2, fold = !open.has(si) && all.length > keep * 2 + 1 && !(first && last);
+            const rows = fold ? [...(first ? [] : all.slice(0, keep)), ...(last ? [] : all.slice(-keep))] : all;
+            const hidden = all.length - rows.length;
+            const foldBtn = hidden > 0 && <button key={"f" + si} type="button" onClick={() => setOpen((o) => new Set(o).add(si))} style={{ alignSelf: "center", margin: "6px 0", height: 24, padding: "0 12px", borderRadius: 999, border: "1px solid var(--border)", color: "var(--muted)", fontSize: 11.5 }}>{"⋯  " + t("{n} unchanged line|{n} unchanged lines", { n: hidden })}</button>;
+            if (hidden > 0 && !first && !last) { const head = rows.slice(0, keep), tail = rows.slice(keep); return <div key={si} style={{ display: "flex", flexDirection: "column" }}>{sameBlock(head, si + "a")}<div style={{ display: "flex", justifyContent: "center" }}>{foldBtn}</div>{sameBlock(tail, si + "b")}</div>; }
+            if (hidden > 0) return <div key={si} style={{ display: "flex", flexDirection: "column" }}>{first && foldBtn}{sameBlock(rows, si + "r")}{last && foldBtn}</div>;
+            return sameBlock(rows, si);
           }
           const b = ++k;
-          const mine = s.mine.filter((l) => l.trim()), theirs = s.theirs.filter((l) => l.trim());
+          const vis = (l: string) => (rendered ? readable(l) : l).trim();
+          const mine = s.mine.filter(vis), theirs = s.theirs.filter(vis);
           const sel = choices[b];
           return (
             <div key={si} style={{ margin: "8px 0", padding: 8, borderRadius: 10, border: `1px solid ${sel ? "color-mix(in srgb,var(--accent) 50%,transparent)" : "var(--border)"}` }} data-block={b}>
               <div style={{ display: phone ? "flex" : "grid", flexDirection: "column", gridTemplateColumns: "1fr 1fr", gap: phone ? 8 : 0 }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 2, paddingInlineEnd: phone ? 0 : 16, opacity: sel === "theirs" ? 0.45 : 1 }}>
                   {phone && head(t("THIS DEVICE"), "var(--accent)")}
-                  {mine.map((l, i) => <DRow key={i} l={line(l, "+", i)} phone={phone} />)}
+                  {mine.map((l, i) => <DRow key={i} l={ln(l, "+", i)} phone={phone} mono={!rendered} />)}
                   {!mine.length && <span style={{ color: "var(--muted)", padding: "3px 8px" }}>{t("Nothing here on this device")}</span>}
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 2, paddingInlineStart: phone ? 0 : 16, borderInlineStart: phone ? "none" : "1px solid var(--border)", opacity: sel === "mine" ? 0.45 : 1 }}>
                   {phone && head(device(other), "var(--link)")}
-                  {theirs.map((l, i) => <DRow key={i} l={line(l, "+", i)} phone={phone} />)}
+                  {theirs.map((l, i) => <DRow key={i} l={ln(l, "+", i)} phone={phone} mono={!rendered} />)}
                   {!theirs.length && <span style={{ color: "var(--muted)", padding: "3px 8px" }}>{t("Nothing here on {device}", { device: other })}</span>}
                 </div>
               </div>

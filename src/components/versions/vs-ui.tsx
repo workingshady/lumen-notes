@@ -34,7 +34,7 @@ export function Seg3<T extends string>({ value, options, onChange }: { value: T;
 }
 
 /** One diff row (design `LN`): marker column, tint, 3px edge, words with their own marks. `picked` outlines a selected row. */
-export function DRow({ l, phone, onClick, picked, strike = true }: { l: DLine; phone: boolean; onClick?: () => void; picked?: boolean; strike?: boolean }) {
+export function DRow({ l, phone, onClick, picked, strike = true, mono }: { l: DLine; phone: boolean; onClick?: () => void; picked?: boolean; strike?: boolean; mono?: boolean }) {
   const m = l.m;
   const colour = m === "+" ? "var(--success)" : m === "-" ? "var(--danger)" : m === "~" ? "var(--warning)" : "transparent";
   const style: CSSProperties = {
@@ -44,8 +44,9 @@ export function DRow({ l, phone, onClick, picked, strike = true }: { l: DLine; p
   };
   return (
     <div style={style} onClick={m ? onClick : undefined} data-m={m || undefined} dir="auto">
+      {onClick && m ? <span aria-hidden data-check style={{ width: 16, height: 16, flexShrink: 0, marginTop: l.h === 1 ? 9 : 4, borderRadius: 4, boxSizing: "border-box", border: `1.5px solid ${picked ? "var(--accent)" : "var(--border)"}`, background: picked ? "var(--accent)" : "transparent", color: "var(--accent-fg)", fontSize: 11, lineHeight: "13px", textAlign: "center" }}>{picked ? "✓" : ""}</span> : null}
       <span style={{ width: 12, flexShrink: 0, font: "600 12px 'JetBrains Mono',monospace", color: m === "+" ? "var(--success)" : m === "-" ? "var(--danger)" : "var(--muted)", paddingTop: l.h === 1 ? 8 : 4 }}>{m === "~" ? "~" : m}</span>
-      <span style={{ flex: 1, minWidth: 0, fontFamily: l.h ? "Inter" : "'Source Serif 4',Georgia,serif", fontSize: l.h ? (l.h === 1 ? 22 : 16) : phone ? 14.5 : 15.5, fontWeight: l.h ? 650 : 400, lineHeight: 1.6, color: m === "-" ? "var(--muted)" : "var(--text)", textDecoration: m === "-" ? "line-through" : "none", textWrap: "pretty", overflowWrap: "anywhere" }}>
+      <span style={{ flex: 1, minWidth: 0, fontFamily: mono ? "'JetBrains Mono',monospace" : l.h ? "Inter" : "'Source Serif 4',Georgia,serif", fontSize: mono ? 12.5 : l.h ? (l.h === 1 ? 22 : 16) : phone ? 14.5 : 15.5, fontWeight: l.h ? 650 : 400, lineHeight: 1.6, color: m === "-" ? "var(--muted)" : "var(--text)", textDecoration: m === "-" ? "line-through" : "none", textWrap: "pretty", overflowWrap: "anywhere" }}>
         {l.toks.map((w, i) => (
           <span key={i} style={{ background: w.k === "+" ? mix("var(--success)", 26) : w.k === "-" ? mix("var(--danger)", 26) : "transparent", textDecoration: w.k === "-" && strike ? "line-through" : "none", borderRadius: 3, padding: "0 1px" }}>{w.s}</span>
         ))}

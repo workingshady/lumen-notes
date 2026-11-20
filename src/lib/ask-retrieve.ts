@@ -97,7 +97,8 @@ export async function ensureIndex(v: Vault, onProgress?: (done: number, total: n
     processTerm: askTerm,
     searchOptions: { processTerm: askTerm },
   });
-  const live = new Map(v.notes.filter((n) => !n.deleted).map((n) => [n.id, n]));
+  // Answers saved from Ask ("# Q" then a [!question] callout) never feed the next answer (no self-citation).
+  const live = new Map(v.notes.filter((n) => !n.deleted && !/^# [^\n]*\n+> \[!question\]/.test(n.body)).map((n) => [n.id, n]));
   for (const [id, e] of indexed) if (!live.has(id)) { for (const c of e.ids) { index.discard(c); chunkById.delete(c); } indexed.delete(id); }
   let t = performance.now(), done = 0;
   for (const n of live.values()) {

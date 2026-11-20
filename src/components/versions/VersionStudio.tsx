@@ -14,6 +14,7 @@ import { download } from "../../lib/io";
 import { pdfMeta, setPdfMeta } from "../../lib/pdf-format";
 import { openNote, toast, useVault } from "../../lib/store";
 import { diffLines, inlineRows, newSide, oldSide, restoreRows, statOf } from "../../lib/versions-diff";
+import { splitFront } from "../../lib/versions-text";
 import { Glyph } from "../Glyph";
 import { PdfCompare, type PdfMode } from "./PdfCompare";
 import { Pill, DRow, SideList, Seg3, VBtn, dayLabel, rowLabels, usePopClose, type SideItem } from "./vs-ui";
@@ -37,6 +38,8 @@ export function VersionStudio({ note, initialId, compare, onClose }: { note: Not
   const [from, setFrom] = useState<string>(initialId ?? "");
   const [to, setTo] = useState<string>(CUR);
   const [mode, setMode] = useState<DMode>(() => (compare ? "side" : ((localStorage.getItem("lumen.diffMode") === "side" ? "side" : "inline") as DMode)));
+  const [view, setView] = useState<"rendered" | "source">(() => { try { return localStorage.getItem("lumen.diffView") === "source" ? "source" : "rendered"; } catch { return "rendered"; } });
+  const rendered = view === "rendered";
   const [pdfMode, setPdfMode] = useState<PdfMode>("pages");
   const [filter, setFilter] = useState<Filter>("all");
   const [picked, setPicked] = useState<Set<number>>(new Set());
@@ -65,7 +68,8 @@ export function VersionStudio({ note, initialId, compare, onClose }: { note: Not
   const fromV = byId.get(from) ?? null;
   const toV = to === CUR ? null : byId.get(to) ?? null;
   const fromBody = fromV?.body ?? "", toBody = to === CUR ? note.body : toV?.body ?? "";
-  const diff = useMemo(() => diffLines(fromBody, toBody), [fromBody, toBody]);
+  const diff = useMemo(() => (rendered ? diffLines(splitFront(fromBody).body, splitFront(toBody).body, true) : diffLines(fromBody, toBody)), [fromBody, toBody, rendered]);
+  const propsChanged = rendered && splitFront(fromBody).fm !== splitFront(toBody).fm;
   const st = useMemo(() => statOf(diff), [diff]);
   useEffect(() => setPicked(new Set()), [from, to]);
 
@@ -99,11 +103,11 @@ export function VersionStudio({ note, initialId, compare, onClose }: { note: Not
   const restoreSelection = async () => {
     if (!fromV || to !== CUR || !picked.size) return;
     const before = { title: note.title, body: note.body };
-    const body = restoreRows(diff, picked);
+    const body = (rendered ? splitFront(note.body).fm : "") + restoreRows(diff, picked);
     if (live[0]?.body !== note.body) await snapshot(note, "");
     await updateNote(note.id, { body });
     await snapshot({ ...note, body }, `Restored from ${fmtDate(fromV.createdAt, { day: "numeric", month: "short" })}`);
-    toast(t("Restored {n} lines", { n: fmtNum(picked.size) }), { label: t("Undo"), run: () => void updateNote(note.id, before) });
+    toast(t("Restored {n} line|Restored {n} lines", { n: picked.size }), { label: t("Undo"), run: () => void updateNote(note.id, before) });
     setPicked(new Set());
   };
   const openCopy = async () => {
@@ -147,11 +151,12 @@ export function VersionStudio({ note, initialId, compare, onClose }: { note: Not
 
   const folder = note.folderId ? vault.folderMap.get(note.folderId)?.name : vault.spaceMap.get(note.spaceId)?.name;
   const noFrom = fromV ? noOf.get(fromV.id) : 0;
-  const modeL = isPdf ? t("Compare v{a} → v{b}", { a: noFrom ?? 0, b: to === CUR ? t("current") : noOf.get(to) ?? 0 }) : comparing && to !== CUR ? t("Comparing 2 versions") : fromV ? t("Viewing v{n} · {when}", { n: noFrom ?? 0, when: fmtDate(fromV.createdAt, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) }) : t("History");
-  const stat = isPdf ? pdfStat : comparing && to !== CUR && !phone ? t("Pick any two in History") : [st.added ? t("+{n} lines", { n: st.added }) : "", st.removed ? t("−{n} lines", { n: st.removed }) : "", st.changed ? t("{n} changed", { n: st.changed }) : ""].filter(Boolean).join(" · ") || t("No differences");
+  const modeL = isPdf ? (to === CUR ? t("Compare v{a} → current", { a: noFrom ?? 0 }) : t("Compare v{a} → v{b}", { a: noFrom ?? 0, b: noOf.get(to) ?? 0 })) : comparing && to !== CUR ? t("Comparing 2 versions") : fromV ? t("Viewing v{n} · {when}", { n: noFrom ?? 0, when: fmtDate(fromV.createdAt, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) }) : t("History");
+  const stat = isPdf ? pdfStat : comparing && to !== CUR && !phone ? t("Pick any two in History") : [st.added ? t("+{n} line|+{n} lines", { n: st.added }) : "", st.removed ? t("−{n} line|−{n} lines", { n: st.removed }) : "", st.changed ? t("{n} changed", { n: st.changed }) : ""].concat(propsChanged ? [t("Properties changed")] : []).filter(Boolean).join(" · ") || t("No differences");
   const pad = phone ? "14px" : "24px";
   const docPad = phone ? "12px 14px" : "22px 40px";
   const dmodes: { v: DMode; l: string }[] = [{ v: "inline", l: t("Inline") }, { v: "side", l: t("Side by side") }, { v: "preview", l: t("Preview") }];
+  const setDV = (v: "rendered" | "source") => { setView(v); try { localStorage.setItem("lumen.diffView", v); } catch { /* ignore */ } };
   const setDM = (m: DMode) => { setMode(m); if (m !== "preview") try { localStorage.setItem("lumen.diffMode", m); } catch { /* ignore */ } };
   const hint = isPdf ? (phone ? t("{n} versions · {size}", { n: live.length + 1, size: `${(totalSize / 1048576).toFixed(1)} MB` }) : t("Older versions stay in the vault; links always open the newest."))
     : phone ? t("Restoring keeps the current text as a version.") : t("Restoring makes a new version; nothing is lost. Select lines to restore only those.");
@@ -172,7 +177,7 @@ export function VersionStudio({ note, initialId, compare, onClose }: { note: Not
   const pane = (h: string, hc: string, ls: typeof oldLines, bl: boolean, strike: boolean) => (
     <div key={h || "one"} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2, padding: docPad, borderInlineStart: bl ? "1px solid var(--border)" : "none", overflow: "auto" }}>
       {h && <span style={{ fontSize: 11, fontWeight: 650, letterSpacing: ".06em", color: hc, paddingBottom: 8 }}>{h}</span>}
-      {ls.map((l) => <DRow key={l.i} l={l} phone={phone} strike={strike} picked={picked.has(l.i)} onClick={to === CUR ? () => pick(l.i) : undefined} />)}
+      {ls.map((l) => <DRow key={l.i} l={l} phone={phone} strike={strike} picked={picked.has(l.i)} mono={!rendered} onClick={to === CUR ? () => pick(l.i) : undefined} />)}
       {!ls.length && <span style={{ color: "var(--muted)" }}>{t("Empty")}</span>}
     </div>
   );
@@ -201,7 +206,7 @@ export function VersionStudio({ note, initialId, compare, onClose }: { note: Not
           </>
         ) : (
           <>
-            <VBtn l={t("Name this version")} g="star" hide={phone} disabled={!fromV} onClick={() => fromV && setNaming(fromV.id)} />
+            <VBtn l={phone ? undefined : t("Name this version")} title={t("Name this version")} g="star" disabled={!fromV} onClick={() => fromV && setNaming(fromV.id)} />
             <VBtn l={t("Close")} g="x" onClick={onClose} />
           </>
         )}
@@ -217,7 +222,7 @@ export function VersionStudio({ note, initialId, compare, onClose }: { note: Not
             <span style={{ flex: 1 }} />
             {isPdf
               ? <Seg3<PdfMode> value={pdfMode} onChange={setPdfMode} options={[{ v: "pages", l: t("Pages") }, { v: "overlay", l: t("Overlay") }, { v: "text", l: t("Text") }]} />
-              : <Seg3<DMode> value={mode} onChange={setDM} options={dmodes} />}
+              : <>{mode !== "preview" && <Seg3<"rendered" | "source"> value={view} onChange={setDV} options={[{ v: "rendered", l: t("Rendered") }, { v: "source", l: t("Source") }]} />}<Seg3<DMode> value={mode} onChange={setDM} options={dmodes} /></>}
           </div>
           <div style={{ flex: 1, minHeight: 0, display: "flex", overflow: "hidden" }}>
             {!fromV ? (
@@ -243,7 +248,7 @@ export function VersionStudio({ note, initialId, compare, onClose }: { note: Not
             ) : (
               <>
                 <VBtn l={t("Open as copy")} h={36} hide={phone} disabled={!fromV} onClick={() => void openCopy()} />
-                <VBtn l={picked.size ? t("Restore selection ({n})", { n: fmtNum(picked.size) }) : t("Restore selection")} h={36} hide={phone} disabled={!picked.size || to !== CUR} onClick={() => void restoreSelection()} title={to !== CUR ? t("Compare with Current to restore lines") : t("Click changed lines to select them")} />
+                <VBtn l={picked.size ? t("Restore selection ({n})", { n: fmtNum(picked.size) }) : t("Restore selection")} h={36} disabled={!picked.size || to !== CUR} onClick={() => void restoreSelection()} title={to !== CUR ? t("Compare with Current to restore lines") : t("Click changed lines to select them")} />
                 <VBtn l={t("Restore v{n}", { n: noFrom ?? 0 })} h={36} pri disabled={!fromV} onClick={() => void restoreAll()} />
               </>
             )}

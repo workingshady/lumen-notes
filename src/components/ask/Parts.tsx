@@ -17,6 +17,13 @@ export const SLOW_MS = 6000;
 const AC = "color-mix(in srgb,var(--accent) 16%,transparent)";
 const sec = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
 
+/** Readable excerpt: no front matter, callout markers, LaTeX delimiters or Markdown punctuation. */
+export function excerpt(raw: string, max = 150) {
+  const sym: Record<string, string> = { theta: "θ", nabla: "∇", alpha: "α", beta: "β", sum: "Σ", cdot: "·" };
+  const clean = raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").replace(/^\s*>\s*\[![\w-]+\][+-]?\s*/gm, "").replace(/\$\$?([^$]+)\$\$?/g, "$1")
+    .replace(/\\(theta|nabla|alpha|beta|sum|cdot)/g, (_, w: string) => sym[w]).replace(/\\[a-z]+/g, "").replace(/[{}]/g, "");
+  return plainText(clean).replace(/\s+/g, " ").trim().slice(0, max) || clean.replace(/\s+/g, " ").trim().slice(0, max);
+}
 /** Re-render every 250 ms while `on` (elapsed-time labels). */
 export function useNow(on: boolean) {
   const [, tick] = useState(0);
@@ -32,7 +39,8 @@ export const AnswerBadge = () => (
 
 /** "Answered in 3.4 s · Workers AI · from 4 notes" above a finished answer. */
 export function DoneLine({ m, n }: { m: ChatMessage; n: number }) {
-  const parts = [m.ms ? t("Answered in {s}", { s: sec(m.ms) }) : t("Answered"), m.general ? t("general knowledge") : providerLabel(), !m.general && n ? t("from {n} notes", { n }) : ""].filter(Boolean);
+  const head = m.stopped ? (m.ms ? t("Stopped after {s}", { s: sec(m.ms) }) : t("Stopped")) : m.ms ? t("Answered in {s}", { s: sec(m.ms) }) : t("Answered");
+  const parts = [head, m.general ? t("general knowledge") : providerLabel(), !m.general && n ? t("from {n} note|from {n} notes", { n }) : ""].filter(Boolean);
   return <div className="flex items-center gap-2 text-[12px] text-muted"><AnswerBadge /><span dir="auto">{parts.join(" · ")}</span></div>;
 }
 
@@ -42,19 +50,19 @@ export function LiveSteps({ live, total, onStop, onScope }: { live: Live; total:
   const now = useNow(working);
   const t0 = live.t0 ?? now;
   const elapsed = now - t0;
-  const waitingModel = live.status === "asking" && !live.text;
-  const slow = waitingModel && elapsed - (live.tRead ?? 0) > SLOW_MS;
+  const waitingModel = (live.status === "asking" && !live.text) || live.status === "rewriting";
+  const slow = waitingModel && elapsed - (live.tRead ?? live.tIndex ?? 0) > SLOW_MS;
   const searching = live.status === "indexing" || live.status === "rewriting";
   const reading = !searching && live.tRead === undefined;
   const big = total > 500;
   const line = slow ? t("Still working · {s} s{big}", { s: Math.round(elapsed / 1000), big: big ? ` · ${t("large scope")}` : "" })
     : live.status === "streaming" ? t("Writing · {s} to first word", { s: sec(live.tFirst ?? elapsed) })
-    : searching ? (live.status === "rewriting" ? t("Understanding the follow-up…") : t("Searching {n} notes…", { n: total.toLocaleString() }))
+    : searching ? (live.status === "rewriting" ? t("Understanding the follow-up…") : t("Searching {n} note…|Searching {n} notes…", { n: total }))
     : reading ? t("Reading the best matches…") : t("Writing…");
   const written = live.status === "streaming";
   type Step = { l: string; time: string; s: "done" | "run" | "wait" };
   const steps: Step[] = live.general ? [{ l: t("Answering from general knowledge"), time: written ? "" : sec(elapsed), s: "run" }] : [
-    { l: searching ? (live.status === "rewriting" ? t("Understanding the follow-up…") : t("Searching {n} notes…", { n: total.toLocaleString() })) : t("Searched {n} notes", { n: total.toLocaleString() }), time: live.tIndex !== undefined ? sec(live.tIndex) : "", s: searching ? "run" : "done" },
+    { l: searching ? (live.status === "rewriting" ? t("Understanding the follow-up…") : t("Searching {n} note…|Searching {n} notes…", { n: total })) : t("Searched {n} note|Searched {n} notes", { n: total }), time: live.tIndex !== undefined ? sec(live.tIndex) : "", s: searching ? "run" : "done" },
     { l: live.tRead !== undefined ? t("Read {n} best matches", { n: live.nRead ?? live.sources.length }) : t("Reading the best matches"), time: live.tRead !== undefined ? sec(live.tRead - (live.tIndex ?? 0)) : "", s: live.tRead !== undefined ? "done" : searching ? "wait" : "run" },
     { l: slow ? t("Waiting for the model (busy)") : t("Writing the answer"), time: written ? "" : slow ? `${Math.round((elapsed - (live.tRead ?? 0)) / 1000)} s` : "", s: live.tRead !== undefined || live.general ? "run" : "wait" },
   ];
@@ -99,9 +107,9 @@ export function SourcesPanel({ sources, text, scopeName, hot, onOpen }: { source
   const notes = new Set(list.map((s) => s.noteId)).size;
   return (
     <aside className="flex w-[300px] shrink-0 flex-col gap-2 overflow-y-auto border-s border-line bg-surface p-3.5" aria-label={t("Sources")} data-sources-panel>
-      <div className="flex items-center"><span className="flex-1 text-[13.5px] font-[650]">{t("Sources")}</span><span className="text-[11.5px] text-muted">{t("{n} notes", { n: notes })}</span></div>
+      <div className="flex items-center"><span className="flex-1 text-[13.5px] font-[650]">{t("Sources")}</span><span className="text-[11.5px] text-muted">{t("{n} note|{n} notes", { n: notes })}</span></div>
       {list.map((s, i) => {
-        const q = plainText(s.text).replace(/\s+/g, " ").trim().slice(0, 150) || s.text.replace(/\s+/g, " ").slice(0, 150);
+        const q = excerpt(s.text);
         return (
           <button key={s.n} data-src={s.n} onClick={() => onOpen(s.noteId)} className="flex flex-col gap-1.5 rounded-[10px] border bg-bg p-2.5 text-start hover:bg-surface-2"
             style={{ borderColor: hot === s.n || (hot == null && i === 0) ? "color-mix(in srgb,var(--link) 50%,var(--border))" : "var(--border)" }}>

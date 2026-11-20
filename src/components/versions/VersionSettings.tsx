@@ -89,7 +89,11 @@ export function VersionSettings() {
   const hours = (h: number) => (h < 48 ? t("{n} hours", { n: h }) : t("{n} days", { n: h / 24 }));
   const days = (d: number) => (d === 365 ? t("1 year") : t("{n} days", { n: d }));
   const cols = phone ? "1fr" : "1fr 1fr 1fr";
-  const spaces = [...vault.spaceMap.values()].filter((s) => !s.deleted);
+  const allSpaces = [...vault.spaceMap.values()].filter((s) => !s.deleted);
+  const [allShown, setAllShown] = useState(false);
+  // A compact list: spaces with their own keep-policy first, then the rest on request.
+  const sorted = [...allSpaces].sort((a, b) => Number(!!p.verSpace[b.id]) - Number(!!p.verSpace[a.id]));
+  const spaces = allShown ? sorted : sorted.slice(0, 4);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", width: "min(100%, 960px)", margin: "0 auto", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden" }}>
@@ -108,6 +112,7 @@ export function VersionSettings() {
             <select aria-label={t("One per day")} value={p.verDailyDays} onChange={(e) => setVersionPrefs({ verDailyDays: Number(e.target.value) })} style={select}>{DAILY_DAYS.map((d) => <option key={d} value={d}>{days(d)}</option>)}</select></div>
           <div style={tile}><div style={{ flex: 1 }}><div style={{ fontWeight: 500 }}>{t("One per week")}</div><div style={{ fontSize: 11.5, color: "var(--muted)" }}>{t("after that")}</div></div></div>
           <div style={tile}><div style={{ flex: 1 }}><div style={{ fontWeight: 500 }}>{t("Named versions")}</div><div style={{ fontSize: 11.5, color: "var(--muted)" }}>{t("forever")}</div></div></div>
+          <div style={tile}><div style={{ flex: 1 }}><div style={{ fontWeight: 500 }}>{t("Deleted notes")}</div><div style={{ fontSize: 11.5, color: "var(--muted)" }}>{t("Trash · until you empty it")}</div></div></div>
         </div>
       </Block>
 
@@ -140,6 +145,7 @@ export function VersionSettings() {
             );
           })}
           {!spaces.length && <span style={{ color: "var(--muted)" }}>{t("No spaces yet.")}</span>}
+          {allSpaces.length > 4 && <button type="button" onClick={() => setAllShown((x) => !x)} style={{ ...tile, minHeight: 44, color: "var(--muted)", justifyContent: "center" }}>{allShown ? t("Show fewer spaces") : t("Show all {n} spaces", { n: fmtNum(allSpaces.length) })}</button>}
         </div>
       </Block>
 

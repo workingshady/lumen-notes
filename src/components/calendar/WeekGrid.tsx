@@ -43,7 +43,7 @@ export function WeekGrid({ days, today, nowMin, items, reviews, showReviews, pho
   dragRef.current = drag;
   useEffect(() => { // scroll so the now line (or 08:00) is in view
     const el = body.current;
-    if (el && days.includes(today)) el.scrollTop = Math.max(0, ((nowMin / 60 - H0) - 2) * PX);
+    if (el && days.includes(today)) el.scrollTop = Math.max(0, ((nowMin / 60 >= 17 ? nowMin / 60 - 2 : 8) - H0) * PX); // design opens at 08:00
   }, [days, today]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const colAt = (clientX: number) => {
