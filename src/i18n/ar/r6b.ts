@@ -100,6 +100,8 @@ export const ar: Catalog = {
   "Move item up / down": "تحريك العنصر لأعلى / لأسفل", "Jump to sidebar from note": "الانتقال إلى الشريط الجانبي من الملاحظة", "Sidebar keys": "مفاتيح الشريط الجانبي",
   "Drag to reorder (or Alt+↑/↓). Hidden items move into More.": "اسحب لإعادة الترتيب (أو Alt+↑/↓). العناصر المخفية تنتقل إلى «المزيد».", Top: "الأعلى", Badge: "شارة", "In More": "في «المزيد»",
   "Go to": "انتقل إلى", Sections: "الأقسام", Collapsed: "مطوي", "Show counts": "إظهار الأعداد", "Due only": "المستحق فقط", "Row height": "ارتفاع الصف", "28 compact": "28 مضغوط", "40 touch": "40 للمس",
+  Open: "الفتح", "On top": "فوق المحتوى", "Push content": "إزاحة المحتوى", "Not used while the sidebar is always open.": "غير مستخدم والشريط الجانبي مفتوح دائمًا.",
+  "On top floats over the page; Push content makes room for it. Saved separately for hover and click.": "«فوق المحتوى» يطفو فوق الصفحة، و«إزاحة المحتوى» يفسح مكانًا له. يُحفظ بشكل منفصل للمرور والنقر.",
   Sidebar: "الشريط الجانبي", "Always open": "مفتوح دائمًا", "Expand on hover": "يتوسع بالمرور", "Expand on click": "يتوسع بالنقر",
   "Collapsed to the rail on desktop and tablet. Opens over the content; Esc closes it.": "مطوي إلى الشريط الضيق على سطح المكتب واللوحي. يفتح فوق المحتوى؛ Esc يغلقه.",
   // note list keyboard, multi-select and row menu

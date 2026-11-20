@@ -1,5 +1,5 @@
 // Sidebar auto-expand (Settings › Appearance › Sidebar): "open" (docked as before), "hover" or "click".
-// In the two collapsed modes a 56 px rail holds the layout and the full sidebar widens over the content (no reflow).
+// In the two collapsed modes a 56 px rail holds the layout; the full sidebar widens over the content ("overlay") or pushes it ("push": the container width animates).
 import { useEffect, useRef, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { useSb } from "./sidebar-r6";
@@ -8,6 +8,11 @@ import { getSettings, useSettings } from "../lib/settings";
 export type SidebarMode = "open" | "hover" | "click";
 export const sidebarMode = (): SidebarMode => (getSettings() as { sidebarMode?: SidebarMode }).sidebarMode ?? "open";
 export const useSidebarMode = (): SidebarMode => (useSettings() as { sidebarMode?: SidebarMode }).sidebarMode ?? "open";
+export type SidebarOpen = "overlay" | "push";
+export const useSidebarOpen = (mode: "hover" | "click"): SidebarOpen => {
+  const s = useSettings() as { sidebarOpenHover?: SidebarOpen; sidebarOpenClick?: SidebarOpen };
+  return (mode === "hover" ? s.sidebarOpenHover ?? "overlay" : s.sidebarOpenClick ?? "push");
+};
 export const SB_OPEN = "lumen:sidebar-open";
 export const SB_TOGGLE = "lumen:sidebar-toggle";
 const MS = 180;
@@ -15,6 +20,7 @@ const reduced = () => typeof matchMedia !== "undefined" && matchMedia("(prefers-
 
 export function AutoSidebar({ mode, tablet }: { mode: "hover" | "click"; tablet: boolean }) {
   const p = useSb();
+  const push = useSidebarOpen(mode) === "push";
   const [open, setOpen] = useState(false);
   const [full, setFull] = useState(false); // full content stays mounted while the width animates back
   const root = useRef<HTMLDivElement>(null);
@@ -54,14 +60,14 @@ export function AutoSidebar({ mode, tablet }: { mode: "hover" | "click"; tablet:
 
   const w = open ? (tablet ? 232 : p.width) : 56;
   return (
-    <div className="relative z-30 h-full w-14 shrink-0">
-      <div ref={root} data-sidebar-auto className={open ? "absolute inset-y-0 start-0 shadow-[0_0_28px_rgba(0,0,0,.35)]" : "absolute inset-y-0 start-0"}
-        style={{ width: w, transition: reduced() ? "none" : `width ${MS}ms ease-out`, overflow: open && !full ? "hidden" : undefined }}
+    <div className="relative z-30 h-full shrink-0" style={{ width: push ? w : 56, transition: push && !reduced() ? `width ${MS}ms ease-out` : "none" }}>
+      <div ref={root} data-sidebar-auto className={open && !push ? "absolute inset-y-0 start-0 shadow-[0_0_28px_rgba(0,0,0,.35)]" : "absolute inset-y-0 start-0"}
+        style={{ width: push ? "100%" : w, transition: push || reduced() ? "none" : `width ${MS}ms ease-out`, overflow: open && !full ? "hidden" : undefined }}
         onPointerEnter={(e) => { inside.current = true; if (mode === "hover" && e.pointerType !== "touch" && !open) schedule(true, 150); }}
-        onPointerLeave={() => { inside.current = false; if (mode === "hover") schedule(false, 300); else clear(); }}
+        onPointerLeave={() => { inside.current = false; if (mode === "hover") schedule(false, push ? 400 : 300); else clear(); }}
         onClick={() => { if (!open) { clear(); setOpen(true); } }}
         onFocus={(e) => { if (!open && (e.target as HTMLElement).matches(":focus-visible")) { clear(); setOpen(true); } }}
-        onBlur={(e) => { if (mode === "hover" && open && !e.currentTarget.contains(e.relatedTarget as Node | null)) schedule(false, 300); }}
+        onBlur={(e) => { if (mode === "hover" && open && !e.currentTarget.contains(e.relatedTarget as Node | null)) schedule(false, push ? 400 : 300); }}
         onKeyDown={(e) => { if (e.key === "Escape" && open) { e.stopPropagation(); clear(); setOpen(false); } }}>
         <Sidebar rail={!(open || full)} />
       </div>

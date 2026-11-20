@@ -28,7 +28,7 @@ import { DeveloperSection } from "./settings-developer";
 import { DevicesPanel } from "./settings-devices";
 import { DiagramsSection } from "./settings-diagrams";
 import { SAdvanced, SBtn, SEdit, SGroup, SPage, SRow, SSeg, SToggle } from "./settings-kit";
-import { useSidebarMode } from "../components/sidebar-auto";
+import { useSidebarMode, useSidebarOpen } from "../components/sidebar-auto";
 import { setAdvanced, useAdvanced } from "./settings-advanced";
 import { ReadingSection } from "./settings-reading";
 import { ReviewSettings } from "./settings-review";
@@ -287,6 +287,8 @@ function AppearanceR6() {
   useLang();
   const adv = useAdvanced();
   const sbMode = useSidebarMode();
+  const openKey = sbMode === "click" ? "sidebarOpenClick" : "sidebarOpenHover";
+  const sbOpen = useSidebarOpen(sbMode === "click" ? "click" : "hover");
   // Owner request: keep every theme (Lamplight, Paper, Midnight, Sepia, Forest, High contrast) with the palette swatches
   // and the live preview from the round-2/4 Appearance page as the main view; round-6 extras sit below it.
   return (
@@ -296,6 +298,7 @@ function AppearanceR6() {
       <div className="max-w-[560px]"><SGroup>
         <SRow label={t("Customise sidebar")} desc={t("Reorder, hide, show counts, row height")} glyph="rail" onOpen={openSidebarCustomise} />
         <SRow label={t("Sidebar")} desc={t("Collapsed to the rail on desktop and tablet. Opens over the content; Esc closes it.")} control={<SSeg label={t("Sidebar")} value={sbMode} onChange={(v) => setSettings({ sidebarMode: v })} options={[{ value: "open", label: t("Always open") }, { value: "hover", label: t("Expand on hover") }, { value: "click", label: t("Expand on click") }]} />} />
+        <SRow label={t("Open")} desc={sbMode === "open" ? t("Not used while the sidebar is always open.") : t("On top floats over the page; Push content makes room for it. Saved separately for hover and click.")} control={<span className={sbMode === "open" ? "pointer-events-none opacity-50" : ""} aria-disabled={sbMode === "open"}><SSeg label={t("Open")} value={sbOpen} onChange={(v) => setSettings({ [openKey]: v } as Partial<S>)} options={[{ value: "overlay", label: <span className="inline-flex items-center gap-1"><Glyph name="layers" size={13} />{t("On top")}</span> }, { value: "push", label: <span className="inline-flex items-center gap-1"><Glyph name="rail" size={13} />{t("Push content")}</span> }]} /></span>} />
         <SRow label={t("Reduce effects")} desc={t("Simpler graph and canvas: no animation, labels on zoom. Turns on by itself on slow devices.")} control={<SToggle on={!!adv.reduceEffects} onChange={(v) => setAdvanced({ reduceEffects: v })} label={t("Reduce effects")} />} />
       </SGroup></div>
     </div>
