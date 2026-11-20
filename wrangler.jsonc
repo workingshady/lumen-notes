@@ -12,7 +12,9 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "lumen-notes", "database_id": "ca71c018-7d95-45e7-85b7-fb8fd5dafffc", "migrations_dir": "migrations" },
     // Second account (its own passcode, secret ROADMAP_PASSCODE): same schema, fully separate data. See worker/accounts.ts.
-    { "binding": "DB_ROADMAP", "database_name": "lumen-roadmap", "database_id": "76ffb43d-6716-4474-9142-6771800b7b11", "migrations_dir": "migrations" }
+    { "binding": "DB_ROADMAP", "database_name": "lumen-roadmap", "database_id": "76ffb43d-6716-4474-9142-6771800b7b11", "migrations_dir": "migrations" },
+    // Third account (secret LANGUAGES_PASSCODE): English + German learning paths, fully separate data.
+    { "binding": "DB_LANGUAGES", "database_name": "lumen-languages", "database_id": "e2739356-a482-405b-b0e4-44b01aa6807a", "migrations_dir": "migrations" }
   ],
   // Attachments are stored free in D1 as 1.5 MB parts (max 100 MB per file, 5 GB total on the free plan).
   // Optional R2 (needs a card on the Cloudflare account): create bucket lumen-notes-files and uncomment.

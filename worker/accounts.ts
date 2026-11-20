@@ -7,7 +7,10 @@ import type { Env } from "./index";
  * so every route (sync, REST, tokens, unlock limits, attachments) works unchanged against that account's data.
  * The main account (DB + APP_PASSCODE) is the default; the public blog / RSS always read the main account.
  */
-export const ACCOUNTS = [{ id: "roadmap", db: "DB_ROADMAP", pass: "ROADMAP_PASSCODE" }] as const;
+export const ACCOUNTS = [
+  { id: "roadmap", db: "DB_ROADMAP", pass: "ROADMAP_PASSCODE" },
+  { id: "languages", db: "DB_LANGUAGES", pass: "LANGUAGES_PASSCODE" },
+] as const;
 type Account = (typeof ACCOUNTS)[number];
 
 type Bindings = Env["Bindings"] & Record<string, unknown>;

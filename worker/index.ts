@@ -36,6 +36,9 @@ export type Env = {
     /** Second account (worker/accounts.ts): its own D1 + passcode. */
     DB_ROADMAP?: D1Database;
     ROADMAP_PASSCODE?: string;
+    /** Third account (languages: English, German learning paths). */
+    DB_LANGUAGES?: D1Database;
+    LANGUAGES_PASSCODE?: string;
     /** Set by accountRouter when the request belongs to an extra account. */
     ACCOUNT?: string;
   };
