@@ -13,6 +13,40 @@ export const blobToDataURL = (b: Blob) =>
 
 export const dataURLToBlob = async (u: string) => (await fetch(u)).blob();
 
+/** Raster photos Lumen inserts itself (SVG and GIF keep their own paths). */
+export const isPhoto = (mime: string) => /^image\/(png|jpe?g|webp|bmp|avif)$/i.test(mime);
+
+/**
+ * Shrink a photo to at most `max` px without blocking the page: the browser decodes and resizes in createImageBitmap
+ * (off the main thread) and encodes asynchronously. Excalidraw's own insert resizes with pica on the main thread,
+ * which froze the board for ~0.5 s per 12 MP photo. Returns the bytes plus the natural size.
+ */
+export async function shrinkImage(file: Blob, max = 1600): Promise<{ blob: Blob; w: number; h: number }> {
+  const full = await createImageBitmap(file);
+  const { width: w0, height: h0 } = full;
+  const s = Math.min(1, max / Math.max(w0, h0));
+  if (s === 1 && file.size < 1_500_000) { full.close(); return { blob: file, w: w0, h: h0 }; }
+  const w = Math.max(1, Math.round(w0 * s)), h = Math.max(1, Math.round(h0 * s));
+  let bmp = full;
+  if (s < 1) { bmp = await createImageBitmap(file, { resizeWidth: w, resizeHeight: h, resizeQuality: "high" }); full.close(); }
+  let blob: Blob | null = null;
+  try {
+    if (typeof OffscreenCanvas !== "undefined") {
+      const oc = new OffscreenCanvas(w, h);
+      oc.getContext("2d")!.drawImage(bmp, 0, 0);
+      blob = await oc.convertToBlob({ type: "image/webp", quality: 0.86 });
+    }
+  } catch { blob = null; }
+  if (!blob) {
+    const cv = document.createElement("canvas");
+    cv.width = w; cv.height = h;
+    cv.getContext("2d")!.drawImage(bmp, 0, 0);
+    blob = await new Promise<Blob | null>((r) => cv.toBlob(r, "image/webp", 0.86));
+  }
+  bmp.close();
+  return { blob: blob && blob.size < file.size ? blob : file, w, h };
+}
+
 /** Files that only have a ref (no bytes yet). */
 export const refsOf = (files: Record<string, SceneFile> | undefined) => Object.values(files ?? {}).filter((f) => f && f.lumenAtt && !f.dataURL);
 

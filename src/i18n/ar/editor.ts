@@ -231,5 +231,15 @@ export const ar: Catalog = {
   "Mermaid did not return an SVG": "لم يُرجع Mermaid صورة SVG", "The browser could not encode the image (too large?)": "تعذّر على المتصفح ترميز الصورة (ربما كبيرة جدًا؟)",
   "This browser can't copy images; download instead.": "لا يستطيع هذا المتصفح نسخ الصور؛ نزّلها بدلًا من ذلك.", "Export diagram": "تصدير المخطط",
   "Missing {key} array": "المصفوفة {key} مفقودة",
+  // ---- undo / redo, find, shortcuts sheet, footer (editor-history.ts, editor-tools.tsx)
+  "Undo ({keys})": "تراجع ({keys})", "Redo ({keys})": "إعادة ({keys})", "Find and replace": "بحث واستبدال", Shortcuts: "الاختصارات",
+  "Editor shortcuts": "اختصارات المحرر", "Keyboard shortcuts": "اختصارات لوحة المفاتيح", "Keyboard shortcuts ({keys})": "اختصارات لوحة المفاتيح ({keys})",
+  "Check / uncheck a task": "تحديد مهمة / إلغاء تحديدها", "Find next / previous": "البحث عن التالي / السابق", "Select next match (multi-cursor)": "تحديد التطابق التالي (مؤشرات متعددة)",
+  "Select all matches": "تحديد كل التطابقات", "Add a cursor": "إضافة مؤشر", "Column selection": "تحديد عمودي", "Move block up / down": "نقل الكتلة لأعلى / لأسفل",
+  "Copy line up / down": "نسخ السطر لأعلى / لأسفل", "Duplicate block": "تكرار الكتلة", "Indent / outdent list": "زيادة / إنقاص مسافة القائمة", "Continue a list": "متابعة القائمة",
+  "Video timestamp": "ختم زمني للفيديو", Click: "نقرة", Drag: "سحب",
+  "{words} words · {chars} characters": "{words} كلمة · {chars} حرف", "{w} of {words} words · {c} of {chars} characters": "{w} من {words} كلمة · {c} من {chars} حرف",
+  Find: "بحث", Replace: "استبدال", next: "التالي", previous: "السابق", "match case": "مطابقة حالة الأحرف", regexp: "تعبير نمطي", "by word": "كلمة كاملة",
+  replace: "استبدال", "replace all": "استبدال الكل", close: "إغلاق", go: "انتقال",
   "Exit slides": "الخروج من الشرائح", "Swipe ← → · tap image to zoom": "اسحب ← → · اضغط الصورة للتكبير", "Go to slide {n} · Enter": "الانتقال إلى الشريحة {n} · Enter",
 };

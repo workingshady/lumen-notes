@@ -10,10 +10,11 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { t, useLang } from "../lib/i18n";
 import { Decoration, EditorView, MatchDecorator, ViewPlugin, keymap, type DecorationSet, type ViewUpdate } from "@codemirror/view";
-import { RangeSetBuilder } from "@codemirror/state";
+import { Prec, RangeSetBuilder } from "@codemirror/state";
+import { isolateHistory } from "@codemirror/commands";
 import CodeMirror from "@uiw/react-codemirror";
-import { Bold, Braces, CheckSquare, Code, Diamond, Heading, ImagePlus, Italic, Link2, List, ListTodo, Loader2, Mic, MoreHorizontal, Quote, Sigma, Square, Table, Workflow } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Bold, Braces, CheckSquare, Code, Heading, ImagePlus, Italic, Keyboard, Link2, List, ListTodo, Loader2, Mic, MoreHorizontal, Quote, Search, Sigma, Square, Table, Workflow } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Note } from "../../shared/types";
 import { updateNote } from "../lib/actions";
 import { api, getToken } from "../lib/api";
@@ -30,6 +31,8 @@ import { PasteMenu, pasteWatch, type PasteInfo } from "./PasteMenu";
 import { parseBlocks, pendingBlock } from "../lib/blocks";
 import { videoNotes } from "./editor-video";
 import { VideoNoteBar } from "./video-dock";
+import { applyExternal, editorHistory, historyView, restoreHistory, runFind, setHistoryView } from "./editor-history";
+import { EditorFooter, EditorShortcuts, openEditorShortcuts, UndoRedo } from "./editor-tools";
 
 let showTooBig: ((f: File) => void) | null = null;
 
@@ -42,7 +45,8 @@ export function insertText(text: string, mode: "cursor" | "end" = "cursor") {
   if (!active) return false;
   const st = active.state;
   const pos = mode === "end" ? st.doc.length : st.selection.main.head;
-  active.dispatch({ changes: { from: pos, insert: text }, selection: { anchor: pos + text.length } });
+  // its own undo step (AI insert, voice note, uploads), never merged with typing
+  active.dispatch({ changes: { from: pos, insert: text }, selection: { anchor: pos + text.length }, userEvent: "input", annotations: isolateHistory.of("full") });
   active.focus();
   return true;
 }
@@ -72,6 +76,25 @@ function linePrefix(v: EditorView, prefix: string) {
   }
   v.dispatch({ changes });
   v.focus();
+}
+/** Ctrl/Cmd+Enter (Obsidian / Bear): check or uncheck the tasks on the selected lines; other lines become tasks. */
+function toggleTasks(v: EditorView) {
+  const changes: { from: number; to?: number; insert: string }[] = [];
+  const seen = new Set<number>();
+  for (const r of v.state.selection.ranges) {
+    for (let pos = r.from; pos <= r.to; ) {
+      const line = v.state.doc.lineAt(pos);
+      pos = line.to + 1;
+      if (seen.has(line.number)) continue;
+      seen.add(line.number);
+      const m = /^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+)\[([ xX/])\]/.exec(line.text);
+      if (m) { const at = line.from + m[1].length + 1; changes.push({ from: at, to: at + 1, insert: m[2] === " " || m[2] === "/" ? "x" : " " }); continue; }
+      const b = /^(\s*(?:>\s*)*)((?:[-*+]|\d+[.)])\s+)?/.exec(line.text)!;
+      changes.push(b[2] ? { from: line.from + b[0].length, insert: "[ ] " } : { from: line.from + b[1].length, insert: "- [ ] " });
+    }
+  }
+  v.dispatch({ changes, userEvent: "input.task", annotations: isolateHistory.of("full") });
+  return true;
 }
 function block(v: EditorView, text: string, cursorOffset?: number) {
   const pos = v.state.selection.main.head;
@@ -175,9 +198,11 @@ const choiceKey = (url: string) => { try { return "lumen.pasteChoice." + new URL
 export function Editor({ note, focus, live, page }: { note: Note; focus?: boolean; live?: boolean; page?: boolean }) {
   const { rtl: uiRtl } = useLang();
   const vault = useVault();
-  const [text, setText] = useState(note.body);
+  // Back from another view mode of the same note: keep its undo history (editor-history.ts restoreHistory)
+  const [restored] = useState(() => restoreHistory(note.id, note.body));
+  const [text, setText] = useState(restored?.json.doc ?? note.body);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const latest = useRef(note.body);
+  const latest = useRef(restored?.json.doc ?? note.body);
   const fileRef = useRef<HTMLInputElement>(null);
   const [more, setMore] = useState(false);
   const [rec, setRec] = useState<MediaRecorder | null>(null);
@@ -200,10 +225,21 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
   showTooBig = setTooBig;
   const wide = typeof innerWidth === "number" && innerWidth >= 900;
 
-  // Switch notes, or remote update while not typing.
+  // Bodies this editor saved in the last few seconds: a late vault echo of an older save is not an outside change.
+  // (A restored doc newer than note.body means its save is still landing: the stale body is not an outside change.)
+  const sent = useRef<{ body: string; at: number }[]>(restored && restored.json.doc !== note.body ? [{ body: note.body, at: Date.now() }] : []);
+  // The body changed outside the editor (sync, Preview checkbox, Assistant, tag edits) while not typing: apply it
+  // through the view as one undoable step, so local history and the caret survive (editor-history.ts).
   useEffect(() => {
-    if (note.body !== latest.current && !timer.current) { setText(note.body); latest.current = note.body; }
+    if (note.body === latest.current || timer.current) return;
+    sent.current = sent.current.filter((x) => Date.now() - x.at < 4000);
+    if (sent.current.some((x) => x.body === note.body)) return;
+    latest.current = note.body;
+    const v = viewRef.current;
+    if (v) applyExternal(v, note.body);
+    setText(note.body);
   }, [note.id, note.body]);
+  useEffect(() => () => { if (historyView() === viewRef.current) setHistoryView(null); }, []);
   useEffect(() => () => { clearTimeout(timer.current); setSaving(false); }, []);
   // flush pending save when switching away
   useEffect(() => {
@@ -239,13 +275,14 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note.id]);
 
-  const onChange = (v: string) => {
+  // Stable identities (onChange, basicSetup): react-codemirror reconfigures the editor whenever either changes.
+  const onChange = useCallback((v: string) => {
     setText(v);
     latest.current = v;
     clearTimeout(timer.current);
     setSaving(true);
-    timer.current = setTimeout(() => { timer.current = undefined; void updateNote(note.id, { body: v }).finally(() => setSaving(false)); }, 400);
-  };
+    timer.current = setTimeout(() => { timer.current = undefined; sent.current.push({ body: v, at: Date.now() }); void updateNote(note.id, { body: v }).finally(() => setSaving(false)); }, 400);
+  }, [note.id]);
 
   function applyPaste(choice: PasteChoice) {
     const p = pasteRef.current;
@@ -292,6 +329,7 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
       return true;
     };
     return [
+      editorHistory(note.id), // undo/redo: word-sized steps, Ctrl+Shift+Z and Ctrl+Y redo, counts for the toolbar (editor-history.ts)
       markdown({ base: markdownLanguage, codeLanguages: languages }),
       syntaxHighlighting(mdStyle),
       EditorView.lineWrapping,
@@ -331,6 +369,7 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
         { key: "Mod-Shift-x", run: (v) => (ACTIONS.task(v), true) },
         { key: "Mod-Shift-m", run: (v) => (ACTIONS.math(v), true) },
       ]),
+      Prec.high(keymap.of([{ key: "Mod-Enter", run: toggleTasks }])), // above the default "insert blank line"
       EditorView.domEventHandlers({
         paste: (e, v) => {
           const fl = e.clipboardData?.files;
@@ -413,7 +452,7 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
   editorBridge.voice = toggleVoice;
   editorBridge.image = () => fileRef.current?.click();
 
-  // Phone keyboard toolbar, design order (6A): B · I · H · list · task · {} · ∑ · ◇ · image · voice, then ⋯ pinned.
+  // Phone keyboard toolbar, design order (6A) with Undo / Redo first: ↶ ↷ · B · I · H · list · task · {} · ∑ · image · voice, then ⋯ pinned.
   const tb = [
     { k: "bold", icon: <Bold size={19} />, label: t("Bold (Ctrl+B)") },
     { k: "italic", icon: <Italic size={19} />, label: t("Italic (Ctrl+I)") },
@@ -422,7 +461,7 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
     { k: "task", icon: <ListTodo size={19} />, label: t("Task") },
     { k: "codeblock", icon: <Braces size={19} />, label: t("Code block") },
     { k: "math", icon: <Sigma size={19} />, label: t("Math block") },
-    { k: "mermaid", icon: <Diamond size={19} />, label: t("Diagram (Mermaid)") },
+    // Mermaid moved to ⋯ (still there) to make room for Undo / Redo on a 390 px bar
   ] as const;
   const extra = [
     { k: "link", icon: <Link2 size={16} />, label: t("Link a note") },
@@ -436,6 +475,7 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
     { k: "mermaid", icon: <Workflow size={16} />, label: "Mermaid" },
   ] as const;
   const showBar = !focus && (live || !wide);
+  const basicSetup = useMemo(() => ({ lineNumbers: !focus && !live && !page && wide, foldGutter: false, highlightActiveLine: !focus && !live && !page, highlightActiveLineGutter: !focus && !live && !page, autocompletion: false, searchKeymap: true, syntaxHighlighting: false, history: false, historyKeymap: false }), [focus, live, page, wide]);
   const pasteOpts: { k: PasteChoice; glyph: string; label: string }[] = [
     { k: "card", glyph: "link-card", label: t("Preview card") },
     ...(paste?.embed ? [{ k: "embed" as const, glyph: "embed", label: t("Embed") }] : []),
@@ -451,12 +491,13 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
         <CodeMirror
           value={text}
           onChange={onChange}
-          onCreateEditor={(v) => { active = v; viewRef.current = v; }}
+          onCreateEditor={(v) => { active = v; viewRef.current = v; setHistoryView(v); }}
           extensions={extensions}
           theme="none"
           height="100%"
           className="h-full"
-          basicSetup={{ lineNumbers: !focus && !live && !page && wide, foldGutter: false, highlightActiveLine: !focus && !live && !page, highlightActiveLineGutter: !focus && !live && !page, autocompletion: false, searchKeymap: true, syntaxHighlighting: false }}
+          basicSetup={basicSetup}
+          initialState={restored}
           placeholder={t("Start writing… Markdown, $math$, ```mermaid, [[links]], #tags")}
         />
       </div>
@@ -490,6 +531,8 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
       {showBar && (
         <div className="safe-b relative flex h-12 shrink-0 items-stretch border-t border-line bg-surface">
           <div className="flex min-w-0 flex-1 items-center justify-around overflow-x-auto px-1">
+            <UndoRedo phone />
+            <span className="h-6 w-px shrink-0 bg-line" />
             {tb.map((b) => (
               <button key={b.k} aria-label={b.label} title={b.label} onMouseDown={(e) => e.preventDefault()} onClick={() => run(b.k)} className="flex h-10 w-9 shrink-0 items-center justify-center rounded-[8px] text-ink active:bg-surface-2">{b.icon}</button>
             ))}
@@ -508,10 +551,14 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
                   {b.label}
                 </button>
               ))}
+              <button onMouseDown={(e) => e.preventDefault()} onClick={() => { setMore(false); runFind(); }} className="flex h-14 w-20 flex-col items-center justify-center gap-1 rounded-[8px] text-center text-[11px] leading-tight text-muted hover:bg-surface-2 hover:text-ink"><Search size={16} />{t("Find and replace")}</button>
+              <button onMouseDown={(e) => e.preventDefault()} onClick={() => { setMore(false); openEditorShortcuts(); }} className="flex h-14 w-20 flex-col items-center justify-center gap-1 rounded-[8px] text-center text-[11px] leading-tight text-muted hover:bg-surface-2 hover:text-ink"><Keyboard size={16} />{t("Shortcuts")}</button>
             </div>
           )}
         </div>
       )}
+      {wide && !focus && !showBar && <EditorFooter />}
+      <EditorShortcuts />
       <input
         ref={fileRef}
         type="file"

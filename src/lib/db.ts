@@ -1,5 +1,5 @@
 import Dexie, { type Table } from "dexie";
-import type { AttachmentMeta, Card, ChatThread, Folder, Kind, Note, ReviewLog, Session, Space, Version } from "../../shared/types";
+import type { Activity, AttachmentMeta, Card, ChatThread, Folder, Kind, Note, ReviewLog, Session, Space, Version } from "../../shared/types";
 
 export interface AttachmentBlob { id: string; blob: Blob; uploaded: 0 | 1 }
 export interface Meta { k: string; v: unknown }
@@ -23,6 +23,7 @@ export class LumenDB extends Dexie {
   attachments!: Table<AttachmentMeta, string>;
   blobs!: Table<AttachmentBlob, string>;
   meta!: Table<Meta, string>;
+  activity!: Table<Activity, string>;
   constructor() {
     // One local database per server account (main = "lumen"), so two accounts never mix on a device.
     const account = (() => { try { return localStorage.getItem("lumen.account") || "main"; } catch { return "main"; } })();
@@ -42,12 +43,14 @@ export class LumenDB extends Dexie {
     this.version(2).stores({ reviews: "id, cardId, at, dirty" });
     // v3: Ask chat threads + tutor sessions (synced as kind "chat").
     this.version(3).stores({ chats: "id, updatedAt, conceptKey, dirty, deleted" });
+    // v4: note activity log (synced as kind "activity"; src/lib/activity.ts). Earlier stores are kept as they are.
+    this.version(4).stores({ activity: "id, noteId, at, [noteId+at], dirty, deleted" });
   }
 }
 export const db = new LumenDB();
 
 export const TABLE: Record<Kind, Table<any, string>> = {
-  space: db.spaces, note: db.notes, folder: db.folders, version: db.versions, card: db.cards, session: db.sessions, attachment: db.attachments, review: db.reviews, chat: db.chats,
+  space: db.spaces, note: db.notes, folder: db.folders, version: db.versions, card: db.cards, session: db.sessions, attachment: db.attachments, review: db.reviews, chat: db.chats, activity: db.activity,
 };
 
 export async function getMeta<T>(k: string, fallback: T): Promise<T> {
@@ -65,12 +68,17 @@ export async function save<K extends Kind>(kind: K, rec: { id: string } & Record
   // older than the server-stamped version it was made from, and the server would silently keep the old one.
   // An edit is always at least 1 ms newer than the version it edits, whatever the device clock says.
   const prev = typeof rec.updatedAt === "number" ? rec.updatedAt : 0;
-  const stored = (await TABLE[kind].get(rec.id))?.updatedAt ?? 0;
+  const before = await TABLE[kind].get(rec.id);
+  const stored = before?.updatedAt ?? 0;
   const r = { ...rec, updatedAt: Math.max(now(), prev + 1, stored + 1), dirty: 1 as const, deleted: (rec.deleted ?? 0) as 0 | 1 };
   await TABLE[kind].put(r);
   schedulePush();
+  if (kind === "note" && noteHook) try { noteHook(before as Note | undefined, r as unknown as Note); } catch { /* the log never breaks a save */ }
   return r;
 }
+// Activity hook (set by activity.ts): sees every note write (before → after); it only queues work, never awaits.
+let noteHook: ((before: Note | undefined, after: Note) => void) | null = null;
+export const onNoteSaved = (fn: typeof noteHook) => (noteHook = fn);
 export async function patch<K extends Kind>(kind: K, id: string, changes: Record<string, unknown>) {
   const old = await TABLE[kind].get(id);
   if (!old) return;

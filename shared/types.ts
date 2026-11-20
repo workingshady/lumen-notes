@@ -180,8 +180,40 @@ export interface ChatThread extends Synced {
   createdAt: number;
 }
 
-export type Kind = "space" | "note" | "folder" | "version" | "card" | "session" | "attachment" | "review" | "chat";
-export const KINDS: Kind[] = ["space", "note", "folder", "version", "card", "session", "attachment", "review", "chat"];
+/** What happened to a note (activity log, kind "activity"; src/lib/activity.ts). */
+export type ActivityAction =
+  | "created" | "imported" | "duplicated" | "edited" | "renamed" | "moved" | "tagged" | "type" | "status"
+  | "trashed" | "restored" | "shared" | "unshared" | "published" | "unpublished" | "reverted";
+/**
+ * One entry of a note's activity log (synced; capped per note, older entries become tombstones).
+ * Edits within a few minutes on one device coalesce into one entry (`at` = start, `end` = last change).
+ */
+export interface Activity extends Synced {
+  noteId: string;
+  action: ActivityAction;
+  at: number;
+  end?: number;
+  device?: string;
+  /** Note title when the entry was written (for app-wide lists). */
+  title?: string;
+  /** edited: characters (Markdown) or items (`unit`: canvas cards, whiteboard elements) added / removed. */
+  add?: number;
+  del?: number;
+  unit?: "chars" | "cards" | "elements";
+  /** whiteboard: images added. */
+  img?: number;
+  /** renamed / type / status: old and new value; moved: "spaceId/folderId" before and after; duplicated: source title. */
+  from?: string;
+  to?: string;
+  /** tagged: tags added / removed (net within the session). */
+  plus?: string[];
+  minus?: string[];
+  /** Version that holds the note's text at (or near) the end of this entry; reverted: the version restored. */
+  ver?: string;
+}
+
+export type Kind = "space" | "note" | "folder" | "version" | "card" | "session" | "attachment" | "review" | "chat" | "activity";
+export const KINDS: Kind[] = ["space", "note", "folder", "version", "card", "session", "attachment", "review", "chat", "activity"];
 
 export interface SyncItem {
   kind: Kind;

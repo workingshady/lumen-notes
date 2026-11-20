@@ -328,6 +328,18 @@ Project spaces become a hub for building software. Nothing connects to GitHub/Bi
 | Respects `prefers-color-scheme` and `prefers-reduced-motion` | ✅ |
 | Big data (round 6, Lumen 32 / 22): graph above 300 notes asks first (Full · Grouped · Tree · Local · Filter, Remember my choice), grouped-by-folder + tree graph, labels on the 30 most-linked, simple mode on slow devices; Folders view (virtualised, sticky paths, match counts); compact skill tree (+N more, Find a topic); month headers + date scrubber; "Showing 50 of N" + narrowing chips; backlinks grouped by folder over 20; long notes (progress, folding, Collapse all, Jump to section); table paging + Open as base; review backlog (Do 50 / Spread over 7 days); too-much-planned Today; first-sync progress (notes first); uploads pause at 98 % storage; lazy media thumbnails (see GRAPH_AND_CANVAS.md › Big graphs) | ✅ |
 
+## 12. Undo, history and media (2026-11-20)
+Status words instead of symbols from here on (no emoji, see docs/ICONS.md).
+
+| Feature | Status | Notes |
+|---|---|---|
+| Docs undo/redo | Shipped | Undo2/Redo2 buttons (desktop header, phone bar), Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y; word-sized steps; survives autosave and Edit/Split switch; sync, AI, tag and front-matter changes are their own undoable steps (`src/components/editor-history.ts`). Ctrl/Cmd+Enter toggles a task, find & replace on phone, word/char footer, shortcuts sheet (Ctrl/Cmd+/) |
+| Canvas undo/redo | Shipped | 100-step stack with selection restore; one step per drag; text typing grouped; pan/zoom never recorded; buttons + Ctrl/Cmd+Z / Shift+Z / Ctrl+Y (`src/lib/canvas-history.ts`) |
+| Canvas editing | Shipped | Copy/cut/paste as JSON Canvas (works across canvases), duplicate, select all, arrow nudge, align & distribute, front/back order, lock (`lumenLocked`), snap-to-grid, minimap, zoom to selection / fit, shortcuts sheet (?). Toolbar adapts to its width (labels, then groups into the More menu) |
+| Activity log | Shipped | History panel › Activity: created, edited (sessions of 5 min), renamed, moved, tags, type/status, trash/restore, share/publish, restore, board cards/elements added; grouped by day, device shown, filters All / Edits / Structure, All notes view; Preview and Restore to here. Synced kind `activity`, 300 entries per note (`src/lib/activity.ts`) |
+| Whiteboard media | Shipped | Photos shrunk off the main thread and stored as attachments (board keeps refs); GIF / video / audio play on the board; YouTube, Vimeo and https web embeds. See WHITEBOARD_ROADMAP.md |
+| Whiteboard next steps | Planned | Pen mode, shape snapping, sketch or photo to Mermaid (Workers AI vision), better exports, all-in-one board: WHITEBOARD_ROADMAP.md |
+
 ---
 
 ## Sources

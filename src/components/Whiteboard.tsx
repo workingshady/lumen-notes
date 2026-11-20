@@ -7,7 +7,7 @@ import { updateNote } from "../lib/actions";
 import { download } from "../lib/io";
 import { attUrl } from "../lib/api";
 import { attBlob, resolveAtt, storeBlob } from "../lib/attachments";
-import { dataURLToBlob, hydrateFiles, inlineSceneFiles, type SceneFile } from "../lib/wb-files";
+import { blobToDataURL, dataURLToBlob, hydrateFiles, inlineSceneFiles, isPhoto, shrinkImage, type SceneFile } from "../lib/wb-files";
 import { embedProps, mediaElement, mediaKindOf, mediaSize } from "./wb-media";
 import { useSettings, activeTheme } from "../lib/settings";
 import { t, tk } from "../lib/i18n";
@@ -252,7 +252,8 @@ function Whiteboard({ note }: { note: Note }) {
     void (async () => {
       try {
         const blob = await dataURLToBlob(f.dataURL!);
-        const { id } = await storeBlob(blob, `whiteboard-image.${(f.mimeType.split("/")[1] ?? "png").replace("+xml", "")}`);
+        // Excalidraw already resized it to 1440 px; only re-encode when it is still heavy (big PNG screenshots).
+        const { id } = await storeBlob(blob, `whiteboard-image.${(f.mimeType.split("/")[1] ?? "png").replace("+xml", "")}`, { shrink: blob.size > 1_500_000 });
         refs.current.set(fid, { id: fid, mimeType: f.mimeType, created: f.created ?? Date.now(), lumenAtt: id });
         clearTimeout(timer.current);
         scheduleSave(150);
@@ -273,7 +274,8 @@ function Whiteboard({ note }: { note: Note }) {
       if (e.type !== "image" || !fid || files[fid]) continue;
       const ref = refs.current.get(fid);
       if (ref) files[fid] = ref;
-      else if (loaded[fid]?.dataURL) { files[fid] = { id: fid, mimeType: loaded[fid].mimeType, created: loaded[fid].created, dataURL: loaded[fid].dataURL }; storeFile(fid, loaded[fid]); }
+      // Not stored yet: start storing; save() waits for it, so the big dataURL never lands in the note, History or sync.
+      else if (loaded[fid]?.dataURL) { files[fid] = { id: fid, mimeType: loaded[fid].mimeType, created: loaded[fid].created }; storeFile(fid, loaded[fid]); }
       else if (prev[fid]) files[fid] = prev[fid];
     }
     s.files = files;
@@ -300,7 +302,33 @@ function Whiteboard({ note }: { note: Note }) {
     } catch (e) { toast((e as Error).message); }
     return true;
   };
-  const pickMedia = () => mediaInput.current?.click();
+  /** Photo → shrunk off the main thread → attachment → image element. Skips Excalidraw's main-thread resize (the lag). */
+  const addImage = async (file: File, at?: { clientX: number; clientY: number }, i = 0) => {
+    const a = api.current;
+    if (!a) return;
+    try {
+      const { blob, w, h } = await shrinkImage(file);
+      const { id } = await storeBlob(blob, file.name || "image", { shrink: false });
+      const mimeType = blob.type || file.type;
+      const ref: SceneFile = { id, mimeType, created: Date.now(), lumenAtt: id };
+      refs.current.set(id, ref);
+      a.addFiles([{ ...ref, dataURL: await blobToDataURL(blob) }]);
+      const st = a.getAppState() as Record<string, number> & { zoom: { value: number } };
+      const z = st.zoom.value, r = host.current?.getBoundingClientRect();
+      const k = Math.min(1, 560 / Math.max(w, h)), dw = Math.round(w * k), dh = Math.round(h * k);
+      const vx = at && r ? at.clientX - r.left : (r?.width ?? 800) / 2, vy = at && r ? at.clientY - r.top : (r?.height ?? 600) / 2.4;
+      const els = convertToExcalidrawElements([{ type: "image", fileId: id, status: "saved", x: vx / z - st.scrollX - dw / 2 + i * 24, y: vy / z - st.scrollY - dh / 2 + i * 24, width: dw, height: dh }] as never) as unknown as El[];
+      a.updateScene({ elements: [...a.getSceneElementsIncludingDeleted(), ...els], appState: { selectedElementIds: Object.fromEntries(els.map((e) => [e.id, true])) } });
+      a.setActiveTool({ type: "selection" });
+      scheduleSave(200);
+    } catch (e) { toast((e as Error).message); }
+  };
+  /** Any file Lumen inserts itself: photos (fast path) or GIF / video / audio (playable embeds). */
+  const ours = (f: File) => isPhoto(f.type) || !!mediaKindOf(f.type);
+  const addFile = (f: File, at?: { clientX: number; clientY: number }, i = 0) => void (isPhoto(f.type) ? addImage(f, at, i) : addMedia(f, at, i));
+  const pick = (accept: string) => { const el = mediaInput.current; if (!el) return; el.accept = accept; el.click(); };
+  const pickMedia = () => pick("image/gif,image/apng,video/*,audio/*");
+  const pickImage = () => pick("image/*");
   /** Debounced autosave that never runs mid-stroke (pen down, shape being drawn, drag) and yields to the browser when idle. */
   const scheduleSave = (ms: number) => {
     clearTimeout(timer.current);
@@ -314,6 +342,7 @@ function Whiteboard({ note }: { note: Note }) {
   const save = (keepTime = false) => {
     if (!api.current) return;
     const s = serialize();
+    if (storing.current.size) return; // an image is still moving into attachments; storeFile saves again when it's done
     if (s === lastSaved.current) return;
     lastSaved.current = s;
     void updateNote(note.id, { body: s }, { keepTime });
@@ -352,6 +381,31 @@ function Whiteboard({ note }: { note: Note }) {
   }, [note.body]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => () => { clearTimeout(timer.current); }, []);
+
+  // Excalidraw's image tool (toolbar button or key 9) would insert through its slow main-thread resize; route it to ours.
+  const pickImageRef = useRef(pickImage);
+  pickImageRef.current = pickImage;
+  useEffect(() => {
+    const typing = (t: EventTarget | null) => t instanceof HTMLElement && !!t.closest("input,textarea,select,[contenteditable=true],.cm-editor");
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "9" || e.ctrlKey || e.metaKey || e.altKey || typing(e.target) || !host.current?.isConnected) return;
+      if (api.current?.getAppState().editingTextElement) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      pickImageRef.current();
+    };
+    const onClick = (e: Event) => {
+      const btn = (e.target as HTMLElement | null)?.closest?.('[data-testid="toolbar-image"]');
+      if (!btn || !host.current?.contains(btn)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (e.type === "click") pickImageRef.current(); // pointerdown is only blocked, so the picker opens once
+    };
+    window.addEventListener("keydown", onKey, true);
+    window.addEventListener("pointerdown", onClick, true);
+    window.addEventListener("click", onClick, true);
+    return () => { window.removeEventListener("keydown", onKey, true); window.removeEventListener("pointerdown", onClick, true); window.removeEventListener("click", onClick, true); };
+  }, []);
 
   async function runScript() {
     try { localStorage.setItem("lumen.wbScript", src); } catch { /* ignore */ }
@@ -409,7 +463,7 @@ function Whiteboard({ note }: { note: Note }) {
     toast(t("Applied to the board"));
   };
   const jsonSpans = useMemo(() => (panel === "json" ? jsonItemSpans(code) : new Map<string, { from: number; to: number }>()), [panel, code]);
-  const clusterBtn = (on: boolean) => cx("flex size-8 items-center justify-center rounded-[8px] transition-colors", on ? "text-accent" : "text-ink hover:bg-surface-2");
+  const clusterBtn = (on: boolean) => cx("flex size-9 items-center justify-center rounded-[8px] transition-colors", on ? "text-accent" : "text-ink hover:bg-surface-2");
 
   // Stable Excalidraw props: the board must not re-render on every save or parent update (that made the pen stutter).
   const live = useRef({
@@ -425,9 +479,9 @@ function Whiteboard({ note }: { note: Note }) {
     scheduleSave(900);
   };
   live.current.onPaste = (ev) => {
-    const files = [...(ev?.clipboardData?.files ?? [])].filter((f) => mediaKindOf(f.type));
+    const files = [...(ev?.clipboardData?.files ?? [])].filter(ours);
     if (!files.length) return true;
-    files.forEach((f, i) => void addMedia(f, undefined, i));
+    files.forEach((f, i) => addFile(f, undefined, i));
     return false;
   };
   live.current.onApi = (a) => {
@@ -441,14 +495,14 @@ function Whiteboard({ note }: { note: Note }) {
   }), []);
   const topRight = useCallback(() => (
             // Lumen cluster: </> code · >_ script · Mermaid → shapes · export
-            <div className={cx("relative items-center gap-0.5 rounded-[12px] border border-line bg-surface p-1", exportOpen ? "flex" : "hidden md:flex")}>
-              <button title={t("Code: edit .excalidraw JSON")} aria-label={t("Code")} className={cx(clusterBtn(panel === "json"), panel === "json" && "bg-[color-mix(in_srgb,var(--accent)_18%,transparent)]")} onClick={() => toggleTab("json")}><Code2 size={16} /></button>
-              <button title={t("Script console")} aria-label={t("Script console")} className={cx(clusterBtn(panel === "script"), panel === "script" && "bg-[color-mix(in_srgb,var(--accent)_18%,transparent)]")} onClick={() => toggleTab("script")}><SquareTerminal size={16} /></button>
-              <button title={t("GIF, video or audio (plays on the board)")} aria-label={t("Add GIF or video")} className={clusterBtn(false)} onClick={pickMedia}><Film size={16} /></button>
-              <button title={t("Web embed: YouTube, Vimeo, any https page")} aria-label={t("Web embed")} className={clusterBtn(tool === "embeddable")} onClick={() => api.current?.setActiveTool({ type: "embeddable" })}><Globe size={16} /></button>
-              <button title={t("Mermaid → shapes")} aria-label={t("Mermaid to shapes")} className={cx(clusterBtn(mermaidOpen), "!w-auto gap-1.5 px-2.5 text-[12.5px]")} onClick={() => setMermaidOpen(true)}><Workflow size={15} /><span className="hidden lg:inline">Mermaid</span></button>
+            <div className={cx("relative items-center gap-0.5 rounded-[8px] border border-line bg-surface p-1", exportOpen ? "flex" : "hidden md:flex")}>
+              <button title={t("Code: edit .excalidraw JSON")} aria-label={t("Code")} className={cx(clusterBtn(panel === "json"), panel === "json" && "bg-[color-mix(in_srgb,var(--accent)_18%,transparent)]")} onClick={() => toggleTab("json")}><Code2 size={16} strokeWidth={1.25} /></button>
+              <button title={t("Script console")} aria-label={t("Script console")} className={cx(clusterBtn(panel === "script"), panel === "script" && "bg-[color-mix(in_srgb,var(--accent)_18%,transparent)]")} onClick={() => toggleTab("script")}><SquareTerminal size={16} strokeWidth={1.25} /></button>
+              <button title={t("GIF, video or audio (plays on the board)")} aria-label={t("Add GIF or video")} className={clusterBtn(false)} onClick={pickMedia}><Film size={16} strokeWidth={1.25} /></button>
+              <button title={t("Web embed: YouTube, Vimeo, any https page")} aria-label={t("Web embed")} className={clusterBtn(tool === "embeddable")} onClick={() => api.current?.setActiveTool({ type: "embeddable" })}><Globe size={16} strokeWidth={1.25} /></button>
+              <button title={t("Mermaid → shapes")} aria-label={t("Mermaid to shapes")} className={cx(clusterBtn(mermaidOpen), "!w-auto gap-1.5 px-2.5 text-[12.5px] font-normal")} onClick={() => setMermaidOpen(true)}><Workflow size={16} strokeWidth={1.25} /><span className="hidden lg:inline">Mermaid</span></button>
               <span className="mx-0.5 h-5 w-px bg-line" />
-              <button title={t("Export")} aria-label={t("Export")} className={clusterBtn(exportOpen)} onClick={() => setExportOpen((o) => !o)}><Download size={16} /></button>
+              <button title={t("Export")} aria-label={t("Export")} className={clusterBtn(exportOpen)} onClick={() => setExportOpen((o) => !o)}><Download size={16} strokeWidth={1.25} /></button>
               {exportOpen && (
                 <div className="absolute right-0 top-11 z-30 flex w-44 flex-col gap-px rounded-[12px] border border-line bg-surface-2 p-1.5 text-[13px] shadow-[0_16px_40px_rgba(0,0,0,.45)] fade-in">
                   {([["png", t("PNG image")], ["svg", t("SVG vector")], ["excalidraw", t(".excalidraw file")]] as const).map(([k, l]) => (
@@ -486,14 +540,14 @@ function Whiteboard({ note }: { note: Note }) {
       </svg>
       <div ref={host} className={cx("lumen-wb relative min-h-0 flex-1", bar?.stickies && "wb-sticky-sel")}
         onDropCapture={(e) => {
-          // GIF / video / audio drops become playable embeds; everything else (photos, .excalidraw, text) stays Excalidraw's.
-          const files = [...e.dataTransfer.files].filter((f) => mediaKindOf(f.type));
+          // Photos (fast path) and GIF / video / audio (playable embeds) are Lumen's; SVG, .excalidraw and text stay Excalidraw's.
+          const files = [...e.dataTransfer.files].filter(ours);
           if (!files.length) return;
           e.preventDefault();
           e.stopPropagation();
-          files.forEach((f, i) => void addMedia(f, e, i));
+          files.forEach((f, i) => addFile(f, e, i));
         }}>
-        <input ref={mediaInput} type="file" accept="image/gif,image/apng,video/*,audio/*" multiple hidden onChange={(e) => { [...(e.target.files ?? [])].forEach((f, i) => void addMedia(f, undefined, i)); e.target.value = ""; }} />
+        <input ref={mediaInput} type="file" accept="image/gif,image/apng,video/*,audio/*" multiple hidden onChange={(e) => { [...(e.target.files ?? [])].filter(ours).forEach((f, i) => addFile(f, undefined, i)); e.target.value = ""; }} />
         {board}
 
         {/* Selection style bar: 6 paper colours · size · font · duplicate · delete */}
@@ -527,7 +581,7 @@ function Whiteboard({ note }: { note: Note }) {
             {more && (
               <div className="mb-2 grid grid-cols-4 gap-1 rounded-[16px] border border-line bg-surface p-2 fade-in">
                 {([["selection", <MousePointer2 size={20} />, t("Select")], ["eraser", <Eraser size={20} />, t("Eraser")], ["frame", <Frame size={20} />, t("Frame")], ["image", <Image size={20} />, t("Image")], ["diamond", <Diamond size={20} />, t("Diamond")], ["ellipse", <Circle size={20} />, t("Ellipse")], ["line", <Minus size={20} />, t("Line")], ["embeddable", <Globe size={20} />, t("Web embed")]] as const).map(([tl, icon, l]) => (
-                  <button key={tl} onClick={() => { api.current?.setActiveTool({ type: tl }); setMore(false); }} className={cx("flex h-14 flex-col items-center justify-center gap-0.5 rounded-[12px] text-[10.5px]", tool === tl ? "bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] text-accent" : "")}>{icon}{l}</button>
+                  <button key={tl} onClick={() => { if (tl === "image") pickImage(); else api.current?.setActiveTool({ type: tl }); setMore(false); }} className={cx("flex h-14 flex-col items-center justify-center gap-0.5 rounded-[12px] text-[10.5px]", tool === tl ? "bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] text-accent" : "")}>{icon}{l}</button>
                 ))}
                 <button onClick={() => { setMore(false); pickMedia(); }} className="flex h-14 flex-col items-center justify-center gap-0.5 rounded-[12px] text-[10.5px]"><Film size={20} />{t("GIF / video")}</button>
                 {([["json", <Code2 size={20} />, t("Code")], ["script", <SquareTerminal size={20} />, t("Script")], ["mermaid", <Workflow size={20} />, "Mermaid"], ["export", <Download size={20} />, t("Export")]] as const).map(([k, icon, l]) => (

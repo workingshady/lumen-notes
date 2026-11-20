@@ -3,6 +3,7 @@ import { db, newFolder, newNote, newSpace, now, patch, save, uid } from "./db";
 import { NOTE_TYPES, STATUSES, type NoteType, type Status } from "../../shared/types";
 import { firstH1, fmList, inlineTags, setFrontMatter, slugify, splitFrontMatter } from "./parse";
 import { TEMPLATES, type Template } from "./templates";
+import { activityHint, activityQuiet, activityVersion, purgeActivity, thisDevice } from "./activity";
 
 export async function createNote(p: Partial<Note> & { template?: string; fm?: Record<string, string> } = {}) {
   const { template, fm, ...rest } = p;
@@ -43,6 +44,7 @@ export async function updateNote(id: string, changes: Partial<Note>, opts: { kee
     next.body = body;
   }
   if (next.published && !next.slug) next.slug = slugify(next.title);
+  if (opts.keepTime) activityQuiet(id); // automatic conversion: not something the user did
   await save("note", next);
   if (opts.keepTime) await db.notes.update(id, { updatedAt: old.updatedAt });
   maybeSnapshot(next);
@@ -55,13 +57,16 @@ export const restoreNote = (id: string) => patch("note", id, { deleted: 0 });
 export async function purgeNote(id: string) {
   // Tombstone stays (deleted: 1) so other devices learn about it; just clear the content.
   await patch("note", id, { deleted: 1, body: "", title: "(deleted)" });
+  await purgeActivity(id);
   for (const v of await db.versions.where("noteId").equals(id).toArray()) await save("version", { ...v, deleted: 1, body: "" });
 }
 
 export async function duplicateNote(id: string) {
   const n = await db.notes.get(id);
   if (!n) return;
-  return createNote({ ...n, id: uid(), title: `${n.title} (copy)`, published: 0, slug: "", createdAt: now(), pinned: 0 });
+  const id2 = uid();
+  activityHint(id2, { action: "duplicated", from: n.title });
+  return createNote({ ...n, id: id2, title: `${n.title} (copy)`, published: 0, slug: "", createdAt: now(), pinned: 0 });
 }
 
 export async function findOrCreateByTitle(title: string, spaceId: string) {
@@ -80,10 +85,20 @@ export async function dailyNote(spaceId: string) {
 // ------------------------------------------------------------------ versions
 const lastSnap = new Map<string, number>();
 const SNAP_EVERY = 2 * 60_000;
-/** Auto-snapshot: at most one per note every 2 min, only if the body changed since the last version. */
+const trailing = new Map<string, ReturnType<typeof setTimeout>>();
+/** Auto-snapshot: at most one per note every 2 min, only if the body changed since the last version. Edits inside the
+ *  2 min get one trailing snapshot when it ends, so the end of a writing session is always a version (the activity
+ *  log's "Restore to here" points at it). */
 async function maybeSnapshot(n: Note) {
   const t = now();
-  if (t - (lastSnap.get(n.id) ?? 0) < SNAP_EVERY) return;
+  const wait = SNAP_EVERY - (t - (lastSnap.get(n.id) ?? 0));
+  if (wait > 0) {
+    if (!trailing.has(n.id)) trailing.set(n.id, setTimeout(() => {
+      trailing.delete(n.id);
+      void db.notes.get(n.id).then((cur) => { if (cur && !cur.deleted) return maybeSnapshot(cur); });
+    }, wait + 50));
+    return;
+  }
   lastSnap.set(n.id, t);
   const last = (await db.versions.where("noteId").equals(n.id).sortBy("createdAt")).pop();
   if (last && last.body === n.body && last.title === n.title) return;
@@ -92,19 +107,16 @@ async function maybeSnapshot(n: Note) {
 export async function snapshot(n: Note, label: string) {
   const v: Version = { id: uid(), noteId: n.id, title: n.title, body: n.body, label, createdAt: now(), updatedAt: now(), deleted: 0, device: thisDevice() };
   await save("version", v);
+  if (!/^(Restored|Before)/.test(label)) activityVersion(n.id, v.id, v.createdAt); // restore bookkeeping versions aren't "the end of an edit"
   return v;
 }
-/** This device's name for version rows (Settings › Devices name, else a guess from the browser; same rules as lib/devices). */
-function thisDevice(): string {
-  try { const n = localStorage.getItem("lumen.deviceName"); if (n) return n; } catch { /* ignore */ }
-  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
-  return /Android/i.test(ua) ? (/Mobile/i.test(ua) ? "Android phone" : "Android tablet") : /iPhone/i.test(ua) ? "iPhone" : /iPad/i.test(ua) ? "iPad" : /Mac OS X/i.test(ua) ? "Mac" : /Windows/i.test(ua) ? "Windows PC" : /Linux|CrOS/i.test(ua) ? "Linux PC" : "Browser";
-}
+export { thisDevice };
 /** Confluence-style: restoring creates a new current version; nothing is lost. */
 export async function restoreVersion(v: Version) {
   const n = await db.notes.get(v.noteId);
   if (!n) return;
   await snapshot(n, "Before restore");
+  activityHint(n.id, { action: "reverted", ver: v.id, from: String(v.createdAt) });
   await save("note", { ...n, title: v.title, body: v.body });
   await snapshot({ ...n, title: v.title, body: v.body }, `Restored ${new Date(v.createdAt).toLocaleString()}`);
 }

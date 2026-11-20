@@ -19,6 +19,7 @@ import { firstH1, outline, setFrontMatter, splitFrontMatter } from "../lib/parse
 import { ShareSheet } from "./ShareSheet";
 import { Skeleton } from "./Skeleton";
 import { Editor, editorBridge, scrollEditorToLine } from "./Editor";
+import { UndoRedo } from "./editor-tools";
 import { Preview } from "./Preview";
 import { ReviewSession } from "./Review";
 import { RightPanel } from "./RightPanel";
@@ -244,7 +245,7 @@ export function NoteView({ note }: { note: Note }) {
   const switcher = (list: typeof modes) => (
     <div className="flex gap-0.5 rounded-[10px] border border-line bg-surface p-[3px]">
       {list.map((m) => (
-        <button key={m.value} title={m.title} onClick={() => setUI({ mode: m.value })} className={"flex h-[26px] items-center gap-1.5 whitespace-nowrap rounded-[7px] px-2.5 text-[12.5px] " + (mode === m.value ? "bg-surface-2 font-semibold text-ink" : "font-[450] text-muted hover:text-ink")}>{m.icon}{m.l}{"badge" in m && m.badge ? <span className="rounded-full bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] px-1.5 text-[10.5px] font-semibold leading-4 text-accent">{fmtNum(Number(m.badge))}</span> : null}</button>
+        <button key={m.value} title={m.title} onClick={() => setUI({ mode: m.value })} className={"flex h-[26px] items-center gap-1.5 whitespace-nowrap rounded-[7px] px-2.5 text-[12.5px] " + (mode === m.value ? "bg-surface-2 font-semibold text-ink" : "font-[450] text-muted hover:text-ink")}>{m.icon}<span className={mode === m.value ? "@max-xl:hidden" : "@max-3xl:hidden"}>{m.l}</span>{"badge" in m && m.badge ? <span className="rounded-full bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] px-1.5 text-[10.5px] font-semibold leading-4 text-accent">{fmtNum(Number(m.badge))}</span> : null}</button>
       ))}
     </div>
   );
@@ -257,7 +258,7 @@ export function NoteView({ note }: { note: Note }) {
       {([["fixed", t("Fixed"), "center"], ["wide", t("Wide"), "wide"], ["full", t("Full"), "full"]] as [PageWidth, string, string][]).map(([k, l, g]) => (
         <button key={k} role="radio" aria-checked={pw === k} title={t("Page width: {width}", { width: l })} onClick={() => pw !== k && void updateNote(note.id, { body: setFrontMatter(note.body, { width: k === "fixed" ? null : k }) })}
           className="flex h-6 items-center gap-[5px] rounded-[6px] px-[9px]" style={pw === k ? { background: "var(--surface-2)", color: "var(--text)", fontWeight: 600 } : { color: "var(--muted)", fontWeight: 450 }}>
-          <Glyph name={g} size={13} />{l}
+          <Glyph name={g} size={13} /><span className="@max-4xl:hidden">{l}</span>
         </button>
       ))}
     </div>
@@ -292,12 +293,14 @@ export function NoteView({ note }: { note: Note }) {
                 {panelBtn}
               </div>
               {markdownNote && (
-                <div className="flex h-11 items-center gap-3 border-b border-line px-5">
+                <div className="flex h-11 min-w-0 items-center gap-3 border-b border-line px-5">
                   {switcher(modes)}
+                  {(effMode === "edit" || effMode === "split") && <UndoRedo />}
                   <span className="flex-1" />
                   {widthBtn}
                   <ReadMenu />
-                  <span className="whitespace-nowrap text-[12px] text-muted">{t("{words} words · {mins} min", { words, mins })}</span>
+                  {/* edit / split show live counts in the editor footer (editor-tools.tsx) */}
+                  {effMode !== "edit" && effMode !== "split" && <span className="whitespace-nowrap text-[12px] text-muted">{t("{words} words · {mins} min", { words, mins })}</span>}
                 </div>
               )}
               {!markdownNote && <div className="border-b border-line" />}
@@ -308,6 +311,7 @@ export function NoteView({ note }: { note: Note }) {
               {crumbsEl}
               <span className="flex-1" />
               {markdownNote && switcher(modes)}
+              {markdownNote && (effMode === "edit" || effMode === "split") && <UndoRedo />}
               {isRoadmap && <Segmented value={rmEdit ? "edit" : "map"} onChange={(x) => setRmEdit(x === "edit")} options={[{ value: "map", label: <><MapIcon size={13} /> {isPath ? t("Path") : t("Roadmap")}</> }, { value: "edit", label: <><PenLine size={13} /> {t("Edit")}</> }]} />}
               <span className="flex-1" />
               <HeaderSync wrap />

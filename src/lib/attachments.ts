@@ -29,10 +29,11 @@ export async function addFile(file: File): Promise<string> {
 }
 
 /** Store bytes as an attachment (big photos shrunk; GIF/video/SVG kept as is); the next sync uploads it. Returns the attachment id. */
-export async function storeBlob(blob: Blob, name: string): Promise<{ id: string; blob: Blob }> {
+export async function storeBlob(blob: Blob, name: string, opts: { shrink?: boolean } = {}): Promise<{ id: string; blob: Blob }> {
   if (blob.size > MAX_FILE) throw new Error(t("{name} is over 100 MB. Upload long videos to YouTube (unlisted) and paste the link.", { name }));
   const id = uid();
-  const out = await compress(blob);
+  // shrink: false when the bytes were already resized (e.g. Excalidraw's own 1440 px insert), to skip a second re-encode.
+  const out = opts.shrink === false ? blob : await compress(blob);
   await db.blobs.put({ id, blob: out, uploaded: 0 });
   await save("attachment", { id, name: name || "file", mime: out.type || blob.type, size: out.size });
   return { id, blob: out };
