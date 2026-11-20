@@ -9,9 +9,9 @@ import type { Note, Version } from "../../../shared/types";
 import { Glyph } from "../Glyph";
 import { ShareSheet } from "../ShareSheet";
 import { useSaving, useSyncLook } from "../ws-sync";
-import { restoreVersion, snapshot, updateNote } from "../../lib/actions";
+import { restoreNote, restoreVersion, snapshot, trashNote, updateNote } from "../../lib/actions";
 import { fmtDate, fmtTime, t, useLang } from "../../lib/i18n";
-import { back, openNote, toast, useVault } from "../../lib/store";
+import { back, openNote, setUI, toast, useVault } from "../../lib/store";
 import { openExport } from "../../lib/diagram-export";
 import { uid } from "../../lib/db";
 import { applyDsl, dslFor, parseDsl, printDsl, type DslError } from "../../lib/arch-dsl";
@@ -355,6 +355,8 @@ function Studio({ note }: { note: Note }) {
 
   // ------------------------------------------------------------ versions (History) and C4
   const [versions, setVersions] = useState<Version[]>([]);
+  // Delete (owner request): same flow as canvas/whiteboard: trash + Undo toast.
+  const deleteDiagram = async () => { const title = note.title; await trashNote(note.id); setUI({ noteId: null }); toast(t("“{title}” moved to Trash", { title }), { label: t("Undo"), run: () => { void restoreNote(note.id); openNote(note.id); } }); };
   const openVersions = async () => { setVersions(await archVersions(note.id)); setPop("versions"); };
   const compare = (ver: Version, all: Version[]) => {
     const older = parseArch(ver.body);
@@ -587,6 +589,7 @@ function Studio({ note }: { note: Note }) {
               <H g="present" l={t("Present")} onClick={() => { setSel(null); setPresent(0); }} />
               <H g="export" l={t("Export")} onClick={doExport} />
               <H g="link" l={t("Share")} pri onClick={() => setShare(true)} />
+              <H g="more" onClick={() => setPop(pop === "more" ? null : "more")} title={t("More")} />
             </>
           )}
         </div>
@@ -648,9 +651,9 @@ function Studio({ note }: { note: Note }) {
             <NodeProps phone n={selNode} onChange={editNode} usedIn={usage.get(selNode.lumenNode?.ref ?? "") ?? 0} onReuse={() => makeReusable(selNode)} />
           </Pop>
         )}
-        {phone && pop === "more" && (
-          <Pop title={note.title} sub={t("Diagram")} sheet onClose={() => setPop(null)} style={{ left: 0, right: 0, bottom: 0, animation: "arch-sheet .22s var(--ease)" }}>
-            <Block gap="0" items={([["reused-object", t("Insert existing object"), () => setPop("insert")], ["diff", t("Compare versions"), () => void openVersions()], ["c-question", t("Review"), review], ["present", t("Present"), () => { setPop(null); setPresent(0); }], ["export", t("Export"), () => { setPop(null); doExport(); }], ["link", t("Share"), () => { setPop(null); setShare(true); }]] as const).map(([g, l, fn]) => ({ g, l, mh: "44px", onClick: fn }))} />
+        {pop === "more" && (
+          <Pop title={note.title} sub={t("Diagram")} sheet={phone} onClose={() => setPop(null)} style={phone ? { left: 0, right: 0, bottom: 0, animation: "arch-sheet .22s var(--ease)" } : { right: 12, top: 52, width: 260 }}>
+            <Block gap="0" items={([["reused-object", t("Insert existing object"), () => setPop("insert")], ["diff", t("Compare versions"), () => void openVersions()], ["c-question", t("Review"), review], ["present", t("Present"), () => { setPop(null); setPresent(0); }], ["export", t("Export"), () => { setPop(null); doExport(); }], ["link", t("Share"), () => { setPop(null); setShare(true); }], ["trash", t("Delete diagram"), () => { setPop(null); void deleteDiagram(); }]] as const).map(([g, l, fn]) => ({ g, l, mh: "44px", onClick: fn }))} />
           </Pop>
         )}
         {(pop === "menu" || pop === "connectTo" || pop === "moveTo" || pop === "sendTo") && menuPop}
