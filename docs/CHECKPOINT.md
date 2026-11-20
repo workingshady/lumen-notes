@@ -1,5 +1,15 @@
 # Checkpoint: where work stopped (2026-11-20, round 7 wave 1 done)
 
+## Plan after wave 3 (owner's request, 2026-11-20)
+1. Deploy wave 3 when all its agents are done (W3-A layers/settings/frames/present + pen live overlay, size, distinct pens, minimap overlap, multi-select bar, sticky author; QA arch+canvas incl. edges static, keyboard shortcuts, property panels, ConvertMenu mounts; vendor icon packs AWS/Azure/GCP/k8s/top companies).
+2. **Design audit:** fresh Opus reviewers compare all 141 frames (`design/handoffs/2026-11-20-round-7/frames/`) and their flows against the live app, area by area, giving one gap list.
+3. **Per-feature deep web research + backend/logic/DB review:**
+   - **Features to cover:** whiteboard pens/palettes/layers/presentation, Board cards + conversions, canvas, architecture studio (code sync, ELK layout, AI), export, drag and drop, library + vendor icons, AI convert backend, sync + storage, sidebar + note list.
+   - **Benchmark against** Excalidraw, tldraw, Miro, FigJam, Eraser, Obsidian and Goodnotes.
+   - **Backend and data:** D1 row size vs big scenes, attachments/R2, sync conflicts, offline queue, AI limits/retries, performance on large boards. Add migrations if needed.
+4. **Fix wave** closes every gap and adds the enhancements: identical design, every flow and use case, consistency across workspaces, backend/logic/UX/optimisation.
+5. Final check, then deploy, commit and push.
+
 ## Update: wave 2 done and live (deploy `39120b8f`, merge commit `70f74f2`)
 - **W2-A:** pens (8 types, settings, saved pens synced in Inbox `props.lumenPens`, pen mode, erasers, ruler, auto-shape), lasso + AI convert, handwriting search, palettes (+ custom, synced in `props.lumenPalettes`), whiteboard export via `openExportJob`, direct Delete row in the board ⋯ menu. Paper-theme frames 34B/37C/37F not verified.
 - **W2-B:** shared library (`src/components/library/*`, `src/lib/library-items.ts`), stamps, icon insert, connector/style/text/sticky popovers. "Later" in the UI: dotted fill, Serif/Arabic fonts, text highlight, sticky author line. Vendor packs come from the user's own SVGs.
