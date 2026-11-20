@@ -43,7 +43,8 @@ type Tab = "Code" | "Mermaid" | "JSON";
 type Sel = { kind: "node" | "edge"; id: string } | null;
 type PopKind = null | "layout" | "insert" | "versions" | "library" | "menu" | "more" | "props" | "connectTo" | "moveTo" | "sendTo";
 /** Fit the diagram: readable bounds (never microscopic, never blown up), the same everywhere the studio refits. */
-const FIT = { padding: 0.12, minZoom: 0.45, maxZoom: 1.25 } as const;
+// fit: tight padding so the starter reads at a useful size in the split view; small diagrams stay at 100%, never below 50%
+const FIT = { padding: 0.05, minZoom: 0.5, maxZoom: 1 } as const;
 const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
 const usePhone = () => { const [p, setP] = useState(() => innerWidth < 640); useEffect(() => { const f = () => setP(innerWidth < 640); addEventListener("resize", f); return () => removeEventListener("resize", f); }, []); return p; };
 const typing = (e: Event) => !!(e.target as HTMLElement | null)?.closest?.("input, textarea, select, .cm-editor, [contenteditable=true]");

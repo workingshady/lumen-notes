@@ -111,7 +111,7 @@ export const ArchGroup = memo(function ArchGroup({ id, data, selected }: NodePro
     // collapsed into a summary node (47A "Collapsed group")
     return (
       <div onMouseEnter={() => c.setHover(id)} onMouseLeave={() => c.setHover(null)} style={{ width: "100%", height: "100%", boxSizing: "border-box", borderRadius: 12, background: `color-mix(in srgb,${col} 10%,var(--surface))`, border: `1.5px dashed ${col}`, display: "flex", alignItems: "center", gap: 6, padding: "0 12px", boxShadow: on ? "0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)" : "none" }}>
-        <Glyph name={lg.icon ?? lg.kind} size={18} color={col} />
+        <NodeIcon icon={lg.icon} fallback={lg.kind} size={18} color={col} />
         <Name id={id} text={c.masked?.has(id) ? "? ? ?" : displayOf(n)} style={{ fontWeight: 600, fontSize: 14, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
         <button className="nodrag" onClick={() => c.toggleCollapse(id)} style={{ height: 30, padding: "0 10px", borderRadius: 999, background: "var(--surface-2)", border: "1px solid var(--border)", fontSize: 11.5, whiteSpace: "nowrap" }}>{t("{n} inside ›", { n: c.inside(id) })}</button>
         <Ports />
@@ -121,7 +121,7 @@ export const ArchGroup = memo(function ArchGroup({ id, data, selected }: NodePro
   return (
     <div onMouseEnter={() => c.setHover(id)} onMouseLeave={() => c.setHover(null)} style={{ width: "100%", height: "100%", boxSizing: "border-box", border: `1.5px ${mark === "add" || mark === "chg" ? "solid" : "dashed"} ${col}`, borderRadius: 14, background: `color-mix(in srgb,${col} 5%,transparent)`, boxShadow: on ? "0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)" : "none", transition: "box-shadow .12s" }}>
       <span style={{ position: "absolute", left: 12, top: -11, display: "flex", alignItems: "center", gap: 6, padding: "1px 8px", borderRadius: 999, background: "var(--bg)", color: col, fontSize: 11.5, fontWeight: 600, whiteSpace: "nowrap" }}>
-        <Glyph name={lg?.icon ?? lg?.kind ?? "region"} size={14} />
+        <NodeIcon icon={lg?.icon} fallback={lg?.kind ?? "region"} size={14} />
         <Name id={id} text={c.masked?.has(id) ? "? ? ?" : displayOf(n)} style={{}} />
         <span style={{ color: "var(--muted)", fontWeight: 400 }}>{k}</span>
         <button className="nodrag" aria-label={t("Collapse group")} title={t("Collapse into a summary node")} onClick={() => c.toggleCollapse(id)} style={{ display: "flex", color: "var(--muted)", marginInlineStart: 2 }}><Glyph name="chevron-down" size={12} /></button>
@@ -147,7 +147,7 @@ export const FLOW_CSS = `
 .arch-flow .arch-edge-hit { fill: none; stroke: transparent; pointer-events: stroke; cursor: pointer; }
 .arch-flow .react-flow__edge.selected .arch-edge-hit { cursor: move; }
 .arch-flow .arch-edge-end { cursor: crosshair; touch-action: none; }
-.arch-flow .arch-edge-end:hover { box-shadow: 0 0 0 4px color-mix(in srgb,var(--accent) 30%,transparent); }
+.arch-flow .arch-edge-end:hover > span, .arch-flow .arch-edge-dot:hover > span { box-shadow: 0 0 0 4px color-mix(in srgb,var(--accent) 30%,transparent); }
 .arch-flow .react-flow__minimap { border-radius: 10px; border: 1px solid var(--border); background: var(--surface); overflow: hidden; }
 .arch-flow .react-flow__connectionline path { stroke: var(--accent); stroke-width: 1.6; }
 @keyframes arch-ghost { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }

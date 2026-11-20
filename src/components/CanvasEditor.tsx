@@ -11,7 +11,7 @@ import {
 import { ConvertMenu } from "./wb/cards/ConvertMenu";
 import { sourceOf } from "../lib/convert";
 import { CanvasPresenter } from "./wb/present/workspaces";
-import { CanvasEdgeCtx, canvasEdgeTypes, type CanvasEdgeApi } from "./CanvasEdge";
+import { CanvasEdgeCtx, canvasEdgeTypes, type CanvasEdgeApi, type RoutedEdge } from "./CanvasEdge";
 import { createContext, memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { CanvasEdge, CanvasNode, JsonCanvas, Note, Side } from "../../shared/types";
 import { createNote, duplicateNote, findOrCreateByTitle, restoreNote, trashNote, updateNote } from "../lib/actions";
@@ -30,6 +30,7 @@ import { CanvasOptions } from "./CanvasOptions";
 import { checkNewEdge } from "../lib/graph-checks";
 import { EdgeSeg, isTidyKey, TidyBanner, type EdgeShape, type TidyStats } from "./graph-display";
 import { Glyph } from "./Glyph";
+import { useVendorIconUrl } from "../lib/vendor-icons";
 import { CanvasKeys } from "./CanvasKeys";
 import { diagramFocus, diagramFolderFor, diagramHash, diagramKind, diagramText, fenced, mermaidBlocks, metaOf, migrateDiagramCards, newDiagramFile, parseDiagramText, type DiagramNode } from "../lib/diagrams";
 import { getSettings } from "../lib/settings";
@@ -87,6 +88,8 @@ function toFlow(c: JsonCanvas): { nodes: FlowNode[]; edges: Edge[] } {
   const edges = (c.edges ?? []).map(toFlowEdge);
   return { nodes, edges };
 }
+/** Drop the edge's bend points and label position (lumen keys, CanvasEdge.tsx): the line routes itself again. */
+const clearRoute = (e: CanvasEdge): CanvasEdge => { const { lumenPoints: _p, lumenLabelPos: _l, ...rest } = e as RoutedEdge; return rest; };
 /** A locked card can't be dragged or deleted on the board (it can still be selected, edited and connected). */
 const lockFlags = (n: CanvasNode) => (isLocked(n) ? { draggable: false, deletable: false } : { draggable: undefined, deletable: undefined });
 function toFlowEdge(e: CanvasEdge): Edge {
@@ -224,6 +227,12 @@ function DiagramBody({ id, n, name, src, selected, onEdit }: { id: string; n: Di
   );
 }
 
+/** A card's icon: a Lumen glyph, or a downloaded vendor icon (`vendor:aws/…`) shown exactly as published (never recoloured). */
+function CardIcon({ icon }: { icon: string }) {
+  const url = useVendorIconUrl(icon);
+  if (icon.startsWith("vendor:")) return url ? <img src={url} alt="" draggable={false} style={{ width: 22, height: 22, objectFit: "contain" }} /> : <Glyph name="service" size={20} />;
+  return <Glyph name={icon} size={20} />;
+}
 const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
   useLang();
   const n = data.node as Extract<CanvasNode, { type: "text" }>;
@@ -249,6 +258,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
     </>
   );
   const { title, body } = splitTitle(n.text);
+  const icon = (n as { lumenNode?: { icon?: string } }).lumenNode?.icon; // a card from the architecture studio / library keeps its icon
   const rich = /\$|\*\*|`|\[\[|!?\[[^\]]*\]\(att:|^\*[^*\n]+\* · |^\s*([-*>]|\d+\.)\s/m.test(body); // + attachments dropped onto the board (lib/dnd.ts) and their progress line
   return (
     <>
@@ -265,6 +275,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
           />
         ) : (
           <div className="nowheel flex h-full flex-col gap-1.5 overflow-auto px-3.5 py-3">
+            {icon && <CardIcon icon={icon} />}
             {title && <span dir="auto" className="text-[14px] font-[650]">{title}</span>}
             {body ? (
               rich
@@ -720,7 +731,7 @@ function Inner({ note }: { note: Note }) {
   const edgeNow: CanvasEdge = selEdges.length ? edgeOf(selEdges[0]) : defEdge;
   const edgeStyle = { path: edgePathOf(edgeNow) ?? (selEdges.length ? edgeShape : edgeShape), line: lineOf(edgeNow), width: widthOf(edgeNow), from: headOf(edgeNow, "from"), to: headOf(edgeNow, "to"), label: labelStyleOf(edgeNow) };
   const onEdgeStyle = (p: Partial<typeof edgeStyle>) => {
-    const fn = (e: CanvasEdge) => { let o = e; if (p.path) o = setEdgePath(o, p.path); if (p.line) o = setLine(o, p.line); if (p.width) o = setWidth(o, p.width); if (p.from) o = setHead(o, "from", p.from); if (p.to) o = setHead(o, "to", p.to); if (p.label) o = setLabelStyle(o, p.label); return o; };
+    const fn = (e: CanvasEdge) => { let o = e; if (p.path) { o = setEdgePath(o, p.path); o = clearRoute(o); } if (p.line) o = setLine(o, p.line); if (p.width) o = setWidth(o, p.width); if (p.from) o = setHead(o, "from", p.from); if (p.to) o = setHead(o, "to", p.to); if (p.label) o = setLabelStyle(o, p.label); return o; };
     if (!selEdges.length) { if (p.path) setMeta({ lumenEdgePath: p.path }); const { path: _p, ...rest } = p; if (Object.keys(rest).length) setDefEdge((d) => fn(d)); return; }
     setEdges((es) => es.map((e) => (e.selected ? { ...e, data: { edge: fn(edgeOf(e)) } } : e)));
   };
@@ -851,6 +862,8 @@ function Inner({ note }: { note: Note }) {
   const [edgeEdit, setEdgeEdit] = useState<string | null>(null);
   const edgeApi: CanvasEdgeApi = {
     editing: edgeEdit, setEditing: setEdgeEdit,
+    patch: (id, fn) => setEdges((es) => es.map((e) => (e.id !== id ? e : { ...e, data: { edge: fn(edgeOf(e)) } }))),
+    select: (id) => { setNodes((ns) => (ns.some((n) => n.selected) ? ns.map((n) => (n.selected ? { ...n, selected: false } : n)) : ns)); setEdges((es) => es.map((e) => (e.selected === (e.id === id) ? e : { ...e, selected: e.id === id }))); },
     saveLabel: (id, text) => { const x = text.trim(); setEdges((es) => es.map((e) => (e.id !== id ? e : { ...e, label: x || undefined, data: { edge: { ...edgeOf(e), ...(x ? { label: x } : {}) } } }))); },
     reconnect: (id, end, node, side) => setEdges((es) => es.map((e) => {
       if (e.id !== id) return e;
@@ -1231,6 +1244,8 @@ function Inner({ note }: { note: Note }) {
             <CanvasOptions selNodes={selNodes.length} selEdges={selEdges.length} node={nodeStyle} onNode={onNodeStyle} edge={edgeStyle} onEdge={onEdgeStyle}
               color={curColor} anySel={anySel} onColor={setColor} groups={{ collapsible: collapsibleOf(meta), pattern: groupPattern, example: exampleCount }} onGroups={onGroups}
               bg={{ pattern: bgPat, color: bgCol }} onBg={onBg} onClose={() => setOptsOpen(false)} customPalettes={customPalettes}
+              routed={selEdges.some((e) => { const x = e.data?.edge as RoutedEdge | undefined; return !!(x?.lumenPoints?.length || x?.lumenLabelPos != null); })}
+              onResetRoute={() => setEdges((es) => es.map((e) => (e.selected ? { ...e, data: { edge: clearRoute(edgeOf(e)) } } : e)))}
               onPresent={() => { setOptsOpen(false); setPresenting(true); }}
               onExport={() => { setOptsOpen(false); openCanvasExport(); }} />
           </div>

@@ -25,6 +25,8 @@ export interface OptionsProps {
   /** Hook for W2-A: synced custom palettes (name → colours) shown after the built-in ones. */
   customPalettes?: Record<string, string[]>;
   onPresent: () => void; onExport: () => void; onClose: () => void;
+  /** A selected edge has bend points or a moved label; Reset route drops them. */
+  routed?: boolean; onResetRoute?: () => void;
 }
 
 const AC = "color-mix(in srgb,var(--accent) 18%,transparent)";
@@ -131,6 +133,11 @@ export function CanvasOptions(p: OptionsProps) {
             <Row label={t("Label")}><Pick value={p.edge.label} onChange={(v) => p.onEdge({ label: v })} opts={LABEL_STYLES.map(([k, l]) => [k, l])} /></Row>
           </div>
         </Block>
+        {p.selEdges > 0 && (
+          <button disabled={!p.routed} onClick={p.onResetRoute} className="flex min-h-[34px] items-center gap-2 rounded-[8px] px-2 text-start text-[12.5px] hover:bg-bg disabled:opacity-50">
+            <Glyph name="undo" size={18} /><span style={{ flex: 1 }}>{t("Reset route")}</span><span style={{ fontSize: 11, color: "var(--muted)" }}>{p.routed ? t("manual") : t("auto")}</span>
+          </button>
+        )}
       </Card>
 
       <Card icon="palette" title={t("Colour")} sub={p.anySel ? undefined : t("New cards")}>

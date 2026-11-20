@@ -6,6 +6,7 @@ import { t, tk } from "../../lib/i18n";
 import { openNote, useVault } from "../../lib/store";
 import { displayOf, EDGE_STYLE, endsOf, GROUP_KINDS, NODE_KINDS, PRESET, STATUS, type AEdge, type LabelStyle, type ANode, type ArchStatus, type EdgeShape, type EdgeStyle, type Ends } from "../../lib/arch-model";
 import { Block, Row } from "./ArchUi";
+import { NodeIcon } from "./ArchFlow";
 
 // ------------------------------------------------------------------ catalogue (≈80 shapes)
 export interface Shape { g: string; l: string; cat: string; group?: boolean }
@@ -74,7 +75,7 @@ export function NodeProps({ n, onChange, usedIn, onReuse, phone }: { n: ANode; o
     <>
       <Block gap="4px">
         <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 32, padding: "0 8px", borderRadius: 8, border: "1px solid var(--border)" }}>
-          <Glyph name={ln.icon ?? "service"} size={17} />
+          <NodeIcon icon={ln.icon} fallback="service" size={17} />
           <input dir="auto" key={n.id + displayOf(n)} defaultValue={displayOf(n)} onBlur={(e) => { const x = e.target.value.trim(); if (x && x !== displayOf(n)) onChange({ ...n, text: x, lumenNode: { ...ln, name: x } } as ANode); }} onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
             style={{ flex: 1, minWidth: 0, background: "transparent", outline: "none", fontWeight: 600, fontSize: 12.5 }} aria-label={t("Name")} />
         </div>
@@ -169,7 +170,7 @@ export function EdgeProps({ e, onChange, names }: { e: AEdge; onChange: (e: AEdg
       <Block h={t("Route")} gap="2px" items={[
         { g: "undo", l: t("Reset route"), sub: shaped ? t("manual") : t("auto"), op: shaped ? 1 : 0.5, onClick: shaped ? () => setLe({ points: undefined, pointsKey: undefined, manual: undefined }) : undefined },
         ...(le.labelPos != null ? [{ g: "undo", l: t("Reset label position"), onClick: () => setLe({ labelPos: undefined }) }] : []),
-      ]} note={t("Select a line, then drag the dots to bend it: a midpoint adds a point, double-click a point to remove it. Drag a label along the line; drag an end onto another node or side to reconnect.")} />
+      ]} note={t("Drag a line anywhere, even on its label, to bend it; drag the dots to move bends, double-click a point to remove it. Move a label along the line by its grip; drag an end onto another node or side to reconnect.")} />
       <Block h={t("Connection")} gap="2px" items={styles.map((s) => ({ g: `edge-${s}`, gc: EDGE_STYLE[s][0], l: t(EDGE_STYLE[s][2]), on: (le.style ?? "sync") === s, onClick: () => setLe({ style: s }) }))} />
       <Block h={t("Shape")} seg={[t("Straight"), t("Orthogonal"), t("Curved")]} segOn={shapes.indexOf(le.shape ?? "orthogonal")} onSeg={(i) => setLe({ shape: shapes[i] })} />
       <Block h={t("Ends")} seg={[t("None"), t("One"), t("Both")]} segOn={ends.indexOf(endsOf(e))} onSeg={(i) => { const { fromEnd: _f, toEnd: _t, ...rest } = e; onChange({ ...rest, ...(ends[i] === "both" ? { fromEnd: "arrow" } : {}), ...(ends[i] === "none" ? { toEnd: "none" } : {}) }); }} />
