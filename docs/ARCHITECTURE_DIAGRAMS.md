@@ -1,6 +1,6 @@
 # Architecture & diagram studio: research, feature list, user experience, use cases
 
-> **Status:** research and specification only, nothing built yet.
+> **Status:** research and specification, merged into Claude Design round 6 (`docs/design/CLAUDE_DESIGN_UPDATE_06.md` §11–§13: Architecture studio, drag and drop everywhere, shared parts and conversions). Build order: `docs/WHITEBOARD_CANVAS_PLAN.md` waves 13–18. Nothing built yet; waiting for the design.
 > **Question answered here:** can Lumen do what Eraser does? That means drag-and-drop *and* text editing of diagrams and
 > system / cloud architecture, with JSON, Mermaid and live preview kept in sync, plus export and save.
 >

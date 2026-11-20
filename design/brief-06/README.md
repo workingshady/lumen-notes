@@ -11,6 +11,7 @@
 | `design/handoffs/2026-11-19-round-4/lumen-glyphs.js` | Current glyph set to extend |
 | `docs/FEATURES.md` | What exists (section 12 = this week's undo/history/media work) |
 | `docs/WHITEBOARD_ROADMAP.md` | Earlier whiteboard ideas and limits |
+| `docs/ARCHITECTURE_DIAGRAMS.md` | Architecture & diagram studio spec (brief §11), research, DSL example, data model |
 | `design/brief-06/screens/*.png` | 15 current-state screenshots (list below) |
 
 ## Screenshots (current state, demo data)
