@@ -49,8 +49,8 @@ function Item({ c }: { c: Cell }) {
       {c.input}
       {c.tog !== undefined && <span style={{ width: 30, height: 18, borderRadius: 999, background: c.tog ? "var(--accent)" : "var(--border)", position: "relative", flexShrink: 0, transition: "background .16s var(--ease)" }}><span style={{ position: "absolute", top: 2, left: c.tog ? 14 : 2, width: 14, height: 14, borderRadius: "50%", background: c.tog ? "var(--accent-fg)" : "var(--muted)", transition: "left .16s var(--ease)" }} /></span>}
       {c.sli && (() => { const [v, lo, hi, set] = c.sli; const pc = ((v - lo) / (hi - lo)) * 100; return (
-        <span style={{ display: "block", flex: 1, height: 4, borderRadius: 2, background: `linear-gradient(90deg,var(--accent) ${pc}%,var(--border) ${pc}%)`, position: "relative", minWidth: 60 }}>
-          <span style={{ position: "absolute", left: `${pc}%`, top: -6, width: 16, height: 16, marginLeft: -8, borderRadius: "50%", background: "var(--text)" }} />
+        <span style={{ display: "block", flex: 1, height: 4, borderRadius: 2, background: `linear-gradient(to ${typeof document !== "undefined" && getComputedStyle(document.documentElement).direction === "rtl" ? "left" : "right"},var(--accent) ${pc}%,var(--border) ${pc}%)`, position: "relative", minWidth: 60 }}>
+          <span style={{ position: "absolute", insetInlineStart: `${pc}%`, top: -6, width: 16, height: 16, marginInlineStart: -8, borderRadius: "50%", background: "var(--text)" }} />
           <input type="range" min={lo} max={hi} value={v} disabled={disabled} onChange={(e) => set(+e.target.value)} aria-label={c.l} style={{ position: "absolute", inset: "-8px 0", width: "100%", height: 20, opacity: 0, cursor: "pointer", margin: 0 }} />
         </span>); })()}
       {c.tag && <span style={{ fontSize: 10, fontWeight: 600, color: "var(--learn)", border: "1px solid var(--learn)", padding: "0 5px", borderRadius: 999, whiteSpace: "nowrap" }}>{c.tag}</span>}

@@ -398,7 +398,7 @@ async function saveBoard(c: Context<Env>, id: string, mutate: (scene: Record<str
   mutate(scene);
   const note: Note = {
     title: c.req.query("title") ?? "Whiteboard", spaceId: "inbox", folderId: null, tags: [], status: null, pinned: 0, favorite: 0, published: 0, slug: "",
-    props: {}, createdAt: now, deleted: 0, ...old, type: old?.type === "board" ? "board" : "whiteboard", body: JSON.stringify(scene), id, updatedAt: now,
+    props: {}, createdAt: now, deleted: 0, ...old, type: old ? (old.type === "board" ? "board" : "whiteboard") : c.req.query("type") === "board" ? "board" : "whiteboard", body: JSON.stringify(scene), id, updatedAt: now,
   };
   await putNote(c.env.DB, note);
   return scene;

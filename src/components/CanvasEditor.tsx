@@ -3,11 +3,9 @@ import {
   useEdgesState, useNodesState, useReactFlow, useViewport, type Connection, type Edge, type Node as RFNode, type NodeChange, type NodeProps,
 } from "@xyflow/react";
 import {
-  ArrowRight, Code2, CornerUpLeft, Copy, Download, Ellipsis, Pin, RotateCw, FilePlus, FileText, GitFork, Group, LayoutDashboard, LayoutGrid, Link2, ListTree, Minus, Network, Orbit, Pencil, Plus, Scan,
-  Image as ImageIcon, Search, SquareTerminal, Trash2, Type, Waypoints, Workflow,
-  AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignHorizontalSpaceAround, AlignStartHorizontal, AlignStartVertical, AlignVerticalSpaceAround,
-  BringToFront, Presentation, Shuffle, Check, ChevronDown, ClipboardPaste, CopyPlus, Focus, Grid3x3, Keyboard, Lock, Map as MapIcon, Redo2, Scissors, SendToBack, SlidersHorizontal, Undo2,
+  ArrowRight, RotateCw, LayoutGrid, ClipboardPaste, Focus, Keyboard, Scissors, SlidersHorizontal,
 } from "lucide-react";
+import { Code2, CornerUpLeft, Copy, Download, Ellipsis, Pin, FilePlus, FileText, GitFork, Group, LayoutDashboard, Link2, ListTree, Minus, Network, Orbit, Plus, Scan, ImageIcon, Search, SquareTerminal, Trash2, Type, Waypoints, Workflow, AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignHorizontalSpaceAround, AlignStartHorizontal, AlignStartVertical, AlignVerticalSpaceAround, BringToFront, Presentation, Shuffle, Check, ChevronDown, CopyPlus, Grid3x3, Lock, MapIcon, Redo2, SendToBack, Undo2, Pencil } from "./canvas-glyphs";
 import { ConvertMenu } from "./wb/cards/ConvertMenu";
 import { sourceOf } from "../lib/convert";
 import { CanvasPresenter } from "./wb/present/workspaces";
@@ -1086,7 +1084,7 @@ function Inner({ note }: { note: Note }) {
     openNote(n.id);
   };
   const duplicate = async () => { const d = await duplicateNote(note.id); if (d) openNote(d.id); };
-  const del = async () => { await trashNote(note.id); setUI({ noteId: null }); toast(t("Canvas moved to trash"), { label: t("Undo"), run: () => { void restoreNote(note.id); openNote(note.id); } }); };
+  const del = async () => { const title = note.title; await trashNote(note.id); setUI({ noteId: null }); toast(t("“{title}” moved to Trash", { title }), { label: t("Undo"), run: () => { void restoreNote(note.id); openNote(note.id); } }); };
 
   const addTools: Tool[] = [
     // [name (English key, rendered with t()), icon, label (translated), run, on]
@@ -1240,7 +1238,7 @@ function Inner({ note }: { note: Note }) {
           onNodeDragStart={dragStart} onNodeDragStop={dragStop} onSelectionDragStart={dragStart} onSelectionDragStop={dragStop}
           onConnectStart={() => setConnecting(true)} onConnectEnd={() => setConnecting(false)}
           connectionMode={ConnectionMode.Loose} fitView fitViewOptions={{ padding: innerWidth < 768 ? 0.06 : 0.15, maxZoom: 1 }} minZoom={0.05} maxZoom={3} snapToGrid={view.snap} snapGrid={[20, 20]} zoomOnDoubleClick={false}
-          deleteKeyCode={["Delete", "Backspace"]} multiSelectionKeyCode={["Shift", "Meta", "Control"]} proOptions={{ hideAttribution: true }}
+          deleteKeyCode={["Delete", "Backspace"]} onDelete={({ nodes: dn, edges: de }) => { const ids = new Set(dn.map((x) => x.id)); const n = dn.length + de.filter((e) => !ids.has(e.source) && !ids.has(e.target)).length; if (n) { toast(t("Deleted {n} item|Deleted {n} items", { n }), { label: t("Undo"), run: () => undo() }); } }} multiSelectionKeyCode={["Shift", "Meta", "Control"]} proOptions={{ hideAttribution: true }}
           connectionLineStyle={{ stroke: "var(--accent)", strokeWidth: 2 }} style={bgCol ? { background: `color-mix(in srgb, ${colorOf(bgCol)} 10%, var(--bg))` } : undefined}
           onEdgeDoubleClick={(_, e) => setEdgeEdit(e.id)} disableKeyboardA11y
         >

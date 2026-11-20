@@ -313,7 +313,7 @@ export function ImportExportDialog() {
   const targetSpace = v.spaceMap.get(job?.spaceId ?? target);
   const pct = (p: Progress) => (p.total ? Math.round((p.done / p.total) * 100) : 0);
 
-  const fileInput = <input ref={input} data-io-input type="file" multiple hidden accept=".md,.markdown,.txt,.canvas,.excalidraw,.zip,.json" onChange={(e) => { void run([...(e.target.files ?? [])]); e.target.value = ""; }} />;
+  const fileInput = <input ref={input} data-io-input type="file" multiple hidden accept=".md,.markdown,.txt,.canvas,.excalidraw,.mermaid,.mmd,.zip,.json" onChange={(e) => { void run([...(e.target.files ?? [])]); e.target.value = ""; }} />;
 
   const importBody = (
     <div className="flex flex-col gap-4 px-[22px] py-5">
@@ -340,8 +340,8 @@ export function ImportExportDialog() {
           onDragOver={(e) => { e.preventDefault(); setOver(true); }}
           onDragLeave={() => setOver(false)}
           onDrop={(e) => { e.preventDefault(); setOver(false); void run([...e.dataTransfer.files]); }}
-          onClick={() => pick(".md,.markdown,.txt,.canvas,.excalidraw,.zip,.json")}
-          role="button" tabIndex={0} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && pick(".md,.markdown,.txt,.canvas,.excalidraw,.zip,.json")}
+          onClick={() => pick(".md,.markdown,.txt,.canvas,.excalidraw,.mermaid,.mmd,.zip,.json")}
+          role="button" tabIndex={0} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && pick(".md,.markdown,.txt,.canvas,.excalidraw,.mermaid,.mmd,.zip,.json")}
           className={cx("flex h-[120px] cursor-pointer flex-col items-center justify-center gap-2 rounded-[12px] border-[1.5px] border-dashed text-muted", over ? "border-accent bg-accent/10" : "border-line hover:border-muted")}
         >
           <Upload size={22} />

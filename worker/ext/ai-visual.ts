@@ -4,33 +4,48 @@ import type { Env, Helpers } from "../index";
 /**
  * AI for visuals (round 7 · Lumen 35 review sheet, Lumen 48 architecture AI). Client: src/lib/ai-convert.ts.
  * All routes sit under /api/ai/… so they go through the existing `auth` and the AI usage meter / daily limit
- * (worker/ext/ai-usage.ts, feature bucket "other").
+ * (worker/ext/ai-usage.ts, feature bucket "other"; the meter still estimates from body size, it ignores our `neurons`).
  *
- *  POST /api/ai/visual/convert {image: "data:image/png;base64,…" | base64, kind: text|math|mermaid|shapes-hint}
- *       → {text, spans: [{start,end,alts[]}], kind, model, neurons}
- *  POST /api/ai/visual/arch    {text, source?: describe|code|openapi|compose|k8s|terraform|sql|rfc, type?: architecture|flowchart|sequence|erd|c4}
- *       → {dsl, neurons}
+ *  POST /api/ai/visual/convert {image: "data:image/(png|jpeg|webp);base64,…", kind: text|math|mermaid|shapes-hint}
+ *       → {text, spans: [{start,end,alts[]}], kind, model, neurons, cached?}
+ *  POST /api/ai/visual/arch    {text, source?, type?} → {dsl, neurons}
  *  POST /api/ai/visual/edit    {dsl, instruction} → {dsl, neurons}
  *  POST /api/ai/visual/review  {dsl, mode?: review|docs|cards} → {review} | {text}, plus {neurons}
  *
- * Vision: @cf/meta/llama-3.2-11b-vision-instruct first (Cloudflare tutorial format: data-URI string in the top-level
- * `image` field next to `messages`), then @cf/meta/llama-4-scout-17b-16e-instruct (OpenAI-style `image_url` content part).
- * The Llama 3.2 licence must be accepted once per account: on a "not agreed" error we send {prompt:"agree"} and retry.
- * Low confidence: the model is asked to wrap guesses as {{word|alt|alt}}; we strip the markers and return spans.
+ * Vision models, in order (checked against the Workers AI docs on 2026-11-20; only DOCUMENTED request shapes are used):
+ *  1. @cf/qwen/qwen3.8-27b: OpenAI chat schema: user content parts {type:"image_url", image_url:{url:data-URI}},
+ *     `response_format` json_schema, `reasoning_effort` low; answer in choices[0].message.content, real `usage`.
+ *     https://developers.cloudflare.com/workers-ai/models/qwen3.8-27b/  (+ /sync-input.json, /sync-output.json)
+ *  2. @cf/meta/llama-3.2-11b-vision-instruct: tutorial shape {messages, image: data-URI string}; no JSON mode, no usage
+ *     documented; one-time licence step {prompt:"agree"} (error code 5016 "agree" message; the docs show no error shape).
+ *     https://developers.cloudflare.com/workers-ai/guides/tutorials/llama-vision-tutorial/index.md
+ *  Not used: Llama 4 Scout and Mistral Small 3.1 (their pages document no image input), Kimi K2.6 (deprecated 2026-11-20).
+ * Image limit: the docs state none. We send ≤1280 px JPEG/PNG (client), cap the body server-side and answer 413.
+ * Cache: D1 table ai_visual_cache (24 h) in the account's own database; no KV binding exists.
+ * Reliability: one 45 s deadline for everything (AbortSignal), one backoff retry on 5xx, one repair retry on invalid output.
  */
-const VISION = "@cf/meta/llama-3.2-11b-vision-instruct";
-const SCOUT = "@cf/meta/llama-4-scout-17b-16e-instruct";
+const QWEN = "@cf/qwen/qwen3.8-27b";
+const LLAMA32 = "@cf/meta/llama-3.2-11b-vision-instruct";
 const TEXT = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
-const TIMEOUT = 50_000;
-const MAX_IMAGE = 3_500_000; // chars of base64 (~2.6 MB)
+const DEADLINE = 45_000;
+const MAX_IMAGE = 2_000_000; // chars of base64 (~1.5 MB decoded); the client sends far less
+const CACHE_TTL = 24 * 3600_000;
+/** Neurons per million tokens (= $/M ÷ $0.000011): Qwen3.8 27B $0.45/$3.20, Llama 3.2 11B $0.0485/$0.676, Llama 3.3 70B fp8-fast. */
+const RATES: Record<string, [number, number]> = { [QWEN]: [40_909, 290_909], [LLAMA32]: [4_409, 61_455], [TEXT]: [26_668, 204_805] };
 
-const MARK = "Where you are unsure of a word or symbol, write it as {{best guess|alternative|alternative}} (up to 3 alternatives). Use this only for real doubt.";
+const MARK = "Where you are unsure of a word, write it as {{best guess|alternative|alternative}} (up to 3 alternatives). Use this only for real doubt.";
+const NONE = "If nothing legible is drawn, answer exactly NO_TEXT.";
 const CONVERT: Record<string, string> = {
-  text: `Transcribe the handwriting or text in this image exactly. Keep line breaks. Write maths inline as plain Unicode (n₁ sin θ₁). Output only the transcription, no commentary. ${MARK}`,
-  math: `Transcribe the mathematics in this image as LaTeX. Output only the LaTeX source, without $ delimiters and without code fences. ${MARK}`,
-  mermaid: `Convert the diagram or flow sketched in this image into Mermaid code (flowchart LR unless another type is clearly drawn). Output only the Mermaid source, without code fences. ${MARK}`,
-  "shapes-hint": `List the shapes and arrows in this sketch as a Mermaid flowchart so they can be redrawn as clean shapes. Output only the Mermaid source, without code fences. ${MARK}`,
+  text: `Transcribe the handwriting or text in this image exactly. Keep line breaks, use Markdown bullets where bullets are drawn. Do not correct spelling or maths. Write maths inline as plain Unicode (n₁ sin θ₁). No commentary. ${MARK} ${NONE}`,
+  math: `Transcribe the mathematics in this image as LaTeX (\frac, \sqrt, aligned for several lines). Output only the LaTeX source, without $ delimiters and without code fences. Do not correct the maths. ${NONE}`,
+  mermaid: `Convert the diagram or flow sketched in this image into Mermaid code (flowchart LR unless another type is clearly drawn). Use explicit node ids, quote labels, label edges only if drawn. Output only the Mermaid source, without code fences. ${NONE}`,
+  "shapes-hint": `List the shapes and arrows in this sketch as a Mermaid flowchart (flowchart LR, explicit node ids, quoted labels) so they can be redrawn as clean shapes. Output only the Mermaid source, without code fences. ${NONE}`,
 };
+const FIELD: Record<string, string> = { text: "text", math: "latex", mermaid: "mermaid", "shapes-hint": "mermaid" };
+const schemaOf = (kind: string) => ({
+  type: "json_schema",
+  json_schema: { name: "ink_" + FIELD[kind], strict: true, schema: { type: "object", properties: { [FIELD[kind]]: { type: "string" } }, required: [FIELD[kind]], additionalProperties: false } },
+});
 
 const DSL_GRAMMAR = `Lumen diagram DSL (output ONLY this, no prose, no code fences):
 direction right            (or down)
@@ -50,77 +65,7 @@ const SOURCE_HINT: Record<string, string> = {
   k8s: "Kubernetes manifests.", terraform: "Terraform or CloudFormation.", sql: "SQL DDL or ORM models.", rfc: "An RFC or PRD note.",
 };
 
-type AiBinding = { run: (m: string, input: unknown) => Promise<unknown> };
-
-/** Strip code fences and chatter around model output. */
-export function cleanCode(s: string): string {
-  const m = s.match(/```[\w-]*\n([\s\S]*?)```/);
-  return (m ? m[1] : s).replace(/^\s*(here is|here's)[^\n]*\n/i, "").trim();
-}
-
-/** Parse {{best|alt|alt}} markers into plain text plus spans over it. */
-export function parseMarks(raw: string): { text: string; spans: { start: number; end: number; alts: string[] }[] } {
-  let text = "";
-  const spans: { start: number; end: number; alts: string[] }[] = [];
-  let last = 0;
-  for (const m of raw.matchAll(/\{\{([^{}]+?)\}\}/g)) {
-    text += raw.slice(last, m.index);
-    const [best, ...alts] = m[1].split("|").map((x) => x.trim());
-    spans.push({ start: text.length, end: text.length + best.length, alts: alts.filter(Boolean) });
-    text += best;
-    last = m.index! + m[0].length;
-  }
-  text += raw.slice(last);
-  return { text, spans };
-}
-
-const withTimeout = <T,>(p: Promise<T>) =>
-  Promise.race([p, new Promise<T>((_, rej) => setTimeout(() => rej(new Error("timeout")), TIMEOUT))]);
-
-const errMsg = (e: unknown) => String((e as Error)?.message ?? e);
-const mapError = (e: unknown): { status: 429 | 502 | 504; error: string; code?: string } => {
-  const m = errMsg(e);
-  if (/timeout|499/i.test(m)) return { status: 504, error: "The AI took too long. Try a smaller selection." };
-  if (/limit|quota|capacity|429|3036|4006/i.test(m)) return { status: 429, error: "Daily free AI limit reached. Try tomorrow.", code: "ai_limit" };
-  return { status: 502, error: "AI request failed." };
-};
-
-async function agree(ai: AiBinding) { try { await ai.run(VISION, { prompt: "agree" }); } catch { /* already agreed or not required */ } }
-
-async function vision(ai: AiBinding, dataUri: string, prompt: string): Promise<{ text: string; model: string }> {
-  const messages = [{ role: "user", content: prompt }];
-  const attempts: [string, () => Promise<unknown>][] = [
-    [VISION, () => ai.run(VISION, { messages, image: dataUri, max_tokens: 1024, temperature: 0.1 })],
-    [SCOUT, () => ai.run(SCOUT, { messages: [{ role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: dataUri } }] }], max_tokens: 1024, temperature: 0.1 })],
-  ];
-  let lastErr: unknown;
-  for (const [model, run] of attempts) {
-    for (let i = 0; i < 2; i++) {
-      try {
-        const r = (await withTimeout(run())) as { response?: string; choices?: { message?: { content?: string } }[] };
-        const out = (r.response ?? r.choices?.[0]?.message?.content ?? "").toString().trim();
-        if (out) return { text: out, model };
-        lastErr = new Error("empty");
-        break;
-      } catch (e) {
-        lastErr = e;
-        if (model === VISION && i === 0 && /agree|licen[cs]e|5016|terms/i.test(errMsg(e))) { await agree(ai); continue; }
-        break;
-      }
-    }
-    if (/limit|quota|429|timeout/i.test(errMsg(lastErr))) break; // retrying another model won't help
-  }
-  throw lastErr;
-}
-
-async function chat(ai: AiBinding, system: string, user: string, max = 1800): Promise<string> {
-  const r = (await withTimeout(ai.run(TEXT, { messages: [{ role: "system", content: system }, { role: "user", content: user.slice(0, 24_000) }], max_tokens: max, temperature: 0.2 }))) as { response?: string };
-  return (r.response ?? "").trim();
-}
-
-/** Neurons estimate (Workers AI doesn't return them): text ~4 chars/token, an image ~1,100 tokens. */
-const neurons = (inChars: number, outChars: number, image = false) => Math.max(1, Math.round(((inChars / 4 + (image ? 1100 : 0)) * 4.41 + (outChars / 4) * 6.41) / 1000));
-
+@@MID@@
 export default function register(api: Hono<Env>, { auth }: Helpers) {
   const body = async <T,>(c: { req: { json: <U>() => Promise<U> } }) => c.req.json<T>().catch(() => null);
 

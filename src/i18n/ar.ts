@@ -33,6 +33,7 @@ import { ar as dnd } from "./ar/dnd"; // drag and drop (round 7, W2-C)
 import { ar as library } from "./ar/library"; // shared library, connector / style popovers, stamps (round 7, W2-B)
 import { ar as arch } from "./ar/arch"; // architecture studio (round 7)
 import { ar as archEdges } from "./ar/arch-edges"; // architecture edge editing (round 7 W2-D)
+import { ar as r7Consistency } from "./ar/r7-consistency"; // round 7 stage 4 consistency pass
 import { ar as api } from "./ar/api"; // Settings › Developer endpoints // round 6: note list filter/multi-select, tags, history panel
 
 /**
@@ -40,4 +41,4 @@ import { ar as api } from "./ar/api"; // Settings › Developer endpoints // rou
  * Split by area so several people can add strings without conflicts; later areas override earlier ones on a clash.
  * Product names (Lumen) and technical terms Arabic users expect in English (Markdown, PDF, FSRS, JSON, URL) stay as is.
  */
-export const AR: Catalog = { ...convert, ...archAiShare, ...dnd, ...library, ...arch, ...archEdges, ...aiVisual, ...activity, ...scale, ...shell, ...home, ...workspace, ...editor, ...paths, ...review, ...settings, ...data, ...dialogs, ...imports, ...accounts, ...sweep, ...r6b, ...r6a, ...organize, ...api, ...canvas, ...wbFix, ...wbW3a, ...wbPens, ...whiteboard, ...canvasOptions, ...exportAr, ...r7ArchFix, ...common, ...visualChooser };
+export const AR: Catalog = { ...convert, ...archAiShare, ...dnd, ...library, ...arch, ...archEdges, ...aiVisual, ...activity, ...scale, ...shell, ...home, ...workspace, ...editor, ...paths, ...review, ...settings, ...data, ...dialogs, ...imports, ...accounts, ...sweep, ...r6b, ...r6a, ...organize, ...api, ...canvas, ...wbFix, ...wbW3a, ...wbPens, ...whiteboard, ...canvasOptions, ...exportAr, ...r7ArchFix, ...common, ...visualChooser, ...r7Consistency };

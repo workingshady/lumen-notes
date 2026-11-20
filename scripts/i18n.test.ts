@@ -3,8 +3,9 @@
 // every literal key used with t() / tx() / tk() / tr() in src must have an Arabic entry (count must be 0).
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { catalog, fmtDate, fmtNum, fmtRelative, locale, resolveLang, tIn, type PluralForms } from "../src/lib/i18n";
+import { catalog, loadCatalog, fmtDate, fmtNum, fmtRelative, locale, resolveLang, tIn, type PluralForms } from "../src/lib/i18n";
 
+await loadCatalog("ar"); // the Arabic catalog is a lazy chunk in the app
 let failed = 0, passed = 0;
 function ok(cond: unknown, msg: string) { if (cond) passed++; else { failed++; console.error("FAIL:", msg); } }
 function eq<T>(a: T, b: T, msg: string) { const A = JSON.stringify(a), B = JSON.stringify(b); ok(A === B, `${msg}\n   got:      ${A}\n   expected: ${B}`); }
@@ -87,7 +88,7 @@ for (const f of files) {
 }
 const missing = [...used].filter(([k]) => !(k in AR) && !/^[\s\d\W]*$/.test(k));
 console.log(`coverage: ${used.size} keys used in ${files.length} files, ${Object.keys(AR).length} Arabic entries, ${missing.length} without an Arabic entry`);
-for (const [k, f] of missing.slice(0, 80)) console.log(`  missing: ${JSON.stringify(k)}  (${f})`);
+for (const [k, f] of missing.slice(0, 200)) console.log(`  missing: ${JSON.stringify(k)}  (${f})`);
 eq(missing.length, 0, "every t() key has an Arabic entry");
 
 console.log(`${passed} passed, ${failed} failed`);

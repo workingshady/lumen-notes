@@ -1,0 +1,43 @@
+{
+ "shell": {
+  "unnamed": [
+   "button@618,805 <button disabled=\"\" class=\"rounded-[3px] size-3\" style=\"background: transparent;\"></button>"
+  ],
+  "errors": []
+ },
+ "whiteboard": {
+  "unnamed": [],
+  "errors": []
+ },
+ "wbSheet": "Help\nDocumentation\nRead our blog\nFound an issue? Submit\nYouTube\nKeyboard shortcuts\nTools\nHand (panning tool)\nH\nSelection\nV\nor\n1\nRectangle\nR\nor\n2\nDiamond\nD\nor\n3\nEllipse\nO\nor\n4\nArrow\nA\nor\n5\nLine\nL\nor\n6\nDraw\nP\nor\n7\nText\nT\nor\n8\nInsert image\n9\nEraser\nE\nor\n0\nFrame tool\nF\nLaser pointer\nK\nPick color from canvas\nI\nor\nShift\nS\nor\nShift\nG\nEdit line/arrow points\nCtrl\nEnter\nEdit text / add label\nEnter\nAdd new line (text editor)\nEnter\nor\nShift\nEnter\nFinish editing (text editor)\nEsc\nor\nCtrl\nEnter\nCurved arrow\nA\nclick\nclick\nclick\nCurved line\nL\nclick\nclick\nclick\nCrop image\ndouble-click\nor\nEnter\nFinish image cropping\nEnter\nor\nEscape\nKeep selected tool active after drawing\nQ\nPrevent arrow binding\nCtrl\nAdd / Update link for a selected shape\nCtrl\nK\nView\nZoom in\nCtrl\n+\nZoom out\nCtrl\n-\nReset zoom\nCtrl\n0\nZoom to fit all elements\nShift\n1\nZoom to selection\nShift\n2\nMove page up/down\nPgUp/PgDn\nMove page left/right\nShift\nPgUp/PgDn\nZen mode\nAlt\nZ\nSnap to objects\nAlt\nS\nToggle grid\nCtrl\n'\nView mode\nAlt\nR\nToggle light/dark theme\nAlt\nShift\nD\nCanvas & Shape properties\nAlt\n/\nFind on canvas\nCtrl\nF\nCommand palette\nCtrl\n/\nor\nCtrl\nShift\nP\nEditor\nCreate a flowchart from a generic element\nCtrl\nArrow Key\nNavigate a flowchart\nAlt\nArrow Key\nMove canvas\nSpace\ndrag\nor\nWheel\ndrag\nReset the canvas\nCtrl\nDelete\nDelete\nDelete\nCut\nCtrl\nX\nCopy\nCtrl\nC\nPaste\nCtrl\nV\nPaste as plaintext\nCtrl\nShift\nV\nSelect all\nCtrl\nA\nAdd element to selection\nShift\nclick\nDeep select\nCtrl\nclick\nDeep select within box, and prevent dragging\nCtrl\ndrag\nCopy",
+ "whiteboard-keys": {
+  "unnamed": [],
+  "errors": []
+ },
+ "canvas": {
+  "unnamed": [],
+  "errors": []
+ },
+ "cvSheet": "Canvas shortcuts\nUndo\nCtrl Z\nRedo\nCtrl Shift Z · Ctrl Y\nCopy / cut / paste cards\nCtrl C · X · V\nDuplicate cards\nCtrl D\nSelect all\nCtrl A\nDelete selected\nDelete · Backspace\nNudge (bigger step with Shift)\n← ↑ → ↓\nLock / unlock\nCtrl Shift L\nBring to front\nCtrl Shift ]\nSend to back\nCtrl Shift [\nFit the board\nShift 1\nZoom to selection\nShift 2\nTidy up\nShift T\nScript console\nCtrl `\nNew text card\nDouble-click\nSelect several\nShift click · Shift drag\nKeyboard shortcuts\n?",
+ "canvas-keys": {
+  "unnamed": [],
+  "errors": []
+ },
+ "arch": {
+  "unnamed": [],
+  "errors": []
+ },
+ "arSheet": "Keyboard shortcuts\n?\nUndo\nCtrl Z\nRedo\nCtrl Shift Z · Ctrl Y\nDelete selected\nDelete · Backspace\nDuplicate\nCtrl D\nCopy / cut / paste\nCtrl C · X · V\nSelect all\nCtrl A\nSelect several\nShift click\nNudge (bigger step with Shift)\n← ↑ → ↓\nRename node · edit edge label\nEnter · F2\nGroup · ungroup\nCtrl G · Ctrl Shift G\nDeselect · close\nEsc\nAuto layout\nCtrl Shift L\nFit the diagram\nShift 1\nKeyboard shortcuts\n?",
+ "arch-keys": {
+  "unnamed": [],
+  "errors": []
+ },
+ "board": {
+  "unnamed": [],
+  "errors": []
+ },
+ "mermaid": {
+  "unnamed": [],
+  "errors": []
+ }
+}

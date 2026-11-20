@@ -1,7 +1,6 @@
 // Canvas options panel (design round 7, frames 43A / 43B / 43D): node shape, border, card background, edge path / line /
 // heads / width / label, colour (presets + palettes), groups and board background. Desktop = a drawer on the board,
 // phone = a full sheet. All data lives in lumen* keys (lib/canvas-style.ts).
-import { X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Glyph } from "./Glyph";
 import type { GlyphName } from "../lib/glyphs";
@@ -110,7 +109,7 @@ export function CanvasOptions(p: OptionsProps) {
         <span style={{ fontSize: 18, fontWeight: 650, letterSpacing: "-.01em" }}>{t("Canvas options")}</span>
         <span className="md:hidden" style={{ fontSize: 12.5, color: "var(--muted)", flex: 1, minWidth: 0 }}>{t("JSON Canvas; Lumen extras saved as lumen* keys")}</span>
         <span className="max-md:hidden" style={{ flex: 1 }} />
-        <button aria-label={t("Close")} onClick={p.onClose} style={{ display: "flex", width: 32, height: 32, alignItems: "center", justifyContent: "center", borderRadius: 8, border: "1px solid var(--border)" }}><X size={15} /></button>
+        <button aria-label={t("Close")} onClick={p.onClose} style={{ display: "flex", width: 32, height: 32, alignItems: "center", justifyContent: "center", borderRadius: 8, border: "1px solid var(--border)" }}><Glyph name="x" size={15} /></button>
       </div>
 
       <Card icon="rect" title={t("Node shape")} sub={nSel}>
@@ -166,7 +165,7 @@ export function CanvasOptions(p: OptionsProps) {
           <Row label={t("Group pattern")}><Pick value={p.groups.pattern} onChange={(v) => p.onGroups({ pattern: v })} opts={patOpts} /></Row>
           <Row label={t("Canvas background")}><Pick value={p.bg.pattern === "lines" ? "none" : p.bg.pattern} onChange={(v) => p.onBg({ pattern: v })} opts={patOpts.filter((o) => o[0] !== "lines")} /></Row>
           <Row label={t("Background colour")}><Pick value={p.bg.color ?? ""} onChange={(v) => p.onBg({ color: v || null })} opts={BG_COLORS} /></Row>
-          <Row label={t("Portals")}><span className="rounded-full border border-[var(--lens,#B48EF0)] px-[5px] text-[10px] font-semibold text-[#B48EF0]">{t("Later")}</span><Toggle on={false} disabled label={t("Portals")} /></Row>
+          <Row label={t("Portals")}><span className="rounded-full border border-[var(--learn)] px-[5px] text-[10px] font-semibold text-[var(--learn)]">{t("Later")}</span><Toggle on={false} disabled label={t("Portals")} /></Row>
           <button onClick={p.onPresent} className="flex min-h-[34px] items-center gap-2 rounded-[8px] px-2 text-start text-[12.5px] hover:bg-bg"><Glyph name="present" size={18} />{t("Present groups as slides")}</button>
           <button onClick={p.onExport} className="flex min-h-[34px] items-center gap-2 rounded-[8px] px-2 text-start text-[12.5px] hover:bg-bg"><Glyph name="export" size={18} />{t("Export…")}</button>
         </div>

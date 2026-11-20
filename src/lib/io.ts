@@ -18,6 +18,12 @@ export function download(name: string, data: Blob | string, mime = "text/plain")
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
+/** Tag a Board's exported scene so a re-import opens it as a Board again (`lumen*` keys are ignored by other apps). */
+function withLumenType(scene: string, type: Note["type"]) {
+  if (type !== "board") return scene;
+  try { return JSON.stringify({ ...JSON.parse(scene), lumenType: "board" }); } catch { return scene; }
+}
+
 export function noteToMarkdown(n: Note) {
   if (n.type === "canvas" || isWbType(n.type)) return n.body;
   const fm = toFrontMatter({ title: n.title, type: n.type !== "note" ? n.type : undefined, status: n.status ?? undefined, tags: n.tags, created: new Date(n.createdAt).toISOString(), slug: n.slug || undefined, ...n.props });
@@ -165,7 +171,8 @@ export async function exportVaultZip(opts: ExportOptions = {}): Promise<ExportRe
     for (let i = 2; used.has(p.toLowerCase()); i++) p = `${pathOf(n)}/${safe(n.title.replace(/\.mermaid$/i, ""))} ${i}${n.type === "canvas" ? ".canvas" : isWbType(n.type) ? ".excalidraw" : n.type === "diagram" ? ".mermaid" : ".md"}`;
     used.add(p.toLowerCase());
     // Whiteboards keep images as attachment refs; the exported .excalidraw gets them inlined so it opens anywhere.
-    zip.file(p, isWbType(n.type) ? await (await import("./wb-files")).inlineSceneFiles(n.body, attachmentBytes) : noteToMarkdown(n));
+    // A Board is an .excalidraw scene too; `lumenType` lets a re-import restore the Board type (other apps ignore it).
+    zip.file(p, isWbType(n.type) ? withLumenType(await (await import("./wb-files")).inlineSceneFiles(n.body, attachmentBytes), n.type) : noteToMarkdown(n));
     opts.onProgress?.(++done, total, p);
   }
   const skipped: ExportResult["skipped"] = [];
@@ -265,7 +272,7 @@ export async function importFiles(files: File[], spaceId: string, folderId: stri
     if (name.endsWith(".zip")) { await importZip(zips.get(f)!, folderId, ctx); continue; }
     if (name.endsWith(".json")) await importBackup(f, res);
     else if (/\.(md|markdown|txt)$/.test(name)) await importOne(ctx, f.name, await f.text(), folderId);
-    else if (/\.(excalidraw|canvas)$/.test(name)) await importOne(ctx, f.name, await f.text(), folderId);
+    else if (/\.(excalidraw|canvas|mermaid|mmd)$/.test(name)) await importOne(ctx, f.name, await f.text(), folderId);
     else res.skipped.push(f.name);
     for (const fn of ctx.later.splice(0)) await fn();
     opts.onProgress?.(++ctx.done, total, f.name);
@@ -293,9 +300,10 @@ function mapTags(text: string, map?: Record<string, string>) {
 async function importOne(ctx: Ctx, fname: string, raw: string, folderId: string | null) {
   const { spaceId, res, o } = ctx;
   const lower = fname.toLowerCase();
-  const kind = lower.endsWith(".excalidraw") ? "whiteboard" : lower.endsWith(".canvas") ? "canvas" : "md";
-  const text = kind === "md" ? mapTags(raw, o.tagMap) : raw;
-  let title = kind === "md" ? splitFrontMatter(text).data.title || fname.replace(/\.(md|markdown|txt)$/i, "") : fname.replace(/\.(excalidraw|canvas)$/i, "");
+  const kind = lower.endsWith(".excalidraw") ? (/"lumenType"\s*:\s*"board"/.test(raw) ? "board" : "whiteboard") : lower.endsWith(".canvas") ? "canvas" : /\.(mermaid|mmd)$/.test(lower) ? "diagram" : "md";
+  // .mermaid / .mmd files become diagram files (note type "diagram", title "<name>.mermaid", body = the raw Mermaid text).
+  const text = kind === "md" ? mapTags(raw, o.tagMap) : kind === "diagram" ? raw.replace(/^\s*```mermaid[^\n]*\n|\n?```\s*$/g, "").trim() + "\n" : raw;
+  let title = kind === "md" ? splitFrontMatter(text).data.title || fname.replace(/\.(md|markdown|txt)$/i, "") : kind === "diagram" ? fname.replace(/\.(mermaid|mmd)$/i, "") + ".mermaid" : fname.replace(/\.(excalidraw|canvas)$/i, "");
   const dup = ctx.existing.get(dupKey(spaceId, folderId, title));
   if (dup) {
     res.duplicates = (res.duplicates ?? 0) + 1;
@@ -308,7 +316,7 @@ async function importOne(ctx: Ctx, fname: string, raw: string, folderId: string 
     }
     title = nextFree(ctx, spaceId, folderId, title);
   }
-  const n = kind === "md" ? await importMd(title, text, spaceId, folderId) : await createNote({ type: kind, title, body: text, spaceId, folderId });
+  const n = kind === "md" ? await importMd(title, text, spaceId, folderId) : await createNote({ type: kind, title, body: text, spaceId, folderId, ...(kind === "diagram" ? { tags: ["diagram"] } : {}) });
   ctx.existing.set(dupKey(spaceId, folderId, n.title), n);
   res.notes++;
 }
@@ -358,7 +366,7 @@ async function importZip(zip: JSZip, rootFolder: string | null, ctx: Ctx) {
     const batch = entries.slice(i, i + 20);
     o.onProgress?.(ctx.done, ctx.total, batch[0].name);
     // Read the bytes first: awaiting non-IndexedDB work inside a transaction would commit it early.
-    const texts = await Promise.all(batch.map((e) => (/\.(md|markdown|canvas|excalidraw)$/i.test(e.name) ? e.async("string") : Promise.resolve(null))));
+    const texts = await Promise.all(batch.map((e) => (/\.(md|markdown|canvas|excalidraw|mermaid|mmd)$/i.test(e.name) ? e.async("string") : Promise.resolve(null))));
     await db.transaction("rw", [db.notes, db.folders, db.versions], async () => {
       for (const [k, entry] of batch.entries()) {
         const parts = entry.name.split("/");

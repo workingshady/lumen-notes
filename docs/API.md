@@ -6,7 +6,7 @@ can only GET). Machine-readable description: `GET /api/openapi.json` (OpenAPI 3.
 | Method | Path | What |
 |---|---|---|
 | GET | `/notes` | List notes (metadata). Query: `q`, `type`, `space`, `folder`, `tag`, `since` (ms), `limit`, `offset` |
-| POST | `/notes` | Create `{ title, body, type, spaceId, folderId, tags, props, id? }` → 201 (409 if the id exists) |
+| POST | `/notes` | Create `{ title, body, type, spaceId, folderId, tags, props, id? }` → 201 (409 if the id exists). Without `body`, `canvas` / `whiteboard` / `board` notes start as an empty JSON Canvas / .excalidraw scene |
 | GET / PUT / DELETE | `/notes/:id` | Note JSON · create-or-update with a partial note · move to Trash |
 | GET | `/notes/:id/markdown` | Markdown with front matter |
 | POST | `/notes/:id/append` | `{ text, heading? }` append at the end, or at the end of that heading's section (created if missing) |
@@ -16,7 +16,7 @@ can only GET). Machine-readable description: `GET /api/openapi.json` (OpenAPI 3.
 | GET | `/tags` | Tags with counts |
 | GET | `/cards/due` | Flashcards due now (`count`, `cards`) |
 | GET / PUT | `/canvas/:id` | JSON Canvas 1.0 |
-| GET / PUT | `/whiteboard/:id` · POST `/whiteboard/:id/elements` | Excalidraw scene · append elements |
+| GET / PUT | `/whiteboard/:id` · POST `/whiteboard/:id/elements` | Excalidraw scene · append elements. Works for `whiteboard` and `board` notes (a PUT keeps the note's type; `?type=board` creates a Board) |
 | GET / PUT | `/att/:id` | Attachment bytes |
 | POST | `/sync` | Raw sync `{ since, items }` |
 

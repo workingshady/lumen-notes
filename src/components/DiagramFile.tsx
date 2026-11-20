@@ -1,4 +1,5 @@
-import { Download, LayoutDashboard, Loader2, Sparkles, Undo2 } from "lucide-react";
+import { Glyph } from "./Glyph";
+import { LayoutDashboard, Loader2, Sparkles, Undo2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { openExportJob } from "../lib/export-job";
 import { mermaidJob } from "../lib/export-jobs";
@@ -59,11 +60,13 @@ function DiagramPreview({ note }: { note: Note }) {
     try { const nm = await renameDiagramWithAI(note, v.notes); toast(nm ? t("Renamed to {name}", { name: nm }) : t("No name suggestion (AI off or over today's limit)")); } finally { setNaming(false); }
   };
   return (
-    <div className="relative h-full min-h-0">
-      {note.body.trim()
-        ? <DiagramView src={note.body} />
-        : <div className="flex h-full items-center justify-center text-muted">{t("Empty diagram. Switch to Source and write Mermaid.")}</div>}
-      <div className="pointer-events-none absolute inset-x-4 top-3 flex flex-wrap items-center justify-end gap-1.5 text-[12px] text-muted">
+    <div className="relative flex h-full min-h-0 flex-col">
+      <div className="order-2 min-h-0 flex-1">
+        {note.body.trim()
+          ? <DiagramView src={note.body} />
+          : <div className="flex h-full items-center justify-center text-muted">{t("Empty diagram. Switch to Source and write Mermaid.")}</div>}
+      </div>
+      <div className="pointer-events-none order-1 flex shrink-0 flex-wrap px-4 py-2.5 items-center justify-end gap-1.5 text-[12px] text-muted">
         <span className="pointer-events-auto rounded-[6px] bg-surface/90 px-1.5 font-mono text-[11.5px]">{diagramKind(note.body)} · {t("updated {when}", { when: relTime(note.updatedAt) })}{meta?.savedAt ? ` · ${t("saved {when}", { when: relTime(Date.parse(meta.savedAt)) })}` : ""}</span>
         {meta ? (
           live ? <button className={chip} onClick={back} title={t("Open the source note at this diagram")}><Undo2 size={12} />{tx("From {title}", { title: <bdi dir="auto">{src!.title}{meta.heading ? ` › ${meta.heading}` : ""}</bdi> })}</button>
@@ -75,7 +78,7 @@ function DiagramPreview({ note }: { note: Note }) {
         ))}
         {!where.length && <button className={chip} onClick={() => void toCanvas().catch(() => toast(t("Couldn't add it to a canvas")))}><LayoutDashboard size={12} />{t("Add to canvas")}</button>}
         <button className={chip} onClick={() => void suggest()} disabled={naming} title={t("Ask the AI for a short descriptive file name")}>{naming ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}{t("Suggest name")}</button>
-        <button className="pointer-events-auto inline-flex h-[30px] items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-semibold text-accent-fg hover:brightness-110" onClick={() => openExportJob(mermaidJob(note.body, note.title))} title={t("Export: SVG, PNG, JPEG, WebP")}><Download size={13} />{t("Export")}</button>
+        <button className="pointer-events-auto inline-flex h-[30px] items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-semibold text-accent-fg hover:brightness-110" onClick={() => openExportJob(mermaidJob(note.body, note.title))} title={t("Export: SVG, PNG, JPEG, WebP")}><Glyph name="export" size={14} />{t("Export")}</button>
       </div>
     </div>
   );

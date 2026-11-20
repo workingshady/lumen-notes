@@ -425,6 +425,7 @@ function Studio({ note }: { note: Note }) {
     const nodes = cur.nodes.filter((n) => !del.has(n.id)).map((n) => { let p = parentOf(n); while (p && del.has(p)) p = parentOf(by.get(p)!); return p !== parentOf(n) ? setParent(n, p) : n; });
     commit(fitGroups({ ...cur, nodes, edges: cur.edges.filter((e) => !delE.has(e.id) && !del.has(e.fromNode) && !del.has(e.toNode)) }));
     setSel(null);
+    toast(t("Deleted {n} item|Deleted {n} items", { n: del.size + delE.size }), { label: t("Undo"), run: () => undo() });
   };
   /** Copies of a set of nodes and the edges among them, shifted by (dx, dy): new ids, unique names, parents remapped. One undo step. */
   const cloneSet = (src: { nodes: ANode[]; edges: AEdge[] }, dx: number, dy: number) => {
@@ -987,7 +988,7 @@ function Studio({ note }: { note: Note }) {
         )}
         {pop === "more" && (
           <Pop title={note.title} sub={t("Diagram")} sheet={phone} onClose={() => setPop(null)} style={phone ? { left: 0, right: 0, bottom: 0, animation: "arch-sheet .22s var(--ease)" } : { right: 12, top: 52, width: 260 }}>
-            <Block gap="0" items={([["reused-object", t("Insert existing object"), () => setPop("insert")], ["assistant", t("Describe a system"), () => openAi("describe")], ["assistant", t("Edit by instruction"), () => openAi("edit")], ["diff", t("Compare versions"), () => void openVersions()], ["switch", t("Convert…"), () => { setPop(null); setConvOpen(true); }], ["c-question", t("Review"), review], ["present", t("Present"), () => { setPop(null); setSel(null); setPresenting(true); }], ["export", t("Export"), () => { setPop(null); doExport(); }], ["link", t("Share"), () => { setPop(null); setShare(true); }], ["trash", t("Delete diagram"), () => { setPop(null); void deleteDiagram(); }]] as const).map(([g, l, fn]) => ({ g, l, mh: "44px", onClick: fn }))} />
+            <Block gap="0" items={([["reused-object", t("Insert existing object"), () => setPop("insert")], ["assistant", t("Describe a system"), () => openAi("describe")], ["assistant", t("Edit by instruction"), () => openAi("edit")], ["diff", t("Compare versions"), () => void openVersions()], ["switch", t("Convert…"), () => { setPop(null); setConvOpen(true); }], ["c-question", t("Review"), review], ["present", t("Present"), () => { setPop(null); setSel(null); setPresenting(true); }], ["export", t("Export"), () => { setPop(null); doExport(); }], ["link", t("Share"), () => { setPop(null); setShare(true); }], ["trash", t("Move to trash"), () => { setPop(null); void deleteDiagram(); }]] as const).map(([g, l, fn]) => ({ g, l, mh: "44px", onClick: fn }))} />
           </Pop>
         )}
         {(pop === "menu" || pop === "connectTo" || pop === "moveTo" || pop === "sendTo") && menuPop}

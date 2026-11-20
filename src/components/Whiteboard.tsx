@@ -34,6 +34,7 @@ import { cardForNote, LinkCardPrompt, NoteCardPicker } from "./wb/NoteCard";
 import { CARD_SIZE, cardSkeleton, noteSize, type LumenCard } from "../lib/convert/cards";
 import { Glyph } from "./Glyph";
 import "./library/register"; // W2-B: shared library panel + Shapes popover registration
+import { WbKeysSheet } from "./wb/KeysSheet";
 import { KEY_TOOL, loadRecent, lumenTool, PAPER, pushRecent, shown, type LineKind, type ShapeKind, type ToolId, type WheelSlot } from "./wb/tools";
 import "./wb/pens/register";
 import "./wb/register-w3a"; // W3-A: layers, frames, board settings, presentation
@@ -194,6 +195,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [panel, setPanel] = useState<CodeTab | null>(null);
   const [mermaidOpen, setMermaidOpen] = useState(false);
+  const [keysOpen, setKeysOpen] = useState(false); // "?" sheet (wb/KeysSheet): Lumen keys, not Excalidraw help
   const [code, setCode] = useState("");
   const [codeErr, setCodeErr] = useState<string | null>(null);
   const [src, setSrc] = useState(() => { try { return localStorage.getItem("lumen.wbScript") ?? SCRIPT_EXAMPLE; } catch { return SCRIPT_EXAMPLE; } });
@@ -462,12 +464,14 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   const key = (k: string, o: { shift?: boolean; ctrl?: boolean; code?: string } = {}) => host.current?.querySelector(".excalidraw")?.dispatchEvent(new KeyboardEvent("keydown", { key: k, code: o.code ?? (k.length === 1 ? "Key" + k.toUpperCase() : k), ctrlKey: o.ctrl ?? true, metaKey: o.ctrl ?? true, shiftKey: !!o.shift, bubbles: true }));
   const undo = () => { histOp.current = true; key("z"); setCanRedo(true); };
   const redo = () => { histOp.current = true; key("z", { shift: true }); };
+  /** Delete + Undo toast, like notes, canvas and architecture (Ctrl+Z still works). */
+  const delToast = (n: number) => { if (n) toast(t("Deleted {n} item|Deleted {n} items", { n }), { label: t("Undo"), run: undo }); };
   const action = (x: Action) => {
     const a = api.current;
     if (!a || !bar) return;
     const K: Partial<Record<Action, () => void>> = {
       front: () => key("]", { shift: true, code: "BracketRight" }), forward: () => key("]", { code: "BracketRight" }), backward: () => key("[", { code: "BracketLeft" }), back: () => key("[", { shift: true, code: "BracketLeft" }),
-      group: () => key("g"), ungroup: () => key("g", { shift: true }), duplicate: () => key("d"), lock: () => key("l", { shift: true }), delete: () => key("Delete", { ctrl: false, code: "Delete" }),
+      group: () => key("g"), ungroup: () => key("g", { shift: true }), duplicate: () => key("d"), lock: () => key("l", { shift: true }), delete: () => { const n = Object.keys(a.getAppState().selectedElementIds ?? {}).length; key("Delete", { ctrl: false, code: "Delete" }); delToast(n); },
       "align-left": () => key("ArrowLeft", { shift: true, code: "ArrowLeft" }), "align-right": () => key("ArrowRight", { shift: true, code: "ArrowRight" }), "align-top": () => key("ArrowUp", { shift: true, code: "ArrowUp" }), "align-bottom": () => key("ArrowDown", { shift: true, code: "ArrowDown" }),
     };
     if (K[x]) return K[x]!();
@@ -779,6 +783,8 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     if (e.altKey && !e.ctrlKey && !e.metaKey && (e.code === "KeyP")) { stop(); openPanel("present"); return; }
     if (e.altKey && !e.ctrlKey && !e.metaKey && (e.code === "KeyZ")) { stop(); toggleZen(); return; }
     if (e.shiftKey && e.key === "Delete" && !Object.keys(api.current?.getAppState().selectedElementIds ?? {}).length) { stop(); void trashBoard(); return; }
+    if (!e.ctrlKey && !e.metaKey && (e.key === "?" || e.key === "؟")) { stop(); setKeysOpen((o) => !o); return; }
+    if ((e.key === "Delete" || e.key === "Backspace") && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { const n = Object.keys(api.current?.getAppState().selectedElementIds ?? {}).length; if (n) setTimeout(() => delToast(n), 0); return; }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (k === "l" && !e.shiftKey && wbRegistry.panels.layers) { stop(); openPanel("layers"); return; }
     const id = KEY_TOOL[k];
@@ -1383,6 +1389,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   return (
     <div dir={rtl ? "rtl" : "ltr"} className={cx("relative flex h-full min-h-0 flex-col", perf && "wb-perf-root")}>
       <style>{WB_CSS}</style>
+      {keysOpen && <WbKeysSheet mod={/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl"} onClose={() => setKeysOpen(false)} />}
       <svg width="0" height="0" className="absolute" aria-hidden>
         <filter id="lumen-wb-ink" colorInterpolationFilters="sRGB">
           <feComponentTransfer>

@@ -13,5 +13,5 @@ export const ar: Catalog = {
   Dots: "نقاط", Grid: "شبكة", Lines: "خطوط", Theme: "السمة", Red: "أحمر", Orange: "برتقالي", Yellow: "أصفر", Green: "أخضر", Cyan: "سماوي", Purple: "بنفسجي",
   Portals: "البوابات", Later: "لاحقًا", "Present groups as slides": "عرض المجموعات كشرائح", "Export…": "تصدير…",
   "Presenting groups as slides arrives with the presentation update": "عرض المجموعات كشرائح سيتوفر مع تحديث العرض التقديمي",
-  "{n} card|{n} cards": "{n} بطاقة|{n} بطاقات", "Expand group": "توسيع المجموعة", "Collapse group": "طيّ المجموعة",
+  "Expand group": "توسيع المجموعة", "Collapse group": "طيّ المجموعة",
 };

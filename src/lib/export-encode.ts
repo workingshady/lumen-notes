@@ -5,19 +5,49 @@ import type { PageSize } from "./export-job";
 const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
 export function crc32(b: Uint8Array, c = 0xffffffff) { for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return c; }
 
+// ------------------------------------------------------------------ browser canvas limits
+export interface CanvasLimits { maxSide: number; maxArea: number; why: string }
+/**
+ * Largest canvas the current browser can really draw. WebKit on iPhone/iPad (every browser there) stops at 16,777,216 px
+ * (4096x4096); desktop Safari at 16,384 px a side; Chromium / Edge / Firefox at 32,767 px a side and 268,435,456 px
+ * (16384x16384) of area (the conservative figure; Firefox allows a little more). `encodeBitmap` also probes the real canvas.
+ */
+export function canvasLimits(ua?: string, touch?: number): CanvasLimits {
+  const nav = typeof navigator !== "undefined" ? navigator : undefined;
+  const u = ua ?? nav?.userAgent ?? "";
+  const pts = touch ?? nav?.maxTouchPoints ?? 0;
+  const ios = /iPhone|iPad|iPod/.test(u) || (/Macintosh/.test(u) && pts > 1); // iPadOS reports a Mac UA
+  if (ios) return { maxSide: 16_384, maxArea: 16_777_216, why: "iOS" };
+  if (/Safari\//.test(u) && !/Chrome\/|Chromium\/|Edg\/|OPR\/|Android/.test(u)) return { maxSide: 16_384, maxArea: 268_435_456, why: "Safari" };
+  return { maxSide: 32_767, maxArea: 268_435_456, why: "Chromium" };
+}
+/** Largest scale for a w x h image inside the browser limits (never above `hardMax`, never below 0.05). */
+export function capScale(w: number, h: number, lim: CanvasLimits = canvasLimits()): number {
+  const k = Math.min(lim.maxSide / Math.max(1, w), lim.maxSide / Math.max(1, h), Math.sqrt(lim.maxArea / Math.max(1, w * h)));
+  return Math.max(0.05, Math.floor(k * 1000) / 1000); // floor: rounding W / H up must not cross the limit
+}
+export const CANVAS_LIMIT_MSG = "canvas-limit";
+
 export interface RasterJob { bitmap: ImageBitmap; bg: string | null; aspect: number; type: "image/png" | "image/jpeg" | "image/webp"; quality: number }
 /** Composite a bitmap on its background (optionally letterboxed to a fixed aspect) and encode it. */
 export async function encodeBitmap(j: RasterJob): Promise<{ blob: Blob; width: number; height: number }> {
   const bw = j.bitmap.width, bh = j.bitmap.height;
   let W = bw, H = bh;
   if (j.aspect > 0) { if (bw / bh < j.aspect) W = Math.round(bh * j.aspect); else H = Math.round(bw / j.aspect); }
+  const lim = canvasLimits();
+  if (W > lim.maxSide || H > lim.maxSide || W * H > lim.maxArea) { j.bitmap.close(); throw new Error(`${CANVAS_LIMIT_MSG}: ${W}x${H}`); }
   const cv = new OffscreenCanvas(W, H);
-  const ctx = cv.getContext("2d")!;
+  const ctx = cv.getContext("2d");
+  // a canvas the browser could not allocate silently ignores drawing: write one pixel in the far corner and read it back
+  let ok = !!ctx;
+  if (ctx) { ctx.fillStyle = "#ff0000"; ctx.fillRect(W - 1, H - 1, 1, 1); ok = ctx.getImageData(W - 1, H - 1, 1, 1).data[3] === 255; ctx.clearRect(W - 1, H - 1, 1, 1); }
+  if (!ctx || !ok) { j.bitmap.close(); throw new Error(`${CANVAS_LIMIT_MSG}: ${W}x${H}`); }
   if (j.bg) { ctx.fillStyle = j.bg; ctx.fillRect(0, 0, W, H); }
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(j.bitmap, Math.round((W - bw) / 2), Math.round((H - bh) / 2));
   j.bitmap.close();
-  const blob = await cv.convertToBlob({ type: j.type, quality: j.type === "image/png" ? undefined : j.quality });
+  const blob = await cv.convertToBlob({ type: j.type, quality: j.type === "image/png" ? undefined : j.quality }).catch(() => null);
+  if (!blob || blob.size < 64) throw new Error(`${CANVAS_LIMIT_MSG}: ${W}x${H}`);
   return { blob, width: W, height: H };
 }
 
@@ -63,6 +93,16 @@ export interface PdfPageIn { bytes: Uint8Array; kind: "png" | "jpg"; width: numb
 export interface PdfLayout { page: PageSize; orient: "landscape" | "portrait"; marginMm: number; title: string }
 const MM = 72 / 25.4;
 const SIZES: Record<Exclude<PageSize, "fit">, [number, number]> = { a4: [595.28, 841.89], letter: [612, 792], "16:9": [960, 540] };
+/** Page size (pt) and the box (pt, from the top-left) an image of `iw` x `ih` px is centred in, inside the margins. */
+export function pageGeometry(lay: PdfLayout, iw: number, ih: number) {
+  const m = lay.marginMm * MM;
+  let pw: number, ph: number;
+  if (lay.page === "fit") { pw = iw * 0.75 + (lay.marginMm ? 2 * m : 0); ph = ih * 0.75 + (lay.marginMm ? 2 * m : 0); }
+  else { [pw, ph] = SIZES[lay.page]; const land = lay.page === "16:9" ? true : lay.orient === "landscape"; if (land !== pw > ph) [pw, ph] = [ph, pw]; if (lay.page === "16:9" && lay.orient === "portrait") [pw, ph] = [540, 960]; }
+  const k = Math.min((pw - 2 * m) / iw, (ph - 2 * m) / ih);
+  const w = iw * k, h = ih * k;
+  return { pw, ph, x: (pw - w) / 2, y: (ph - h) / 2, w, h };
+}
 /** One image per page, centred inside the margins and scaled to fit. */
 export async function buildPdf(pages: PdfPageIn[], lay: PdfLayout, progress?: (i: number) => void): Promise<Uint8Array> {
   const { PDFDocument } = await import("pdf-lib");
@@ -71,14 +111,9 @@ export async function buildPdf(pages: PdfPageIn[], lay: PdfLayout, progress?: (i
   let i = 0;
   for (const p of pages) {
     const img = p.kind === "png" ? await doc.embedPng(p.bytes) : await doc.embedJpg(p.bytes);
-    const m = lay.marginMm * MM;
-    let pw: number, ph: number;
-    if (lay.page === "fit") { pw = p.width * 0.75 + (lay.marginMm ? 2 * m : 0); ph = p.height * 0.75 + (lay.marginMm ? 2 * m : 0); }
-    else { [pw, ph] = SIZES[lay.page]; const land = lay.page === "16:9" ? true : lay.orient === "landscape"; if (land !== pw > ph) [pw, ph] = [ph, pw]; if (lay.page === "16:9" && lay.orient === "portrait") [pw, ph] = [540, 960]; }
-    const page = doc.addPage([pw, ph]);
-    const k = Math.min((pw - 2 * m) / p.width, (ph - 2 * m) / p.height);
-    const w = p.width * k, h = p.height * k;
-    page.drawImage(img, { x: (pw - w) / 2, y: (ph - h) / 2, width: w, height: h });
+    const g = pageGeometry(lay, p.width, p.height);
+    const page = doc.addPage([g.pw, g.ph]);
+    page.drawImage(img, { x: g.x, y: g.ph - g.y - g.h, width: g.w, height: g.h });
     progress?.(++i);
   }
   return doc.save();

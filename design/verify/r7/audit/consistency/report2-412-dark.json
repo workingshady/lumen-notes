@@ -1,0 +1,50 @@
+{
+ "shell": {
+  "unnamed": [
+   "button@365,855 <button disabled=\"\" class=\"rounded-[3px] size-[14px]\" style=\"background: transparent;\"></button>"
+  ],
+  "errors": []
+ },
+ "whiteboard": {
+  "unnamed": [],
+  "errors": []
+ },
+ "keys": [
+  "Whiteboard shortcuts: Whiteboard shortcuts\nTOOLS\nSelect\n1\nLasso\n2\nHand\nH\nPen\n3\nHighlighter\n4\nEraser\n5\nLaser\nK\nShapes\n6\nArrow and connector\n7\nText\n8\nSticky\n9\nImage\n0\nNote card\nN\nFrame\nF\nEDIT\nUndo\nCtrl Z\nRedo\nCtrl Shift Z · "
+ ],
+ "excalidrawHelp": false,
+ "wb-keys": {
+  "unnamed": [],
+  "errors": []
+ },
+ "wb-export": {
+  "unnamed": [],
+  "errors": []
+ },
+ "wb-menu": {
+  "unnamed": [],
+  "errors": [
+   "STEP wb-menu threw no more btn"
+  ]
+ },
+ "wb-library": {
+  "unnamed": [],
+  "errors": []
+ },
+ "vendor-packs": {
+  "unnamed": [],
+  "errors": [
+   "STEP vendor-packs threw missing .//button[contains(., 'Download vendor packs') or contains(., 'تنزيل حزم')]"
+  ]
+ },
+ "chooser": {
+  "unnamed": [],
+  "errors": [
+   "STEP chooser threw no chooser btn"
+  ]
+ },
+ "arch": {
+  "unnamed": [],
+  "errors": []
+ }
+}

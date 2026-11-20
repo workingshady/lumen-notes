@@ -2,7 +2,7 @@
 // (`lmn_…`; read-only tokens are refused on non-GET by `auth`). Writes go through the same `items` table as sync,
 // so they show up on every device. Documented in docs/API.md and served as OpenAPI at GET /api/openapi.json.
 import type { Hono } from "hono";
-import type { Folder, Note, Space } from "../../shared/types";
+import { isWbType, type Folder, type Note, type Space } from "../../shared/types";
 import type { Env, Helpers } from "../index";
 
 type Row = { data: string };
@@ -28,8 +28,11 @@ export default function register(api: Hono<Env>, h: Helpers) {
     const p = await c.req.json<Partial<Note>>().catch(() => ({} as Partial<Note>));
     const now = Date.now();
     const title = (p.title ?? "").trim() || "Untitled";
+    const type = p.type ?? "note";
+    // Canvas, whiteboard and board bodies are JSON (JSON Canvas 1.0 / .excalidraw), never a Markdown heading.
+    const empty = type === "canvas" ? '{"nodes":[],"edges":[]}' : isWbType(type) ? '{"type":"excalidraw","version":2,"source":"lumen","elements":[]}' : `# ${title}\n`;
     const note: Note = {
-      title, body: p.body ?? `# ${title}\n`, spaceId: p.spaceId || "inbox", folderId: p.folderId ?? null, tags: p.tags ?? [], type: p.type ?? "note",
+      title, body: p.body ?? empty, spaceId: p.spaceId || "inbox", folderId: p.folderId ?? null, tags: p.tags ?? [], type,
       status: p.status ?? null, pinned: p.pinned ?? 0, favorite: p.favorite ?? 0, published: 0, slug: p.slug ?? slugify(title), props: p.props ?? {},
       createdAt: now, deleted: 0, id: p.id || uid(), updatedAt: now,
     };
@@ -141,7 +144,7 @@ export default function register(api: Hono<Env>, h: Helpers) {
         "/tags": { get: op("List tags with counts") },
         "/cards/due": { get: op("Flashcards due now") },
         "/canvas/{id}": { get: op("Get a canvas (JSON Canvas 1.0)"), put: op("Replace a canvas") },
-        "/whiteboard/{id}": { get: op("Get a whiteboard (Excalidraw scene)"), put: op("Replace a whiteboard") },
+        "/whiteboard/{id}": { get: op("Get a whiteboard or board (Excalidraw scene)"), put: op("Replace a whiteboard or board (keeps the type; ?type=board creates a Board)") },
         "/whiteboard/{id}/elements": { post: op("Append whiteboard elements") },
         "/att/{id}": { get: op("Download an attachment"), put: op("Upload an attachment (raw bytes)") },
         "/sync": { post: op("Sync records { since, items }") },

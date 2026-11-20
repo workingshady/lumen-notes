@@ -1,0 +1,52 @@
+{
+ "shell": {
+  "unnamed": [
+   "button@810,894 <button disabled=\"\" class=\"rounded-[3px] size-3\" style=\"background: transparent;\"></button>"
+  ],
+  "errors": []
+ },
+ "whiteboard": {
+  "unnamed": [],
+  "errors": []
+ },
+ "keys": [
+  "اختصارات اللوح الأبيض: اختصارات اللوح الأبيض\nأدوات\nتحديد\n1\nلاسو\n2\nيدوي\nH\nقلم\n3\nقلم التظليل\n4\nالممحاة\n5\nليزر\nK\nالأشكال\n6\nسهم وموصل\n7\nنص\n8\nملصق\n9\nصورة\n0\nبطاقة ملاحظة\nN\nإطار\nF\nتعديل\nتراجع\nCtrl Z\nإعادة\nCtrl Shift Z · Ctrl Y\nنسخ"
+ ],
+ "excalidrawHelp": false,
+ "wb-keys": {
+  "unnamed": [],
+  "errors": []
+ },
+ "wb-export": {
+  "unnamed": [],
+  "errors": []
+ },
+ "wb-menu": {
+  "unnamed": [],
+  "errors": [
+   "STEP wb-menu threw no more btn"
+  ]
+ },
+ "wb-library": {
+  "unnamed": [],
+  "errors": [
+   "STEP wb-library threw no shapes"
+  ]
+ },
+ "vendor-packs": {
+  "unnamed": [],
+  "errors": [
+   "STEP vendor-packs threw missing .//button[contains(., 'Download vendor packs') or contains(., 'تنزيل حزم')]"
+  ]
+ },
+ "chooser": {
+  "unnamed": [],
+  "errors": [
+   "STEP chooser threw no chooser btn"
+  ]
+ },
+ "arch": {
+  "unnamed": [],
+  "errors": []
+ }
+}

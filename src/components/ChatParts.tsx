@@ -69,7 +69,11 @@ export function RichAnswer({ text, sources, streaming, size = 16, onOpen, onHove
 
 /** Source card: number, note-type glyph, title, quoted passage. `row` = compact list row (phone / panel). */
 export function SourceCard({ s, hot, dim, row, v, onOpen }: { s: ChatSource; hot?: boolean; dim?: boolean; row?: boolean; v: Vault; onOpen: (id: string) => void }) {
-  const quote = useMemo(() => plainText(s.text).replace(/\u{1F4C5}\s?/gu, "").replace(/\s+/g, " ").trim().slice(0, 140), [s.text]);
+  // plainText drops `Q :: A` card lines (palette previews); a passage made only of cards quotes them as "Q — A" instead.
+  const quote = useMemo(() => {
+    const clean = (md: string) => plainText(md).replace(/\u{1F4C5}\s?/gu, "").replace(/\s+/g, " ").trim().slice(0, 140);
+    return clean(s.text) || clean(s.text.replace(/\s::\s/g, " — "));
+  }, [s.text]);
   const title = s.heading ? `${s.title} · ${s.heading}` : s.title;
   const glyph = v.byId.get(s.noteId)?.type ?? "note";
   if (row) return (
@@ -88,7 +92,7 @@ export function SourceCard({ s, hot, dim, row, v, onOpen }: { s: ChatSource; hot
         <Glyph name={glyph} size={13} color="var(--muted)" />
         <span dir="auto" className="truncate">{title}</span>
       </span>
-      <span dir="auto" className="line-clamp-3 text-[12.5px] leading-[17px] text-muted">“{quote}”</span>
+      {quote && <span dir="auto" className="line-clamp-3 text-[12.5px] leading-[17px] text-muted">“{quote}”</span>}
     </button>
   );
 }

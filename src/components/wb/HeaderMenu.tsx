@@ -4,9 +4,18 @@ import { useEffect, useState } from "react";
 import { t } from "../../lib/i18n";
 import { Glyph } from "../Glyph";
 import { cx } from "../ui";
+import { IS_MAC } from "../../lib/mod-label";
 import { Row } from "./ui";
 
 export type MenuItem = { id: string; glyph: string; label: string; hint?: string; run: () => void; on?: boolean };
+
+/** Design copy uses Mac signs (⌥P, ⇧⌘E); on Windows / Linux show Ctrl / Alt / Shift like the key sheets do. */
+const platHint = (h?: string) => {
+  if (!h || IS_MAC) return h;
+  const mods = [h.includes("⌘") && "Ctrl", h.includes("⌥") && "Alt", h.includes("⇧") && "Shift"].filter(Boolean) as string[];
+  const rest = h.replace(/[⌘⌥⇧]/g, "");
+  return mods.length ? [...mods, rest].join(" ") : h;
+};
 
 export function HeaderMenu({ items, noteItems, phone, onClose }: { items: MenuItem[]; noteItems: MenuItem[]; phone: boolean; onClose: () => void }) {
   const [sub, setSub] = useState(false);
@@ -26,7 +35,7 @@ export function HeaderMenu({ items, noteItems, phone, onClose }: { items: MenuIt
   );
   const rows = (
     <div className={cx("flex flex-col p-[12px_14px_14px]", phone ? "gap-0" : "gap-0")}>
-      {list.map((m) => <Row key={m.id} glyph={m.glyph} label={m.label} hint={m.hint} on={m.on} danger={m.id === "trash" || m.id === "delete"} onClick={() => { if (m.id === "note") { setSub(true); return; } onClose(); m.run(); }} />)}
+      {list.map((m) => <Row key={m.id} glyph={m.glyph} label={m.label} hint={platHint(m.hint)} on={m.on} danger={m.id === "trash" || m.id === "delete"} onClick={() => { if (m.id === "note") { setSub(true); return; } onClose(); m.run(); }} />)}
     </div>
   );
   if (phone) return (

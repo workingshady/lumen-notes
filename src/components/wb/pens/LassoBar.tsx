@@ -40,9 +40,9 @@ export function LassoBar({ pos, phone, color, busy, onAction, onPen, recolour }:
           </PanelShell>
         )}
       </span>
-      <PBtn glyph="duplicate" tip={t("Duplicate")} onClick={() => onAction("duplicate")} anchor={false} />
+      <PBtn glyph="duplicate" tip={t("Duplicate") + " · Ctrl D"} onClick={() => onAction("duplicate")} anchor={false} />
       <PBtn glyph="copy-image" tip={t("Copy as image")} onClick={() => onAction("copy-image")} anchor={false} />
-      <PBtn glyph="group" tip={t("Group")} onClick={() => onAction("group")} anchor={false} />
+      <PBtn glyph="group" tip={t("Group") + " · Ctrl G"} onClick={() => onAction("group")} anchor={false} />
       {phone ? <span className="basis-full" /> : <Sep />}
       {([["shapes", "to-shapes", "Shapes", "Convert to shapes (on device)"], ["text", "to-text", "Text", "Convert to text"], ["math", "to-math", "Math", "Convert to math"], ["mermaid", "to-mermaid", "Mermaid", "Convert to Mermaid"]] as [LassoAction, string, string, string][]).map(([a, g, l, tip]) => (
         <button key={a} type="button" title={t(tip)} aria-label={t(tip)} onClick={() => onAction(a)}
