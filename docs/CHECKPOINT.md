@@ -30,6 +30,13 @@ Live: deploy `c012e97c` · commit `f3a4d49` on `main`. Everything deployed, comm
    - **Reconnect:** drag either end to another node or side (React Flow `onReconnect` / reconnectable edges), plus a drop indicator.
    - **Reshape:** bend-point handles on the selected edge: drag a segment midpoint to add a point, drag points to move them, double-click to remove. Points are saved in `lumenEdge.points`; `route()` already accepts points. Orthogonal edges keep right angles while dragging.
    - **Label:** drag the label along the edge (`lumenEdge.labelPos` 0–1).
+   - **Edge label options** (in the edge properties panel and a small popover on the label itself):
+     - **Edit text:** double-click the label (or the edge) to edit it inline; Enter saves, Esc cancels.
+     - **Three slots:** start, middle and end labels (e.g. cardinality "1" / "N" at the ends, protocol in the middle).
+     - **Style:** plain / pill / boxed, font size S·M·L, text colour + background from the palettes, bold.
+     - **Placement:** on the line, or above / below it (offset side); "follow the line" rotation on/off; show/hide.
+     - **Architecture chips:** protocol and port (e.g. `HTTPS · 443`) shown as a chip next to the label.
+     - **Storage:** `lumenEdge.labels {start, mid, end}` + `labelStyle`. The DSL keeps only the middle text (`A > B: label`); styles live in JSON. Also apply to canvas edges if cheap.
    - **Reset route:** clears the points back to auto routing.
    - **Rules:** every change is one undo step and rewrites the DSL only when the topology changes (positions and points live in JSON only). This works on canvas edges too if it's cheap (`CanvasEditor.tsx`, coordinate with W2-C).
 5. **Wave 3:**
