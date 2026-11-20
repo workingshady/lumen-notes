@@ -26,7 +26,13 @@ Live: deploy `c012e97c` · commit `f3a4d49` on `main`. Everything deployed, comm
    - The full prompt was drafted (it was cancelled when the owner paused); rebuild it from this list + the brief.
 2. **W2-B Shared library, stamps, icon insert** (Sonnet; new `src/components/library/*`): 36A–G, 49A–F, 44D, 45C–D. Registers `registerWb('shapes')` and replaces the studio's library panel.
 3. **W2-C Drag and drop** (Sonnet; new `src/lib/dnd.ts`): 50A–C, sources everywhere (sidebar, list, search, backlinks, Ask, PDF, Graph), drop targets in whiteboard, Board, canvas and arch, touch + keyboard.
-4. **Wave 3:**
+4. **W2-D Architecture edge editing** (Sonnet; owns `src/components/arch/*` + `src/lib/arch-route.ts` this wave). Today edges can be created, selected and edited in properties, and they follow their nodes. Missing:
+   - **Reconnect:** drag either end to another node or side (React Flow `onReconnect` / reconnectable edges), plus a drop indicator.
+   - **Reshape:** bend-point handles on the selected edge: drag a segment midpoint to add a point, drag points to move them, double-click to remove. Points are saved in `lumenEdge.points`; `route()` already accepts points. Orthogonal edges keep right angles while dragging.
+   - **Label:** drag the label along the edge (`lumenEdge.labelPos` 0–1).
+   - **Reset route:** clears the points back to auto routing.
+   - **Rules:** every change is one undo step and rewrites the DSL only when the topology changes (positions and points live in JSON only). This works on canvas edges too if it's cheap (`CanvasEditor.tsx`, coordinate with W2-C).
+5. **Wave 3:**
    - W3-A layers / board settings / frames / presentation (38, 39, 41, 44E/F).
    - W3-B Mixed Board cards + conversions (40D–H, 45E, 52).
    - W3-C architecture AI hook-up (connect `arch/ai-hooks.ts` to `ArchAIPanel`; 48C–F).

@@ -41,6 +41,7 @@ Handoff: **`design/handoffs/2026-11-20-round-7/`** (from `Lumen Index Design Rou
 | W2-A Pens, palettes, lasso | 34A–H, 37A–F, 44B, 44C, 44I | whiteboard (after W1-A) | Opus |
 | W2-B Shared library, stamps, icon insert | 36A–G, 49A–F, 44D, 45C–D | new `src/components/library/*` | Sonnet |
 | W2-C Drag and drop | 50A–C | new `src/lib/dnd.ts` + drop sources | Sonnet |
+| W2-D Architecture edge editing | 46C/N + 47A–B (edges) | `src/components/arch/*`, `src/lib/arch-route.ts`: reconnect ends, bend points (add/move/remove, orthogonal keeps right angles), drag label, reset route; one undo step each; points in `lumenEdge.points` (JSON only) | Sonnet |
 | W3-A Layers, board settings, frames, presentation | 38A–E, 39A–G, 41A–F, 44E, 44F | whiteboard + presenter | Opus |
 | W3-B Mixed Board cards + conversions | 40D–H, 45E, 52A–C | whiteboard (board kind) + conversions | Sonnet |
 | W3-C Architecture AI hook-up | 48C–F | arch + AI | Sonnet |
