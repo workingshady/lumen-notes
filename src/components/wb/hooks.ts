@@ -35,6 +35,17 @@ export interface WbCtx {
   setStyle?: (p: Partial<Style>) => void;
   /** Restyle the selection with Lumen-only data (e.g. customData.lumenExact). */
   setCustom?: (fn: (e: Record<string, unknown>) => Record<string, unknown> | null) => void;
+  /** W3-A: arrange the selection (one undo step), open the export dialog on frames, start the presentation. */
+  arrange?: (a: import("./layers/Arrange").ArrangeId) => void;
+  exportFrames?: () => void;
+  present?: () => void;
+  /** W3-A stores of the open board: board settings and layers. */
+  board?: import("./settings/model").BoardStore;
+  layers?: import("./layers/model").LayerStore;
+  /** Re-render tick (view moved / scene changed). */
+  tick?: number;
+  /** Presentation data: board title, space and the frame to start on. */
+  presentMeta?: { title: string; spaceId: string; start?: string };
 }
 
 /** A registered panel: rendered by Whiteboard while open (floating desktop panel or phone sheet is up to the panel). */

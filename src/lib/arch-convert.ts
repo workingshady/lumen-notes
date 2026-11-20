@@ -345,4 +345,6 @@ export async function registerArchIcons(): Promise<void> {
   }
   m.registerIconPacks([{ name: "lumen", icons: { prefix: "lumen", width: 24, height: 24, icons } }]);
   packed = true;
+  // downloaded vendor packs too, so architecture-beta can use aws:… gcp:… k8s:… logos:…
+  try { const { registerVendorIconPacks } = await import("./vendor-icons"); await registerVendorIconPacks(m as never); } catch { /* packs are optional */ }
 }

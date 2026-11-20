@@ -6,8 +6,12 @@ import {
   ArrowRight, Code2, CornerUpLeft, Copy, Download, Ellipsis, Pin, RotateCw, FilePlus, FileText, GitFork, Group, LayoutDashboard, LayoutGrid, Link2, ListTree, Minus, Network, Orbit, Pencil, Plus, Scan,
   Image as ImageIcon, Search, SquareTerminal, Trash2, Type, Waypoints, Workflow,
   AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignHorizontalSpaceAround, AlignStartHorizontal, AlignStartVertical, AlignVerticalSpaceAround,
-  BringToFront, Check, ChevronDown, ClipboardPaste, CopyPlus, Focus, Grid3x3, Keyboard, Lock, Map as MapIcon, Redo2, Scissors, SendToBack, SlidersHorizontal, Undo2,
+  BringToFront, Presentation, Shuffle, Check, ChevronDown, ClipboardPaste, CopyPlus, Focus, Grid3x3, Keyboard, Lock, Map as MapIcon, Redo2, Scissors, SendToBack, SlidersHorizontal, Undo2,
 } from "lucide-react";
+import { ConvertMenu } from "./wb/cards/ConvertMenu";
+import { sourceOf } from "../lib/convert";
+import { CanvasPresenter } from "./wb/present/workspaces";
+import { CanvasEdgeCtx, canvasEdgeTypes, type CanvasEdgeApi } from "./CanvasEdge";
 import { createContext, memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { CanvasEdge, CanvasNode, JsonCanvas, Note, Side } from "../../shared/types";
 import { createNote, duplicateNote, findOrCreateByTitle, restoreNote, trashNote, updateNote } from "../lib/actions";
@@ -58,7 +62,12 @@ const Ctx = createContext<{ spaceId: string; mark: (key: string) => void }>({ sp
 
 // Board chrome in Lumen tokens (CanvasBoard design): amber connection dots + square resize handles on the selection only.
 const CANVAS_CSS = `
-.lumen-canvas .react-flow__handle { width: 12px; height: 12px; min-width: 0; min-height: 0; border: 0; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--bg); opacity: 0; transition: opacity .12s; }
+/* React Flow ends an edge at the handle box's outer side: a zero-thickness box on the border makes lines meet the card exactly;
+   the 12 px dot (and its hit area) is drawn by ::before, centred on the border */
+.lumen-canvas .react-flow__handle { min-width: 0; min-height: 0; border: 0; border-radius: 0; background: transparent; opacity: 0; transition: opacity .12s; overflow: visible; }
+.lumen-canvas .react-flow__handle-top, .lumen-canvas .react-flow__handle-bottom { width: 12px; height: 0; }
+.lumen-canvas .react-flow__handle-left, .lumen-canvas .react-flow__handle-right { width: 0; height: 12px; }
+.lumen-canvas .react-flow__handle::before { content: ""; position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; transform: translate(-50%,-50%); border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--bg); }
 .lumen-canvas .react-flow__node.selected .react-flow__handle, .lumen-canvas .react-flow__node:hover .react-flow__handle, .lumen-canvas.connecting .react-flow__handle { opacity: 1; }
 .lumen-canvas .react-flow__resize-control.handle { width: 8px; height: 8px; border-radius: 2px; background: var(--bg); border: 1.5px solid var(--accent); }
 .lumen-canvas .react-flow__resize-control.line { border-color: transparent; }
@@ -221,6 +230,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
   const { updateNodeData } = useReactFlow();
   const { spaceId, mark } = useContext(Ctx);
   const [edit, setEdit] = useState(!n.text);
+  useEffect(() => { const f = (e: Event) => { if ((e as CustomEvent<string>).detail === id) setEdit(true); }; addEventListener("lumen-canvas-edit", f); return () => removeEventListener("lumen-canvas-edit", f); }, [id]);
   const diagram = !edit ? parseDiagramText(n.text) : null;
   if (diagram) return (
     <>
@@ -441,7 +451,8 @@ log(hits.length, "notes tagged #" + tag);` },
 
 /** Output-line markers OutputStrip (VisualCodePanel) turns into a check / x icon; the characters themselves never render. */
 const LOG_OK = "\u2713", LOG_ERR = "\u2716";
-const EDGE_RF: Record<EdgeShape, string> = { curved: "default", elbow: "smoothstep", straight: "straight" };
+// custom edge types (CanvasEdge.tsx): React Flow's paths plus touch-friendly reconnect handles and in-place labels
+const EDGE_RF: Record<EdgeShape, string> = { curved: "cvCurved", elbow: "cvStep", straight: "cvStraight" };
 const TOOL = "flex h-8 items-center justify-center gap-[5px] rounded-[8px] text-ink hover:bg-surface-2 disabled:opacity-40 disabled:hover:bg-transparent";
 const CAPTION = "shrink-0 whitespace-nowrap ps-1 pe-1.5 text-[10.5px] font-semibold uppercase tracking-[.06em] text-muted";
 const SEP = <span className="mx-1.5 h-[22px] w-px shrink-0 bg-line" />;
@@ -549,6 +560,8 @@ function Inner({ note }: { note: Note }) {
   const [view, setViewRaw] = useState<{ snap: boolean; minimap: boolean }>(() => { try { return { snap: true, minimap: true, ...JSON.parse(localStorage.getItem(VIEW_KEY) ?? "{}") }; } catch { return { snap: true, minimap: true }; } });
   const setView = (p: Partial<typeof view>) => setViewRaw((o) => { const n = { ...o, ...p }; try { localStorage.setItem(VIEW_KEY, JSON.stringify(n)); } catch { /* ignore */ } return n; });
   const [keysOpen, setKeysOpen] = useState(false);
+  const [convOpen, setConvOpen] = useState(false);
+  const [presenting, setPresenting] = useState(false);
 
   // ------------------------------------------------------------ undo / redo (lib/canvas-history.ts)
   // One snapshot per settled change; the component is keyed by note id, so opening another note starts a new history.
@@ -834,6 +847,25 @@ function Inner({ note }: { note: Note }) {
     if (cut) delSelected();
     else toast(t("Copied {n} card|Copied {n} cards", { n: selected.length }));
   };
+  // ------------------------------------------------------------ edges: reconnect, labels in place (CanvasEdge.tsx)
+  const [edgeEdit, setEdgeEdit] = useState<string | null>(null);
+  const edgeApi: CanvasEdgeApi = {
+    editing: edgeEdit, setEditing: setEdgeEdit,
+    saveLabel: (id, text) => { const x = text.trim(); setEdges((es) => es.map((e) => (e.id !== id ? e : { ...e, label: x || undefined, data: { edge: { ...edgeOf(e), ...(x ? { label: x } : {}) } } }))); },
+    reconnect: (id, end, node, side) => setEdges((es) => es.map((e) => {
+      if (e.id !== id) return e;
+      if ((end === "source" ? e.target : e.source) === node) return e; // no self-loops
+      return end === "source" ? { ...e, source: node, sourceHandle: side ?? null, selected: true } : { ...e, target: node, targetHandle: side ?? null, selected: true };
+    })),
+  };
+  /** Ctrl+G: a group around the selected cards (groups are spatial: everything inside belongs to it). */
+  const groupSel = () => {
+    const sel = nodesRef.current.filter((n) => n.selected && n.data.node.type !== "group");
+    if (!sel.length) return;
+    const ns = sel.map((n) => n.data.node);
+    const x0 = Math.min(...ns.map((n) => n.x)), y0 = Math.min(...ns.map((n) => n.y)), x1 = Math.max(...ns.map((n) => n.x + n.width)), y1 = Math.max(...ns.map((n) => n.y + n.height));
+    addNode({ type: "group", label: t("Group"), width: x1 - x0 + 80, height: y1 - y0 + 100 }, { x: x0 - 40, y: y0 - 60 });
+  };
   const duplicateSel = () => {
     const ids = selSet();
     if (!ids.size) return;
@@ -930,6 +962,13 @@ function Inner({ note }: { note: Note }) {
       else if (mod && !e.altKey && !e.shiftKey && key === "y") { stop(); redo(); }
       else if (mod && !e.altKey && !e.shiftKey && key === "a") { stop(); selectAll(); }
       else if (mod && !e.altKey && !e.shiftKey && key === "d") { stop(); duplicateSel(); }
+      else if (mod && !e.altKey && !e.shiftKey && key === "g") { stop(); groupSel(); }
+      else if (!mod && (e.key === "Enter" || e.key === "F2") && (selected.length + edgesRef.current.filter((x) => x.selected).length) === 1) {
+        stop();
+        const se = edgesRef.current.find((x) => x.selected);
+        if (se) setEdgeEdit(se.id); else dispatchEvent(new CustomEvent("lumen-canvas-edit", { detail: selected[0].id }));
+      }
+      else if (e.key === "Escape" && !tidyPrev && (selected.length || edgesRef.current.some((x) => x.selected))) { stop(); setNodes((ns) => ns.map((n) => (n.selected ? { ...n, selected: false } : n))); setEdges((es) => es.map((x) => (x.selected ? { ...x, selected: false } : x))); }
       else if (mod && e.shiftKey && key === "l") { stop(); toggleLock(); }
       else if (mod && e.shiftKey && e.code === "BracketRight") { stop(); order("front"); }
       else if (mod && e.shiftKey && e.code === "BracketLeft") { stop(); order("back"); }
@@ -1114,8 +1153,10 @@ function Inner({ note }: { note: Note }) {
             <MenuRow icon={<MapIcon />} label={t("Minimap")} on={view.minimap} onClick={() => setView({ minimap: !view.minimap })} />
             <MenuRow icon={<SlidersHorizontal />} label={t("Canvas options")} on={optsOpen} onClick={() => { setMenu(null); setOptsOpen(true); }} />
             <MenuRow icon={<Keyboard />} label={t("Keyboard shortcuts")} keys="?" onClick={() => { setMenu(null); setKeysOpen(true); }} />
+            <MenuRow icon={<Presentation />} label={t("Present groups as slides")} onClick={() => { setMenu(null); setPresenting(true); }} />
             <div className="m-1 h-px shrink-0 bg-line" />
             <span className={MENU_HEAD}>{t("Convert")}</span>
+            <MenuRow icon={<Shuffle />} label={t("Convert…")} onClick={() => { setMenu(null); setConvOpen(true); }} />
             {conversions.map(([a, b, l, n, fn]) => (
               <button key={l} onClick={fn} className="flex h-10 items-center gap-2.5 rounded-[8px] px-2.5 text-start hover:bg-bg">
                 <span className="flex items-center gap-[3px] rounded-[6px] border border-line bg-bg px-1.5 py-[3px] text-muted">{a}<ArrowRight size={10} /><span className="text-ink">{b}</span></span>
@@ -1152,14 +1193,14 @@ function Inner({ note }: { note: Note }) {
           const p = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY });
           addNode({ type: "text", text: "" }, { x: Math.round(p.x / 20) * 20, y: Math.round(p.y / 20) * 20 });
         }}>
-        <ReactFlow
-          nodes={shownNodes} edges={shownEdges} onNodesChange={onNodesChangeH} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={nodeTypes}
+        <CanvasEdgeCtx.Provider value={edgeApi}><ReactFlow
+          nodes={shownNodes} edges={shownEdges} onNodesChange={onNodesChangeH} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={nodeTypes} edgeTypes={canvasEdgeTypes}
           onNodeDragStart={dragStart} onNodeDragStop={dragStop} onSelectionDragStart={dragStart} onSelectionDragStop={dragStop}
           onConnectStart={() => setConnecting(true)} onConnectEnd={() => setConnecting(false)}
           connectionMode={ConnectionMode.Loose} fitView fitViewOptions={{ padding: 0.15, maxZoom: 1, ...(typeof innerWidth === "number" && innerWidth < 768 ? { minZoom: 0.62 } : {}) }} minZoom={0.05} maxZoom={3} snapToGrid={view.snap} snapGrid={[20, 20]} zoomOnDoubleClick={false}
           deleteKeyCode={["Delete", "Backspace"]} multiSelectionKeyCode={["Shift", "Meta", "Control"]} proOptions={{ hideAttribution: true }}
           connectionLineStyle={{ stroke: "var(--accent)", strokeWidth: 2 }} style={bgCol ? { background: `color-mix(in srgb, ${colorOf(bgCol)} 10%, var(--bg))` } : undefined}
-          onEdgeDoubleClick={(_, e) => { const l = prompt(t("Edge label"), (e.label as string) ?? ""); if (l !== null) setEdges((es) => es.map((x) => (x.id === e.id ? { ...x, label: l || undefined } : x))); }}
+          onEdgeDoubleClick={(_, e) => setEdgeEdit(e.id)} disableKeyboardA11y
         >
           {bgPat !== "none" && <Background variant={bgPat === "grid" ? BackgroundVariant.Lines : BackgroundVariant.Dots} gap={22} size={bgPat === "grid" ? 1 : 1.1} color={bgPat === "grid" ? "color-mix(in srgb, var(--muted) 16%, transparent)" : "color-mix(in srgb, var(--muted) 35%, transparent)"} />}
           <ZoomPill />
@@ -1167,7 +1208,7 @@ function Inner({ note }: { note: Note }) {
           {!panel && !optsOpen && view.minimap && <MiniMap pannable zoomable className="!hidden lg:!block" style={{ width: 176, height: 112 }} nodeBorderRadius={3}
             nodeColor={(n) => { const c = colorOf((n.data as Data).node.color); return c ? `color-mix(in srgb, ${c} 45%, transparent)` : "color-mix(in srgb, var(--muted) 45%, transparent)"; }}
             maskColor="color-mix(in srgb, var(--surface) 55%, transparent)" maskStrokeColor="var(--accent)" maskStrokeWidth={2} />}
-        </ReactFlow>
+        </ReactFlow></CanvasEdgeCtx.Provider>
 
         {/* Desktop toolbar: Undo Redo | Add | Arrange | Style | Code | ⋯. It fits its own board width (lvl): captions and
             labels go first, then whole groups move into ⋯, so it never runs under the side panel. */}
@@ -1190,11 +1231,13 @@ function Inner({ note }: { note: Note }) {
             <CanvasOptions selNodes={selNodes.length} selEdges={selEdges.length} node={nodeStyle} onNode={onNodeStyle} edge={edgeStyle} onEdge={onEdgeStyle}
               color={curColor} anySel={anySel} onColor={setColor} groups={{ collapsible: collapsibleOf(meta), pattern: groupPattern, example: exampleCount }} onGroups={onGroups}
               bg={{ pattern: bgPat, color: bgCol }} onBg={onBg} onClose={() => setOptsOpen(false)} customPalettes={customPalettes}
-              onPresent={() => toast(t("Presenting groups as slides arrives with the presentation update"))}
+              onPresent={() => { setOptsOpen(false); setPresenting(true); }}
               onExport={() => { setOptsOpen(false); openCanvasExport(); }} />
           </div>
         )}
         {keysOpen && <CanvasKeys mod={MOD} onClose={() => setKeysOpen(false)} />}
+      {convOpen && <ConvertMenu source={() => sourceOf({ ...note, body: stringify(snap()) })} onClose={() => setConvOpen(false)} />}
+      {presenting && <CanvasPresenter canvas={snap()} notes={v.notes} title={note.title} noteId={note.id} spaceId={note.spaceId} onExit={() => setPresenting(false)} />}
         {tidyPrev && <TidyBanner stats={tidyPrev.stats} onCancel={cancelTidy} onApply={applyTidy} top={64} />}
 
         {/* Phone: one bottom tool card, groups as tabs */}

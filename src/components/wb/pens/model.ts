@@ -40,12 +40,12 @@ export const THICK_PRESETS = [1, 2.5, 5, 10, 18];
 const BASE: Omit<PenSettings, "type"> = { color: "#1e1e1e", width: 2.5, opacity: 100, smoothing: "low", pressure: true, curve: "linear", straight: true };
 export const PEN_DEFAULTS: Record<PenType, PenSettings> = {
   ballpoint: { ...BASE, type: "ballpoint", width: 1.5, pressure: false },
-  fountain: { ...BASE, type: "fountain", width: 2.5 },
-  brush: { ...BASE, type: "brush", width: 6, smoothing: "high" },
+  fountain: { ...BASE, type: "fountain", width: 3 },
+  brush: { ...BASE, type: "brush", width: 8, smoothing: "high" },
   marker: { ...BASE, type: "marker", width: 8, opacity: 80, pressure: false },
   highlighter: { ...BASE, type: "highlighter", color: "#FFD43B", width: 14, opacity: 40, pressure: false },
-  pencil: { ...BASE, type: "pencil", width: 1.5, opacity: 85, pressure: true },
-  calligraphy: { ...BASE, type: "calligraphy", width: 4, pressure: false },
+  pencil: { ...BASE, type: "pencil", width: 1.5, opacity: 72, pressure: true },
+  calligraphy: { ...BASE, type: "calligraphy", width: 6, pressure: false },
   laser: { ...BASE, type: "laser", color: "#EF6B6B", width: 3 },
 };
 
@@ -144,6 +144,54 @@ const curveOf = (c: Curve) => (p: number) => (c === "soft" ? Math.pow(p, 0.6) : 
 const grain = (i: number) => { const x = Math.sin(i * 12.9898) * 43758.5453; return x - Math.floor(x); };
 
 /**
+ * Per-pen pressure profile (one function for the live overlay and the committed element). Excalidraw draws every freedraw
+ * with fixed perfect-freehand options (size = strokeWidth × 4.25, thinning .6, sine easing), so a pen's look is carried by
+ * its pressures: each point's radius = size × sin((.2 + .6 p) · π/2). Without stylus data the profile comes from the
+ * point spacing (pointer speed), the stroke direction or the arc length, so every pen reads differently with a mouse too.
+ */
+export function penPressures(pts: Pt[], pr: number[], stylus: boolean, p: PenSettings, straight = false): number[] {
+  const n = pts.length;
+  if (!n) return [];
+  const cv = curveOf(p.curve);
+  const real = (i: number) => cv(pr[i] ?? 0.5);
+  const clamp = (v: number) => Math.max(0.02, Math.min(1, v));
+  // speed: spacing between pointer samples, smoothed over a few points (fast = thin)
+  const gap = pts.map((q, i) => (i ? Math.hypot(q[0] - pts[i - 1][0], q[1] - pts[i - 1][1]) : 0));
+  if (n > 1) gap[0] = gap[1];
+  const speed = gap.map((_, i) => { let s = 0, k = 0; for (let j = Math.max(0, i - 3); j <= Math.min(n - 1, i + 3); j++) { s += gap[j]; k++; } return s / k; });
+  const ref = 3 + p.width;
+  const bySpeed = (i: number) => 1 - Math.min(1, speed[i] / ref);
+  // arc length for tapers
+  const arc: number[] = []; let L = 0;
+  for (let i = 0; i < n; i++) { L += gap[i] && i ? gap[i] : 0; arc.push(L); }
+  const taper = (i: number, len: number) => Math.min(1, (arc[i] + 0.5) / len, (L - arc[i] + 0.5) / len);
+  switch (p.type) {
+    case "ballpoint": return pts.map(() => 0.25);
+    case "fountain":
+      if (straight) return pts.map(() => 0.3);
+      return pts.map((_, i) => clamp(p.pressure && stylus ? real(i) : 0.04 + 0.96 * Math.pow(bySpeed(i), 1.4)));
+    case "brush": {
+      const len = Math.max(8, Math.min(L * 0.3, p.width * 7));
+      return pts.map((_, i) => clamp(Math.pow(taper(i, len), 0.7) * (p.pressure && stylus ? 0.3 + real(i) * 0.7 : 0.3 + 0.7 * bySpeed(i))));
+    }
+    case "calligraphy":
+      // fixed 45° nib: width follows the stroke direction
+      return pts.map((_, i) => { const r = pts[Math.min(n - 1, i + 2)], l = pts[Math.max(0, i - 2)]; const a = Math.atan2(r[1] - l[1], r[0] - l[0]); return clamp(0.04 + 0.96 * Math.abs(Math.sin(a - Math.PI / 4))); });
+    case "pencil": return pts.map((_, i) => clamp((p.pressure && stylus ? real(i) * 0.5 : 0.2) + (grain(i) - 0.5) * 0.36));
+    case "marker": case "highlighter": return pts.map(() => 1);
+    default: return pts.map((_, i) => (p.pressure && stylus ? clamp(real(i) * 0.5 + 0.05) : 0.25));
+  }
+}
+
+/** Excalidraw radius factor of one pressure (sine easing, thinning .6). */
+const radiusK = (q: number) => Math.sin(((0.2 + 0.6 * q) * Math.PI) / 2);
+/** strokeWidth so the stroke's average width is the chosen size in px, whatever the pen's pressure shaping. */
+export function strokeWidthFor(px: number, pressures: number[]): number {
+  const mean = pressures.length ? pressures.reduce((s, q) => s + radiusK(q), 0) / pressures.length : radiusK(0.25);
+  return Math.max(0.05, Math.round((px / (2 * 4.25 * mean)) * 1000) / 1000);
+}
+
+/**
  * Freedraw element → the element as the pen draws it. `straight` replaces the path by a straight line (hold-to-straighten),
  * `angleSnap` snaps that line to 15°.
  */
@@ -151,7 +199,8 @@ export function finishStroke<E extends Record<string, unknown>>(el: E, p: PenSet
   let pts = ((el.points as Pt[]) ?? []).map((q) => [q[0], q[1]] as Pt);
   const n0 = pts.length;
   let pr = (el.pressures as number[] | undefined) ?? [];
-  const hadPressure = !el.simulatePressure && pr.length === n0 && pr.some((v) => v !== 0.5);
+  // real stylus data only: a mouse reports a constant (0.5, or 0 in some browsers / automation)
+  const hadPressure = !el.simulatePressure && pr.length === n0 && n0 > 1 && Math.max(...pr) - Math.min(...pr) > 0.02;
   if (o.straight && pts.length > 1) {
     const a = pts[0];
     let b = pts[pts.length - 1];
@@ -165,22 +214,8 @@ export function finishStroke<E extends Record<string, unknown>>(el: E, p: PenSet
   } else {
     pts = smooth(pts, p.smoothing === "high" ? 4 : p.smoothing === "low" ? 1 : 0);
   }
-  const n = pts.length;
-  const cv = curveOf(p.curve);
-  const base = (i: number) => (hadPressure && !o.straight ? cv(pr[i] ?? 0.5) : 0.5);
-  let pressures: number[] | null = null;
-  let simulate = false;
-  switch (p.type) {
-    case "fountain": if (p.pressure && hadPressure && !o.straight) pressures = pts.map((_, i) => base(i)); else if (p.pressure && !o.straight) simulate = true; else pressures = pts.map(() => 0.25); break;
-    case "brush": pressures = pts.map((_, i) => { const t = n > 1 ? i / (n - 1) : 0.5; return Math.min(1, (0.08 + 0.92 * Math.sin(Math.PI * t)) * (p.pressure && hadPressure ? cv(pr[i] ?? 0.5) * 1.6 : 0.85)); }); break;
-    case "calligraphy": {
-      // fixed 45° nib: width follows the stroke direction
-      pressures = pts.map((_, i) => { const r = pts[Math.min(n - 1, i + 1)], l = pts[Math.max(0, i - 1)]; const a = Math.atan2(r[1] - l[1], r[0] - l[0]); return 0.1 + 0.8 * Math.abs(Math.sin(a - Math.PI / 4)) ; });
-      break;
-    }
-    case "pencil": pressures = pts.map((_, i) => (p.pressure && hadPressure ? cv(pr[i] ?? 0.5) * 0.6 : 0.22) + (grain(i) - 0.5) * 0.12); break;
-    default: pressures = pts.map((_, i) => (p.pressure && hadPressure ? base(i) * 0.5 + 0.1 : 0.25));
-  }
+  const pressures = penPressures(pts, pr, hadPressure && !o.straight, p, !!o.straight);
+  const simulate = false;
   // points are relative to (x, y): keep the first at 0,0
   const [ox, oy] = pts[0] ?? [0, 0];
   const rel = pts.map(([x, y]) => [x - ox, y - oy] as Pt);
@@ -190,7 +225,7 @@ export function finishStroke<E extends Record<string, unknown>>(el: E, p: PenSet
     x: (el.x as number) + ox, y: (el.y as number) + oy,
     points: rel, width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys),
     pressures: simulate ? [] : pressures ?? [], simulatePressure: simulate,
-    strokeWidth: pxToSw(p.width), opacity: p.opacity, roughness: 0,
+    strokeWidth: strokeWidthFor(p.width, pressures), opacity: p.opacity, roughness: 0,
     customData: { ...((el.customData as object) ?? {}), lumenPen: { type: p.type, width: p.width, smoothing: p.smoothing, pressure: p.pressure, curve: p.curve } },
   };
 }

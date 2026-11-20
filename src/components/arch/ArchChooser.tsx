@@ -78,7 +78,7 @@ export function ArchChooser({ where, onClose }: { where: ChooserWhere; onClose: 
         </Panel>
         <Panel g="template" title={t("Start from")} w={phone ? "100%" : "420px"}>
           <div style={{ display: "grid", gap: 6 }}>
-            {([["template", t("From template"), t("3-tier, RAG, k8s…"), () => setTpl(true)], ["assistant", t("Describe it"), t("AI drafts, you review"), () => void archAiDescribe().catch((e: Error) => toast(e.message, undefined, { icon: "info" }))], ["export", t("Import"), t("Mermaid · draw.io · IaC · SQL · OpenAPI"), () => file.current?.click()]] as const).map(([g, l, sub, fn]) => (
+            {([["template", t("From template"), t("3-tier, RAG, k8s…"), () => setTpl(true)], ["assistant", t("Describe it"), t("AI drafts, you review"), () => archAiDescribe((dsl, type, instr) => make(type ?? "architecture", dsl, instr.length > 48 ? `${instr.slice(0, 48).trim()}…` : instr))], ["export", t("Import"), t("Mermaid · draw.io · IaC · SQL · OpenAPI"), () => file.current?.click()]] as const).map(([g, l, sub, fn]) => (
               <button key={g} style={row(false)} className="hover:bg-surface-2" onClick={fn}><Glyph name={g} size={18} /><span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{l}</span><span style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "nowrap" }}>{sub}</span></button>
             ))}
           </div>

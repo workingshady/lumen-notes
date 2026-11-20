@@ -141,7 +141,7 @@ const ARCH_T: VisualTemplate[] = ARCH.map((a) => {
   if (a.id === "threat") els.push(stageBox(156, 26, 120, 14, { t: "Trust boundary", fs: 9.5, c: "#EF6B6B" }));
   if (a.id === "url-short") els = els.map((e) => (e.t ? { ...e, t: "? ? ?" } : e));
   if (a.id === "chat-feed") els.push(stageBox(160, 70, 140, 30, { t: "Reveal labels ⌥R", fs: 10.5, c: "var(--muted)" }));
-  return { id: a.id, name: a.name, cat: a.cat, caption: a.caption ?? "", type: "canvas", title: a.title, els, lines, build: () => JSON.stringify(a.id === "erd" ? erdCanvas() : archCanvas(a.spec), null, 2) };
+  return { id: a.id, name: a.name, cat: a.cat, caption: a.caption ?? "", type: "canvas", title: a.title, els, lines, build: () => { const c = a.id === "erd" ? erdCanvas() : archCanvas(a.spec); if (a.cat === "Interview" && c.lumenArch && typeof c.lumenArch === "object") (c.lumenArch as Record<string, unknown>).interview = true; return JSON.stringify(c, null, 2); } };
 });
 
 export const VISUAL_TEMPLATES: VisualTemplate[] = [...STUDY, ...ARCH_T];

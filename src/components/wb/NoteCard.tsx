@@ -1,6 +1,8 @@
-// Note card (toolbar N, empty-state "Add a note card"): pick a note from the vault; the board gets a card with its title
-// that links to it ("lumen:note/<id>", opened in Lumen by Whiteboard's onLinkOpen). Plain Excalidraw rectangle + label,
-// so the .excalidraw file stays open; the note id also sits in customData.lumenNote.
+// Note card (toolbar N, empty-state "Add a note card", drops): pick a note from the vault; the board gets a live card
+// (Lumen 40D–40G: collapsed · card · expanded editor · missing; rendered by ./cards/CardView through Excalidraw's embeddable)
+// that links to it ("lumen:note/<id>", opened in Lumen by Whiteboard's onLinkOpen). The .excalidraw file stays open: a plain
+// embeddable with a link; the Lumen data sits in customData.lumenCard. noteCardPlain() is the old box-with-a-title.
+import "./cards/register";
 import { useMemo, useState } from "react";
 import type { Note } from "../../../shared/types";
 import { t } from "../../lib/i18n";
@@ -9,7 +11,15 @@ import { Glyph } from "../Glyph";
 import { cx } from "../ui";
 import { Pop } from "./ui";
 
+import { cardSkeleton } from "../../lib/convert/cards";
+
+/** A live note card at x, y (260 × 140). */
 export function noteCardSkeleton(n: Note, x: number, y: number) {
+  return cardSkeleton({ kind: "note", noteId: n.id, title: n.title, state: "card" }, x, y);
+}
+
+/** The plain box-with-a-title note card (no live content). */
+export function noteCardPlain(n: Note, x: number, y: number) {
   return {
     type: "rectangle", x, y, width: 260, height: 96, backgroundColor: "#d0ebff", fillStyle: "solid", strokeColor: "#1e1e1e", roughness: 0, roundness: { type: 3 },
     link: `lumen:note/${n.id}`, customData: { lumenNote: n.id },

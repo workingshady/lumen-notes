@@ -160,3 +160,28 @@ export function route(p: Pt, ps: Side, q: Pt, qs: Side, shape: "orthogonal" | "s
   if (ends.start) heads.push(head(p.x, p.y, startDir));
   return { d, heads, mid, pts, poly };
 }
+
+/** The side of `b` whose border `pt` lies on (nearest border). */
+export function sideOfPoint(b: Box, pt: Pt): Side {
+  const d: [Side, number][] = [["left", Math.abs(pt.x - b.x)], ["right", Math.abs(pt.x - (b.x + b.width))], ["top", Math.abs(pt.y - b.y)], ["bottom", Math.abs(pt.y - (b.y + b.height))]];
+  return d.sort((x, y) => x[1] - y[1])[0][0];
+}
+/** Pin a stored route's two ends to the centre ports of the sides they touch (the board's handles), keeping right angles:
+ * the neighbouring bend slides with the end so the first / last segments stay straight. Returns the full polyline and the sides. */
+export function snapRoute(pts: Pt[], a: Box, b: Box): { pts: Pt[]; fs: Side; ts: Side } | null {
+  const fs = sideOfPoint(a, pts[0]), ts = sideOfPoint(b, pts[pts.length - 1]);
+  const p = portAt(a, fs), q = portAt(b, ts);
+  const out = pts.map((x) => ({ ...x }));
+  const slide = (i: number, j: number, to: Pt, horiz: boolean) => {
+    const old = out[i];
+    out[i] = { ...to };
+    if (j > 0 && j < out.length - 1) { if (horiz && near(out[j].y, old.y)) out[j].y = to.y; else if (!horiz && near(out[j].x, old.x)) out[j].x = to.x; }
+  };
+  slide(0, 1, p, horizSide(fs));
+  slide(out.length - 1, out.length - 2, q, horizSide(ts));
+  const full = orthogonalize(out, horizSide(fs));
+  // the first / last segment must leave / enter along its side's axis, otherwise the automatic route is the better one
+  const along = (u: Pt, v: Pt, s: Side) => (horizSide(s) ? near(u.y, v.y) : near(u.x, v.x));
+  if (full.length < 2 || !along(full[0], full[1], fs) || !along(full[full.length - 2], full[full.length - 1], ts)) return null;
+  return { pts: full, fs, ts };
+}

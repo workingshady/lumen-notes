@@ -15,6 +15,8 @@ const sid = () => crypto.randomUUID().replace(/-/g, "").slice(0, 16);
 let bound: { api: WbAPI; el: HTMLElement | null } | null = null;
 /** Optional: Whiteboard hands over its API so the drop zone can hit-test elements and auto-scroll. */
 export function bindWbApi(api: WbAPI | null, host?: HTMLElement | null) { bound = api ? { api, el: host ?? null } : null; }
+/** The bound board API (cards edit their own element through it: lib/convert cards, W3-B). */
+export const getBoundApi = (): WbAPI | null => bound?.api ?? null;
 
 function view(api: WbAPI) {
   const a = api.getAppState() as { scrollX: number; scrollY: number; zoom: { value: number }; offsetLeft?: number; offsetTop?: number };
@@ -115,8 +117,8 @@ async function skeletons(p: DndPayload, x: number, y: number, kind: "whiteboard"
 /** Add skeletons to the board as one step: selected afterwards, with an Undo chip. */
 async function addToBoard(ctx: WbCtx, sk: Sk[], files: unknown[] | undefined, label: string) {
   const api = ctx.api!;
-  const { convertToExcalidrawElements } = await import("@excalidraw/excalidraw");
-  const els = convertToExcalidrawElements(sk as never, { regenerateIds: false }) as unknown as El[];
+  const { convertSkeleton } = await import("../../lib/convert/bind"); // live cards (embeddables) and arrows bound to them
+  const els = (await convertSkeleton(sk as never, { regenerateIds: false })) as unknown as El[];
   if (files?.length) api.addFiles(files);
   const sel: Record<string, true> = {};
   els.forEach((e) => { if (!(e.type === "text" && (e as { containerId?: string }).containerId)) sel[e.id] = true; });
@@ -213,8 +215,8 @@ export async function sendToWhiteboardNote(p: DndPayload, body: string, kind: "w
   const y = els.length ? Math.min(...els.map((e) => e.y)) : 0;
   const r = await skeletons(p, x, y, kind, noteId, null as unknown as WbAPI);
   if (!r) return null;
-  const { convertToExcalidrawElements } = await import("@excalidraw/excalidraw");
-  const added = convertToExcalidrawElements(r.sk as never, { regenerateIds: false }) as unknown as El[];
+  const { convertSkeleton } = await import("../../lib/convert/bind");
+  const added = (await convertSkeleton(r.sk as never, { regenerateIds: false })) as unknown as El[];
   const files = { ...(doc.files ?? {}) };
   for (const f of (r.files ?? []) as { id: string; mimeType: string; created: number; lumenAtt?: string }[]) files[f.id] = { id: f.id, mimeType: f.mimeType, created: f.created, lumenAtt: f.lumenAtt };
   return { body: JSON.stringify({ ...doc, elements: [...(doc.elements ?? []), ...added], files }), label: r.label };

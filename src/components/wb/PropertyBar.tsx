@@ -1,7 +1,9 @@
 // Contextual property bar (design 33A / 33C / 44A): floats 24 px above the selection, or docks under the toolbar when
 // a tool is active and nothing is selected. Shows only what the selection has; each control opens a small popover.
 // Replaces Excalidraw's tall style panel and the old sticky bar (both hidden), so nothing can overlap any more.
-import { useState, type ReactNode } from "react";
+import { ArrangePopover } from "./layers/Arrange";
+import { selectedIsVendor } from "../../lib/library-items";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { t, tk } from "../../lib/i18n";
 import { Glyph } from "../Glyph";
 import { cx } from "../ui";
@@ -40,8 +42,10 @@ export function PropertyBar({ mode, style, pos, phone, dark, ctx, onSet, onActio
   const toggle = (k: Key) => (e: React.MouseEvent) => { setAnchor((e.currentTarget as HTMLElement).getBoundingClientRect()); setOpen(open === k ? null : k); if (k === "link") setLinkDraft(style.link ?? ""); };
   const close = () => setOpen(null);
 
+  // vendor icons are shown exactly as published: no recolouring
+  const vendor = !!ctx.api && !mode.startsWith("tool-") && selectedIsVendor(ctx.api as never);
   const Btn = ({ k, glyph, sw, label, tip, on }: { k: Key; glyph?: string; sw?: string | null; label?: ReactNode; tip: string; on?: boolean }) => (
-    <button type="button" data-pop-anchor title={tip} aria-label={tip} onClick={toggle(k)}
+    <button type="button" data-pop-anchor title={vendor && (k === "stroke" || k === "fill") ? t("Vendor icons are never recoloured") : tip} aria-label={tip} disabled={vendor && (k === "stroke" || k === "fill")} onClick={toggle(k)}
       className={cx("flex h-[30px] min-w-[30px] shrink-0 items-center justify-center gap-[5px] rounded-[7px] px-[6px] text-[12px]", open === k || on ? "text-accent" : "text-ink hover:bg-surface")}
       style={open === k || on ? { background: AC_BG } : undefined}>
       {sw !== undefined && <span className="size-[18px] rounded-[5px]" style={{ background: sw == null ? "linear-gradient(135deg,var(--surface) 45%,var(--muted) 45% 55%,var(--surface) 55%)" : sw === "transparent" ? "repeating-conic-gradient(var(--surface) 0 25%, var(--bg) 0 50%) 0 0/6px 6px" : shown(sw, dark), boxShadow: "inset 0 0 0 1px rgba(0,0,0,.15)" }} />}
@@ -111,17 +115,7 @@ export function PropertyBar({ mode, style, pos, phone, dark, ctx, onSet, onActio
         </div>
       );
       case "type": return <div className="p-1"><Label>{t("Arrow type")}</Label><Choices value={style.arrowType} onPick={(v) => onSet({ arrowType: v })} items={[["sharp", "path-straight", t("Straight")], ["round", "path-curved", t("Curved")], ["elbow", "path-elbow", t("Elbow")]]} /></div>;
-      case "arrange": return (
-        <div className="w-[236px] p-1">
-          <Label>{t("Arrange")}</Label>
-          <div className="grid grid-cols-6 gap-1">
-            {([["front", "bring-front", t("Bring to front")], ["forward", "bring-forward", t("Bring forward")], ["backward", "send-backward", t("Send backward")], ["back", "send-back", t("Send to back")], ["group", "group", t("Group")], ["ungroup", "ungroup", t("Ungroup")],
-              ["align-left", "align-left", t("Align left")], ["align-center", "align-center", t("Align centre")], ["align-right", "align-right", t("Align right")], ["align-top", "align-top", t("Align top")], ["align-middle", "align-middle", t("Align middle")], ["align-bottom", "align-bottom", t("Align bottom")]] as [Action, string, string][]).map(([a, g, l]) => (
-              <button key={a} type="button" title={l} aria-label={l} onClick={() => onAction(a)} className="flex h-[36px] items-center justify-center rounded-[8px] border border-line hover:bg-surface-2"><Glyph name={g} size={17} /></button>
-            ))}
-          </div>
-        </div>
-      );
+      case "arrange": return <ArrangePopover phone={phone} count={Object.keys((ctx.api?.getAppState().selectedElementIds ?? {}) as object).length} run={(x) => { if (ctx.arrange) ctx.arrange(x); else onAction(x as Action); close(); }} />;
       case "link": return (
         <form className="flex w-[280px] items-center gap-1.5 p-1" onSubmit={(e) => { e.preventDefault(); onSet({ link: linkDraft.trim() || null }); close(); }}>
           <input autoFocus value={linkDraft} onChange={(e) => setLinkDraft(e.target.value)} placeholder="https://…" dir="ltr" className="h-[32px] min-w-0 flex-1 rounded-[8px] border border-line bg-bg px-2 text-[12.5px] outline-none focus:border-accent" aria-label={t("Link")} />
@@ -179,9 +173,25 @@ export function PropertyBar({ mode, style, pos, phone, dark, ctx, onSet, onActio
       className={cx("absolute z-30 flex max-w-[calc(100%-20px)] flex-wrap items-center gap-[2px] whitespace-nowrap rounded-[10px] border border-line bg-surface-2 p-1 shadow-[0_10px_28px_rgba(0,0,0,.3)]", phone ? "inset-x-[10px] bottom-[calc(96px+env(safe-area-inset-bottom))] w-fit max-w-none" : "")}
       style={phone ? undefined : pos ? { left: pos.x, top: pos.y } : { left: "50%", top: 64, transform: "translateX(-50%)" }}>
       {items}
-      {open && (open === "stroke" || open === "fill") && wbRegistry.palette
+      {open === "arrange" && <div className={phone ? "absolute inset-x-0 bottom-[calc(100%+8px)] z-40 max-h-[70vh] overflow-y-auto" : popUp ? "absolute bottom-[calc(100%+8px)] start-0 z-40 fade-in" : "absolute start-0 top-[calc(100%+8px)] z-40 fade-in"}><ArrangeOutside onClose={close}>{body()}</ArrangeOutside></div>}
+      {open !== "arrange" && open && (open === "stroke" || open === "fill") && wbRegistry.palette
         ? <div className={phone ? "" : popUp ? "absolute bottom-[calc(100%+6px)] start-0 z-40 [&>[role=dialog]]:bottom-0" : "absolute start-0 top-[calc(100%+6px)] z-40"}>{body()}</div>
-        : open && <Pop onClose={close} className={phone ? "bottom-[calc(100%+8px)] start-0" : popUp ? "bottom-[calc(100%+8px)] start-0" : "start-0 top-[calc(100%+8px)]"}>{body()}</Pop>}
+        : open && open !== "arrange" && <Pop onClose={close} className={phone ? "bottom-[calc(100%+8px)] start-0" : popUp ? "bottom-[calc(100%+8px)] start-0" : "start-0 top-[calc(100%+8px)]"}>{body()}</Pop>}
     </div>
   );
+}
+
+/** Closes the arrange popover on an outside press or Esc (like Pop, without Pop's frame: 38E draws its own panels). */
+function ArrangeOutside({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const down = (e: PointerEvent) => { if (ref.current && !ref.current.contains(e.target as Node) && !(e.target as HTMLElement).closest?.("[data-pop-anchor]")) onClose(); };
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
+    const tm = setTimeout(() => addEventListener("pointerdown", down, true), 0);
+    addEventListener("keydown", key, true);
+    return () => { clearTimeout(tm); removeEventListener("pointerdown", down, true); removeEventListener("keydown", key, true); };
+  }, [onClose]);
+  // keep the three panels on screen: shift left when they would run past the window edge
+  useEffect(() => { const el = ref.current; if (!el) return; const r = el.getBoundingClientRect(); const over = r.right - (innerWidth - 12); if (over > 0) el.style.transform = `translateX(${-Math.min(over, r.left - 12)}px)`; }, []);
+  return <div ref={ref} className="whitespace-normal" onPointerDown={(e) => e.stopPropagation()}>{children}</div>;
 }

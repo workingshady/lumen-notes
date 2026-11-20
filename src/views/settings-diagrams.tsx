@@ -3,6 +3,7 @@ import { ChipSelect, PrefRow } from "../components/chip-select";
 import { setExtraPrefs, useExtraPrefs, type DiagramPrefs } from "../lib/reading-prefs";
 import { DIAGRAM_EXPORT_DEFAULTS, setSettings, type DiagramExportPrefs } from "../lib/settings";
 import { cx } from "../components/ui";
+import { BoardDefaultsRows } from "../components/wb/settings/Defaults";
 import { fmtNum, t, tk } from "../lib/i18n";
 
 const THEMES: { value: DiagramPrefs["diagramTheme"]; label: string }[] = [{ value: "app", label: tk("Match app") }, { value: "default", label: tk("Paper") }, { value: "dark", label: tk("Lamplight") }, { value: "neutral", label: tk("Neutral") }, { value: "forest", label: tk("Forest") }];
@@ -64,6 +65,7 @@ export function DiagramsSection() {
       <PrefRow label={t("Name new diagram files")} desc={t("A short name from Workers AI, else the section heading")}>
         <ChipSelect value={s.diagramAiNames ? "on" : "off"} onChange={(v) => setSettings({ diagramAiNames: v === "on" })} options={[{ value: "on", label: t("Suggested") }, { value: "off", label: t("From heading") }]} />
       </PrefRow>
+      <BoardDefaultsRows />
     </div>
   );
 }

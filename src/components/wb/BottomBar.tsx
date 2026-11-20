@@ -1,4 +1,5 @@
 // Bottom clusters (design 33A / 33H / 33J): zoom − % + | Fit, Undo · Redo, minimap; bottom-right frame navigator chip.
+import { orderedFrames } from "./present/frames";
 import { useEffect, useRef, useState } from "react";
 import { t } from "../../lib/i18n";
 import { Glyph } from "../Glyph";
@@ -22,7 +23,7 @@ export function ZoomCluster({ api, zoom, canRedo, onUndo, onRedo, disabledEdit }
   };
   const b = "flex size-7 items-center justify-center rounded-[7px] text-[16px] hover:bg-surface-2";
   return (
-    <div data-wb-chrome className="absolute bottom-[14px] start-[14px] z-20 hidden gap-2 md:flex" onPointerDown={(e) => e.stopPropagation()}>
+    <div data-wb-chrome className="hidden gap-2 md:flex" onPointerDown={(e) => e.stopPropagation()}>
       <div className="flex items-center gap-[2px] rounded-[10px] border border-line bg-surface p-[3px]">
         <button type="button" aria-label={t("Zoom out")} title={t("Zoom out") + " · Ctrl −"} onClick={() => setZoom(1 / 1.2)} className={b}>−</button>
         <button type="button" title={t("Reset to 100%")} onClick={() => setZoom(null)} className="w-11 text-center text-[12px] tabular-nums">{Math.round(zoom * 100)}%</button>
@@ -36,6 +37,12 @@ export function ZoomCluster({ api, zoom, canRedo, onUndo, onRedo, disabledEdit }
       </div>
     </div>
   );
+}
+
+/** Bottom-start stack (WBStudio): the minimap sits 8 px above the zoom · undo cluster (bottom 58 = 14 + 36 + 8), both at
+ *  inset-inline-start 14 px, so they never overlap at any size, zoom or direction. */
+export function BottomStart({ children }: { children: React.ReactNode }) {
+  return <div className="pointer-events-none absolute bottom-[14px] start-[14px] z-20 flex flex-col items-start gap-2 [&>*]:pointer-events-auto">{children}</div>;
 }
 
 /** 180×110 overview: element boxes (frames outlined), the visible area in amber; click or drag to move there. */
@@ -82,19 +89,14 @@ export function Minimap({ api, tick }: { api: WbAPI | null; tick: number }) {
     api.updateScene({ appState: { scrollX: -(sx - st.width / st.zoom.value / 2), scrollY: -(sy - st.height / st.zoom.value / 2) } });
   };
   return (
-    <div data-wb-chrome className="absolute bottom-[58px] start-[14px] z-20 hidden h-[110px] w-[180px] overflow-hidden rounded-[10px] border border-line bg-surface md:block">
+    <div data-wb-chrome className="hidden h-[110px] w-[180px] shrink-0 overflow-hidden rounded-[10px] border border-line bg-surface md:block">
       <canvas ref={ref} aria-label={t("Minimap")} className="size-full cursor-pointer" style={{ width: 180, height: 110 }} onPointerDown={(e) => { (e.target as HTMLElement).setPointerCapture(e.pointerId); go(e); }} onPointerMove={(e) => e.buttons && go(e)} />
     </div>
   );
 }
 
 /** Frames, in board order (W3-A may reorder via customData.lumenOrder). */
-export function framesOf(api: WbAPI | null) {
-  if (!api) return [];
-  const fr = api.getSceneElements().filter((e) => (e.type === "frame" || e.type === "magicframe") && !e.isDeleted);
-  const ord = (e: Record<string, unknown>) => ((e.customData as { lumenOrder?: number } | undefined)?.lumenOrder ?? Infinity);
-  return [...fr].sort((a, b) => ord(a) - ord(b));
-}
+export function framesOf(api: WbAPI | null) { return orderedFrames(api); }
 
 export function FrameChip({ api, count, tick, minimap, onMinimap, onFrames }: { api: WbAPI | null; count: number; tick: number; minimap: boolean; onMinimap: () => void; onFrames: () => void }) {
   const [menu, setMenu] = useState(false);

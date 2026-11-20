@@ -3,6 +3,8 @@
 // real DOM <img>/<video> that plays. Media files are Lumen attachments; the element's link is the public /api/att/<id>
 // URL (so other .excalidraw viewers can still open it) and customData.lumenMedia says how to render it.
 import { useEffect, useState } from "react";
+import { cardOf } from "../lib/convert/cards";
+import { CardView } from "./wb/cards/CardView";
 
 export type MediaKind = "gif" | "video" | "audio";
 const ATT = /\/api\/att\/([\w-]+)/;
@@ -25,11 +27,15 @@ function Media({ el, resolve }: { el: El; resolve: (attId: string) => Promise<st
   return <video src={src} controls playsInline preload="metadata" className={box} style={{ background: "#000" }} />;
 }
 
-/** Props for <Excalidraw>: allow Lumen media + any https page, render media natively (other embeds keep Excalidraw's iframe). */
+/** Props for <Excalidraw>: allow Lumen media, Lumen cards + any https page; media and cards render natively (other embeds keep Excalidraw's iframe). */
 export function embedProps(resolve: (attId: string) => Promise<string>) {
   return {
-    validateEmbeddable: (link: string) => (attIdOf(link) || /^https:\/\//i.test(link) ? true : undefined),
-    renderEmbeddable: (el: El) => (attIdOf(el.link) ? <Media el={el} resolve={resolve} /> : null),
+    validateEmbeddable: (link: string) => (attIdOf(link) || /^(https:\/\/|lumen:)/i.test(link) ? true : undefined),
+    renderEmbeddable: (el: El & { width: number; height: number }) => {
+      if (attIdOf(el.link)) return <Media el={el} resolve={resolve} />;
+      const card = cardOf(el);
+      return card ? <CardView el={el} card={card} /> : null; // Lumen cards: note, Mermaid, link, PDF page (wb/cards)
+    },
   };
 }
 

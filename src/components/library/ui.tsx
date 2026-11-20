@@ -67,7 +67,7 @@ export function Block({ bk }: { bk: Blk }) {
         <div role="tablist" style={{ display: "flex", padding: 2, borderRadius: 8, background: "var(--sf2)", gap: 2 }}>
           {bk.seg.map((l, i) => {
             const on = i === (bk.segOn ?? 0);
-            return <button key={l} type="button" role="tab" aria-selected={on} onClick={() => bk.onSeg?.(i)} style={{ flex: 1, height: 28, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: bk.segCompact ? 11 : 12, minWidth: 0, background: on ? "var(--sf)" : "transparent", color: on ? "var(--tx)" : "var(--mu)", fontWeight: on ? 600 : 400, whiteSpace: "nowrap", boxShadow: on ? "0 1px 2px rgba(0,0,0,.2)" : "none", padding: bk.segCompact ? "0 2px" : "0 6px", border: 0, cursor: "pointer", fontFamily: "inherit", transition: "background .12s" }}>{l}</button>;
+            return <button key={l} type="button" role="tab" aria-selected={on} onClick={() => bk.onSeg?.(i)} style={{ flex: bk.segCompact ? "1 0 auto" : 1, height: 28, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: bk.segCompact ? 11.5 : 12, minWidth: bk.segCompact ? "auto" : 0, background: on ? "var(--sf)" : "transparent", color: on ? "var(--tx)" : "var(--mu)", fontWeight: on ? 600 : 400, whiteSpace: "nowrap", boxShadow: on ? "0 1px 2px rgba(0,0,0,.2)" : "none", padding: "0 6px", border: 0, cursor: "pointer", fontFamily: "inherit", transition: "background .12s" }}>{l}</button>;
           })}
         </div>
       )}

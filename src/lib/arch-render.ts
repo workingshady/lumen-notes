@@ -2,8 +2,9 @@
 import type { DiagramExportPrefs } from "./settings";
 import type { BuiltSvg } from "./diagram-export";
 import { GLYPHS } from "./glyphs";
+import { vendorIconUrl } from "./vendor-icons";
 import { displayOf, edgeSides, endsOf, groupColor, hiddenBy, isGroup, nodeColor, STATUS, EDGE_STYLE, type AEdge, type ANode, type ArchCanvas } from "./arch-model";
-import { portAt, route, type Pt, type Route } from "./arch-route";
+import { portAt, route, snapRoute, type Pt, type Route } from "./arch-route";
 import type { Side } from "../../shared/types";
 import { routeKey } from "./arch-layout";
 import { chipOf, labelLook, labelSpots, lblStyle } from "./arch-label";
@@ -16,11 +17,13 @@ export function edgeRoute(c: ArchCanvas, e: AEdge, by: Map<string, ANode>): (Rou
   const a = by.get(fromId), b = by.get(toId);
   if (!a || !b) return null;
   const auto = edgeSides(a, b);
-  const fs = fromId === e.fromNode && e.fromSide ? e.fromSide : auto[0];
-  const ts = toId === e.toNode && e.toSide ? e.toSide : auto[1];
   const le = e.lumenEdge;
   const manual = !!le?.manual && !!le.points && fromId === e.fromNode && toId === e.toNode;
-  const pts = manual ? le!.points : le?.points && le.pointsKey && fromId === e.fromNode && toId === e.toNode && le.pointsKey === routeKey(c, e.fromNode, e.toNode) ? le.points : undefined;
+  const stored = !manual && le?.points && le.points.length >= 2 && le.pointsKey && fromId === e.fromNode && toId === e.toNode && le.pointsKey === routeKey(c, e.fromNode, e.toNode) ? snapRoute(le.points, a, b) : null;
+  const pts = manual ? le!.points : stored?.pts;
+  // a stored full route (auto layout) ends on the centre port of the sides it touches, so the line meets the handles
+  const fs = stored ? stored.fs : fromId === e.fromNode && e.fromSide ? e.fromSide : auto[0];
+  const ts = stored ? stored.ts : toId === e.toNode && e.toSide ? e.toSide : auto[1];
   const ends = endsOf(e);
   const src: RouteSrc = { p: portAt(a, fs), ps: fs, q: portAt(b, ts), qs: ts, shape: le?.shape ?? "orthogonal", ends: { start: ends === "both", end: ends !== "none" } };
   return { ...route(src.p, fs, src.q, ts, src.shape, src.ends, pts, manual), from: fromId, to: toId, fs, ts, src };
@@ -32,6 +35,7 @@ const PAL = {
 };
 const xml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const glyph = (name: string, x: number, y: number, size: number, color: string) => {
+  if (name.startsWith("vendor:")) { const u = vendorIconUrl(name); return u ? `<image href="${u}" x="${x}" y="${y}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet"/>` : ""; }
   const parts = GLYPHS[name] ?? [];
   const k = size / 24;
   return `<g transform="translate(${x} ${y}) scale(${k})" fill="none" stroke="${color}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${parts.map((p) => typeof p === "string" ? `<path d="${p}"/>` : `<path d="${p.d}"${p.fill ? ` fill="${color}" stroke="none"` : ""}/>`).join("")}</g>`;

@@ -3,6 +3,7 @@
 //   registerWb("shapes")      → the Shapes split-button caret opens the same panel (36A)
 // The connector / shape-style / text / sticky / stamp popovers are exported from ./Popovers and mounted by the property bar:
 // see `libraryPopover()` below for the key → component map.
+import { selectedIsVendor } from "../../lib/library-items";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { placeOnBoard } from "../../lib/library-items";
@@ -31,14 +32,14 @@ function FloatingLibrary({ ctx }: { ctx: WbCtx }) {
         <div className="absolute inset-0 z-30 bg-black/30" onPointerDown={ctx.close} />
         <div data-wb-chrome className="sheet-in absolute inset-x-0 bottom-0 z-40 flex max-h-[72%] flex-col" onPointerDown={(e) => e.stopPropagation()}>
           <div className="flex justify-center rounded-t-[20px] bg-surface pt-2"><span className="h-1 w-9 rounded-full bg-line" /></div>
-          <LibraryPanel workspace={ctx.kind} variant="sheet" onClose={ctx.close} onPlace={place(ctx)} width="100%" />
+          <LibraryPanel workspace={ctx.kind} variant="sheet" onClose={ctx.close} onPlace={place(ctx)} selectedVendor={ctx.api ? selectedIsVendor(ctx.api as never) : false} width="100%" />
         </div>
       </>
     );
   }
   return (
     <div data-wb-chrome className="absolute z-30 flex" style={{ left: 14, top: 108, bottom: 60, width: 320, maxHeight: "calc(100% - 168px)" }} onPointerDown={(e) => e.stopPropagation()}>
-      <LibraryPanel workspace={ctx.kind} onClose={ctx.close} onPlace={place(ctx)} />
+      <LibraryPanel workspace={ctx.kind} onClose={ctx.close} onPlace={place(ctx)} selectedVendor={ctx.api ? selectedIsVendor(ctx.api as never) : false} />
     </div>
   );
 }
@@ -53,7 +54,7 @@ function ShapesSlot({ ctx }: { ctx: WbCtx }) {
       <span ref={ref} style={{ display: "block", height: 1 }} />
       {r && createPortal(
         <div data-pop-anchor data-wb-chrome style={{ position: "fixed", left: r.left + 14, top: r.top + 60, bottom: Math.max(8, innerHeight - r.bottom + 60), zIndex: 60, display: "flex" }}>
-          <LibraryPanel workspace={ctx.kind} onClose={ctx.close} onPlace={place(ctx)} />
+          <LibraryPanel workspace={ctx.kind} onClose={ctx.close} onPlace={place(ctx)} selectedVendor={ctx.api ? selectedIsVendor(ctx.api as never) : false} />
         </div>, document.body)}
     </>
   );

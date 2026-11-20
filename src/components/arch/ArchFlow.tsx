@@ -10,6 +10,14 @@ import type { Route } from "../../lib/arch-route";
 import type { RouteSrc } from "../../lib/arch-render";
 import type { LabelPart } from "../../lib/arch-label";
 import { ArchEdge } from "./ArchEdge";
+import { useVendorIconUrl } from "../../lib/vendor-icons";
+
+/** Node icon: a Lumen glyph, or a downloaded vendor icon (`vendor:aws/…`) shown exactly as published (never recoloured). */
+export function NodeIcon({ icon, fallback, size, color }: { icon?: string; fallback: string; size: number; color?: string }) {
+  const url = useVendorIconUrl(icon);
+  if (icon?.startsWith("vendor:")) return url ? <img src={url} alt="" draggable={false} style={{ width: size, height: size, objectFit: "contain" }} /> : <Glyph name={fallback} size={size} color={color} />;
+  return <Glyph name={icon ?? fallback} size={size} color={color} />;
+}
 
 export const DC: Record<DiffMark, string> = { add: "var(--success)", del: "var(--danger)", chg: "var(--warning)" };
 export interface FlowCtx {
@@ -18,6 +26,13 @@ export interface FlowCtx {
   ro: boolean; editEdge: { id: string; part: LabelPart } | null; setEditEdge: (x: { id: string; part: LabelPart } | null) => void;
   saveLabel: (id: string, part: LabelPart, text: string) => void; patchEdge: (id: string, fn: (e: AEdge) => AEdge) => void; labelClick: (id: string) => void;
   setHover: (id: string | null) => void; rename: (id: string, v: string) => void; stopEdit: () => void; toggleCollapse: (id: string) => void; inside: (id: string) => number;
+  /** Interview mode: node ids whose label is still hidden; clicking reveals. */
+  masked?: Set<string>;
+  /** Select an edge (pressing its line starts a bend drag), and move one end of it onto a node (side = that node's port, undefined = automatic). */
+  selectEdge?: (id: string) => void;
+  reconnect?: (id: string, end: "source" | "target", node: string, side?: Side) => void;
+  /** Screen pixel → node id + nearest side under it (reconnect / quick connect targets). */
+  nodeAt?: (x: number, y: number) => { id: string; side: Side } | null;
 }
 export const Ctx = createContext<FlowCtx>({ ro: false, editEdge: null, setEditEdge: () => {}, saveLabel: () => {}, patchEdge: () => {}, labelClick: () => {}, hl: null, sel: null, editing: null, setHover: () => {}, rename: () => {}, stopEdit: () => {}, toggleCollapse: () => {}, inside: () => 0 });
 export type NData = { n: ANode; mark?: DiffMark; chip?: string; ghost?: boolean };
@@ -53,14 +68,15 @@ export const ArchNode = memo(function ArchNode({ id, data, selected }: NodeProps
   const bd = mark ? `1.5px ${mark === "del" ? "dashed" : "solid"} ${DC[mark]}` : on ? "1.5px solid var(--accent)" : "1px solid var(--border)";
   const ring = on && !mark ? "0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)" : "none";
   const fields = ln.fields;
+  const masked = !!c.masked?.has(id);
   return (
     <div onMouseEnter={() => c.setHover(id)} onMouseLeave={() => c.setHover(null)}
       style={{ position: "relative", width: "100%", height: "100%", boxSizing: "border-box", borderRadius: 10, background: bg, border: bd, boxShadow: ring, display: "flex", flexDirection: fields ? "column" : "row", alignItems: fields ? "stretch" : "center", gap: fields ? 0 : 8, padding: fields ? 0 : "0 10px", opacity: mark === "del" ? 0.7 : 1, transition: "box-shadow .12s, border-color .12s" }}>
       {fields ? (
         <>
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 10px", height: 38, borderBottom: "1px solid var(--border)" }}>
-            <span style={{ width: 24, height: 24, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", background: `color-mix(in srgb,${col} 16%,transparent)`, color: col }}><Glyph name={ln.icon ?? "database"} size={15} /></span>
-            <Name id={id} text={displayOf(n)} style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
+            <span style={{ width: 24, height: 24, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", background: `color-mix(in srgb,${col} 16%,transparent)`, color: col }}><NodeIcon icon={ln.icon} fallback="database" size={15} /></span>
+            <Name id={id} text={masked ? "? ? ?" : displayOf(n)} style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
           </div>
           {fields.map((f, i) => (
             <div key={i} style={{ display: "flex", gap: 8, height: 22, alignItems: "center", padding: "0 10px", font: "500 11px 'JetBrains Mono',monospace" }}>
@@ -70,10 +86,10 @@ export const ArchNode = memo(function ArchNode({ id, data, selected }: NodeProps
         </>
       ) : (
         <>
-          <span style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: `color-mix(in srgb,${col} 16%,transparent)`, color: col }}><Glyph name={ln.icon ?? "service"} size={18} /></span>
+          <span style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: `color-mix(in srgb,${col} 16%,transparent)`, color: col }}><NodeIcon icon={ln.icon} fallback="service" size={18} /></span>
           <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
-            <Name id={id} text={displayOf(n)} style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecoration: mark === "del" ? "line-through" : "none" }} />
-            {ln.tech && <span dir="auto" style={{ fontSize: 10.5, color: "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ln.tech}</span>}
+            <Name id={id} text={masked ? "? ? ?" : displayOf(n)} style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecoration: mark === "del" ? "line-through" : "none" }} />
+            {ln.tech && !masked && <span dir="auto" style={{ fontSize: 10.5, color: "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ln.tech}</span>}
           </div>
         </>
       )}
@@ -96,7 +112,7 @@ export const ArchGroup = memo(function ArchGroup({ id, data, selected }: NodePro
     return (
       <div onMouseEnter={() => c.setHover(id)} onMouseLeave={() => c.setHover(null)} style={{ width: "100%", height: "100%", boxSizing: "border-box", borderRadius: 12, background: `color-mix(in srgb,${col} 10%,var(--surface))`, border: `1.5px dashed ${col}`, display: "flex", alignItems: "center", gap: 6, padding: "0 12px", boxShadow: on ? "0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)" : "none" }}>
         <Glyph name={lg.icon ?? lg.kind} size={18} color={col} />
-        <Name id={id} text={displayOf(n)} style={{ fontWeight: 600, fontSize: 14, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
+        <Name id={id} text={c.masked?.has(id) ? "? ? ?" : displayOf(n)} style={{ fontWeight: 600, fontSize: 14, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
         <button className="nodrag" onClick={() => c.toggleCollapse(id)} style={{ height: 30, padding: "0 10px", borderRadius: 999, background: "var(--surface-2)", border: "1px solid var(--border)", fontSize: 11.5, whiteSpace: "nowrap" }}>{t("{n} inside ›", { n: c.inside(id) })}</button>
         <Ports />
       </div>
@@ -106,7 +122,7 @@ export const ArchGroup = memo(function ArchGroup({ id, data, selected }: NodePro
     <div onMouseEnter={() => c.setHover(id)} onMouseLeave={() => c.setHover(null)} style={{ width: "100%", height: "100%", boxSizing: "border-box", border: `1.5px ${mark === "add" || mark === "chg" ? "solid" : "dashed"} ${col}`, borderRadius: 14, background: `color-mix(in srgb,${col} 5%,transparent)`, boxShadow: on ? "0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)" : "none", transition: "box-shadow .12s" }}>
       <span style={{ position: "absolute", left: 12, top: -11, display: "flex", alignItems: "center", gap: 6, padding: "1px 8px", borderRadius: 999, background: "var(--bg)", color: col, fontSize: 11.5, fontWeight: 600, whiteSpace: "nowrap" }}>
         <Glyph name={lg?.icon ?? lg?.kind ?? "region"} size={14} />
-        <Name id={id} text={displayOf(n)} style={{}} />
+        <Name id={id} text={c.masked?.has(id) ? "? ? ?" : displayOf(n)} style={{}} />
         <span style={{ color: "var(--muted)", fontWeight: 400 }}>{k}</span>
         <button className="nodrag" aria-label={t("Collapse group")} title={t("Collapse into a summary node")} onClick={() => c.toggleCollapse(id)} style={{ display: "flex", color: "var(--muted)", marginInlineStart: 2 }}><Glyph name="chevron-down" size={12} /></button>
       </span>
@@ -128,6 +144,10 @@ export const FLOW_CSS = `
 .arch-flow .react-flow__node.selected .arch-port, .arch-flow .react-flow__node:hover .arch-port, .arch-flow.connecting .arch-port { opacity: 1; }
 .arch-flow .arch-port.connectingto, .arch-flow .arch-port.valid { opacity: 1; transform: scale(1.5); background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb,var(--accent) 25%,transparent); }
 .arch-flow .react-flow__node-archGroup .arch-port { opacity: 0; pointer-events: none; }
+.arch-flow .arch-edge-hit { fill: none; stroke: transparent; pointer-events: stroke; cursor: pointer; }
+.arch-flow .react-flow__edge.selected .arch-edge-hit { cursor: move; }
+.arch-flow .arch-edge-end { cursor: crosshair; touch-action: none; }
+.arch-flow .arch-edge-end:hover { box-shadow: 0 0 0 4px color-mix(in srgb,var(--accent) 30%,transparent); }
 .arch-flow .react-flow__minimap { border-radius: 10px; border: 1px solid var(--border); background: var(--surface); overflow: hidden; }
 .arch-flow .react-flow__connectionline path { stroke: var(--accent); stroke-width: 1.6; }
 @keyframes arch-ghost { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }

@@ -1,11 +1,11 @@
-// Library (left panel / phone sheet, 46C / 46O) and Properties (46L / 46M / 46P), ported from ArchStudio.dc.html
+// Shape catalogue and Properties (46L / 46M / 46P), ported from ArchStudio.dc.html
 // `libBlocks` and `prBlocks`, wired to the diagram: drag or click a tile to add a node, edit any field in place.
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Glyph } from "../Glyph";
 import { t, tk } from "../../lib/i18n";
 import { openNote, useVault } from "../../lib/store";
 import { displayOf, EDGE_STYLE, endsOf, GROUP_KINDS, NODE_KINDS, PRESET, STATUS, type AEdge, type LabelStyle, type ANode, type ArchStatus, type EdgeShape, type EdgeStyle, type Ends } from "../../lib/arch-model";
-import { Block, Row, type Item } from "./ArchUi";
+import { Block, Row } from "./ArchUi";
 
 // ------------------------------------------------------------------ catalogue (≈80 shapes)
 export interface Shape { g: string; l: string; cat: string; group?: boolean }
@@ -23,53 +23,7 @@ export const SHAPES: Shape[] = [
   ...S(tk("SaaS"), [["payment", "Payments"], ["external-system", "External"], ["email", "Email API"], ["monitoring", "Monitoring"], ["logs", "Logs"], ["metrics", "Metrics"], ["alert", "Alerts"], ["repo", "Repo"]]),
   ...S(tk("Boundaries"), [["region", "Region"], ["vpc", "VPC"], ["subnet", "Subnet"], ["zone", "Zone"], ["cluster", "Cluster"], ["namespace", "Namespace"], ["account", "Account"], ["team", "Team"], ["trust-boundary", "Trust"]], true),
 ];
-const RECENT_KEY = "lumen.arch.recent";
-export const recentShapes = (): Shape[] => { try { return (JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]") as Shape[]).slice(0, 3); } catch { return []; } };
-export const pushRecent = (s: Shape) => { try { localStorage.setItem(RECENT_KEY, JSON.stringify([s, ...recentShapes().filter((x) => x.g !== s.g || x.l !== s.l)].slice(0, 6))); } catch { /* storage off */ } };
-const VENDOR_KEY = "lumen.arch.vendor";
-export const MIME = "application/x-lumen-arch";
-
-export function Library({ onAdd, sheet, onClose }: { onAdd: (s: Shape) => void; sheet?: boolean; onClose?: () => void }) {
-  const [q, setQ] = useState("");
-  const [tab, setTab] = useState(0);
-  const [vendor, setVendor] = useState(() => { try { return localStorage.getItem(VENDOR_KEY) === "1"; } catch { return false; } });
-  const [, bump] = useState(0);
-  const tile = (s: Shape, mh = "56px"): Item => ({
-    g: s.g, l: t(s.l), col: true, bd: "var(--border)", mh, title: t("Drag onto the canvas, or click to add"),
-    onClick: () => { pushRecent(s); onAdd(s); bump((x) => x + 1); onClose?.(); },
-    draggable: !sheet, onDragStart: (e) => { e.dataTransfer.setData(MIME, JSON.stringify(s)); e.dataTransfer.effectAllowed = "copy"; },
-  });
-  const by = (cat: string) => SHAPES.filter((s) => s.cat === cat);
-  const hits = useMemo(() => { const s = q.trim().toLowerCase(); if (!s) return []; const seen = new Set<string>(); return SHAPES.filter((x) => (x.l.toLowerCase().includes(s) || x.g.includes(s) || t(x.l).toLowerCase().includes(s)) && !seen.has(x.g + x.l) && seen.add(x.g + x.l)); }, [q]);
-  const recent = recentShapes();
-  const rec = recent.length ? recent : [SHAPES[12], SHAPES[20], SHAPES[39]];
-  const blocks: ReactNode[] = [];
-  blocks.push(
-    <label key="s" style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 32, padding: "0 8px", borderRadius: 8, border: `1px solid ${q ? "var(--accent)" : "var(--border)"}` }}>
-      <Glyph name="search" size={17} color={q ? "var(--text)" : "var(--muted)"} />
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Search {n} shapes…", { n: SHAPES.length })} dir="auto" style={{ flex: 1, minWidth: 0, background: "transparent", outline: "none", fontSize: 12.5, color: "var(--text)" }} />
-    </label>,
-  );
-  if (q.trim()) blocks.push(<Block key="r" h={t("Results · {n}", { n: hits.length })} items={hits.map((s, i) => ({ g: s.g, l: t(s.l), sub: t(s.cat), on: i === 0, onClick: () => { pushRecent(s); onAdd(s); onClose?.(); }, draggable: !sheet, onDragStart: (e) => e.dataTransfer.setData(MIME, JSON.stringify(s)) }))} note={hits.length ? undefined : t("No shape matches “{q}”.", { q })} />);
-  else {
-    blocks.push(<Block key="seg" seg={[t("Architecture"), t("Drawing"), t("Stamps")]} segOn={tab} onSeg={setTab} />);
-    if (tab === 0) {
-      blocks.push(<Block key="rec" h={t("Recent")} items={rec.map((s) => tile(s))} cols="repeat(3,1fr)" />);
-      blocks.push(<Block key="cmp" h={t("Compute")} hr="8" items={by("Compute").slice(0, 6).map((s) => tile(s))} cols="repeat(3,1fr)" />);
-      blocks.push(<Block key="dat" h={t("Data")} hr="10" items={by("Data").slice(0, 6).map((s) => tile(s))} cols="repeat(3,1fr)" />);
-      blocks.push(<Block key="net" h={t("Network · Messaging")} items={[...by("Network").slice(0, 3), ...by("Messaging").slice(0, 3)].map((s) => tile(s))} cols="repeat(3,1fr)" />);
-      blocks.push(<Block key="bnd" h={t("Boundaries")} items={[0, 1, 2, 8].map((i) => tile(by("Boundaries")[i], "50px"))} cols="repeat(4,1fr)" />);
-      for (const cat of ["AI / ML", "Security", "Clients", "Kubernetes", "SaaS", "Generic"]) blocks.push(<Block key={cat} h={t(cat)} hr={String(by(cat).length)} items={by(cat).map((s) => tile(s))} cols="repeat(3,1fr)" />);
-      blocks.push(<Block key="v" items={[{ l: t("Vendor icons (AWS · Azure · GCP)"), tog: vendor, onClick: () => { const v = !vendor; setVendor(v); try { localStorage.setItem(VENDOR_KEY, v ? "1" : "0"); } catch { /* */ } } }]} note={vendor ? t("Vendor packs load on demand and are shown unmodified, never recoloured.") : undefined} />);
-    } else if (tab === 1) {
-      blocks.push(<Block key="b" h={t("Basic")} items={([["rect", "Rect", "process"], ["ellipse", "Ellipse", "terminator"], ["decision", "Diamond", "decision"], ["cylinder", "Cylinder", "database"], ["cloud", "Cloud", "internet"], ["callout", "Callout", "c-note"]] as const).map(([a, b, icon]) => ({ ...tile({ g: icon, l: b, cat: "Drawing" }), g: a }))} cols="repeat(3,1fr)" />);
-      blocks.push(<Block key="f" h={t("Flowchart")} items={([["process", "Process"], ["decision", "Decision"], ["terminator", "Start/End"], ["data", "Data"], ["document", "Doc"], ["delay", "Delay"]] as const).map(([a, b]) => tile({ g: a, l: b, cat: "Drawing" }))} cols="repeat(3,1fr)" />);
-    } else {
-      blocks.push(<Block key="st" h={t("Stamps")} items={(["c-tip", "c-warning", "c-question", "threat", "cost", "sla", "status-live", "status-planned", "pin"] as const).map((g) => tile({ g, l: g.replace(/^c-|status-/, ""), cat: "Stamps" }))} cols="repeat(3,1fr)" />);
-    }
-  }
-  return <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>{blocks}</div>;
-}
+// The studio's library is the shared LibraryPanel (src/components/library), vendor packs included (vendor-icons.ts).
 
 // ------------------------------------------------------------------ properties
 function Field({ label, value, onChange, placeholder, align = "end", mono }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; align?: "end" | "start"; mono?: boolean }) {

@@ -3,14 +3,16 @@
 // DataTransfer `application/x-lumen+json` {type:"library-item", id}.
 //   whiteboard / board:  <LibraryPanel workspace="whiteboard" onPlace={(item, o) => placeOnBoard(api, item, o)} />
 //   architecture studio: <LibraryPanel workspace="architecture" variant="docked" onPlace={(item) => addShape(canvasNodeFor(item, centre, id))} />
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { t } from "../../lib/i18n";
 import { useVaultSelector } from "../../lib/store";
 import {
-  ALL_GLYPHS, ICON_COLORS, ICON_GROUPS, STAMPS, TAB_LABEL, VENDOR_PACKS, clearVendorPack, getLibraryItem, getVendorPack, itemsOf, orderedCats, saveVendorPack, searchLibrary, setLibPrefs, setLibraryDrag,
-  svgDataUrl, tabsFor, toggleFav, touchRecent, useLibPrefs, vendorItems, type LibCat, type LibItem, type LibTab, type PlaceOpts, type Workspace,
+  ALL_GLYPHS, ICON_COLORS, ICON_GROUPS, STAMPS, TAB_LABEL, getLibraryItem, itemsOf, orderedCats, searchLibrary, setLibPrefs, setLibraryDrag,
+  svgDataUrl, tabsFor, toggleFav, touchRecent, useLibPrefs, type LibCat, type LibItem, type LibTab, type PlaceOpts, type Workspace,
 } from "../../lib/library-items";
+import { installedPacks, packCategories, packIcons, vendorRef, useVendorPacks } from "../../lib/vendor-icons";
 import { Block, PanelShell, sw, type Blk, type Itm } from "./ui";
+import { VendorPackCards } from "./VendorPacks";
 
 export interface LibraryPanelProps {
   workspace: Workspace;
@@ -26,13 +28,16 @@ export interface LibraryPanelProps {
   width?: number | string;
   /** Open on this tab instead of the workspace default (Insert icon opens on Icons). */
   initialTab?: LibTab;
+  /** The selected board element is a vendor icon: the colour control is disabled (vendor icons are never recoloured). */
+  selectedVendor?: boolean;
 }
 
-export function LibraryPanel({ workspace, onPlace, onClose, variant = "floating", onRecolour, selectedColor, width, initialTab }: LibraryPanelProps) {
+export function LibraryPanel({ workspace, onPlace, onClose, variant = "floating", onRecolour, selectedColor, width, initialTab, selectedVendor }: LibraryPanelProps) {
   const prefs = useLibPrefs();
   const docked = variant === "docked";
-  const tabs = tabsFor(workspace);
-  const [tab, setTabS] = useState<LibTab>(initialTab ?? prefs.tab[workspace] ?? tabs[0]);
+  // the docked studio panel (260 px) has the design's three tabs (49A–49D); icons stay one search away
+  const tabs = docked ? tabsFor(workspace).filter((x, i) => x !== "icons" || i === 0) : tabsFor(workspace);
+  const [tab, setTabS] = useState<LibTab>(() => { const w = initialTab ?? prefs.tab[workspace] ?? tabs[0]; return tabs.includes(w) ? w : tabs[0]; });
   const setTab = (x: LibTab) => { setTabS(x); if (!initialTab) setLibPrefs({ tab: { ...prefs.tab, [workspace]: x } }); };
   const [q, setQ] = useState("");
   const [view, setView] = useState<"browse" | "customise">("browse");
@@ -41,7 +46,10 @@ export function LibraryPanel({ workspace, onPlace, onClose, variant = "floating"
   const [seeNote, setSeeNote] = useState(false);
   const [nq, setNq] = useState("");
   const notes = useVaultSelector((v) => v.notes);
-  const vendorLoaded = prefs.vendor ? vendorItems() : [];
+  useVendorPacks();
+  const loadedPacks = installedPacks();
+  const [vcat, setVcat] = useState<Record<string, string>>({});
+  const [vmax, setVmax] = useState<Record<string, number>>({});
   const sub = workspace === "architecture" || workspace === "canvas" ? t("Architecture first") : workspace === "board" ? t("All") : t("Drawing first");
   const cols = docked ? "repeat(3,1fr)" : "repeat(4,1fr)";
   const mh = docked ? "56px" : "58px";
@@ -56,7 +64,10 @@ export function LibraryPanel({ workspace, onPlace, onClose, variant = "floating"
   };
   const mk = (it: LibItem, o: Partial<Itm> = {}): Itm => {
     const v = !!it.vendorSvg;
+    // single-colour brand marks (Simple Icons) are published without a colour: shown as published on a light tile
+    const lightTile = v && it.vendorPack === "simple-icons" ? { bg: "#f4f4f5", c: "#1e1e1e" } : {};
     return {
+      ...lightTile,
       key: it.id, g: v ? undefined : it.glyph, img: v && it.vendorSvg ? svgDataUrl(it.vendorSvg) : undefined, gs: v ? 24 : undefined, l: it.tab === "stamps" ? t(it.name) : v ? it.name : t(it.name), col: true, bd: "var(--bd)", mh,
       on: tab === "drawing" && prefs.lastShape === it.id, gc: it.tab === "stamps" ? it.color : undefined, onClick: () => place(it), draggable: true, onDragStart: (e) => setLibraryDrag(e, it.id), star: { on: prefs.favs.includes(it.id), toggle: () => toggleFav(it.id) }, tip: it.name, ...o,
     };
@@ -112,9 +123,24 @@ export function LibraryPanel({ workspace, onPlace, onClose, variant = "floating"
       // the design groups the small drawing categories in one block: UML · Mind map · Containers · Math & study
       if (merged.length) blocks.push({ key: "merged", h: merged.map((c) => t(c.name)).join(" · "), items: merged.flatMap((c) => itemsOf(c)).map((it) => mk(it)), cols, note: t("Click to place in the centre, or drag onto the board.") });
       if (tab === "architecture") {
-        blocks.push({ key: "vendor", items: [{ l: t("Vendor icons (AWS · Azure · GCP)"), tog: prefs.vendor, onClick: () => setLibPrefs({ vendor: !prefs.vendor }), mh: "34px", bd: "var(--bd)" }], note: prefs.vendor ? t("Vendor packs load on demand and are shown unmodified, never recoloured.") : undefined });
-        if (prefs.vendor) for (const p of VENDOR_PACKS) { const l = getVendorPack(p.id); if (l) blocks.push({ key: "v-" + p.id, h: p.name, hr: String(l.length), items: l.slice(0, 60).map((v) => mk(getLibraryItem(`vendor:${p.id}:${v.name}`)!)), cols }); }
-        if (prefs.vendor && !vendorLoaded.length) blocks.push({ key: "vnone", note: t("No vendor pack is loaded yet. Pick one under Customise › Vendor icons."), noteBg: "var(--sf2)" });
+        blocks.push({ key: "vendor", items: [{ l: t("Vendor icons & brand logos"), tog: prefs.vendor, onClick: () => setLibPrefs({ vendor: !prefs.vendor }), mh: "34px", bd: "var(--bd)" }], note: prefs.vendor ? t("Packs are downloaded once, cached for offline use and shown unmodified, never recoloured.") : undefined });
+        if (prefs.vendor) {
+          for (const p of loadedPacks) {
+            const all = packIcons(p.id), cat = vcat[p.id] ?? (p.group === "Brands & tech" ? "Clouds & platforms" : "");
+            const list = cat ? all.filter((i) => i.cat === cat) : all, max = vmax[p.id] ?? 48;
+            const last = (x: string) => (x === "More logos" || x === "Other" ? 1 : 0);
+            const cats = [...packCategories(p.id)].sort((x, y) => last(x) - last(y) || x.localeCompare(y));
+            blocks.push({ key: "vh-" + p.id, h: p.name, hr: String(list.length), node: (
+              <select value={cat} aria-label={t("Category")} onChange={(e) => setVcat({ ...vcat, [p.id]: e.target.value })} style={{ height: 30, borderRadius: 8, border: "1px solid var(--bd)", background: "var(--sf)", color: "var(--tx)", fontSize: "12.5px", padding: "0 6px", fontFamily: "inherit" }}>
+                <option value="">{t("All")} · {all.length}</option>
+                {cats.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            ) });
+            blocks.push({ key: "v-" + p.id, items: list.slice(0, max).map((v) => mk(getLibraryItem(vendorRef(p.id, v.id))!)), cols });
+            if (list.length > max) blocks.push({ key: "vm-" + p.id, items: [{ l: t("Show more · {n} left", { n: list.length - max }), mh: "32px", bd: "var(--bd)", onClick: () => setVmax({ ...vmax, [p.id]: max + 96 }) }] });
+          }
+          if (!loadedPacks.length) blocks.push({ key: "vnone", items: [{ l: t("Download vendor packs…"), mh: "34px", bd: "var(--bd)", onClick: () => setView("customise") }], note: t("No vendor pack is downloaded yet. AWS, Google Cloud, Kubernetes and brand logos download on demand; Azure imports Microsoft's ZIP."), noteBg: "var(--sf2)" });
+        }
       }
     } else if (tab === "stamps") {
       const st = STAMPS.map(([id]) => getLibraryItem("stamp:" + id)!);
@@ -140,24 +166,13 @@ export function LibraryPanel({ workspace, onPlace, onClose, variant = "floating"
       blocks.push({ key: "igrp", seg: ICON_GROUPS.map(([, l]) => t(l)), segOn: iconGroup, onSeg: (i) => { setIconGroup(i); setIconMax(96); } });
       blocks.push({ key: "icons", items: shown.map((g) => mk(getLibraryItem("icon:" + g)!, { l: undefined, mh: "40px", gs: 20, gc: cur.startsWith("var") ? "var(--tx)" : cur, star: undefined, tip: g })), cols: docked ? "repeat(5,1fr)" : "repeat(6,1fr)", note: names.length > shown.length ? undefined : t("{n} glyphs", { n: names.length }) });
       if (names.length > shown.length) blocks.push({ key: "more", items: [{ l: t("Show more · {n} left", { n: names.length - shown.length }), mh: "32px", bd: "var(--bd)", onClick: () => setIconMax(iconMax + 120) }] });
-      blocks.push({ key: "icol", h: t("Colour"), hr: onRecolour && selectedColor ? t("applies to the selected icon") : undefined, items: ICON_COLORS.map((c) => sw(c, cur === c || (c === "var(--tx)" && cur === "var(--tx)"), c.startsWith("var") ? t("Text colour") : c, { onClick: () => pick(c), mh: "28px", thH: "28px" })), cols: "repeat(8,1fr)", note: onRecolour ? t("Icons stay editable: select one and pick a colour to recolour it.") : undefined });
+      blocks.push({ key: "icol", h: t("Colour"), hr: selectedVendor ? t("disabled for vendor icons") : onRecolour && selectedColor ? t("applies to the selected icon") : undefined, items: ICON_COLORS.map((c) => sw(c, cur === c || (c === "var(--tx)" && cur === "var(--tx)"), c.startsWith("var") ? t("Text colour") : c, { onClick: selectedVendor ? undefined : () => pick(c), mh: "28px", thH: "28px", op: selectedVendor ? 0.35 : 1, disabled: selectedVendor })), cols: "repeat(8,1fr)", note: selectedVendor ? t("Vendor icons are shown exactly as published and are never recoloured.") : onRecolour ? t("Icons stay editable: select one and pick a colour to recolour it.") : undefined });
     }
     blocks.push({ key: "cust", items: [{ g: "gear", l: t("Categories, order, vendor packs"), mh: "34px", bd: "var(--bd)", onClick: () => setView("customise") }] });
   }
 
   // ------------------------------------------------------------ customise (49F)
   const [catTab, setCatTab] = useState<"architecture" | "drawing">("architecture");
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [packFor, setPackFor] = useState("");
-  const [msg, setMsg] = useState("");
-  const onFiles = async (files: FileList | null) => {
-    if (!files?.length || !packFor) return;
-    const icons: { name: string; svg: string }[] = [];
-    for (const f of Array.from(files)) if (/\.svg$/i.test(f.name)) icons.push({ name: f.name.replace(/\.svg$/i, ""), svg: await f.text() });
-    const n = icons.length ? saveVendorPack(packFor, icons) : 0;
-    setMsg(n ? t("{n} icons loaded, unmodified.", { n }) : t("No .svg files found."));
-    if (n) setLibPrefs({ vendor: true });
-  };
   const catList = orderedCats(catTab);
   const moveCat = (from: string, onto: string) => {
     const order = orderedCats(catTab).map((c) => c.id).filter((x) => x !== from);
@@ -175,14 +190,12 @@ export function LibraryPanel({ workspace, onPlace, onClose, variant = "floating"
       onClick: () => { const all: LibTab[] = ["drawing", "stamps", "icons", "architecture"]; setLibPrefs({ firstTab: { ...prefs.firstTab, [w]: all[(all.indexOf(prefs.firstTab[w]) + 1) % 4] }, tab: {} }); }, tip: t("Click to change which tab opens first") })), gap: "2px",
       note: t("Every category is reachable from every workspace.") },
     { key: "vend", h: t("Vendor icons"), items: [{ l: t("Show vendor icon packs"), tog: prefs.vendor, onClick: () => setLibPrefs({ vendor: !prefs.vendor }), mh: "34px" }] },
-    { key: "packs", items: VENDOR_PACKS.map((p) => { const l = getVendorPack(p.id); return { key: p.id, th: "var(--sf2)", thW: "26px", thH: "26px", l: p.name, sub: l ? t("Loaded · {n}", { n: l.length }) : t("Load .svg files…"), mh: "40px", bd: "var(--bd)",
-      onClick: () => { setPackFor(p.id); fileRef.current?.click(); }, ic: l ? ["trash"] : undefined } as Itm; }), gap: "4px", note: msg || t("Loaded on demand and shown exactly as published: never recoloured or edited, per each vendor’s terms. Pick the pack’s own .svg files; they stay on this device."), noteBg: "var(--sf2)" },
+    { key: "packs", node: <VendorPackCards /> },
     { key: "back", items: [{ l: "‹  " + t("Back to library"), mh: "34px", bd: "var(--bd)", onClick: () => setView("browse") }] },
   ];
 
   const body = (
     <>
-      <input ref={fileRef} type="file" accept=".svg,image/svg+xml" multiple hidden onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
       {view === "customise" ? custom.map((b) => <Block key={b.key} bk={b} />) : (
         <>
           {search}
@@ -191,31 +204,19 @@ export function LibraryPanel({ workspace, onPlace, onClose, variant = "floating"
       )}
     </>
   );
-  // Clicking the trash on a loaded pack removes it (the pack row's click loads files; the ic glyph is decorative): handled by long path below.
-  const clearable = view === "customise" && VENDOR_PACKS.some((p) => getVendorPack(p.id));
   const shellProps = { title: t("Library"), g: "shape-library", sub: view === "customise" ? t("Customise") : sub, onClose: docked ? undefined : onClose };
 
   if (docked) {
     return (
       <PanelShell {...shellProps} flat w={width ?? "100%"} style={{ height: "100%", border: 0 }} bodyStyle={{ overflowY: "auto", gap: 12 }}>
-        {body}{clearable && <PackClear onDone={() => setMsg(t("Pack removed."))} />}
+        {body}
       </PanelShell>
     );
   }
   return (
     <PanelShell {...shellProps} w={width ?? (variant === "sheet" ? "100%" : 320)} style={{ maxHeight: "100%", ...(variant === "sheet" ? { borderRadius: "20px 20px 0 0" } : { animation: "lib-in .16s var(--ease,ease) both" }) }} bodyStyle={{ overflowY: "auto", gap: 14 }}>
-      {body}{clearable && <PackClear onDone={() => setMsg(t("Pack removed."))} />}
+      {body}
     </PanelShell>
-  );
-}
-
-/** Remove loaded vendor packs (customise view). */
-function PackClear({ onDone }: { onDone: () => void }) {
-  const loaded = VENDOR_PACKS.filter((p) => getVendorPack(p.id));
-  return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-      {loaded.map((p) => <button key={p.id} type="button" onClick={() => { clearVendorPack(p.id); onDone(); }} style={{ height: 28, padding: "0 10px", borderRadius: 8, border: "1px solid var(--bd)", background: "transparent", color: "var(--da)", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>{t("Remove {name}", { name: p.name })}</button>)}
-    </div>
   );
 }
 

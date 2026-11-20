@@ -22,6 +22,8 @@ export interface LumenArch {
   kind: ArchKind; direction: Direction; dsl?: string; layout?: string; split?: Split;
   /** C4 zoom levels: this diagram is the `level` view of node `parentNode` in diagram note `parent`. */
   c4?: { level: C4Level; parent?: string; parentNode?: string };
+  /** Interview / review mode: node labels start hidden ("? ? ?"); click a node or press Alt+R to reveal. */
+  interview?: boolean;
 }
 export interface LumenNode {
   kind?: string; icon?: string; tech?: string; status?: ArchStatus; name?: string; parent?: string; size?: NodeSize;

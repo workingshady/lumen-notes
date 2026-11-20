@@ -580,7 +580,56 @@ const downloadBoard = (note: PubNote) => note.type === "canvas"
   ? download(`${note.title}.canvas`, note.body, "application/json")
   : download(`${note.title}.excalidraw`, note.body, "application/json");
 
+const WhiteboardView = lazy(() => import("../components/WhiteboardView"));
+/** Shared whiteboard / board (design 33H): the view-only studio, zoom cluster + minimap + frames, header PNG export, Duplicate to my vault, Ask to edit. */
+function SharedWhiteboard({ blog, note }: { blog: Brand; note: PubNote }) {
+  const [ex, setEx] = useState<ExApi | null>(null);
+  const [dlg, setDlg] = useState<null | "signin" | "edit">(null);
+  const [msg, setMsg] = useState("");
+  const png = () => { void boardPng(note, ex).catch(() => setMsg(t("Couldn't export the image."))); };
+  const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(""), 3500); };
+  /** Duplicate: only the owner signed in on this device writes a copy (to the space the original lives in); anyone else gets the sign-in prompt. */
+  const duplicate = async () => {
+    const [{ getToken }, { db }] = await Promise.all([import("../lib/api"), import("../lib/db")]);
+    const mine = getToken() ? await db.notes.get(note.id).catch(() => undefined) : undefined;
+    if (!mine || mine.deleted) { setDlg("signin"); return; }
+    const { createNote } = await import("../lib/actions");
+    const n = await createNote({ title: `${note.title} (copy)`, type: mine.type, body: note.body, spaceId: mine.spaceId, folderId: mine.folderId });
+    flash(t("Duplicated to your vault."));
+    const { openNote } = await import("../lib/store");
+    go("/"); setTimeout(() => openNote(n.id), 50);
+  };
+  const link = location.href;
+  const askMsg = t("Could you give me edit access to “{title}”? {link}", { title: note.title, link });
+  const copy = async () => { try { await navigator.clipboard.writeText(link); flash(t("Link copied. Send it to the owner and ask for edit access.")); } catch { flash(link); } setDlg(null); };
+  const card = "fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4";
+  return (
+    <div className="h-dvh bg-bg text-[14px] leading-[normal] text-ink">
+      <Suspense fallback={null}>
+        <WhiteboardView header body={note.body} title={note.title} crumb={`${blog.name} › ${t("Shared")}`} by={blog.name} onApi={(a) => setEx(a as unknown as ExApi)}
+          extraButtons={[{ glyph: "export", label: "PNG", tip: t("Download as PNG image"), run: png }]} onDuplicate={() => void duplicate()} onAskEdit={() => setDlg("edit")} />
+      </Suspense>
+      {msg && <div role="status" className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-[10px] border border-line bg-surface px-4 py-2.5 text-[13px] shadow-lg">{msg}</div>}
+      {dlg && (
+        <div className={card} onClick={() => setDlg(null)}>
+          <div role="dialog" onClick={(e) => e.stopPropagation()} className="flex w-full max-w-[380px] flex-col gap-3 rounded-[14px] border border-line bg-surface p-5 shadow-xl">
+            <span className="text-[15px] font-semibold">{dlg === "signin" ? t("Sign in to duplicate") : t("Ask to edit")}</span>
+            <span className="text-[13px] leading-[19px] text-muted">{dlg === "signin" ? t("Duplicating copies this board into your own Lumen vault. Sign in on this device, then try again.") : t("Edit access comes from the owner. Send them this link and ask.")}</span>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setDlg(null)} className="h-9 rounded-[9px] border border-line px-3.5">{t("Cancel")}</button>
+              {dlg === "signin" ? <button onClick={() => go("/")} className="h-9 rounded-[9px] bg-accent px-3.5 font-semibold text-accent-fg">{t("Open Lumen")}</button>
+                : <><button onClick={() => void copy()} className="h-9 rounded-[9px] border border-line px-3.5">{t("Copy link")}</button>
+                  <a href={`mailto:?subject=${encodeURIComponent(t("Edit access to “{title}”", { title: note.title }))}&body=${encodeURIComponent(askMsg)}`} onClick={() => setDlg(null)} className="flex h-9 items-center rounded-[9px] bg-accent px-3.5 font-semibold text-accent-fg">{t("Email the owner")}</a></>}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BoardPage({ blog, note, theme, refsPath }: { blog: Brand; note: PubNote; theme: { dark: boolean; toggle: () => void }; refsPath?: string }) {
+  if (isWbType(note.type)) return <SharedWhiteboard blog={blog} note={note} />;
   const isCanvas = note.type === "canvas";
   const [ex, setEx] = useState<ExApi | null>(null);
   const [busy, setBusy] = useState(false);

@@ -6,6 +6,7 @@ import { tk } from "./i18n";
 import { GLYPHS, hasGlyph } from "./glyphs";
 import { sk, type Skeleton } from "./whiteboard";
 import { kindOfIcon, type ANode } from "./arch-model";
+import { getVendorIcon, installedPacks, packIcons, sanitizeSvg, searchVendorIcons, vendorAspect, vendorRef } from "./vendor-icons";
 
 export type Workspace = "whiteboard" | "board" | "canvas" | "architecture";
 export type LibTab = "drawing" | "stamps" | "icons" | "architecture";
@@ -21,8 +22,8 @@ export interface LibItem {
   group?: string;
   /** Stamp / icon: a Lumen glyph drawn as an image, recolourable. */
   glyphName?: string; color?: string;
-  /** Vendor pack icon (unmodified SVG text). */
-  vendorSvg?: string; vendorPack?: string;
+  /** Vendor pack icon (sanitised SVG text, shown as published) and its ref "vendor:<pack>/<id>". */
+  vendorSvg?: string; vendorPack?: string; vendorRef?: string;
 }
 
 // ------------------------------------------------------------------ geometry helpers
@@ -172,7 +173,7 @@ export function getLibraryItem(id: string): LibItem | undefined {
   const hit = BY_ID.get(id);
   if (hit) return hit;
   if (id.startsWith("icon:")) { const g = id.slice(5); return hasGlyph(g) ? { id, name: cap(g), glyph: g, tab: "icons", glyphName: g, color: "#E8E6E1" } : undefined; }
-  if (id.startsWith("vendor:")) { const [, pack, ...rest] = id.split(":"); const f = getVendorPack(pack)?.find((x) => x.name === rest.join(":")); return f ? { id, name: f.name, glyph: "cloud", tab: "architecture", vendorSvg: f.svg, vendorPack: pack } : undefined; }
+  if (id.startsWith("vendor:")) { const h = getVendorIcon(id); return h ? { id, name: h.name, glyph: "cloud", tab: "architecture", vendorSvg: h.svg, vendorPack: h.pack, vendorRef: id } : undefined; }
   return undefined;
 }
 export const drawingItems = () => DRAW;
@@ -186,7 +187,7 @@ export function searchLibrary(q: string, limit = 60): LibItem[] {
   const out: LibItem[] = ALL.filter(hit);
   const seenIds = new Set(out.map((i) => i.id));
   for (const g of ALL_GLYPHS) if (g.includes(s) && out.length < limit && !seenIds.has("icon:" + g) && !ARCH.some((a) => a.glyph === g) && !STAMP_ITEMS.some((a) => a.glyph === g)) out.push(getLibraryItem("icon:" + g)!);
-  if (getLibPrefs().vendor) for (const p of VENDOR_PACKS) for (const v of getVendorPack(p.id) ?? []) if (v.name.toLowerCase().includes(s)) out.push(getLibraryItem(`vendor:${p.id}:${v.name}`)!);
+  if (getLibPrefs().vendor) for (const v of searchVendorIcons(s, Math.max(0, limit - out.length))) out.push({ id: v.ref, name: v.name, glyph: "cloud", tab: "architecture", vendorSvg: v.svg, vendorPack: v.pack, vendorRef: v.ref });
   return out.slice(0, limit);
 }
 
@@ -232,11 +233,12 @@ export async function placeOnBoard(api: WbLike, item: LibItem, opts: PlaceOpts =
   if (item.skeleton) skel = item.skeleton(x, y);
   else if (item.vendorSvg || item.glyphName || item.group) {
     const id = fid();
-    const svg = item.vendorSvg ?? glyphSvgText(item.glyphName ?? item.glyph, opts.color ?? item.color ?? "#E8E6E1");
+    const svg = (item.vendorSvg ? sanitizeSvg(item.vendorSvg) : null) ?? glyphSvgText(item.glyphName ?? item.glyph, opts.color ?? item.color ?? "#E8E6E1");
     files.push({ id, mimeType: "image/svg+xml", dataURL: svgDataUrl(svg), created: Date.now() });
     const sz = item.vendorSvg ? 80 : item.tab === "stamps" ? 64 : 72;
-    skel = [{ type: "image", fileId: id, status: "saved", x: x - sz / 2, y: y - sz / 2, width: sz, height: sz, ...(opts.link ? { link: opts.link } : {}),
-      customData: item.vendorSvg ? { lumenVendor: item.vendorPack } : { lumenGlyph: { name: item.glyphName ?? item.glyph, color: opts.color ?? item.color ?? "#E8E6E1" }, ...(item.id.startsWith("stamp:") ? { lumenStamp: item.id.slice(6) } : {}) } } as unknown as Skeleton];
+    const asp = item.vendorSvg ? vendorAspect(svg) : 1, iw = asp >= 1 ? sz : sz * asp, ih = asp >= 1 ? sz / asp : sz;
+    skel = [{ type: "image", fileId: id, status: "saved", x: x - iw / 2, y: y - ih / 2, width: iw, height: ih, ...(opts.link ? { link: opts.link } : {}),
+      customData: item.vendorSvg ? { lumenVendor: item.vendorRef ?? item.vendorPack } : { lumenGlyph: { name: item.glyphName ?? item.glyph, color: opts.color ?? item.color ?? "#E8E6E1" }, ...(item.id.startsWith("stamp:") ? { lumenStamp: item.id.slice(6) } : {}) } } as unknown as Skeleton];
   }
   if (!skel.length) return [];
   if (files.length) api.addFiles(files);
@@ -274,7 +276,7 @@ export function selectedGlyphColor(api: WbLike): string | null {
 export function canvasNodeFor(item: LibItem, at: { x: number; y: number }, id: string, name?: string): ANode {
   const nm = name ?? item.name;
   if (item.group) return { id, type: "group", x: at.x - 150, y: at.y - 100, width: 300, height: 200, label: nm, lumenGroup: { kind: item.group, name: nm } } as ANode;
-  if (item.vendorSvg) return { id, type: "text", text: nm, x: at.x - 75, y: at.y - 30, width: 150, height: 60, lumenNode: { name: nm, kind: "service", tags: [`vendor:${item.vendorPack}`], icon: "service" }, lumenVendorSvg: item.vendorSvg } as unknown as ANode;
+  if (item.vendorRef) return { id, type: "text", text: nm, x: at.x - 75, y: at.y - 30, width: 150, height: 60, lumenNode: { name: nm, kind: "service", icon: item.vendorRef } } as unknown as ANode;
   const icon = item.glyphName ?? (item.tab === "drawing" ? ({ process: "process", decision: "decision", terminator: "terminator", actor: "actor", "uml-class": "uml-class", database: "database", cylinder: "database", rect: "service" } as Record<string, string>)[item.id.slice(5)] : undefined);
   if (!icon) return { id, type: "text", text: nm, x: at.x - 75, y: at.y - 30, width: 150, height: 60 } as ANode;
   const n = { id, type: "text", text: nm, x: at.x - 75, y: at.y - 30, width: 150, height: 60, lumenNode: { name: nm, icon, kind: kindOfIcon(icon) } } as ANode;
@@ -331,20 +333,11 @@ export function tabsFor(ws: Workspace): LibTab[] {
   return [first, ...rest.filter((x) => x !== first)];
 }
 
-// ------------------------------------------------------------------ vendor packs (shown exactly as published: never recoloured or edited)
-export const VENDOR_PACKS: { id: string; name: string }[] = [{ id: "aws", name: "AWS Architecture Icons" }, { id: "azure", name: "Azure icons" }, { id: "gcp", name: "Google Cloud icons" }];
-const vkey = (p: string) => "lumen.library.vendor." + p;
-export interface VendorIcon { name: string; svg: string }
-export function getVendorPack(pack: string): VendorIcon[] | undefined {
-  try { const v = JSON.parse(localStorage.getItem(vkey(pack)) ?? "null") as VendorIcon[] | null; return v?.length ? v : undefined; } catch { return undefined; }
+// ------------------------------------------------------------------ vendor packs (downloaded on demand, see vendor-icons.ts; shown exactly as published)
+/** Library items of every downloaded vendor pack. */
+export const vendorItems = (): LibItem[] => installedPacks().flatMap((p) => packIcons(p.id).map((v) => getLibraryItem(vendorRef(p.id, v.id))!));
+/** True when the selected board element is a vendor icon (the colour control is disabled for these). */
+export function selectedIsVendor(api: WbLike): boolean {
+  const sel = (api.getAppState() as { selectedElementIds?: Record<string, boolean> }).selectedElementIds ?? {};
+  return api.getSceneElementsIncludingDeleted().some((e) => sel[e.id as string] && (e.customData as { lumenVendor?: string } | undefined)?.lumenVendor);
 }
-/** Store the SVG files the owner picked for a pack, byte for byte. Returns how many were kept (localStorage budget ~3 MB per pack). */
-export function saveVendorPack(pack: string, icons: VendorIcon[]): number {
-  const keep: VendorIcon[] = []; let size = 0;
-  for (const i of icons) { size += i.svg.length; if (size > 3_000_000) break; keep.push(i); }
-  try { localStorage.setItem(vkey(pack), JSON.stringify(keep)); } catch { return 0; }
-  subs.forEach((f) => f());
-  return keep.length;
-}
-export function clearVendorPack(pack: string) { try { localStorage.removeItem(vkey(pack)); } catch { /* ignore */ } subs.forEach((f) => f()); }
-export const vendorItems = (): LibItem[] => VENDOR_PACKS.flatMap((p) => (getVendorPack(p.id) ?? []).map((v) => getLibraryItem(`vendor:${p.id}:${v.name}`)!));

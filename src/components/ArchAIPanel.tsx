@@ -24,14 +24,16 @@ import {
 } from "../lib/ai-convert";
 
 export type ArchAIMode = "describe" | "edit" | "review";
-export interface ArchProposal { instruction: string; base: string; dsl: string; rows: DiffRow[]; summary: ReturnType<typeof diffSummary> }
+export interface ArchProposal { instruction: string; base: string; dsl: string; rows: DiffRow[]; summary: ReturnType<typeof diffSummary>; type?: ArchType }
 export interface ArchAIPanelProps {
   mode: ArchAIMode;
   dsl: string;
   title?: string;
   phone?: boolean;
   validate?: (dsl: string) => DslIssue[];
-  onApplyDsl: (dsl: string, meta: { mode: ArchAIMode; instruction: string }) => void;
+  onApplyDsl: (dsl: string, meta: { mode: ArchAIMode; instruction: string; type?: ArchType }) => void;
+  /** Slotted: the host draws the diff bar + code diff itself (ArchDiffBar / ArchDiffCode) and owns Accept / Reject; the panel only collects input. */
+  slotted?: boolean;
   onProposal?: (p: ArchProposal | null) => void;
   onCreateNote: (title: string, markdown: string) => void;
   onCreateTasks?: (lines: string[]) => void;
@@ -128,7 +130,7 @@ function InputSheet({ mode, ph, props, onProposal, busy, setBusy }: { mode: "des
         dsl = r2.dsl; issues = validate(dsl);
       }
       if (issues.length) throw new AiConvertError(t("The AI wrote diagram code that didn’t check out (line {n}). Try again or add detail.", { n: issues[0].line }), "failed");
-      onProposal(makeProposal(text.trim() || t("Sketch"), describe ? "" : props.dsl, dsl));
+      onProposal({ ...makeProposal(text.trim() || t("Sketch"), describe ? "" : props.dsl, dsl), type: describe ? TYPES[type] : undefined });
     } catch (e) {
       if (!(e instanceof AiConvertError && e.code === "aborted")) setErr(errText(e));
     } finally { setBusy(false); }
@@ -138,7 +140,7 @@ function InputSheet({ mode, ph, props, onProposal, busy, setBusy }: { mode: "des
   return (
     <div role="dialog" aria-label={describe ? t("Describe a system") : t("Edit by instruction")} style={ph
       ? { position: "fixed", left: 0, right: 0, bottom: 0, minHeight: "62%", maxHeight: "86%", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "20px 20px 0 0", boxShadow: "0 20px 50px rgba(0,0,0,.35)", display: "flex", flexDirection: "column", overflow: "hidden", zIndex: 90, animation: "lm-aap-sheet .24s var(--ease) both" }
-      : { position: "fixed", left: "50%", top: 90, width: "min(760px, calc(100% - 32px))", transform: "translateX(-50%)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, boxShadow: "0 20px 50px rgba(0,0,0,.35)", display: "flex", flexDirection: "column", overflow: "hidden", zIndex: 90, animation: "lm-aap-in .2s var(--ease) both" }}>
+      : { position: "fixed", left: "max(16px, calc(50% - 380px))", top: 90, width: "min(760px, calc(100% - 32px))", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, boxShadow: "0 20px 50px rgba(0,0,0,.35)", display: "flex", flexDirection: "column", overflow: "hidden", zIndex: 90, animation: "lm-aap-in .2s var(--ease) both" }}>
       {ph && <div style={{ display: "flex", justifyContent: "center", paddingTop: 8 }}><span style={{ width: 36, height: 4, borderRadius: 2, background: "var(--border)" }} /></div>}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px 8px" }}>
         <span style={{ fontWeight: 600, fontSize: 13.5, flex: 1 }}>{describe ? t("Describe a system") : t("Edit by instruction")}</span>
@@ -312,7 +314,7 @@ export function ArchAIPanel(props: ArchAIPanelProps) {
   const { onProposal, onClose } = props;
   const propose = (p: ArchProposal) => { setProp(p); onProposal?.(p); };
   const reject = () => { setProp(null); onProposal?.(null); onClose(); };
-  const accept = () => { if (!prop) return; props.onApplyDsl(prop.dsl, { mode: props.mode, instruction: prop.instruction }); onProposal?.(null); toast(t("Applied. Undo restores the previous diagram.")); onClose(); };
+  const accept = () => { if (!prop) return; props.onApplyDsl(prop.dsl, { mode: props.mode, instruction: prop.instruction, type: prop.type }); onProposal?.(null); toast(t("Applied. Undo restores the previous diagram.")); onClose(); };
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape" && !busy) { if (prop) reject(); else onClose(); } }; addEventListener("keydown", k); return () => removeEventListener("keydown", k); }); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => onProposal?.(null), []); // eslint-disable-line react-hooks/exhaustive-deps
   const style = useMemo(() => <style>{KEYFRAMES}</style>, []);
@@ -323,6 +325,7 @@ export function ArchAIPanel(props: ArchAIPanelProps) {
       <ArchReviewPanel dsl={props.dsl} title={props.title} ph={ph} onClose={onClose} onCreateNote={props.onCreateNote} onCreateTasks={props.onCreateTasks}
         style={ph ? { position: "fixed", left: 0, right: 0, bottom: 0, maxHeight: "86%", minHeight: "60%", borderRadius: "20px 20px 0 0", border: "1px solid var(--border)", zIndex: 90 } : { position: "fixed", right: 0, top: 48, bottom: 0, width: "min(590px, 100%)", borderInlineStart: "1px solid var(--border)", zIndex: 90 }} />
     </div>);
+  if (prop && props.slotted) return null;
   if (prop) return (
     <div style={fam}>{style}
       <ArchDiffBar p={prop} onAccept={accept} onReject={reject} style={ph ? { position: "fixed", left: 12, right: 12, top: 12, zIndex: 91 } : { position: "fixed", left: "calc(50% - 540px)", top: 60, width: 560, maxWidth: "calc(100% - 620px)", zIndex: 91 }} />
