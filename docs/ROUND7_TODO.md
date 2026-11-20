@@ -8,7 +8,7 @@ Owner's bar for every item:
 Tick the boxes as work lands. The newest status sits at the top of `docs/CHECKPOINT.md`.
 
 ## Stage 0: finish wave 3 and deploy
-- [ ] **W3-A whiteboard (Opus):**
+- [x] **W3-A whiteboard (Opus):** done (deploy 1d9c7dda)
   - [ ] layers panel/sheet, frames navigator, arrange popover (38A–E, 44E);
   - [ ] board settings: backgrounds, patterns, pages mode, snapping, zen; defaults in Settings › Diagrams (39A–G, 44F);
   - [ ] presentation + phone remote; a `<Presenter>` reused by canvas and architecture (41A–F);
@@ -19,16 +19,16 @@ Tick the boxes as work lands. The newest status sits at the top of `docs/CHECKPO
   - [ ] multi-selection gets the floating action bar and light selection boxes;
   - [ ] stickies with the author/device footer;
   - [ ] vendor icons never recoloured (colour control disabled).
-- [ ] **QA architecture + canvas (Opus):**
+- [ ] **QA architecture + canvas (Opus):** partly done (cut off by a session restart); a finisher agent is verifying + completing
   - [ ] fit-to-view, library tabs overlap, edges meeting their nodes, empty node card, zoom jump, properties panel overlap;
   - [ ] edges selectable and draggable (reconnect, bend) with a real mouse and touch;
   - [ ] selection keyboard: Del, Ctrl+D / C / X / V / A, arrows, Esc, Enter/F2, undo/redo, Ctrl+G; the "?" sheet;
   - [ ] every control in the edge, node and group panels applies, saves and undoes;
   - [ ] ConvertMenu mounted in canvas + architecture;
   - [ ] vendor icons rendered on nodes/cards; old vendor toggle replaced; Mermaid icon packs registered.
-- [ ] Type-check + build → deploy → commit + push.
+- [x] Type-check + build → deploy → commit + push: waves 1–3 live (1d9c7dda, commit 3e25132).
 
-## Stage 1: design audit (all 141 frames, every flow)
+## Stage 1: design audit (all 141 frames, every flow): running (whiteboard + board; arch + canvas + export)
 - [ ] Fresh Opus reviewers, area by area, compare the live app with every frame PNG and the `.dc.html` flow. Output: one gap list (missing, different, broken).
   - [ ] **Whiteboard:** 33, 34, 37, 38, 39, 41, 44, 45.
   - [ ] **Shared parts:** 35 AI review, 36 / 49 library, 50 drag and drop, 52 conversions.
