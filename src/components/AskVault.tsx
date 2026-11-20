@@ -1,30 +1,34 @@
-// Ask your notes as a multi-turn chat — design round 5, Lumen 23 (AskChat): R5-23A…N.
-// Desktop: full page beside the app sidebar: thread column (280 px: New, Search chats, Pinned / Today / Earlier) +
-// conversation (header with title, context line and ⋯; 760 px column; composer with scope chip, Tutor mode switch,
-// Enter hint and Send / Stop). Phone: full screen, threads in a sheet from the list icon. Tutor threads render
-// TutorSession full width. Logic: lib/ask.ts (store, network) + lib/chat.ts (pure). The note Assistant (right panel)
+// Ask your notes as a multi-turn chat. Round 8 (Lumen 56 Ask enhanced, AskStudio): Ask takes the sidebar's place
+// (rail + chat list + conversation + sources panel), suggestions from real activity, the waiting made visible
+// (steps, streamed text, Stop, a "still working" state), answer actions (save / append / flashcards) and a scope menu.
+// Phone: full screen, chats in a sheet. Tutor threads render TutorSession full width. Logic: lib/ask.ts (store,
+// network, streaming + cancel) + lib/chat.ts (pure); pieces in components/ask/*. The note Assistant (right panel)
 // lives in Assistant.tsx and shares the engine.
 import { useLiveQuery } from "dexie-react-hooks";
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
 import type { ChatMessage, ChatThread, Note } from "../../shared/types";
 import { createNote } from "../lib/actions";
-import { aiRun, getToken } from "../lib/api";
 import {
-  closeAsk, deleteThread, getAsk, getPendingTutor, newChat, openThread, pinThread, regenerate, renameThread, scopeLabel, sendChat, setAsk, setFeedback, stopChat, useAsk,
+  closeAsk, deleteThread, getAsk, getPendingTutor, newChat, openThread, pinThread, regenerate, renameThread, scopeLabel, scopeNotes, sendChat, setAsk, setFeedback, stopChat, useAsk,
   type Live, type Scope,
 } from "../lib/ask";
 import { answerMarkdown, citedIn, starterQuestions, threadMarkdown, WINDOW_TURNS } from "../lib/chat";
-import { db, DEMO } from "../lib/db";
-import { fmtDate, fmtTime, isRtl, t, useLang } from "../lib/i18n";
+import { db } from "../lib/db";
+import { isRtl, t, useLang } from "../lib/i18n";
 import { parsePath } from "../lib/path";
 import { openNote, setUI, toast, useUI, useVault, type Vault } from "../lib/store";
-import { actBtn, ChatIcon, RichAnswer, sidebarInset, SourceCard, useAiLocked, useOnline } from "./ChatParts";
+import { ChatIcon, RichAnswer, SourceCard, useAiLocked, useOnline } from "./ChatParts";
 import { Glyph } from "./Glyph";
 import { openSettings } from "./ShareSheet";
 import { ConceptPicker, TutorSession } from "./TutorSession";
+import { appendAnswerToNote, makeCards, questionOf, saveAnswerAsNote, shareThread, useSaved } from "./ask/actions";
+import { DoneLine, LiveSteps, providerLabel, Rail, SavedBanner, SourcesPanel } from "./ask/Parts";
+import { ScopeMenu } from "./ask/ScopeMenu";
+import { useSuggestions, type Pin } from "./ask/suggestions";
 import { cx } from "./ui";
 
 type Layout = "page" | "sheet" | "panel";
+const AC = "color-mix(in srgb,var(--accent) 16%,transparent)";
 
 /** Active thread (stored, or the pending tutor thread not saved yet). */
 export function useThread(id: string | null): ChatThread | undefined {
@@ -43,46 +47,6 @@ export const usePhone = () => {
   return p;
 };
 
-// ------------------------------------------------------------------ scope chip (composer)
-const sameScope = (a: Scope, b: Scope) => a.kind === b.kind && (a.spaceId ?? "") === (b.spaceId ?? "") && (a.noteId ?? "") === (b.noteId ?? "") && (a.pathId ?? "") === (b.pathId ?? "");
-function ScopeChip({ scope, setScope, note, v, spaceId }: { scope: Scope; setScope: (s: Scope) => void; note?: Note; v: Vault; spaceId: string }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const off = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", off);
-    return () => document.removeEventListener("mousedown", off);
-  }, [open]);
-  const paths = v.notes.filter((n) => n.type === "path" && !n.deleted);
-  const space = v.spaceMap.get(spaceId);
-  const opts: { s: Scope; label: string; glyph: string; color?: string }[] = [
-    { s: { kind: "vault" }, label: t("Whole vault"), glyph: "query" },
-    ...(space ? [{ s: { kind: "space" as const, spaceId }, label: space.name, glyph: "folder" }] : []),
-    ...(note ? [{ s: { kind: "note" as const, noteId: note.id }, label: t("{title} + links", { title: note.title }), glyph: note.type || "note" }] : []),
-    ...paths.map((p) => ({ s: { kind: "path" as const, pathId: p.id }, label: p.title, glyph: "path", color: "#A371F7" })),
-  ];
-  const cur = opts.find((o) => sameScope(o.s, scope)) ?? { s: scope, label: scopeLabel(scope, v), glyph: scope.kind === "path" ? "path" : "query", color: scope.kind === "path" ? "#A371F7" : undefined };
-  return (
-    <div ref={ref} className="relative shrink-0">
-      <button aria-haspopup="listbox" aria-expanded={open} aria-label={t("Search in: {scope}", { scope: cur.label })} onClick={() => setOpen((o) => !o)}
-        className="flex h-7 max-w-[220px] items-center gap-1.5 rounded-full bg-surface-2 px-2.5 text-[12.5px] hover:text-ink" data-scope>
-        <Glyph name={cur.glyph} size={13} color={cur.color ?? "var(--muted)"} /><span dir="auto" className="truncate">{cur.label}</span><span aria-hidden>▾</span>
-      </button>
-      {open && (
-        <div role="listbox" aria-label={t("Search in")} className="absolute bottom-[calc(100%+4px)] start-0 z-40 flex max-h-[300px] w-[240px] flex-col overflow-y-auto rounded-[10px] border border-line bg-surface-2 p-1 text-[12.5px] shadow-[0_8px_24px_rgb(0_0_0/.25)]">
-          {opts.map((o) => (
-            <button key={o.label + o.s.kind} role="option" aria-selected={o === cur} onClick={() => { setScope(o.s); setOpen(false); }}
-              className={cx("flex h-11 items-center gap-2 rounded-[6px] px-2 text-start sm:h-8", o === cur ? "bg-bg" : "hover:bg-bg")}>
-              <Glyph name={o.glyph} size={13} color={o.color ?? "var(--muted)"} /><span dir="auto" className="truncate">{o.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /** Open the search palette with the question typed in ("Search instead" / "Show closest notes"). */
 export function searchInstead(q: string) {
   closeAsk();
@@ -95,7 +59,7 @@ export function searchInstead(q: string) {
   }, 60);
 }
 
-/** "Tutor mode" switch in the composer (R5-23): on → concept picker, off → back to Ask. */
+/** "Tutor mode" switch (R5-23): on → concept picker, off → back to Ask. Used inside tutor sessions. */
 export function TutorToggle({ on }: { on: boolean }) {
   return (
     <button role="switch" aria-checked={on} onClick={() => (on ? newChat() : setAsk({ picking: true }))} data-act="tutor-mode"
@@ -108,41 +72,50 @@ export function TutorToggle({ on }: { on: boolean }) {
   );
 }
 
+const outlineBtn = "flex h-[30px] items-center gap-1.5 whitespace-nowrap rounded-[8px] border border-line px-2.5 text-[12px] font-medium hover:bg-surface-2 disabled:opacity-50";
+
+// ------------------------------------------------------------------ append-to-note picker
+function AppendPicker({ onPick, onClose }: { onPick: (n: Note) => void; onClose: () => void }) {
+  const v = useVault();
+  const [q, setQ] = useState("");
+  const list = useMemo(() => {
+    const k = q.trim().toLowerCase();
+    return v.notes.filter((n) => !n.deleted && ["note", "lesson", "journal", "moc", "post"].includes(n.type) && (!k || n.title.toLowerCase().includes(k))).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 30);
+  }, [v.notes, q]);
+  return (
+    <>
+      <div className="fixed inset-0 z-30" onClick={onClose} />
+      <div role="dialog" aria-label={t("Append to note…")} className="absolute start-0 top-[calc(100%+4px)] z-40 flex max-h-[320px] w-[300px] max-w-[88vw] flex-col gap-1 rounded-[12px] border border-line bg-surface-2 p-1.5 shadow-[0_16px_40px_rgb(0_0_0/.35)]" data-append-picker>
+        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} dir="auto" placeholder={t("Find a note")} aria-label={t("Find a note")} onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } }}
+          className="h-8 rounded-[7px] border border-line bg-bg px-2.5 text-[12.5px] outline-none focus:border-accent" />
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          {!list.length && <span className="px-2.5 py-3 text-[12.5px] text-muted">{t("No notes match.")}</span>}
+          {list.map((n) => (
+            <button key={n.id} onClick={() => onPick(n)} className="flex h-9 items-center gap-2 rounded-[8px] px-2.5 text-start text-[13px] hover:bg-bg">
+              <Glyph name={n.type || "note"} size={14} color="var(--muted)" /><span dir="auto" className="flex-1 truncate">{n.title}</span><span className="max-w-[90px] truncate text-[11px] text-muted">{v.spaceMap.get(n.spaceId)?.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ------------------------------------------------------------------ one assistant message
-function AssistantMessage({ m, thread, last, v, note, layout, phone, onOpen }: { m: ChatMessage; thread: ChatThread; last: boolean; v: Vault; note?: Note; layout: Layout; phone: boolean; onOpen: (id: string) => void }) {
+function AssistantMessage({ m, thread, last, v, note, layout, phone, onOpen, onHot, hot }: { m: ChatMessage; thread: ChatThread; last: boolean; v: Vault; note?: Note; layout: Layout; phone: boolean; onOpen: (id: string) => void; onHot: (n: number | null) => void; hot: number | null }) {
   const [showSrc, setShowSrc] = useState(true);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [hot, setHot] = useState<number | null>(null);
+  const [pick, setPick] = useState(false);
   const [closest, setClosest] = useState(false);
-  const question = useMemo(() => { const i = thread.messages.indexOf(m); return [...thread.messages.slice(0, i)].reverse().find((x) => x.role === "user")?.text ?? ""; }, [thread.messages, m]);
+  const saved = useSaved()[m.id];
+  const question = questionOf(thread, m);
   const cited = citedIn(m.text);
   const srcs = m.sources ?? [];
   const shown = cited.size ? srcs.filter((s) => cited.has(s.n)) : srcs;
-  const targetSpace = note?.spaceId ?? "inbox";
-  const label = (s: string) => (phone ? null : <span>{s}</span>);
+  const panel = layout === "page" && !phone; // sources live in the right panel there
 
   const copy = async () => { try { await navigator.clipboard.writeText(answerMarkdown(m)); setCopied(true); setTimeout(() => setCopied(false), 1400); } catch { toast(t("Couldn't copy")); } };
-  const saveNote = async () => {
-    const title = question.replace(/[#[\]|]/g, "").slice(0, 90) || thread.title;
-    const n = await createNote({ title, spaceId: targetSpace, body: `# ${title}\n\n${answerMarkdown(m)}` });
-    toast(t("Saved as a note"), { label: t("Open"), run: () => openNote(n.id) });
-  };
-  const makeCards = async () => {
-    setBusy(true);
-    try {
-      const plain = m.text.replace(/\[\d+(?:,\s*\d+)*\]/g, "").replace(/\*\*[^*]+\*\*/g, "");
-      let out = "";
-      if (DEMO && !getToken()) out = plain.split(/(?<=[.!?])\s+|\n+/).map((s) => s.replace(/^[-*\s]+/, "").trim()).filter((s) => s.length > 12).slice(0, 4).map((s, i) => `${question.replace(/[?؟]$/, "")} (${i + 1})? :: ${s.replace(/[*_]/g, "")}`).join("\n");
-      else out = (await aiRun("flashcards", `${question}\n\n${plain}`)).trim();
-      const cards = out.split("\n").map((l) => l.replace(/^\s*(?:[-*]|\d+[.)])\s+/, "").trim()).filter((l) => / :: /.test(l));
-      if (!cards.length) { toast(t("The AI didn't return any cards.")); return; }
-      const title = `${question.replace(/[#[\]|]/g, "").slice(0, 80) || thread.title} · cards`;
-      const from = srcs.filter((s) => cited.has(s.n)).map((s) => `[[${s.title.replace(/[[\]|#]/g, " ")}]]`).filter((x, i, a) => a.indexOf(x) === i);
-      const n = await createNote({ title, spaceId: targetSpace, type: "flashcards", body: `# ${title}\n\n${cards.join("\n")}\n${from.length ? `\nFrom ${from.join(", ")}\n` : ""}` });
-      toast(t("{n} flashcard made (it shows in Review)|{n} flashcards made (they show in Review)", { n: cards.length }), { label: t("Open"), run: () => openNote(n.id) });
-    } catch (e) { toast((e as Error).message); } finally { setBusy(false); }
-  };
 
   if (m.empty === "none") {
     // R5-23E: "Your notes don't cover this yet." + two plain choices
@@ -165,10 +138,11 @@ function AssistantMessage({ m, thread, last, v, note, layout, phone, onOpen }: {
 
   return (
     <div className="flex flex-col gap-2.5" data-msg="assistant">
+      <DoneLine m={m} n={new Set(shown.map((s) => s.noteId)).size} />
       {m.rewrite && <Rewrite text={m.rewrite} />}
       {m.general && <GeneralLabel />}
-      <RichAnswer text={m.text} sources={srcs} size={phone ? 16 : 17} onOpen={onOpen} onHover={setHot} />
-      {shown.length > 0 && !m.general && (
+      <RichAnswer text={m.text} sources={srcs} size={15.5} lh={25} onOpen={onOpen} onHover={onHot} />
+      {!panel && shown.length > 0 && !m.general && (
         <div className="flex flex-col gap-2">
           <button onClick={() => setShowSrc((s) => !s)} aria-expanded={showSrc} className="flex items-center gap-1.5 self-start text-[12px] text-muted hover:text-ink">
             <span aria-hidden className="text-[9px]">{showSrc ? "▼" : isRtl() ? "◀" : "▶"}</span>{t("Sources")} · {shown.length}
@@ -180,17 +154,22 @@ function AssistantMessage({ m, thread, last, v, note, layout, phone, onOpen }: {
           )}
         </div>
       )}
-      <div className="-ms-2 flex flex-wrap items-center gap-1" aria-label={t("Answer actions")}>
-        <button className={actBtn} onClick={copy} title={t("Copy with citations")} aria-label={t("Copy")}><Glyph name="columns-2" size={14} />{label(copied ? t("Copied") : t("Copy"))}</button>
-        <button className={actBtn} onClick={saveNote} aria-label={t("Save as note")}><Glyph name="note" size={14} />{label(t("Save as note"))}</button>
-        <button className={actBtn} onClick={makeCards} disabled={busy} aria-label={t("Make flashcards")}><Glyph name="flashcards" size={14} />{label(busy ? t("Making cards…") : t("Make flashcards"))}</button>
-        {last && <button className={actBtn} onClick={() => void regenerate(thread.id, v, !!m.general)} aria-label={t("Regenerate")}><Glyph name="undo" size={14} />{label(t("Regenerate"))}</button>}
-        <button className={cx(actBtn, m.feedback === 1 && "!text-ok")} aria-pressed={m.feedback === 1} aria-label={t("Helpful")} title={t("Helpful")} onClick={() => void setFeedback(thread.id, m.id, m.feedback === 1 ? undefined : 1)}><Glyph name="s-done" size={14} /></button>
-        <button className={cx(actBtn, m.feedback === -1 && "!text-bad")} aria-pressed={m.feedback === -1} aria-label={t("Not helpful")} title={t("Not helpful")} onClick={() => void setFeedback(thread.id, m.id, m.feedback === -1 ? undefined : -1)}><Glyph name="d-rejected" size={14} /></button>
+      <div className="flex flex-wrap items-center gap-1.5 pt-1" aria-label={t("Answer actions")}>
+        <button className={outlineBtn} onClick={() => void saveAnswerAsNote(thread, m, v, note)} aria-label={t("Save as note")}><Glyph name="note" size={14} />{t("Save as note")}</button>
+        <span className="relative">
+          <button className={outlineBtn} onClick={() => setPick((p) => !p)} aria-haspopup="dialog" aria-expanded={pick} aria-label={t("Append to note…")}><Glyph name="plus" size={14} />{t("Append to note…")}</button>
+          {pick && <AppendPicker onClose={() => setPick(false)} onPick={(n) => { setPick(false); void appendAnswerToNote(thread, m, n); }} />}
+        </span>
+        <button className={outlineBtn} onClick={async () => { setBusy(true); try { await makeCards(thread, m, v, note, 5); } finally { setBusy(false); } }} disabled={busy} aria-label={t("Make flashcards")}><Glyph name="flashcards" size={14} />{busy ? t("Making cards…") : t("Make 5 flashcards")}</button>
+        <button className={outlineBtn} onClick={copy} title={t("Copy with citations")} aria-label={t("Copy")}><Glyph name="copy" size={14} />{copied ? t("Copied") : t("Copy")}</button>
+        {last && <button className={outlineBtn} onClick={() => void regenerate(thread.id, v, !!m.general)} aria-label={t("Retry")}><Glyph name="refresh" size={14} />{t("Retry")}</button>}
+        <button className={cx(outlineBtn, m.feedback === 1 && "!text-ok")} aria-pressed={m.feedback === 1} aria-label={t("Helpful")} title={t("Helpful")} onClick={() => void setFeedback(thread.id, m.id, m.feedback === 1 ? undefined : 1)}><Glyph name="thumbs-up" size={14} /></button>
+        <button className={cx(outlineBtn, m.feedback === -1 && "!text-bad")} aria-pressed={m.feedback === -1} aria-label={t("Not helpful")} title={t("Not helpful")} onClick={() => void setFeedback(thread.id, m.id, m.feedback === -1 ? undefined : -1)}><Glyph name="thumbs-down" size={14} /></button>
       </div>
+      {saved && <SavedBanner info={saved} />}
       {last && m.followups && m.followups.length > 0 && (
         <div className="flex flex-wrap gap-1.5" aria-label={t("Follow-ups")}>
-          {m.followups.map((f) => <button key={f} dir="auto" onClick={() => void sendChat(f, v, { scope: thread.scope as Scope })} className="flex h-[30px] items-center rounded-full border border-line px-3 text-[12.5px] hover:bg-surface-2" data-followup>{f}</button>)}
+          {m.followups.map((f) => <button key={f} dir="auto" onClick={() => void sendChat(f, v, { scope: thread.scope as Scope })} className="flex h-[30px] items-center whitespace-nowrap rounded-full border border-line px-3 text-[12.5px] hover:bg-surface-2" data-followup>{f}</button>)}
         </div>
       )}
     </div>
@@ -214,23 +193,17 @@ export function StateBanner({ glyph, color, text, action, onAction }: { glyph: s
   );
 }
 
-/** The answer in progress (indexing → rewriting → streaming), or the offline / signed-out / error / limit state. */
-function LiveAnswer({ live, v, layout, phone, scope, onOpen }: { live: Live; v: Vault; layout: Layout; phone: boolean; scope: Scope; onOpen: (id: string) => void }) {
-  const name = scopeLabel(scope, v);
+/** The answer in progress: steps + streamed words with Stop, or the offline / signed-out / error / limit state. */
+function LiveAnswer({ live, v, scope, onOpen, onHot, onScope }: { live: Live; v: Vault; scope: Scope; onOpen: (id: string) => void; onHot: (n: number | null) => void; onScope: () => void }) {
   const retry = () => void regenerate(live.threadId, v, !!live.general);
+  const working = ["indexing", "rewriting", "asking", "streaming"].includes(live.status);
+  const total = live.total ?? (scopeNotes(scope, v)?.size ?? v.notes.length);
   return (
     <div className="flex flex-col gap-2.5" aria-live="polite" data-msg="live" data-status={live.status}>
       {live.rewrite && <Rewrite text={live.rewrite} />}
-      {live.status === "indexing" && (
-        <div className="flex flex-col gap-2" role="status">
-          <span className="text-muted" dir="auto">{t("Reading {n} notes in {scope}…", { n: live.total ?? 0, scope: name })}</span>
-          <span className="h-1 overflow-hidden rounded-[2px] bg-surface-2"><span className="block h-full bg-accent transition-[width]" style={{ width: `${live.total ? Math.round(((live.read ?? 0) / live.total) * 100) : 0}%` }} /></span>
-        </div>
-      )}
-      {live.status === "rewriting" && <span className="text-muted">{t("Understanding the follow-up…")}</span>}
-      {live.status === "asking" && <span className="text-muted">{live.general ? t("Answering from general knowledge…") : t("Answering from {n} passages in {scope}…", { n: live.sources.length, scope: name })}</span>}
+      {working && <LiveSteps live={live} total={total} onStop={() => stopChat()} onScope={onScope} />}
       {live.general && live.text && <GeneralLabel />}
-      {live.text && <RichAnswer text={live.text} sources={live.sources} streaming={live.status === "streaming"} size={phone || layout === "panel" ? 16 : 17} onOpen={onOpen} />}
+      {live.text && <RichAnswer text={live.text} sources={live.sources} streaming={live.status === "streaming"} size={15.5} lh={25} onOpen={onOpen} onHover={onHot} />}
       {live.status === "offline" && <StateBanner glyph="c-info" color="var(--info)" text={t("Ask needs a connection. Search and your notes still work offline.")} action={t("Search instead")} onAction={() => searchInstead(live.question)} />}
       {live.status === "signedout" && <StateBanner glyph="s-locked" color="var(--muted)" text={t("Unlock sync to use Ask on this device.")} action={t("Unlock")} onAction={() => { closeAsk(); openSettings("sync"); }} />}
       {live.status === "error" && <StateBanner glyph="c-danger" color="var(--danger)" text={live.error === "Stopped before an answer." ? t("Stopped before an answer. Your question is kept.") : t("Something went wrong while answering. Your question is kept.")} action={t("Retry")} onAction={retry} />}
@@ -257,6 +230,10 @@ export function AskVault({ note, autoFocus, onOpened, layout = "page" }: { note?
   const busy = !!live && ["indexing", "rewriting", "asking", "streaming"].includes(live.status);
   const open = (id: string) => { openNote(id); onOpened?.(); };
   const locked = useAiLocked();
+  const [hot, setHot] = useState<number | null>(null);
+  const [scopeSignal, setScopeSignal] = useState(0);
+  const [queued, setQueued] = useState<string | null>(null);
+  const suggestions = useSuggestions(phone ? 3 : 4);
 
   useEffect(() => { if (autoFocus && !phone) setTimeout(() => input.current?.focus(), 30); }, [autoFocus, st.activeId, phone]);
   // A question handed over from the palette ("Ask your notes: …") runs once, in a new chat.
@@ -268,6 +245,8 @@ export function AskVault({ note, autoFocus, onOpened, layout = "page" }: { note?
   }, [v.ready]); // eslint-disable-line react-hooks/exhaustive-deps
   const msgCount = thread?.messages.length ?? 0;
   useEffect(() => { const el = scroller.current; if (el) el.scrollTop = el.scrollHeight; }, [msgCount, live?.text, live?.status]);
+  // "Type your next question; it sends when this one finishes": the queued question goes out once the answer is saved.
+  useEffect(() => { if (queued && !busy && online && !locked) { const q = queued; setQueued(null); void sendChat(q, v, { scope }); } }, [queued, busy]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const starters = useMemo(() => {
     const cur = note ?? (ui.noteId ? v.byId.get(ui.noteId) : undefined);
@@ -277,65 +256,91 @@ export function AskVault({ note, autoFocus, onOpened, layout = "page" }: { note?
     return starterQuestions({ noteTitle: cur && cur.type !== "path" ? cur.title : undefined, headings, concepts });
   }, [note, ui.noteId, v.byId, scope.kind, scope.pathId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const msgs = thread?.messages ?? [];
+  const lastMsg = msgs[msgs.length - 1];
+  const lastAnswer = [...msgs].reverse().find((m) => m.role === "assistant" && !m.empty && !m.general);
+  const panelSources = live?.sources.length ? live.sources.map((s) => ({ n: s.n, noteId: s.noteId, title: s.title, heading: s.heading, text: s.text })) : lastAnswer?.sources ?? [];
+  const panelText = live?.sources.length ? "" : lastAnswer?.text ?? "";
+  const showPanel = layout === "page" && !phone && panelSources.length > 0 && !live?.general;
+
   if (st.picking) return <ConceptPicker note={note ?? (ui.noteId ? v.byId.get(ui.noteId) : undefined)} layout={layout} />;
   if (thread && thread.mode !== "ask") return <TutorSession thread={thread} layout={layout} onOpened={onOpened} />;
 
-  const submit = (q = st.draft) => { if (q.trim() && !busy && online && !locked) void sendChat(q, v, { scope }); };
-  const msgs = thread?.messages ?? [];
-  const lastMsg = msgs[msgs.length - 1];
+  const submit = (q = st.draft, s: Scope = scope, pins?: Pin[]) => {
+    if (!q.trim() || !online || locked) return;
+    if (busy) { setQueued(q.trim()); setAsk({ draft: "" }); return; }
+    if (s !== scope) setAsk({ scope: s });
+    void sendChat(q, v, { scope: s, ...(pins?.length ? { pinned: pins } : {}) });
+  };
   const dim = !online || locked;
+  const px = phone ? 16 : 28;
 
   const composer = (
-    <div className={cx("flex shrink-0 justify-center", phone ? "px-3 pb-5 pt-2" : "px-6 pb-5")}>
-      <div className={cx("flex w-[760px] max-w-full flex-col gap-2.5 rounded-[14px] border bg-surface px-3 py-2.5", busy ? "border-line" : "border-accent")} style={{ opacity: dim ? 0.55 : 1 }} data-composer>
+    <div className="relative mx-auto w-full max-w-[820px] shrink-0" style={{ padding: `10px ${px}px ${phone ? 28 : 20}px` }}>
+      {queued && <div className="mb-2 flex items-center gap-2 px-1 text-[12px] text-muted" data-queued><span className="min-w-0 flex-1 truncate" dir="auto">{t("Sends when this finishes:")} {queued}</span><button aria-label={t("Cancel")} onClick={() => setQueued(null)} className="flex size-5 items-center justify-center"><Glyph name="x" size={12} /></button></div>}
+      <div className="flex flex-col gap-2 rounded-[16px] bg-surface p-3" style={{ border: `1.5px solid ${busy ? "var(--border)" : "color-mix(in srgb,var(--accent) 60%,var(--border))"}`, opacity: dim ? 0.55 : 1 }} data-composer>
         <textarea ref={input} dir="auto" rows={1} value={dim ? "" : st.draft} disabled={dim} onChange={(e) => setAsk({ draft: e.target.value })}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); }
             if (e.key === "Escape" && busy) { e.stopPropagation(); stopChat(); }
           }}
-          placeholder={!online ? t("Offline") : locked ? t("Locked") : msgs.length ? t("Ask a follow-up…") : t("Ask your notes…")} aria-label={t("Message")}
-          className="max-h-[200px] min-h-[22px] w-full resize-none bg-transparent text-[13px] leading-[1.5] text-ink !outline-none placeholder:text-muted"
+          placeholder={!online ? t("Offline") : locked ? t("Locked") : busy ? t("Type your next question; it sends when this one finishes…") : msgs.length ? t("Ask a follow-up…") : t("Ask your notes…")} aria-label={t("Message")}
+          className="max-h-[200px] min-h-[22px] w-full resize-none bg-transparent text-[14px] leading-[22px] text-ink !outline-none placeholder:text-muted"
           style={{ fieldSizing: "content" } as CSSProperties} />
-        <div className="flex flex-wrap items-center gap-2">
-          <ScopeChip scope={scope} setScope={setScope} note={note} v={v} spaceId={spaceId || ""} />
-          <TutorToggle on={false} />
+        <div className="flex flex-wrap items-center gap-1.5">
+          <ScopeMenu scope={scope} setScope={setScope} note={note} v={v} spaceId={spaceId || ""} openSignal={scopeSignal} />
+          <button onClick={() => setAsk({ picking: true })} data-act="tutor-mode" className="flex h-[30px] items-center gap-1.5 whitespace-nowrap rounded-full border border-line px-2.5 text-[12px] hover:bg-surface-2"><Glyph name="lesson" size={13} stroke={1.9} />{t("Tutor mode")} · {t("off")}</button>
+          {!phone && <span className="flex h-[30px] items-center gap-1.5 whitespace-nowrap rounded-full border border-line px-2.5 text-[12px] text-muted" title={t("The model that writes answers")}><Glyph name="model" size={13} stroke={1.9} />{providerLabel()}</span>}
           <span className="flex-1" />
-          {!phone && <span className="text-[11.5px] text-muted">{t("Enter to send · Shift+Enter new line")}</span>}
+          {!phone && <span className="text-[11px] text-muted">{t("Enter to send · Shift+Enter new line")}</span>}
           {busy
-            ? <button aria-label={t("Stop")} onClick={() => stopChat()} className="flex h-8 items-center gap-1.5 rounded-[9px] border border-line px-3.5 font-semibold hover:bg-surface-2"><span aria-hidden>■</span>{t("Stop")}</button>
-            : <button aria-label={t("Send")} onClick={() => submit()} disabled={dim} className="flex h-8 items-center gap-1.5 rounded-[9px] bg-accent px-3.5 font-semibold text-accent-fg disabled:opacity-60">{t("Send")}</button>}
+            ? <button aria-label={t("Stop")} onClick={() => stopChat()} className="flex h-[34px] items-center gap-1.5 rounded-[9px] border border-line px-3.5 text-[13px] font-[650] hover:bg-surface-2"><Glyph name="stop" size={14} stroke={1.9} />{t("Stop")}</button>
+            : <button aria-label={t("Send")} onClick={() => submit()} disabled={dim} className="flex h-[34px] items-center gap-1.5 rounded-[9px] bg-accent px-3.5 text-[13px] font-[650] text-accent-fg disabled:opacity-60"><Glyph name="send" size={14} stroke={1.9} />{t("Send")}</button>}
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="flex min-h-0 w-full flex-1 flex-col text-[13px]" data-ask={layout}>
-      <div ref={scroller} className="flex min-h-0 flex-1 justify-center overflow-y-auto">
-        <div className={cx("flex w-[760px] max-w-full flex-col gap-4", phone ? "p-4" : "py-6")}>
+    <div className="flex min-h-0 w-full flex-1 text-[13px]" data-ask={layout}>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div ref={scroller} className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           {!msgs.length && !live && (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3.5 pb-20 text-center" data-empty>
-              <Glyph name="query" size={24} color="var(--muted)" tile="#9AA0AA" />
-              <span className="text-[17px] font-semibold">{t("Ask your notes anything")}</span>
-              <span className="text-muted" dir="auto">{t("Answers come from {scope}, with sources.", { scope: scope.kind === "vault" ? t("your whole vault") : scopeLabel(scope, v) })}</span>
-              <div className="flex w-full max-w-[440px] flex-col gap-2">
-                {starters.map((q) => (
-                  <button key={q} dir="auto" onClick={() => submit(q)} disabled={dim} className="flex min-h-10 items-center rounded-[10px] border border-line bg-surface px-3.5 py-2 text-start hover:bg-surface-2" data-starter>{q}</button>
+            <div className="flex flex-1 flex-col items-center justify-center gap-[18px] pb-6" style={{ padding: `0 ${px}px` }} data-empty>
+              <span className="flex size-12 items-center justify-center rounded-[14px]" style={{ background: "color-mix(in srgb,var(--accent) 14%,transparent)", color: "var(--accent)" }}><Glyph name="assistant" size={24} /></span>
+              <div className="flex flex-col items-center gap-1.5 text-center">
+                <span className="font-[650]" style={{ fontSize: phone ? 19 : 22 }}>{t("Ask your notes anything")}</span>
+                <span className="max-w-[460px] text-[13.5px] text-muted" dir="auto" style={{ textWrap: "pretty" }}>{t("Answers come only from your vault and always show their sources. Only the matching excerpts are sent to the AI.")}</span>
+              </div>
+              <div className="grid w-full max-w-[720px] gap-2.5" style={{ gridTemplateColumns: phone ? "1fr" : "1fr 1fr" }}>
+                {suggestions.length ? suggestions.map((s) => (
+                  <button key={s.id} onClick={() => submit(s.text, s.scope, s.pins)} disabled={dim} data-suggest={s.id} className="flex flex-col gap-1.5 rounded-[12px] border border-line bg-surface px-3.5 py-3 text-start hover:bg-surface-2 disabled:opacity-60">
+                    <span className="flex items-center gap-1.5 text-[11px] font-[650] tracking-[.05em]" style={{ color: s.color }}><Glyph name={s.glyph} size={13} stroke={1.9} />{s.kind}</span>
+                    <span dir="auto" className="text-[13px] leading-[18px]">{s.text}</span>
+                    <span dir="auto" className="text-[11px] text-muted">{s.src}</span>
+                  </button>
+                )) : starters.map((q) => (
+                  <button key={q} dir="auto" onClick={() => submit(q)} disabled={dim} className="flex min-h-10 items-center rounded-[12px] border border-line bg-surface px-3.5 py-3 text-start text-[13px] hover:bg-surface-2" data-starter>{q}</button>
                 ))}
               </div>
             </div>
           )}
-          {thread?.summary && msgs.length > 0 && (
-            <div className="flex items-center gap-2.5 text-[12px] text-muted" data-summarized><span className="h-px flex-1 bg-line" />{t("Earlier messages summarized")}<span className="h-px flex-1 bg-line" /></div>
+          {(msgs.length > 0 || live) && (
+            <div className="mx-auto flex w-full max-w-[820px] flex-col gap-[18px]" style={{ padding: `22px ${px}px 12px` }}>
+              {thread?.summary && msgs.length > 0 && (
+                <div className="flex items-center gap-2.5 text-[12px] text-muted" data-summarized><span className="h-px flex-1 bg-line" />{t("Earlier messages summarized")}<span className="h-px flex-1 bg-line" /></div>
+              )}
+              {thread && msgs.map((m) => m.role === "user"
+                ? <div key={m.id} className="flex justify-end"><span dir="auto" data-msg="user" className="max-w-[80%] whitespace-pre-wrap rounded-[14px] rounded-ee-[4px] bg-surface-2 px-3.5 py-2.5 text-[14px] leading-[21px]">{m.text}</span></div>
+                : <AssistantMessage key={m.id} m={m} thread={thread} last={m === lastMsg && !live} v={v} note={note} layout={layout} phone={phone} onOpen={open} onHot={setHot} hot={hot} />)}
+              {live && !thread && <div className="flex justify-end"><span dir="auto" className="max-w-[80%] rounded-[14px] rounded-ee-[4px] bg-surface-2 px-3.5 py-2.5 text-[14px] leading-[21px]">{live.question}</span></div>}
+              {live && <LiveAnswer live={live} v={v} scope={scope} onOpen={open} onHot={setHot} onScope={() => setScopeSignal((x) => x + 1)} />}
+            </div>
           )}
-          {thread && msgs.map((m) => m.role === "user"
-            ? <div key={m.id} className="flex justify-end"><span dir="auto" data-msg="user" className="max-w-[78%] whitespace-pre-wrap rounded-[14px] rounded-ee-[4px] bg-surface-2 px-3.5 py-2.5 leading-[1.5]">{m.text}</span></div>
-            : <AssistantMessage key={m.id} m={m} thread={thread} last={m === lastMsg && !live} v={v} note={note} layout={layout} phone={phone} onOpen={open} />)}
-          {live && !thread && <div className="flex justify-end"><span dir="auto" className="max-w-[78%] rounded-[14px] rounded-ee-[4px] bg-surface-2 px-3.5 py-2.5 leading-[1.5]">{live.question}</span></div>}
-          {live && <LiveAnswer live={live} v={v} layout={layout} phone={phone} scope={scope} onOpen={open} />}
         </div>
+        {composer}
       </div>
-      {composer}
+      {showPanel && <SourcesPanel sources={panelSources} text={panelText} scopeName={scopeLabel(scope, v)} hot={hot} onOpen={open} />}
     </div>
   );
 }
@@ -351,15 +356,8 @@ function contextLine(thread: ChatThread | undefined, live: Live | null) {
 }
 
 // ------------------------------------------------------------------ thread list
-const SCOPE_SHORT: Record<string, string> = { vault: "Vault", space: "Space", note: "Note + links", path: "Path" };
 const DAY = 86_400_000;
 const startOfDay = (ts: number) => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
-function when(ts: number, inToday: boolean) {
-  const today = startOfDay(Date.now());
-  if (ts >= today) return inToday ? fmtTime(ts) : t("Today");
-  if (ts >= today - 6 * DAY) return fmtDate(ts, { weekday: "short" });
-  return fmtDate(ts, { day: "numeric", month: "short" });
-}
 
 function ThreadMenu({ t: th, onRename, onDelete, onClose, extra }: { t: ChatThread; onRename: () => void; onDelete: () => void; onClose: () => void; extra?: ReactNode }) {
   const item = "flex h-8 items-center gap-2 rounded-[6px] px-2 text-start hover:bg-bg";
@@ -370,7 +368,7 @@ function ThreadMenu({ t: th, onRename, onDelete, onClose, extra }: { t: ChatThre
       <div role="menu" className="absolute end-1 top-[calc(100%+2px)] z-40 flex w-[200px] flex-col rounded-[10px] border border-line bg-surface-2 p-1 text-[12.5px] shadow-[0_8px_24px_rgb(0_0_0/.25)]" onClick={onClose}>
         <button role="menuitem" className={item} onClick={onRename}><ChatIcon name="edit" size={13} />{t("Rename")}</button>
         <button role="menuitem" className={item} onClick={() => void pinThread(th.id, !th.pinned)}><ChatIcon name="pin" size={13} />{th.pinned ? t("Unpin") : t("Pin")}</button>
-        <button role="menuitem" className={item} onClick={() => void navigator.clipboard?.writeText(threadMarkdown(th)).then(() => toast(t("Conversation copied")))}><Glyph name="columns-2" size={13} />{t("Copy conversation")}</button>
+        <button role="menuitem" className={item} onClick={() => void shareThread(threadMarkdown(th))}><Glyph name="copy" size={13} />{t("Copy conversation")}</button>
         <button role="menuitem" className={item} onClick={() => void saveAll()}><Glyph name="note" size={13} />{t("Save conversation as note")}</button>
         {extra}
         <button role="menuitem" className={cx(item, "text-bad")} onClick={onDelete}><Glyph name="x" size={13} />{t("Delete")}</button>
@@ -379,33 +377,33 @@ function ThreadMenu({ t: th, onRename, onDelete, onClose, extra }: { t: ChatThre
   );
 }
 
-function ThreadRow({ t: th, active, group }: { t: ChatThread; active: boolean; group: string }) {
+function ThreadRow({ t: th, active }: { t: ChatThread; active: boolean }) {
+  const v = useVault();
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [confirm, setConfirm] = useState(false);
-  const scope = th.mode === "ask" ? t(SCOPE_SHORT[th.scope.kind] ?? "Vault") : t("Tutor");
+  const lastA = [...th.messages].reverse().find((m) => m.role === "assistant" && m.sources?.length);
+  const n = lastA ? new Set(lastA.sources!.map((s) => s.noteId)).size : 0;
+  const sub = th.mode === "ask" ? [scopeLabel(th.scope as Scope, v), n ? t("{n} sources", { n }) : ""].filter(Boolean).join(" · ") : t("Tutor");
   if (renaming) return (
-    <input autoFocus dir="auto" defaultValue={th.title} aria-label={t("Rename")} className="h-9 rounded-[8px] border border-accent bg-bg px-2 text-[13px] outline-none"
+    <input autoFocus dir="auto" defaultValue={th.title} aria-label={t("Rename")} className="mx-2 h-9 rounded-[8px] border border-accent bg-bg px-2 text-[13px] outline-none"
       onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") { e.stopPropagation(); setRenaming(false); } }}
       onBlur={(e) => { void renameThread(th.id, e.target.value); setRenaming(false); }} />
   );
   if (confirm) return (
-    <div className="flex flex-col gap-1.5 rounded-[8px] border border-line bg-surface p-2 text-[12.5px]" role="alertdialog">
+    <div className="mx-2 flex flex-col gap-1.5 rounded-[8px] border border-line bg-surface p-2 text-[12.5px]" role="alertdialog">
       <span>{t("Delete this conversation?")}</span>
       <div className="flex gap-1.5"><button className="h-7 rounded-[6px] bg-bad px-2.5 font-semibold text-white" onClick={() => void deleteThread(th.id)}>{t("Delete")}</button><button className="h-7 rounded-[6px] px-2.5 hover:bg-surface-2" onClick={() => setConfirm(false)}>{t("Cancel")}</button></div>
     </div>
   );
   return (
-    <div className={cx("group relative rounded-[8px]", active ? "bg-surface-2" : "hover:bg-surface-2")} data-thread={th.id}>
-      <button onClick={() => openThread(th.id)} className="flex w-full flex-col gap-1 p-2 text-start">
+    <div className="group relative mx-2 rounded-[9px]" style={{ background: active ? AC : undefined }} data-thread={th.id}>
+      <button onClick={() => openThread(th.id)} className={cx("flex w-full flex-col gap-0.5 rounded-[9px] px-2.5 py-2 text-start", !active && "hover:bg-surface-2")}>
         <span className="flex w-full items-center gap-1.5 pe-6">
           {th.pinned ? <span className="text-[11px] text-accent" aria-hidden>●</span> : null}
-          <span dir="auto" className={cx("min-w-0 flex-1 truncate", active ? "font-semibold" : "font-[450]")}>{th.title}</span>
+          <span dir="auto" className="min-w-0 flex-1 truncate text-[13px]" style={{ fontWeight: active ? 600 : 400 }}>{th.title}</span>
         </span>
-        <span className="flex items-center gap-1.5 text-[11.5px] text-muted">
-          <span className="rounded-[5px] px-1.5 leading-[18px]" style={{ background: active ? "var(--bg)" : "var(--surface-2)" }}>{scope}</span>
-          {when(th.updatedAt, group === "today")}
-        </span>
+        <span dir="auto" className="truncate text-[11.5px] text-muted">{sub}</span>
       </button>
       <button aria-label={t("Thread actions")} aria-haspopup="menu" onClick={() => setMenu((m) => !m)} className={cx("absolute end-1.5 top-1.5 flex size-6 items-center justify-center rounded-[6px] text-muted hover:text-ink", !active && !menu && "opacity-0 focus:opacity-100 group-hover:opacity-100 max-md:opacity-100")}><span aria-hidden>⋯</span></button>
       {menu && <ThreadMenu t={th} onClose={() => setMenu(false)} onRename={() => setRenaming(true)} onDelete={() => setConfirm(true)} />}
@@ -418,61 +416,77 @@ export function ThreadList({ activeId, query = "" }: { activeId: string | null; 
   const threads = q ? all.filter((th) => th.title.toLowerCase().includes(q) || th.messages.some((m) => m.text.toLowerCase().includes(q))) : all;
   const today = startOfDay(Date.now());
   const groups: [string, string, ChatThread[]][] = [
-    ["pinned", t("Pinned"), threads.filter((th) => th.pinned)],
-    ["today", t("Today"), threads.filter((th) => !th.pinned && th.updatedAt >= today)],
-    ["earlier", t("Earlier"), threads.filter((th) => !th.pinned && th.updatedAt < today)],
+    ["pinned", t("PINNED"), threads.filter((th) => th.pinned)],
+    ["today", t("TODAY"), threads.filter((th) => !th.pinned && th.updatedAt >= today)],
+    ["yesterday", t("YESTERDAY"), threads.filter((th) => !th.pinned && th.updatedAt < today && th.updatedAt >= today - DAY)],
+    ["week", t("PREVIOUS 7 DAYS"), threads.filter((th) => !th.pinned && th.updatedAt < today - DAY && th.updatedAt >= today - 7 * DAY)],
+    ["earlier", t("EARLIER"), threads.filter((th) => !th.pinned && th.updatedAt < today - 7 * DAY)],
   ];
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto" aria-label={t("Chats")}>
-      {!threads.length && <span className="px-2 py-2 text-muted">{q ? t("No chats match.") : t("Conversations you start show here.")}</span>}
+    <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto" aria-label={t("Chats")}>
+      {!threads.length && (q
+        ? <span className="px-4 py-2 text-muted">{t("No chats match.")}</span>
+        : <div className="m-4 rounded-[12px] border border-dashed border-line p-3.5 text-[12.5px] leading-[18px] text-muted">{t("Your chats show here. Each one can be saved as a note.")}</div>)}
       {groups.map(([k, label, list]) => list.length > 0 && (
-        <div key={k} className="flex flex-col gap-1">
-          <span className="px-2 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{label}</span>
-          {list.map((th) => <ThreadRow key={th.id} t={th} active={th.id === activeId} group={k} />)}
+        <div key={k} className="flex flex-col gap-0.5">
+          <span className="px-4 pb-1 pt-2.5 text-[11px] font-[650] tracking-[.06em] text-muted">{label}</span>
+          {list.map((th) => <ThreadRow key={th.id} t={th} active={th.id === activeId} />)}
         </div>
       ))}
     </div>
   );
 }
-function ThreadColumn({ activeId }: { activeId: string | null }) {
+function ThreadColumn({ activeId, searchRef }: { activeId: string | null; searchRef: RefObject<HTMLInputElement | null> }) {
   const [q, setQ] = useState("");
   return (
-    <div className="flex w-[280px] shrink-0 flex-col gap-1 border-e border-line px-2.5 py-3.5" data-threads>
-      <div className="flex items-center gap-2 px-1.5 pb-2.5">
-        <span className="flex-1 text-[15px] font-[650]">{t("Ask")}</span>
-        <button onClick={() => newChat()} className="flex h-[30px] items-center gap-1.5 rounded-[8px] border border-line px-2.5 hover:bg-surface-2" data-act="new-chat"><span aria-hidden>+</span>{t("New")}</button>
+    <div className="flex w-[270px] shrink-0 flex-col border-e border-line bg-surface" data-threads>
+      <div className="flex items-center gap-2 px-3.5 pb-2.5 pt-4">
+        <span className="flex-1 text-[16px] font-[650]">{t("Ask")}</span>
+        <button onClick={() => newChat()} className="flex h-[30px] items-center gap-1.5 rounded-[8px] border border-line px-2.5 text-[12.5px] hover:bg-surface-2" data-act="new-chat" title="Ctrl+J"><span aria-hidden>+</span>{t("New")} <span className="text-[11px] text-muted">⌘J</span></button>
       </div>
-      <label className="mx-0.5 mb-2 flex h-8 items-center gap-2 rounded-[7px] border border-line bg-bg px-2.5 text-muted focus-within:border-accent">
-        <Glyph name="query" size={14} />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Search chats")} aria-label={t("Search chats")} dir="auto" className="min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-muted" />
+      <label className="mx-3.5 mb-2.5 flex h-[34px] items-center gap-2 rounded-[9px] border border-line px-2.5 text-muted focus-within:border-accent">
+        <Glyph name="search" size={14} stroke={1.9} />
+        <input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Search chats")} aria-label={t("Search chats")} dir="auto" className="min-w-0 flex-1 bg-transparent text-[12.5px] text-ink outline-none placeholder:text-muted" />
       </label>
       <ThreadList activeId={activeId} query={q} />
     </div>
   );
 }
 
-/** Conversation header: title, context line, ⋯ (thread actions + close). */
-function ConvHeader({ phone, thread, live }: { phone: boolean; thread: ChatThread | undefined; live: Live | null }) {
+/** Conversation header: title, context line, Save as note, Share, History, ⋯ (thread actions + close). */
+function ConvHeader({ phone, thread, live, note, searchRef }: { phone: boolean; thread: ChatThread | undefined; live: Live | null; note?: Note; searchRef?: RefObject<HTMLInputElement | null> }) {
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const st = useAsk();
+  const v = useVault();
+  const saved = useSaved();
   const ctx = phone ? "" : contextLine(thread, live);
   const title = st.picking ? t("Tutor") : thread?.title ?? t("New chat");
   const item = "flex h-8 items-center gap-2 rounded-[6px] px-2 text-start hover:bg-bg";
+  const ask = !!thread && thread.mode === "ask";
+  const lastA = ask ? [...thread!.messages].reverse().find((m) => m.role === "assistant" && m.text.trim() && !m.empty) : undefined;
+  const isSaved = !!lastA && !!saved[lastA.id];
   const tail = <><button role="menuitem" className={item} onClick={() => newChat()}><Glyph name="plus" size={13} />{t("New chat")}</button><button role="menuitem" className={item} onClick={closeAsk}><Glyph name="x" size={13} />{t("Close Ask")}</button></>;
+  const ghost = "flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[8px] border px-2.5 text-[12.5px] font-medium";
   return (
-    <div className={cx("relative flex shrink-0 items-center gap-2.5 border-b border-line", phone ? "h-14 px-3" : "h-[52px] px-6")} data-ask-header>
-      {phone && <button aria-label={t("Close")} onClick={closeAsk} className="flex size-7 items-center justify-center text-[18px]"><span aria-hidden>{isRtl() ? "→" : "←"}</span></button>}
+    <div className={cx("relative flex shrink-0 items-center gap-2.5 border-b border-line", phone ? "h-[52px] px-4" : "h-14 px-7")} data-ask-header>
+      {phone && <button aria-label={t("Close")} onClick={closeAsk} className="-ms-2 flex size-10 items-center justify-center text-[22px]"><span aria-hidden>{isRtl() ? "›" : "‹"}</span></button>}
       {renaming && thread ? (
         <input autoFocus dir="auto" defaultValue={thread.title} aria-label={t("Rename")} className="h-8 min-w-0 flex-1 rounded-[7px] border border-accent bg-bg px-2 font-semibold outline-none"
           onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") { e.stopPropagation(); setRenaming(false); } }}
           onBlur={(e) => { void renameThread(thread.id, e.target.value); setRenaming(false); }} />
-      ) : <span dir="auto" className="min-w-0 flex-1 truncate font-semibold">{title}</span>}
+      ) : <span dir="auto" className="min-w-0 flex-1 truncate text-[14px] font-[650]">{title}</span>}
       {ctx && <span className="whitespace-nowrap text-[12px] text-muted" data-context>{ctx}</span>}
-      {phone && <button aria-label={t("Chats")} onClick={() => setAsk({ list: true })} className="flex size-9 items-center justify-center"><Glyph name="v-list" size={18} /></button>}
+      {lastA && thread && (
+        <button onClick={() => void saveAnswerAsNote(thread, lastA, v, note)} className={ghost} data-act="save-note"
+          style={isSaved ? { borderColor: "var(--border)" } : { borderColor: "transparent", background: "var(--accent)", color: "var(--accent-fg)", fontWeight: 650 }}><Glyph name="note" size={15} />{isSaved ? t("Saved") : t("Save as note")}</button>
+      )}
+      {lastA && thread && !phone && <button onClick={() => void shareThread(threadMarkdown(thread))} className={cx(ghost, "border-line")} data-act="share"><Glyph name="link" size={15} />{t("Share")}</button>}
+      {!lastA && !phone && <button onClick={() => searchRef?.current?.focus()} className={cx(ghost, "border-transparent text-muted")} data-act="history"><Glyph name="history" size={15} />{t("History")}</button>}
+      {phone && <button aria-label={t("Chats")} onClick={() => setAsk({ list: true })} className="flex size-9 items-center justify-center"><Glyph name="history" size={18} /></button>}
       <div className="relative">
-        <button aria-label={t("More")} aria-haspopup="menu" onClick={() => setMenu((m) => !m)} className="flex size-7 items-center justify-center rounded-[7px] text-[16px] text-muted hover:bg-surface-2 hover:text-ink"><span aria-hidden>⋯</span></button>
+        <button aria-label={t("More")} aria-haspopup="menu" onClick={() => setMenu((m) => !m)} className="flex h-8 items-center justify-center rounded-[8px] px-2.5 text-muted hover:bg-surface-2 hover:text-ink"><Glyph name="more" size={15} /></button>
         {menu && (thread && thread.mode === "ask"
           ? <ThreadMenu t={thread} onClose={() => setMenu(false)} onRename={() => setRenaming(true)} onDelete={() => setConfirm(true)} extra={tail} />
           : (<><div className="fixed inset-0 z-30" onClick={() => setMenu(false)} />
@@ -488,37 +502,40 @@ function ConvHeader({ phone, thread, live }: { phone: boolean; thread: ChatThrea
   );
 }
 
-/** Full Ask (palette → "Ask your notes…"): a page beside the sidebar on desktop, full screen on phone. */
+/**
+ * Full Ask (palette → "Ask your notes…"): takes the sidebar's place on desktop (rail + chat list + conversation +
+ * sources), full screen on phone. The notes sidebar is back as soon as Ask closes.
+ */
 export function AskSheet() {
   const st = useAsk();
   const ui = useUI();
   const v = useVault();
   useLang();
   const note = ui.view === "notes" && ui.noteId ? v.byId.get(ui.noteId) : undefined;
-  const [inset, setInset] = useState(0);
   const phone = usePhone();
   const thread = useThread(st.activeId);
   const live = st.live && (!thread || st.live.threadId === thread.id) ? st.live : null;
+  const search = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!st.open) return;
-    // keep the app's sidebar (rail) visible: start where it ends (mirrored in RTL)
-    const measure = () => setInset(sidebarInset());
-    measure();
-    const k = (e: KeyboardEvent) => { if (e.key === "Escape" && !document.querySelector('[role="alertdialog"]')) { if (getAsk().list) setAsk({ list: false }); else closeAsk(); } };
-    addEventListener("keydown", k); addEventListener("resize", measure);
-    return () => { removeEventListener("keydown", k); removeEventListener("resize", measure); };
+    const k = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !document.querySelector('[role="alertdialog"]')) { if (getAsk().list) setAsk({ list: false }); else closeAsk(); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "j") { e.preventDefault(); newChat(); }
+    };
+    addEventListener("keydown", k);
+    return () => removeEventListener("keydown", k);
   }, [st.open]);
   if (!st.open) return null;
   const tutor = !!thread && thread.mode !== "ask";
   if (phone) return (
     <div role="dialog" aria-label={t("Ask")} className="fixed inset-0 z-50 flex flex-col bg-bg text-[13px] fade-in" data-r6-layer>
-      {!tutor && <ConvHeader phone thread={thread} live={live} />}
+      {!tutor && <ConvHeader phone thread={thread} live={live} note={note} />}
       <div className="flex min-h-0 flex-1 flex-col"><AskVault note={note} autoFocus onOpened={closeAsk} layout="sheet" /></div>
       {st.list && (
         <div className="fixed inset-0 z-50 bg-[rgba(5,6,8,.5)] fade-in" onMouseDown={(e) => e.target === e.currentTarget && setAsk({ list: false })}>
-          <div className="absolute inset-x-0 bottom-0 flex h-[78%] flex-col gap-2 rounded-t-[14px] bg-surface px-3 pt-2" role="dialog" aria-label={t("Chats")}>
+          <div className="absolute inset-x-0 bottom-0 flex h-[78%] flex-col gap-2 rounded-t-[14px] bg-surface px-1 pt-2" role="dialog" aria-label={t("Chats")}>
             <span className="flex justify-center pb-1"><span className="h-1 w-9 rounded-[2px] bg-line" /></span>
-            <div className="flex items-center gap-2 px-1"><span className="flex-1 text-[16px] font-[650]">{t("Chats")}</span>
+            <div className="flex items-center gap-2 px-3"><span className="flex-1 text-[16px] font-[650]">{t("Chats")}</span>
               <button onClick={() => newChat()} className="flex h-9 items-center gap-1.5 rounded-[8px] border border-line px-3"><span aria-hidden>+</span>{t("New")}</button>
               <button aria-label={t("Close")} onClick={() => setAsk({ list: false })} className="flex size-9 items-center justify-center"><Glyph name="x" size={16} /></button></div>
             <ThreadList activeId={st.activeId} />
@@ -528,10 +545,11 @@ export function AskSheet() {
     </div>
   );
   return (
-    <div role="dialog" aria-label={t("Ask")} className="fixed inset-y-0 z-50 flex bg-bg text-[13px] fade-in" style={{ insetInlineStart: inset, insetInlineEnd: 0 }} data-r6-layer>
-      {!tutor && <ThreadColumn activeId={st.activeId} />}
+    <div role="dialog" aria-label={t("Ask")} className="fixed inset-0 z-50 flex bg-bg text-[13px] fade-in" data-r6-layer data-ask-takeover>
+      <Rail />
+      {!tutor && <ThreadColumn activeId={st.activeId} searchRef={search} />}
       <div className="flex min-w-0 flex-1 flex-col">
-        {!tutor && <ConvHeader phone={false} thread={thread} live={live} />}
+        {!tutor && <ConvHeader phone={false} thread={thread} live={live} note={note} searchRef={search} />}
         <AskVault note={note} autoFocus onOpened={closeAsk} layout="page" />
       </div>
     </div>

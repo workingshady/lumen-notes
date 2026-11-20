@@ -40,7 +40,7 @@ export function ChatIcon({ name, size = 15, filled }: { name: keyof typeof ICONS
 const markCitations = (md: string) => md.replace(/\[(\d{1,2}(?:\s*,\s*\d{1,2})*)\](?!\()/g, (_m, list: string) => list.split(",").map((x) => `⟦${x.trim()}⟧`).join(""));
 
 /** Answer Markdown + KaTeX in the reading serif, citations as numbered chips (click opens the note). */
-export function RichAnswer({ text, sources, streaming, size = 16, onOpen, onHover, ui }: { text: string; sources: ChatSource[]; streaming?: boolean; size?: number; onOpen: (noteId: string) => void; onHover?: (n: number | null) => void; /** UI font (Assistant panel) instead of the reading serif. */ ui?: boolean }) {
+export function RichAnswer({ text, sources, streaming, size = 16, lh, onOpen, onHover, ui }: { lh?: number; text: string; sources: ChatSource[]; streaming?: boolean; size?: number; onOpen: (noteId: string) => void; onHover?: (n: number | null) => void; /** UI font (Assistant panel) instead of the reading serif. */ ui?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const by = useMemo(() => new Map(sources.map((s) => [s.n, s])), [sources]);
   const html = useMemo(() => {
@@ -54,7 +54,7 @@ export function RichAnswer({ text, sources, streaming, size = 16, onOpen, onHove
   useEffect(() => { if (ref.current) ref.current.innerHTML = html; }, [html]);
   return (
     <div ref={ref} dir="auto" className={cx("prose ask-answer flex w-full !max-w-none flex-col !mx-0 gap-3", streaming && "ask-streaming")}
-      style={{ fontSize: size, lineHeight: ui ? `${Math.round(size * 1.54)}px` : `${Math.round(size * 1.75)}px`, fontFamily: ui ? (isAr(text) ? "'IBM Plex Sans Arabic', Inter, sans-serif" : "inherit") : isAr(text) ? "'Noto Naskh Arabic', 'IBM Plex Sans Arabic', serif" : SERIF }}
+      style={{ fontSize: size, lineHeight: lh ? `${lh}px` : ui ? `${Math.round(size * 1.54)}px` : `${Math.round(size * 1.75)}px`, fontFamily: ui ? (isAr(text) ? "'IBM Plex Sans Arabic', Inter, sans-serif" : "inherit") : isAr(text) ? "'Noto Naskh Arabic', 'IBM Plex Sans Arabic', serif" : SERIF }}
       onClick={(e) => {
         const a = (e.target as HTMLElement).closest<HTMLElement>(".ask-cite");
         if (!a) return;

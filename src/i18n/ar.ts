@@ -11,6 +11,7 @@ import { ar as dialogs } from "./ar/dialogs";
 import { ar as imports } from "./ar/imports";
 import { ar as accounts } from "./ar/accounts";
 import { ar as sweep } from "./ar/sweep";
+import { ar as askR8 } from "./ar/ask-r8"; // round 8 package 56: Ask enhanced
 import { ar as r6a } from "./ar/chat-r6"; // round 6 part A: Ask, tutor, note tabs, Assistant
 import { ar as common } from "./ar/common";
 import { ar as scale } from "./ar/scale";
@@ -41,4 +42,4 @@ import { ar as api } from "./ar/api"; // Settings › Developer endpoints // rou
  * Split by area so several people can add strings without conflicts; later areas override earlier ones on a clash.
  * Product names (Lumen) and technical terms Arabic users expect in English (Markdown, PDF, FSRS, JSON, URL) stay as is.
  */
-export const AR: Catalog = { ...convert, ...archAiShare, ...dnd, ...library, ...arch, ...archEdges, ...aiVisual, ...activity, ...scale, ...shell, ...home, ...workspace, ...editor, ...paths, ...review, ...settings, ...data, ...dialogs, ...imports, ...accounts, ...sweep, ...r6b, ...r6a, ...organize, ...api, ...canvas, ...wbFix, ...wbW3a, ...wbPens, ...whiteboard, ...canvasOptions, ...exportAr, ...r7ArchFix, ...common, ...visualChooser, ...r7Consistency };
+export const AR: Catalog = { ...askR8, ...convert, ...archAiShare, ...dnd, ...library, ...arch, ...archEdges, ...aiVisual, ...activity, ...scale, ...shell, ...home, ...workspace, ...editor, ...paths, ...review, ...settings, ...data, ...dialogs, ...imports, ...accounts, ...sweep, ...r6b, ...r6a, ...organize, ...api, ...canvas, ...wbFix, ...wbW3a, ...wbPens, ...whiteboard, ...canvasOptions, ...exportAr, ...r7ArchFix, ...common, ...visualChooser, ...r7Consistency };

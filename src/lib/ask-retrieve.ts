@@ -115,8 +115,8 @@ export async function ensureIndex(v: Vault, onProgress?: (done: number, total: n
 }
 
 // ------------------------------------------------------------------ scope
-export type ScopeKind = "vault" | "space" | "note" | "path";
-export interface Scope { kind: ScopeKind; spaceId?: string; noteId?: string; pathId?: string; /** Explicit note set (Assistant context chips); wins over the kind. */ noteIds?: string[] }
+export type ScopeKind = "vault" | "space" | "note" | "path" | "folder" | "tag" | "file";
+export interface Scope { kind: ScopeKind; spaceId?: string; noteId?: string; pathId?: string; folderId?: string; tag?: string; /** Explicit note set (Assistant context chips); wins over the kind. */ noteIds?: string[] }
 
 /** Note ids the scope allows (null = whole vault). */
 export function scopeNotes(s: Scope, v: Vault): Set<string> | null {
@@ -127,6 +127,14 @@ export function scopeNotes(s: Scope, v: Vault): Set<string> | null {
     if (!s.noteId) return null;
     return new Set([s.noteId, ...(v.outlinks.get(s.noteId) ?? []), ...(v.backlinks.get(s.noteId) ?? [])]);
   }
+  if (s.kind === "folder") {
+    if (!s.folderId) return null;
+    const ids = new Set([s.folderId]);
+    for (let grew = true; grew;) { grew = false; for (const f of v.folders) if (f.parentId && ids.has(f.parentId) && !ids.has(f.id)) { ids.add(f.id); grew = true; } }
+    return new Set(v.notes.filter((n) => n.folderId && ids.has(n.folderId)).map((n) => n.id));
+  }
+  if (s.kind === "tag") { const tg = (s.tag ?? "").toLowerCase(); return new Set(v.notes.filter((n) => n.tags.some((x) => x.toLowerCase() === tg)).map((n) => n.id)); }
+  if (s.kind === "file") return new Set(s.noteId ? [s.noteId] : []);
   const p = s.pathId ? v.byId.get(s.pathId) : undefined;
   if (!p) return null;
   const doc = parsePath(p.body);
@@ -143,6 +151,9 @@ export function scopeLabel(s: Scope, v: Vault): string {
   if (s.kind === "vault" || (s.kind === "space" && (!s.spaceId || s.spaceId === "all"))) return "Whole vault";
   if (s.kind === "space") { const sp = v.spaceMap.get(s.spaceId!); return sp ? sp.name : "This space"; }
   if (s.kind === "note") return `${v.byId.get(s.noteId ?? "")?.title ?? "This note"} + links`;
+  if (s.kind === "folder") return v.folderMap.get(s.folderId ?? "")?.name ?? "This folder";
+  if (s.kind === "tag") return `#${s.tag ?? ""}`;
+  if (s.kind === "file") return v.byId.get(s.noteId ?? "")?.title ?? "This file";
   return v.byId.get(s.pathId ?? "")?.title ?? "Learning path";
 }
 
