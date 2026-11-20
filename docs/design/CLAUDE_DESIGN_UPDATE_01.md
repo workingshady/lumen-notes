@@ -17,14 +17,14 @@ Explain the difference visually so users pick the right one:
 | What | Cards of notes, text, links, groups connected by arrows | Freehand: pen, shapes, arrows, sticky notes, frames, images | Auto map of how notes link |
 | Format | JSON Canvas 1.0 (`.canvas`, Obsidian-compatible) | Excalidraw (`.excalidraw`) | Generated, not stored |
 | Edit by | Drag & drop · JSON code panel · script console · REST API | Drawing tools · JSON code panel · script console · Mermaid → shapes · REST API | Filters only |
-| Icon | 🧩 | 🖍️ | network |
+| Icon | plugin | highlighter️ | network |
 
 Design:
 - **"New…" chooser**: a sheet with three large cards (Canvas / Whiteboard / Graph-from-note), each with a one-line "use it when…" and a tiny preview illustration made of shapes, not stock art.
 - **Canvas screen** (refine round 1): the floating toolbar is grouped as *Add* (text · note · link · group) | *Arrange* (tree · grid · force layout) | *Style* (6 color presets) | *Code* (`</>` JSON, `>_` script, download). Selected card: resize handles + 4 connection dots in the accent color. Edge labels sit on a bg-colored pill.
 - **Whiteboard screen**: Excalidraw's tool bar restyled to the Lumen tokens (surface `#161A21`, border `#2A303B`, active tool = accent). Top-right Lumen cluster: `</>` code · `>_` script · Mermaid · export. Show sticky notes in 6 soft paper colors (`#fff3bf #d3f9d8 #d0ebff #ffd8a8 #eebefa #ffc9c9`) with dark ink text, a frame titled "Week 3", a hand-drawn arrow, and a pasted image.
-- **Code side panel** (shared by canvas + whiteboard): right on desktop, bottom sheet on phone. Header: format name, a validation chip (green "valid ✓" / red error message), Apply, Download. Monospace editor with line numbers.
-- **Script console**: code editor, a Run button (accent), an output log strip (monospace, muted, `✓ done` / `✖ error` lines), and an **Examples** dropdown with "Mind map from headings", "Stickies from list" and "Flowchart from Mermaid".
+- **Code side panel** (shared by canvas + whiteboard): right on desktop, bottom sheet on phone. Header: format name, a validation chip (green "valid check" / red error message), Apply, Download. Monospace editor with line numbers.
+- **Script console**: code editor, a Run button (accent), an output log strip (monospace, muted, `check done` / `x error` lines), and an **Examples** dropdown with "Mind map from headings", "Stickies from list" and "Flowchart from Mermaid".
 - **Mermaid → whiteboard** dialog: Mermaid text on the left, live diagram preview on the right, and an "Add as editable shapes" button.
 - **Conversions** (in the ⋯ menu): Note outline → Canvas · Canvas → Whiteboard · Mermaid block → Whiteboard. Show the menu with these three, each with a small "from → to" glyph.
 - **Developer/API sheet** (Settings → Developer): shows the endpoints with copy buttons: `GET/PUT /api/notes/:id`, `GET/PUT /api/canvas/:id`, `GET/PUT /api/whiteboard/:id`, `POST /api/whiteboard/:id/elements`, plus "Copy token" behind a reveal button and a warning that the token gives full access.

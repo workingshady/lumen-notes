@@ -15,7 +15,7 @@ Design: `design/handoffs/2026-11-19-round-4/Lumen 16 Editor and Read.dc.html` (E
 - **Page width** switch in the header: Fixed (Aa › line width, 680 px by default) · Wide (920 px) · Full (the pane minus 72 px each side). Stored per note as front-matter `width: wide|full` (no key = fixed). In Fixed, tables break out of the text column by 60 px each side.
 - Contents box `[[toc]]`: H2/H3 of the note; the section being read is bold (scroll spy).
 - Callouts/panels use the callout glyphs (`c-note`, `c-info`, `c-tip`, `c-success`, `c-warning`, `c-danger`, `c-question`, `c-example`, `c-quote`, `c-abstract`); a callout with one short paragraph reads as one line: **Title** — text.
-- Tables: header line "Caption · N rows" · Filter (becomes a field) · full screen (Esc / ✕ to leave); sticky header, zebra rows, click a header to sort (accent arrow), bold first column, sticky first column when the table scrolls sideways.
+- Tables: header line "Caption · N rows" · Filter (becomes a field) · full screen (Esc / x to leave); sticky header, zebra rows, click a header to sort (accent arrow), bold first column, sticky first column when the table scrolls sideways.
 - Includes `![[Note#Heading]]` / `![[Note#^id]]`: dashed frame, source chip and **Go to source →** (opens the note scrolled to that section or block).
 
 ## New Markdown (all plain text, renders as text elsewhere)

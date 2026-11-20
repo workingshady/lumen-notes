@@ -15,9 +15,9 @@ Everything from rounds 1–4 still applies:
 - **Visual system:** Lamplight / Paper tokens; one amber accent for the current or primary thing only; the round-4 **Lumen glyph set** (no emoji); radius 6 / 10 / 14 / 999; Inter + IBM Plex Sans Arabic.
 - **AI:** no "AI look" (no sparkles, gradients or glow; AI actions use plain labels).
 - **Interaction:** one inline confirm bar, one menu style, one sheet style.
-- **Layout:** desktop 1440×900 and phone 412×915 for every screen; Lamplight and Paper where marked ★.
+- **Layout:** desktop 1440×900 and phone 412×915 for every screen; Lamplight and Paper where marked (both themes).
 
-## 1. Ask as a chat ★
+## 1. Ask as a chat (both themes)
 **Today:** one question, one answer with numbered citations [n] from your notes; history keeps the last 12 questions; scopes are Vault / Space / Note + links / Learning path.
 
 **New:** a conversation.
@@ -28,7 +28,7 @@ Everything from rounds 1–4 still applies:
 - **Messages:**
   - Your question bubble.
   - The answer in reading type with citation chips.
-  - Under each answer: its source cards (collapsible), then Copy · Save as note · Make flashcards · Regenerate · 👍/👎 as glyphs.
+  - Under each answer: its source cards (collapsible), then Copy · Save as note · Make flashcards · Regenerate · thumbs up / thumbs down as glyphs.
 - **Composer:**
   - Multiline, Enter to send, Shift+Enter for a new line.
   - Scope chip, plus a "Tutor mode" switch (see 2).
@@ -42,7 +42,7 @@ Everything from rounds 1–4 still applies:
   - offline; signed out; error with retry.
 - **Arabic:** answers RTL, mixed English terms.
 
-## 2. AI tutor modes ★
+## 2. AI tutor modes (both themes)
 The tutor teaches a concept from your path using your own notes as the source. You start it from:
 - the concept sheet in a learning path ("Learn with tutor");
 - a lesson note (⋯ › Tutor);
@@ -61,7 +61,7 @@ The tutor teaches a concept from your path using your own notes as the source. Y
 - **Phone:** full-screen chat, mode switch as a segmented control, hint ladder as chips.
 - **States:** no notes for this concept (the tutor says so and offers general knowledge only if you choose it), signed out, offline.
 
-## 3. Full Arabic interface ★
+## 3. Full Arabic interface (both themes)
 The whole app chrome in Arabic, not only note text.
 - **Setting › Appearance › Language:** English / العربية / Auto (from the device). The direction follows the language.
 - **Mirrored layout:** sidebar on the right, back arrows flipped, chevrons flipped, progress bars filling from the right, tab order reversed; glyphs that imply direction (back, forward, timeline, arrows) mirrored, others (play, check) not.
@@ -118,7 +118,7 @@ These flows are being built behind a switch and stay **off** until launch. Desig
 - **Avatar:** glyph tile (the space-icon picker style) or uploaded photo, round.
 
 ## Deliverables
-- **Screens:** every screen above on desktop and phone; Paper for ★.
+- **Screens:** every screen above on desktop and phone; Paper for (both themes).
 - **Component sheet additions:**
   - chat bubble (user / answer), rewrite note, suggestion chips;
   - tutor step / question / feedback cards, hint ladder, clarity bars;

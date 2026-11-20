@@ -40,7 +40,7 @@ This round has four parts:
 
 ### Deliverables
 - Desktop 1440×900 and phone 412×915 for every screen; tablet 1024 where noted.
-- Lamplight and Paper for screens marked ★.
+- Lamplight and Paper for screens marked (both themes).
 - Additions to the component sheet.
 - Use the sample content at the end, never lorem ipsum.
 
@@ -64,7 +64,7 @@ This round has four parts:
 
 # Part A. Redesign every feature built after the handoff
 
-## A1. Learning paths ★ (the most important screen of this round)
+## A1. Learning paths (both themes) (the most important screen of this round)
 **What it is:** the user learns one subject from many overlapping courses at once. Their real path is "AI Engineer": 28 courses, 101 concepts, 7 stages. Each course keeps its own roadmap. The **learning path** sits on top as one concept-first roadmap: topics that several courses teach become **one concept** carrying all their material.
 
 **How it works today:**
@@ -127,7 +127,7 @@ This round has four parts:
 11. **Learning paths list.** Cards with a ring, course dots, "N to revise", and last studied.
 12. **New learning path dialog.** Name plus a course multi-select (glyph, name, provider). It can start empty.
 
-## A2. Course roadmaps: Outline, Skill tree, Timeline, with drag-and-drop editing ★
+## A2. Course roadmaps: Outline, Skill tree, Timeline, with drag-and-drop editing (both themes)
 **What it is:** every course space has a roadmap. It's stored as Markdown: `## Module`, then `- [ ] Topic (needs: A, B) 📅 2026-12-01 → [[Lesson note]]`. Topic statuses are todo / learning / done / skipped.
 
 **How it works today:**
@@ -202,7 +202,7 @@ This round has four parts:
 - Each option keeps a glyph from Part B, the one-line "use it when…", the format line (".canvas · JSON Canvas 1.0") and capability chips.
 - Keep the idea "Pick by what you want to do with your hands." Say where it will be created ("in Inbox", with the folder glyph, not an emoji).
 
-## A6. Editor: slash commands, insert gallery, block editing, block references, paste menu ★
+## A6. Editor: slash commands, insert gallery, block editing, block references, paste menu (both themes)
 **Slash commands.**
 - **How it works:**
   - **Opening:** `/` at line start or after a space opens a grouped menu: Basic · Layout · Panels & callouts · Media & embeds · Knowledge · Advanced, 55 blocks in all.
@@ -243,7 +243,7 @@ This round has four parts:
 - **How it works:** after pasting more than 200 characters, or a URL in the middle of a line, a small floating row offers Keep · Clean up formatting · As quote · As link card · Summarize · Make flashcards. Esc or typing dismisses it, and it fades after 12 s. A link pasted alone on a line offers Preview card / Embed / Plain link.
 - **Design:** both floating rows and the result states.
 
-## A7. Read mode and preview ★
+## A7. Read mode and preview (both themes)
 **How it works today:**
 - **Page width:** Fixed / Wide / Full per note (a ↔ button in the header, or `width:` in front matter). Wide tables and `::: wide` / `::: full` blocks break out of the text column.
 - **Page layout blocks:**
@@ -315,7 +315,7 @@ This round has four parts:
 - the Esc hint;
 - Settings › Reading.
 
-## A10. Bases (database views of notes) ★
+## A10. Bases (database views of notes) (both themes)
 **What it is:** a note of type "base" holds a view definition in Obsidian Bases YAML, and shows notes as Table · Board · Gallery · List · Calendar.
 
 **How it works:**
@@ -449,7 +449,7 @@ A **custom glyph set** on Lucide's grid: 24 px canvas, 2 px padding, 1.75 stroke
 
 # Part D. New features to design (no AI needed)
 
-## D1. PDF reader with highlights ★ (the biggest one)
+## D1. PDF reader with highlights (both themes) (the biggest one)
 Today PDFs open in a basic inline viewer with "quote to note". Design a real reader for course PDFs, papers and book chapters.
 - **Reader:**
   - continuous scroll or single page; fit width / fit page / zoom;
@@ -496,7 +496,7 @@ Today PDFs open in a basic inline viewer with "quote to note". Design a real rea
   - in review the target box is solid accent and the others are outlined.
 - **Phone:** draw with a finger, pinch to zoom, and the box list in a sheet.
 
-## D3. Today: the study plan ★
+## D3. Today: the study plan (both themes)
 A Today page, plus a Home section, that builds the day from the learning path, course target dates and due reviews. It uses rules, not AI.
 - **Header:** date, planned minutes vs. daily goal, streak.
 - **Sections:**

@@ -14,13 +14,13 @@ Three levels of visibility, shown consistently everywhere with one small badge:
 | Level | Badge | Meaning |
 |---|---|---|
 | Private | none | Only on your devices + your Cloudflare |
-| **Shared link** | 🔗 "Shared" (info blue) | Anyone with the link can view, read-only, not listed |
-| **Published** | 🌐 "Published" (success green) | On the public blog `/blog`, in RSS, readable URL |
+| **Shared link** | link "Shared" (info blue) | Anyone with the link can view, read-only, not listed |
+| **Published** | web "Published" (success green) | On the public blog `/blog`, in RSS, readable URL |
 
 Design:
 - **Share button** in every note header (next to the side-panel button) and on every space/course page. Filled state when shared or published.
 - **Share sheet** (dialog on desktop, bottom sheet on phone):
-  1. "Share link" row: icon, title, one-line explanation, toggle. When on: read-only URL field + Copy (turns into ✓) + Share… (native share sheet on phone) + Open. Small link: "Make a new link (old one stops working)".
+  1. "Share link" row: icon, title, one-line explanation, toggle. When on: read-only URL field + Copy (turns into check) + Share… (native share sheet on phone) + Open. Small link: "Make a new link (old one stops working)".
   2. For spaces: a calm warning card: "Everything in this space is visible through the link, including notes you add later."
   3. "Publish to blog" row (Markdown notes only): toggle, URL slug field, excerpt field, URL row when on.
   4. Offline / sync-off state: a warning card "Sharing needs sync on", toggles disabled.
@@ -29,7 +29,7 @@ Design:
 
 ## 2. Public read-only pages (what visitors see)
 Visitors have no account. The pages must look like a polished personal site, not an app with disabled buttons.
-- **Shared course/space page** `/s/<token>`: header (emoji tile, kind label, title, description, goal/target date/course link, note count), **progress ring** on the right, tabs **Overview · Graph**. Overview: roadmap modules (status icons, locked topics dimmed, a 📄 button on topics that have a lesson) then a 2-column grid of note cards (status dot, title, 2-line excerpt, type · updated). Graph: full-width force graph, status-colored nodes, hover card, click opens the note.
+- **Shared course/space page** `/s/<token>`: header (emoji tile, kind label, title, description, goal/target date/course link, note count), **progress ring** on the right, tabs **Overview · Graph**. Overview: roadmap modules (status icons, locked topics dimmed, a page button on topics that have a lesson) then a 2-column grid of note cards (status dot, title, 2-line excerpt, type · updated). Graph: full-width force graph, status-colored nodes, hover card, click opens the note.
 - **Shared note page** `/s/<token>/<note>`: "← Back to overview", big title, "Updated 3d ago · 6 min read · #tags", reading typography identical to the blog. Wiki links inside the shared space are live; links to unshared notes show as plain text.
 - **Per type**:
   - Slides: a "▶ Present" action, full-screen presenter for visitors with progress bar, ← → and swipe.
@@ -44,7 +44,7 @@ Visitors have no account. The pages must look like a polished personal site, not
 ## 3. Slides with media
 Slides can contain uploaded images, image URLs, YouTube/Vimeo, uploaded video/audio, Mermaid diagrams, math, tables and code.
 - Design 5 slide layouts as examples (they're written in Markdown, so this is styling, not a layout engine): **Title**, **Bullets**, **Full image** (image centered, max 62% of slide height, rounded, optional caption), **Video** (16:9 player centered), **Diagram** (Mermaid centered).
-- Presenter bar: progress line on top, ← n/N →, a thumbnail strip (desktop) where image slides show "🖼 Image" and video slides show "▶ Media", "F fullscreen · Esc exit" hint.
+- Presenter bar: progress line on top, ← n/N →, a thumbnail strip (desktop) where image slides show "image Image" and video slides show "▶ Media", "F fullscreen · Esc exit" hint.
 - Phone: swipe left/right, bottom bar only.
 
 ## 4. Files & storage (free tier)

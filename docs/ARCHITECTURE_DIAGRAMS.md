@@ -189,15 +189,15 @@ AI output is always the **DSL**, which is validated before it touches the canvas
 ### 3.6 Import / export / save
 | Format | Import | Export |
 |---|---|---|
-| JSON Canvas (`.canvas`) + Lumen arch fields | ✓ | ✓ (already) |
-| Lumen DSL (`.lumendiagram` / code block) | ✓ | ✓ |
-| Mermaid (flowchart, architecture-beta, erDiagram, C4, sequence, block-beta, state, class) | ✓ (to canvas or code) | ✓ |
-| draw.io XML (`.drawio`) | ✓ (shapes, groups, edges) | ✓ |
-| Excalidraw | via whiteboard | ✓ (sketch style) |
-| SVG / PNG / JPEG / WebP / PDF | — | ✓ (SVG–WebP via the existing dialog; PDF to add) |
-| SQL DDL | ✓ (ERD) | ✓ (ERD → DDL) |
-| Terraform / CloudFormation / docker-compose / k8s | ✓ (read-only → diagram) | — (later: skeleton IaC) |
-| Markdown | — | ✓ (diagram + component table for docs / README) |
+| JSON Canvas (`.canvas`) + Lumen arch fields | check | check (already) |
+| Lumen DSL (`.lumendiagram` / code block) | check | check |
+| Mermaid (flowchart, architecture-beta, erDiagram, C4, sequence, block-beta, state, class) | check (to canvas or code) | check |
+| draw.io XML (`.drawio`) | check (shapes, groups, edges) | check |
+| Excalidraw | via whiteboard | check (sketch style) |
+| SVG / PNG / JPEG / WebP / PDF | — | check (SVG–WebP via the existing dialog; PDF to add) |
+| SQL DDL | check (ERD) | check (ERD → DDL) |
+| Terraform / CloudFormation / docker-compose / k8s | check (read-only → diagram) | — (later: skeleton IaC) |
+| Markdown | — | check (diagram + component table for docs / README) |
 
 **Save:**
 - **Format and sync:** a diagram is a canvas note (`type: canvas`, `kind: architecture`). It autosaves, syncs, keeps version history, and has share links and public pages.
@@ -250,7 +250,7 @@ AI output is always the **DSL**, which is validated before it touches the canvas
 │ Generic│  │ ┌ VPC ─────────┐  [DB]     │   (User)        │ 2   VPC { API Worker }  │
 │ AWS    │  │ │ [API] [Wkr]  │  [Queue]  │                 │ 3   DB  Queue           │
 │ GCP …  │  │ └──────────────┘           │                 │ 4 }  User > API: HTTPS  │
-│ Recent │  └────────────────────────────┘      minimap    │ ⚠ line 7: unknown icon  │
+│ Recent │  └────────────────────────────┘      minimap    │ Note: line 7: unknown icon  │
 └────────┴─────────────────────────────────────────────────┴────────────────────────┘
                Properties panel slides over the code pane when a node is selected
 ```

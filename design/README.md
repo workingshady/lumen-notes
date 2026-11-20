@@ -19,23 +19,23 @@ Everything visual that Lumen is built from. Keep old handoffs; add new ones as n
 ## Implementation status (handoff 2026-11-13)
 | Area | Design file | Status |
 |---|---|---|
-| Brand mark, app icon | Lumen 00, LumenMark | ✅ round 2 |
-| Sidebar + collapsed rail | LumenSidebar | ✅ round 2 |
-| Phone tab bar | LumenTabBar | ✅ round 2 |
-| Workspace: note list, header, modes, editor, reading pane | ScreenWorkspace, Lumen 02 | ✅ round 2 |
-| Unlock / welcome | ScreenUnlock, Lumen 01 | ✅ round 2 |
-| Share sheet | ShareSheet, Lumen 09 | ✅ round 2 |
-| Home dashboard, first run | Lumen 01 | ✅ round 2 |
-| Spaces, course roadmap, project | Lumen 03, ScreenCourse | ✅ round 2 |
-| Palette, graph, canvas, history | Lumen 04, CanvasBoard | ✅ round 2 |
-| Review, slides | Lumen 05, SlideFrame, Lumen 11 | ✅ round 2 |
-| Tasks, kanban, calendar, database, properties, AI, timer | Lumen 05b | ✅ round 2 |
-| Settings, import/export, storage, developer, sharing list | Lumen 06, 07b, 11, ScreenSettings | ✅ round 2 |
-| Blog, states | Lumen 06b | ✅ round 2 |
-| Whiteboard, chooser, code/script panels | Lumen 07, 07b, WhiteboardBoard | ✅ round 2 |
-| Bidi note, embeds | Lumen 08, NoteBidi | ✅ round 2 |
-| Public shared pages, visitor types | Lumen 10, 10b, PublicCourse, PublicNote | ✅ round 2 |
-| Android first launch, share-to-Lumen, skeletons, sync states | Lumen 12 | ✅ round 2 |
+| Brand mark, app icon | Lumen 00, LumenMark | Done round 2 |
+| Sidebar + collapsed rail | LumenSidebar | Done round 2 |
+| Phone tab bar | LumenTabBar | Done round 2 |
+| Workspace: note list, header, modes, editor, reading pane | ScreenWorkspace, Lumen 02 | Done round 2 |
+| Unlock / welcome | ScreenUnlock, Lumen 01 | Done round 2 |
+| Share sheet | ShareSheet, Lumen 09 | Done round 2 |
+| Home dashboard, first run | Lumen 01 | Done round 2 |
+| Spaces, course roadmap, project | Lumen 03, ScreenCourse | Done round 2 |
+| Palette, graph, canvas, history | Lumen 04, CanvasBoard | Done round 2 |
+| Review, slides | Lumen 05, SlideFrame, Lumen 11 | Done round 2 |
+| Tasks, kanban, calendar, database, properties, AI, timer | Lumen 05b | Done round 2 |
+| Settings, import/export, storage, developer, sharing list | Lumen 06, 07b, 11, ScreenSettings | Done round 2 |
+| Blog, states | Lumen 06b | Done round 2 |
+| Whiteboard, chooser, code/script panels | Lumen 07, 07b, WhiteboardBoard | Done round 2 |
+| Bidi note, embeds | Lumen 08, NoteBidi | Done round 2 |
+| Public shared pages, visitor types | Lumen 10, 10b, PublicCourse, PublicNote | Done round 2 |
+| Android first launch, share-to-Lumen, skeletons, sync states | Lumen 12 | Done round 2 |
 
 ## Built after the handoff, not designed yet (sent as `docs/design/CLAUDE_DESIGN_UPDATE_04.md`)
 | Area | Status |
