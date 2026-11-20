@@ -5,6 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { Glyph } from "./Glyph";
 import { cx } from "./ui";
 import { t, tk } from "../lib/i18n";
+import { setSettings, useSettings, type Settings } from "../lib/settings";
 
 export type ItemKey = "home" | "today" | "inbox" | "review" | "tasks" | "ask" | "daily" | "calendar" | "graph" | "canvas" | "blog" | "trash";
 export type SectionKey = "favourites" | "paths" | "folders" | "smart" | "tags" | "recent";
@@ -134,6 +135,7 @@ function Seg<T extends string | number>({ value, options, onChange }: { value: T
 /** Customise sidebar (30b-H/I/N): reorder by drag or Alt+↑/↓, hide (→ More), sections on/off, counts, row height. */
 function Customise({ onClose }: { onClose: () => void }) {
   const p = useSb();
+  const sbm = ((useSettings() as { sidebarMode?: "open" | "hover" | "click" }).sidebarMode) ?? "open";
   const [drag, setDrag] = useState<{ list: "top" | "more" | "sec"; i: number } | null>(null);
   const moveIn = (list: "top" | "more" | "sec", from: number, to: number) => {
     if (list === "sec") { const l = [...p.sections]; if (to < 0 || to >= l.length) return; const [x] = l.splice(from, 1); l.splice(to, 0, x); setSb({ sections: l }); return; }
@@ -176,6 +178,7 @@ function Customise({ onClose }: { onClose: () => void }) {
           {p.sections.map((s, i) => row("sec", i, SECTIONS[s.id].glyph, t(SECTIONS[s.id].label), s.id === "tags" && p.folded.tags ? t("Collapsed") : "", s.on, () => setSb({ sections: p.sections.map((x) => (x.id === s.id ? { ...x, on: !x.on } : x)) })))}
         </div>
         <div className="flex flex-col gap-2 border-t border-line px-[18px] py-3">
+          <div className="flex items-center gap-2.5"><span className="flex-1">{t("Sidebar")}</span><Seg value={sbm} onChange={(v) => setSettings({ sidebarMode: v } as Partial<Settings>)} options={[["open", t("Always open")], ["hover", t("Expand on hover")], ["click", t("Expand on click")]]} /></div>
           <div className="flex items-center gap-2.5"><span className="flex-1">{t("Show counts")}</span><Seg value={p.counts} onChange={(v) => setSb({ counts: v })} options={[["none", t("None")], ["due", t("Due only")], ["all", t("All")]]} /></div>
           <div className="flex items-center gap-2.5"><span className="flex-1">{t("Row height")}</span><Seg value={p.rowH} onChange={(v) => setSb({ rowH: v })} options={[[32, "32"], [28, t("28 compact")], [40, t("40 touch")]]} /></div>
         </div>

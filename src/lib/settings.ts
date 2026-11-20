@@ -41,6 +41,8 @@ export interface Settings {
   fontSize: number;
   measure: 60 | 68 | 80 | 0;
   density: "comfortable" | "compact";
+  /** Desktop/tablet sidebar: always open, collapsed to the rail and widened on hover, or on click / Esc to close. */
+  sidebarMode: "open" | "hover" | "click";
   blogName: string;
   tagline: string;
   author: string;
@@ -73,7 +75,7 @@ export interface Settings {
   planDailyMinutes: number; planStudyDays: number[]; planMaxNew: number; planCourseOrder: string[];
 }
 const DEFAULTS: Settings = {
-  theme: "auto", accentHue: null, readingFont: "serif", fontSize: 16, measure: 68, density: "comfortable",
+  theme: "auto", accentHue: null, readingFont: "serif", fontSize: 16, measure: 68, density: "comfortable", sidebarMode: "open",
   blogName: "Lumen", tagline: "Notes from what I'm learning", author: "", avatar: "glyph:owl", johnnyDecimal: false, spellcheck: true, dailyTemplate: "journal", diagramFolder: "sub", diagramAutoSave: false, diagramAiNames: false, diagramExport: DIAGRAM_EXPORT_DEFAULTS, focusMode: "read", focusDim: true, highlightOnExit: "ask", ttsRate: 1, retention: 0.9,
   fsrsMaxInterval: 36500, fsrsNewPerDay: 0, fsrsLearningSteps: [1, 10], fsrsRelearningSteps: [10], fsrsWeights: null, fsrsFit: null,
   planDailyMinutes: 60, planStudyDays: [1, 2, 3, 4, 5, 6], planMaxNew: 2, planCourseOrder: [],

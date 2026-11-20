@@ -11,6 +11,7 @@ import { useDeviceHeartbeat } from "./lib/devices";
 import { useFaviconBadge } from "./lib/favicon";
 import { useAllPathMoments, useStreakMoment } from "./components/Moments";
 import { Sidebar } from "./components/Sidebar";
+import { AutoSidebar, useSidebarMode } from "./components/sidebar-auto";
 import { Skeleton } from "./components/Skeleton";
 import { NoteList } from "./components/NoteList";
 import { TagMenuHost, TagPage } from "./components/TagPage";
@@ -174,6 +175,7 @@ function Workspace() {
   const ready = useVaultSelector((v) => v.ready);
   const wide = useWide();
   const tablet = useTablet();
+  const sbMode = useSidebarMode();
   const rtl = useRtl();
   useBackGesture(wide);
   useDeviceHeartbeat(); // Settings › Sync › Devices (lib/devices.ts)
@@ -217,8 +219,8 @@ function Workspace() {
     <div className="flex h-full overflow-hidden">
       {/* sidebar: docked on desktop, drawer on phone */}
       {/* tablet (900–1199): rail docked, full sidebar opens as a drawer over the content */}
-      {wide && tablet && <Sidebar rail />}
-      {wide && !tablet ? <Sidebar rail={sidebarRail(ui)} /> : ui.sidebar && (
+      {wide && sbMode !== "open" ? <AutoSidebar mode={sbMode} tablet={tablet} /> : wide && tablet && <Sidebar rail />}
+      {wide && sbMode !== "open" ? null : wide && !tablet ? <Sidebar rail={sidebarRail(ui)} /> : ui.sidebar && (
         <div className="fixed inset-0 z-40 flex fade-in">
           <div className="sheet-in shadow-2xl"><Sidebar /></div>
           <div className="flex-1 bg-black/50" onClick={() => setUI({ sidebar: false })} />
