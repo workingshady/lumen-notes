@@ -14,7 +14,7 @@ import { noteDerived, openNote, setUI, toast, useUI, useVault, type Panel } from
 import { aliasesOf, findMentions, ignoredOf, linkMentions, mayMention, normalizeTerm, PROSE_TYPES, relocate, type Mention } from "../lib/mentions";
 import { normalize } from "../lib/search";
 import { scrollEditorToLine } from "./Editor";
-import { AssistantPanel, AssistantRail, useAssistantRail } from "./Assistant";
+import { AssistantPanel, AssistantRail, toggleAssistantRail, useAssistantRail } from "./Assistant";
 import { Glyph } from "./Glyph";
 import { HistoryPanel } from "./HistoryPanel";
 import { NoteTagPicker } from "./TagPicker";
@@ -48,14 +48,14 @@ export function RightPanel({ note }: { note: Note }) {
           {TABS.map((tab) => {
             const on = panel === tab.value;
             return (
-              <button key={tab.value} role="tab" aria-selected={on} title={t(tab.label)} aria-label={t(tab.label)} onClick={() => setUI({ panel: tab.value })}
-                className={cx("flex h-[30px] shrink-0 items-center justify-center gap-1.5 rounded-[6px]", on ? "bg-surface-2 px-2.5 font-semibold text-ink [&>svg]:text-accent" : "w-8 text-muted hover:bg-surface-2 hover:text-ink")}>
-                {tab.icon}{on && t(tab.label)}
+              <button key={tab.value} role="tab" aria-selected={on} title={t(tab.label)} aria-label={t(tab.label)} onClick={() => (tab.value === "ai" ? toggleAssistantRail(false) : setUI({ panel: tab.value }))}
+                className={cx("flex h-[30px] items-center justify-center gap-1.5 rounded-[6px]", on ? "min-w-0 bg-surface-2 px-2.5 font-semibold text-ink [&>svg]:shrink-0 [&>svg]:text-accent" : "w-8 shrink-0 text-muted hover:bg-surface-2 hover:text-ink")}>
+                {tab.icon}{on && <span className="truncate">{t(tab.label)}</span>}
               </button>
             );
           })}
         </div>
-        <button aria-label={t("Close panel")} title={t("Close panel")} className="flex size-8 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink md:hidden" onClick={() => setUI({ panel: null })}><X size={16} /></button>
+        <button aria-label={t("Close panel")} title={t("Close panel")} className="flex size-8 items-center justify-center rounded-[6px] text-muted hover:bg-surface-2 hover:text-ink" onClick={() => setUI({ panel: null })}><X size={16} /></button>
       </div>
       <div className={cx("min-h-0 flex-1 overflow-y-auto", panel === "versions" || panel === "properties" ? "" : "p-3")}>
         {panel === "outline" && <Outline note={note} />}

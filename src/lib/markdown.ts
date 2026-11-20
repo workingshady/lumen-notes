@@ -530,12 +530,25 @@ async function loadMermaid() {
 }
 let mermaidTheme = "";
 let seq = 0;
+/** Rendered SVGs by theme + source: the preview re-renders its HTML after every save, and re-running Mermaid on
+ *  unchanged diagrams was most of that cost. Small LRU (Map keeps insertion order). */
+const mermaidSvgCache = new Map<string, string>();
+const MERMAID_CACHE_MAX = 120;
 async function renderMermaid(el: HTMLElement) {
-  const mermaid = await loadMermaid();
   // Diagram colors come from the theme tokens (design 5A: surface-2 nodes, border strokes, muted edges, 12 px Inter).
   const css = getComputedStyle(document.documentElement);
   const tok = (k: string) => css.getPropertyValue(k).trim();
   const theme = [tok("--surface-2"), tok("--border"), tok("--text"), tok("--muted"), tok("--surface"), edgeCurve()].join("|");
+  const source = decodeURIComponent(el.dataset.src ?? "");
+  const key = `${theme}|${document.documentElement.dataset.dark ?? ""}|${source}`;
+  const show = (svg: string) => {
+    el.innerHTML = svg;
+    const card = el.closest<HTMLElement>(".mermaid-card");
+    if (card) diagramViewer(card, el);
+  };
+  const hit = mermaidSvgCache.get(key);
+  if (hit !== undefined) { mermaidSvgCache.delete(key); mermaidSvgCache.set(key, hit); show(hit); return; }
+  const mermaid = await loadMermaid();
   if (theme !== mermaidTheme) {
     mermaid.initialize({
       startOnLoad: false, theme: "base", securityLevel: "strict", fontFamily: "Inter, system-ui, sans-serif",
@@ -550,10 +563,10 @@ async function renderMermaid(el: HTMLElement) {
   }
   const id = `mmd-${++seq}`;
   try {
-    const { svg } = await mermaid.render(id, decodeURIComponent(el.dataset.src ?? ""));
-    el.innerHTML = svg;
-    const card = el.closest<HTMLElement>(".mermaid-card");
-    if (card) diagramViewer(card, el);
+    const { svg } = await mermaid.render(id, source);
+    mermaidSvgCache.set(key, svg);
+    if (mermaidSvgCache.size > MERMAID_CACHE_MAX) mermaidSvgCache.delete(mermaidSvgCache.keys().next().value!);
+    show(svg);
   } catch (e) {
     el.innerHTML = `<div class="render-error">Mermaid: ${esc(String((e as Error).message ?? e).split("\n")[0])}</div>`;
     document.getElementById(`d${id}`)?.remove();

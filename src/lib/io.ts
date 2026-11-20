@@ -1,9 +1,8 @@
-import JSZip from "jszip";
+import type JSZip from "jszip";
 import type { Folder, Note, Space } from "../../shared/types";
 import { createNote, snapshot, updateNote } from "./actions";
 import { attUrl } from "./api";
 import { db, newFolder, save } from "./db";
-import { render } from "./markdown";
 import { splitFrontMatter, toFrontMatter } from "./parse";
 import { activeTheme } from "./settings";
 
@@ -27,8 +26,12 @@ const fileName = (n: Note) => n.type === "diagram" ? safe(n.title.replace(/\.mer
 
 export const exportNoteMd = (n: Note) => download(fileName(n), noteToMarkdown(n), "text/markdown");
 
+// JSZip and the Markdown renderer load on first use (they are only needed for import / export).
+const loadZip = async () => (await import("jszip")).default;
+
 /** Standalone styled HTML (KaTeX CSS from CDN; Mermaid blocks rendered client-side by its CDN script). */
-export function noteHtml(n: Note) {
+export async function noteHtml(n: Note) {
+  const { render } = await import("./markdown");
   const t = activeTheme();
   const vars = Object.entries(t.vars).map(([k, v]) => `--${k}:${v}`).join(";");
   const body = render(n.body).replace(/<div class="mermaid-block"[^>]*data-src="([^"]*)"><div class="muted">Rendering diagram…<\/div><\/div>/g,
@@ -39,12 +42,12 @@ export function noteHtml(n: Note) {
 <body><h1>${n.title.replace(/</g, "&lt;")}</h1>${body}
 <script type="module">import m from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";m.initialize({startOnLoad:true,theme:${t.dark ? '"dark"' : '"neutral"'}});</script></body></html>`;
 }
-export const exportNoteHtml = (n: Note) => download(safe(n.title) + ".html", noteHtml(n), "text/html");
+export const exportNoteHtml = async (n: Note) => download(safe(n.title) + ".html", await noteHtml(n), "text/html");
 
-export function printNote(n: Note) {
-  const w = window.open("", "_blank");
+export async function printNote(n: Note) {
+  const w = window.open("", "_blank"); // opened inside the click, before any await (popup blockers)
   if (!w) return;
-  w.document.write(noteHtml(n));
+  w.document.write(await noteHtml(n));
   w.document.close();
   setTimeout(() => w.print(), 900);
 }
@@ -141,7 +144,7 @@ async function attachmentBytes(id: string): Promise<Blob | null> {
 
 /** Vault zip: <Space>/<folder path>/<note>.md|.canvas + attachments/ */
 export async function exportVaultZip(opts: ExportOptions = {}): Promise<ExportResult> {
-  const zip = new JSZip();
+  const zip = new (await loadZip())();
   const [spaces, folders, notes, atts] = await Promise.all([db.spaces.toArray(), db.folders.toArray(), db.notes.toArray(), db.attachments.toArray()]);
   const fmap = new Map(folders.map((f) => [f.id, f]));
   const smap = new Map(spaces.map((s) => [s.id, s]));
@@ -160,7 +163,8 @@ export async function exportVaultZip(opts: ExportOptions = {}): Promise<ExportRe
     let p = `${pathOf(n)}/${fileName(n)}`;
     for (let i = 2; used.has(p.toLowerCase()); i++) p = `${pathOf(n)}/${safe(n.title.replace(/\.mermaid$/i, ""))} ${i}${n.type === "canvas" ? ".canvas" : n.type === "whiteboard" ? ".excalidraw" : n.type === "diagram" ? ".mermaid" : ".md"}`;
     used.add(p.toLowerCase());
-    zip.file(p, noteToMarkdown(n));
+    // Whiteboards keep images as attachment refs; the exported .excalidraw gets them inlined so it opens anywhere.
+    zip.file(p, n.type === "whiteboard" ? await (await import("./wb-files")).inlineSceneFiles(n.body, attachmentBytes) : noteToMarkdown(n));
     opts.onProgress?.(++done, total, p);
   }
   const skipped: ExportResult["skipped"] = [];
@@ -238,7 +242,7 @@ async function countItems(files: File[], zips: Map<File, JSZip>) {
   for (const f of files) {
     const name = f.name.toLowerCase();
     if (name.endsWith(".zip")) {
-      const z = await JSZip.loadAsync(f);
+      const z = await (await loadZip()).loadAsync(f);
       zips.set(f, z);
       n += Object.values(z.files).filter((e) => !e.dir && !/(^|\/)\.|__MACOSX/.test(e.name)).length;
     } else n++;

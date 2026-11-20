@@ -7,6 +7,7 @@ import "./index.css";
 import "./layout.css";
 import { DEMO, db, ensureDefaults, getMeta, setMeta } from "./lib/db";
 import { applyTheme } from "./lib/settings";
+import { loadCatalog } from "./lib/i18n";
 import { startSync } from "./lib/sync";
 import { DevPanel, openDevPanel, toggleDevPanel } from "./views/DevPanel";
 
@@ -68,8 +69,10 @@ devHost.id = "dev-panel-root";
 document.body.appendChild(devHost);
 createRoot(devHost).render(<DevPanel />);
 
-createRoot(document.getElementById("root")!).render(
+// Arabic: the first render waits for the catalog chunk (already being fetched), so no English flash. A failed
+// load still renders (English strings) rather than a blank page.
+void loadCatalog().catch(() => {}).then(() => createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
   </StrictMode>,
-);
+));

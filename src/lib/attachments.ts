@@ -3,7 +3,7 @@ import { db, save, uid } from "./db";
 import { t } from "./i18n";
 
 /** Shrink big photos so they fit D1 fallback storage and load fast on phones. */
-async function compress(file: File): Promise<Blob> {
+async function compress(file: Blob): Promise<Blob> {
   if (!/^image\/(png|jpe?g|webp)$/.test(file.type) || file.size < 400_000) return file;
   const bmp = await createImageBitmap(file).catch(() => null);
   if (!bmp) return file;
@@ -26,6 +26,29 @@ export async function addFile(file: File): Promise<string> {
   const name = (file.name || "file").replace(/[[\]]/g, "");
   // Images, video, audio and PDFs render inline (players / viewer); other files become download links.
   return /^(image|video|audio)\/|^application\/pdf$/.test(blob.type) ? `![${name}](att:${id})` : `[${name}](att:${id})`;
+}
+
+/** Store bytes as an attachment (big photos shrunk; GIF/video/SVG kept as is); the next sync uploads it. Returns the attachment id. */
+export async function storeBlob(blob: Blob, name: string): Promise<{ id: string; blob: Blob }> {
+  if (blob.size > MAX_FILE) throw new Error(t("{name} is over 100 MB. Upload long videos to YouTube (unlisted) and paste the link.", { name }));
+  const id = uid();
+  const out = await compress(blob);
+  await db.blobs.put({ id, blob: out, uploaded: 0 });
+  await save("attachment", { id, name: name || "file", mime: out.type || blob.type, size: out.size });
+  return { id, blob: out };
+}
+
+/** Attachment bytes: this device first, else the server (cached locally, never re-uploaded). */
+export async function attBlob(id: string): Promise<Blob | null> {
+  const b = await db.blobs.get(id);
+  if (b) return b.blob;
+  try {
+    const r = await fetch(attUrl(id));
+    if (!r.ok) return null;
+    const blob = await r.blob();
+    await db.blobs.put({ id, blob, uploaded: 1 });
+    return blob;
+  } catch { return null; }
 }
 
 const CHUNK = 1_500_000; // must match worker CHUNK

@@ -14,7 +14,7 @@ import {
 } from "../lib/plan";
 import { useSettings, type Settings } from "../lib/settings";
 import { go, noteDerived, openNote, toast, useVault, type Vault } from "../lib/store";
-import { useDueCards } from "./Review";
+import { useDueCards } from "../lib/due-cards";
 import { t } from "../lib/i18n";
 
 export const planSettingsOf = (s: Settings): PlanSettings => ({

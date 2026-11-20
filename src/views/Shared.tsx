@@ -31,12 +31,13 @@ type ExApi = { getAppState: () => { zoom: { value: number } }; updateScene: (s: 
 const BoardViewer = lazy(async () => {
   const [{ Excalidraw }] = await Promise.all([import("@excalidraw/excalidraw"), import("@excalidraw/excalidraw/index.css")]);
   const loaded = await loadScene();
+  const [{ embedProps }, { hydrateFiles, serverSource }] = await Promise.all([import("../components/wb-media"), import("../lib/wb-files")]);
+  const embeds = embedProps(async (id) => `${API_BASE}/api/att/${id}`);
   function V({ body, onApi }: { body: string; onApi: (a: ExApi) => void }) {
-    const initialData = useMemo(() => {
-      const r = loaded(body);
-      return { elements: r.elements, files: r.files, appState: { viewBackgroundColor: "transparent", viewModeEnabled: true, gridModeEnabled: true, gridSize: 20, gridStep: 5 }, scrollToContent: true };
-    }, [body]);
-    return <Excalidraw initialData={initialData as never} viewModeEnabled excalidrawAPI={(a) => onApi(a as unknown as ExApi)} theme={activeTheme().dark ? "dark" : "light"}
+    const r = useMemo(() => loaded(body), [body]);
+    const initialData = useMemo(() => ({ elements: r.elements, files: r.files, appState: { viewBackgroundColor: "transparent", viewModeEnabled: true, gridModeEnabled: true, gridSize: 20, gridStep: 5 }, scrollToContent: true }), [r]);
+    return <Excalidraw initialData={initialData as never} viewModeEnabled {...(embeds as object)} theme={activeTheme().dark ? "dark" : "light"}
+      excalidrawAPI={(a) => { onApi(a as unknown as ExApi); void hydrateFiles(r.refs as never, serverSource((id) => `${API_BASE}/api/att/${id}`)).then((f) => { if (f.length) a.addFiles(f as never); }); }}
       UIOptions={{ canvasActions: { loadScene: false, saveToActiveFile: false, export: false, toggleTheme: false, changeViewBackgroundColor: false, clearCanvas: false, saveAsImage: false } }} />;
   }
   return { default: V };
@@ -51,14 +52,19 @@ async function loadScene() {
     let els = scene.elements as unknown[];
     if (pending.length) { try { els = [...els, ...convertToExcalidrawElements(placeBoundArrows(pending as never, els as never) as never, { regenerateIds: false })]; } catch { /* bad skeleton: show the rest */ } }
     const r = restore({ elements: els as never, files: scene.files as never }, null, null);
-    return { elements: r.elements as readonly unknown[], files: r.files as Record<string, unknown> };
+    return { elements: r.elements as readonly unknown[], files: r.files as Record<string, unknown>, refs: scene.files as Record<string, unknown> };
   };
 }
 async function boardPng(note: PubNote, ex: ExApi | null) {
   const { exportToBlob } = await import("@excalidraw/excalidraw");
   let elements: readonly unknown[], files: Record<string, unknown>;
   if (ex) { elements = ex.getSceneElements(); files = ex.getFiles(); }
-  else { const r = (await loadScene())(note.body); elements = r.elements; files = r.files; }
+  else {
+    const r = (await loadScene())(note.body);
+    const { hydrateFiles, serverSource } = await import("../lib/wb-files");
+    elements = r.elements;
+    files = { ...r.files, ...Object.fromEntries((await hydrateFiles(r.refs as never, serverSource((id) => `${API_BASE}/api/att/${id}`))).map((f) => [f.id, f])) };
+  }
   const dark = activeTheme().dark;
   const blob = await exportToBlob({ elements: elements as never, files: files as never, mimeType: "image/png", exportPadding: 32, appState: { exportBackground: true, viewBackgroundColor: dark ? "#0F1115" : "#FFFFFF", exportWithDarkMode: dark } as never });
   download(`${note.title}.png`, blob, "image/png");

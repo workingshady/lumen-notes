@@ -4,7 +4,7 @@ import { openNewMenu } from "./NewMenu";
 import { NewPathDialog } from "./NewPathDialog";
 import { FileText, Globe, LayoutTemplate, Link2, Pin, Plus, X } from "lucide-react";
 import { PdfLibrary } from "./pdf-library";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { Note } from "../../shared/types";
 import { createNote } from "../lib/actions";
 import { importFiles } from "../lib/io";
@@ -22,7 +22,7 @@ import { filterByQuery, openSmartEditor, scopeQuery, SmartListHeader, smartListF
 import { BulkBar, DeskRow, Dropdown, FilterBox, FilterEmpty, GroupHeader, groupRows, useTagColors, type Group } from "./note-list-desk";
 import { EmptyState } from "./EmptyState";
 import { indexLabel, LIST_PAGE, useIndexStatus } from "../lib/big-vault";
-import { fmtDate, t } from "../lib/i18n";
+import { fmtDate, t, useLang } from "../lib/i18n";
 
 type Sort = "updated" | "created" | "title";
 /** Note type → glyph (Lumen 13 › B1 note types; the glyph name equals the type). Flashcards carry the violet "practice" colour. */
@@ -109,14 +109,17 @@ export function NoteList() {
   useEffect(exitSelect, [ui.filter, ui.folderId, ui.spaceId, ui.tag]);
   const smartSel = smartListFor(v, ui, smart);
   const indexing = !!indexLabel(useIndexStatus()); // big vaults: "Indexing 512 / 738" replaces the count while it runs
+  // list scope: only the ui fields that pick the notes (opening a note or switching modes must not rebuild the list)
+  const { spaceId: uiSpace, folderId: uiFolder, tag: uiTag, filter: uiFilter } = ui;
   const notes = useMemo(() => {
-    let list = smartListFor(v, ui, smart)?.notes ?? scoped(v, ui);
+    const u = { spaceId: uiSpace, folderId: uiFolder, tag: uiTag, filter: uiFilter };
+    let list = smartListFor(v, u, smart)?.notes ?? scoped(v, u);
     if (wide && lq.trim()) list = filterByQuery(v, list, lq);
     if (!wide && filter === "pinned") list = list.filter((n) => n.pinned);
     if (!wide && filter === "review") list = list.filter((n) => n.status === "review");
     const cmp = sort === "title" ? (a: Note, b: Note) => a.title.localeCompare(b.title, undefined, { numeric: true }) : sort === "created" ? (a: Note, b: Note) => b.createdAt - a.createdAt : (a: Note, b: Note) => b.updatedAt - a.updatedAt;
     return list.sort(cmp); // design: pinned notes keep their place in time order and show a pin
-  }, [v, ui, sort, filter, wide, smart, lq]);
+  }, [v, uiSpace, uiFolder, uiTag, uiFilter, sort, filter, wide, smart, lq]);
   const folder = ui.folderId ? v.folderMap.get(ui.folderId) : null;
   const space = v.spaceMap.get(ui.spaceId);
   const title = smartSel ? smartSel.sf?.name ?? t("Smart folder") : ui.filter === "visual" ? t("Canvases & whiteboards") : ui.filter === "paths" ? t("Learning paths") : ui.filter === "published" ? t("Blog posts") : folder ? folder.name : ui.spaceId === "all" ? (ui.tag && !wide ? `#${ui.tag}` : tr("All notes", rtl)) : space?.name ?? tr("Notes", rtl);
@@ -149,9 +152,12 @@ export function NoteList() {
     setSelected((s) => { const x = new Set(s); if (x.has(n.id)) x.delete(n.id); else x.add(n.id); return x; });
     anchor.current = n.id;
   };
+  // rows are memoized and keep their first handlers: route clicks through a ref so they always see current state
+  const onRowRef = useRef(onRow);
+  onRowRef.current = onRow;
   const setGroupSaved = (g: Group) => { setGroup(g); try { localStorage.setItem("lumen.group", g); } catch { /* ignore */ } };
   const setSortSaved = (s: Sort) => { setSort(s); try { localStorage.setItem("lumen.sort", s); } catch { /* ignore */ } };
-  const hasPdfs = useMemo(() => wide && scoped(v, { ...ui, tag: null }).some((n) => n.type === "pdf"), [wide, v, ui]);
+  const hasPdfs = useMemo(() => wide && scoped(v, { spaceId: uiSpace, folderId: uiFolder, tag: null, filter: uiFilter }).some((n) => n.type === "pdf"), [wide, v, uiSpace, uiFolder, uiFilter]);
   const filterChips = [
     ...(ui.tag ? [{ text: `tag:#${ui.tag}`, onRemove: () => setUI({ tag: null }) }] : []),
     ...chips.map((c, i) => ({ text: c, onRemove: () => setChips((cs) => cs.filter((_, j) => j !== i)) })),
@@ -199,21 +205,7 @@ export function NoteList() {
         <PhoneChips filter={filter} setFilter={setFilter} onSort={cycleSort} sortLabel={sort} />
         {pdfs && <PdfLibrary spaceId={spaceId} folderId={ui.folderId} onClose={() => setPdfs(false)} />}
         <div className={cx("flex min-h-0 flex-1 flex-col overflow-y-auto", over && "bg-accent/5", pdfs && "hidden")}>
-          {shown.map((n) => (
-            <SwipeRow key={n.id} n={n}>
-              <button onClick={() => openNote(n.id)} className="flex w-full flex-col gap-1.5 px-4 py-3.5 text-start active:bg-surface">
-                <div className="flex w-full items-center gap-2">
-                  <span className="size-2 shrink-0 rounded-full" style={{ background: n.status ? STATUS_COLOR[n.status] : "var(--muted)" }} />
-                  <span dir="auto" className="min-w-0 flex-1 truncate text-[15px] font-semibold">{n.title || t("Untitled")}</span>
-                  {n.shareId ? <Link2 size={13} className="text-info" /> : null}
-                  {n.published ? <Globe size={13} className="text-ok" /> : null}
-                  {n.pinned ? <Pin size={13} className="text-muted" /> : null}
-                  <span className="text-[12px] text-muted">{listTime(n.updatedAt)}</span>
-                </div>
-                <div dir="auto" className="line-clamp-2 h-10 text-[13.5px] leading-5 text-muted">{preview(n)}</div>
-              </button>
-            </SwipeRow>
-          ))}
+          {shown.map((n) => <PhoneRow key={n.id} n={n} time={listTime(n.updatedAt)} />)}
           {more}
           {empty}
           <button onClick={() => setTpl(true)} className="mx-auto my-3 flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[13px] text-muted active:bg-surface"><LayoutTemplate size={14} />{t("New from template · base")}</button>
@@ -267,7 +259,7 @@ export function NoteList() {
         {smartSel?.sf ? shown.map((n) => <SmartRow key={n.id} n={n} active={n.id === ui.noteId} onOpen={() => openNote(n.id)} />)
           : rows.map((r, i) => ("id" in r
             ? <DeskRow key={r.id} n={r} active={r.id === ui.noteId} selecting={selecting} selected={selected.has(r.id)} colors={colors} preview={preview(r)} time={listTime(sort === "created" ? r.createdAt : r.updatedAt)}
-                space={ui.spaceId === "all" ? v.spaceMap.get(r.spaceId) : undefined} onClick={(e) => onRow(e, r)} onDragStart={(e) => dragNote(e, r.id)} />
+                space={ui.spaceId === "all" ? v.spaceMap.get(r.spaceId) : undefined} onClick={(e) => onRowRef.current(e, r)} onDragStart={(e) => dragNote(e, r.id)} />
             : <GroupHeader key={"h" + i + r.h} h={r.h} pin={r.pin} />))}
         {more}
         {deskEmpty}
@@ -279,6 +271,26 @@ export function NoteList() {
     </div>
   );
 }
+
+/** Phone list row. Memoized like DeskRow: a save re-renders only the edited note's row. */
+const PhoneRow = memo(function PhoneRow({ n, time }: { n: Note; time: string }) {
+  useLang();
+  return (
+    <SwipeRow n={n}>
+      <button onClick={() => openNote(n.id)} className="flex w-full flex-col gap-1.5 px-4 py-3.5 text-start active:bg-surface">
+        <div className="flex w-full items-center gap-2">
+          <span className="size-2 shrink-0 rounded-full" style={{ background: n.status ? STATUS_COLOR[n.status] : "var(--muted)" }} />
+          <span dir="auto" className="min-w-0 flex-1 truncate text-[15px] font-semibold">{n.title || t("Untitled")}</span>
+          {n.shareId ? <Link2 size={13} className="text-info" /> : null}
+          {n.published ? <Globe size={13} className="text-ok" /> : null}
+          {n.pinned ? <Pin size={13} className="text-muted" /> : null}
+          <span className="text-[12px] text-muted">{time}</span>
+        </div>
+        <div dir="auto" className="line-clamp-2 h-10 text-[13.5px] leading-5 text-muted">{preview(n)}</div>
+      </button>
+    </SwipeRow>
+  );
+}, (a, b) => a.n.id === b.n.id && a.n.updatedAt === b.n.updatedAt && a.time === b.time);
 
 export function TemplatePicker({ open, onClose, spaceId, folderId }: { open: boolean; onClose: () => void; spaceId: string; folderId: string | null }) {
   return (

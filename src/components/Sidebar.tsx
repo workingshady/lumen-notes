@@ -15,7 +15,7 @@ import { useSync } from "../lib/sync";
 import { num } from "./ws-dir";
 import { t } from "../lib/i18n";
 import { PRESETS } from "../lib/canvas";
-import { useDueCards } from "./Review";
+import { useDueCards } from "../lib/due-cards";
 import { cx } from "./ui";
 import { SidebarSmartFolders, openSmartEditor, scopeQuery } from "./SmartFolders";
 import { AccountSwitcher } from "./AccountSwitcher";

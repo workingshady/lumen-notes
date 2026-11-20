@@ -1,5 +1,5 @@
 import { liveQuery } from "dexie";
-import { useSyncExternalStore } from "react";
+import { useRef, useSyncExternalStore } from "react";
 import type { Folder, Note, Space } from "../../shared/types";
 import { db, DEFAULT_SPACE } from "./db";
 import { wikiLinks } from "./parse";
@@ -172,6 +172,28 @@ export function useVault(): Vault {
   startVault();
   return useSyncExternalStore(subscribeVault, () => vaultSnap);
 }
+
+/**
+ * A slice of the vault: the component re-renders only when the selected value changes (by `eq`, default Object.is),
+ * not on every vault rebuild (every save). The selector may close over props/state: it is re-run when it changes.
+ */
+export function useVaultSelector<T>(sel: (v: Vault) => T, eq: (a: T, b: T) => boolean = Object.is): T {
+  startVault();
+  const memo = useRef<{ snap: Vault; sel: (v: Vault) => T; val: T } | null>(null);
+  const get = () => {
+    const m = memo.current;
+    if (m && m.snap === vaultSnap && m.sel === sel) return m.val;
+    const next = sel(vaultSnap);
+    const val = m && eq(m.val, next) ? m.val : next;
+    memo.current = { snap: vaultSnap, sel, val };
+    return val;
+  };
+  return useSyncExternalStore(subscribeVault, get);
+}
+
+/** Same note version (id + updatedAt + sync flags): Dexie hands out new objects on every rebuild. */
+export const sameNote = (a: Note | undefined, b: Note | undefined) =>
+  a === b || (!!a && !!b && a.id === b.id && a.updatedAt === b.updatedAt && a.deleted === b.deleted && a.dirty === b.dirty);
 
 function buildVault(notes: Note[] | undefined, folders: Folder[] | undefined, spaces: Space[] | undefined): Vault {
   {

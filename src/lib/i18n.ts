@@ -1,5 +1,4 @@
 import { createElement, Fragment, useSyncExternalStore, type ReactNode } from "react";
-import { AR } from "../i18n/ar";
 import { setSettings } from "./settings";
 
 /**
@@ -22,7 +21,8 @@ export type PluralForms = Partial<Record<Intl.LDMLPluralRule, string>> & { other
 export type Catalog = Record<string, string | PluralForms>;
 type Vars = Record<string, string | number | null | undefined>;
 
-const CATALOGS: Record<Lang, Catalog> = { en: {}, ar: AR };
+// The Arabic catalog loads on demand (loadCatalog): English sessions never download it.
+const CATALOGS: Record<Lang, Catalog> = { en: {}, ar: {} };
 const RTL: Record<Lang, boolean> = { en: false, ar: true };
 /** Stored in the `lumen.settings` object (keys `lang`, `digits`) like lib/reading-prefs.ts; settings.ts keeps unknown keys. */
 const KEY = "lumen.settings";
@@ -46,8 +46,21 @@ export function resolveLang(p: LangPref = state.pref, nav = navLang()): Lang { r
 let lang: Lang = resolveLang();
 let snap = { pref: state.pref, lang, digits: state.digits, rtl: RTL[lang] };
 
+let arLoad: Promise<void> | null = null;
+/** Load the catalog of `l` (Arabic is a separate chunk); resolves once its strings are in. Subscribers re-render then. */
+export function loadCatalog(l: Lang = lang): Promise<void> {
+  if (l !== "ar") return Promise.resolve();
+  arLoad ??= import("../i18n/ar").then((m) => {
+    CATALOGS.ar = m.AR;
+    snap = { ...snap }; // new snapshot: useLang() callers re-render with the strings
+    subs.forEach((f) => f());
+  }, (e) => { arLoad = null; throw e; });
+  return arLoad;
+}
+
 function commit() {
   lang = resolveLang();
+  if (lang === "ar") void loadCatalog().catch(() => {});
   snap = { pref: state.pref, lang, digits: state.digits, rtl: RTL[lang] };
   fmtCache.clear();
   applyLang();
@@ -73,6 +86,7 @@ export function applyLang() {
   try { h.dataset.arFont = (JSON.parse(localStorage.getItem(KEY) ?? "{}") as { arReadFont?: string }).arReadFont === "plex" ? "plex" : "naskh"; } catch { /* no storage */ }
 }
 if (typeof document !== "undefined") applyLang();
+if (lang === "ar") void loadCatalog().catch(() => {}); // start the fetch now; main.tsx waits for it before the first render
 if (typeof window !== "undefined") window.addEventListener("languagechange", () => { if (state.pref === "auto") commit(); });
 
 const subscribe = (f: () => void) => (subs.add(f), () => { subs.delete(f); });

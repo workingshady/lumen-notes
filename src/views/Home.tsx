@@ -12,7 +12,7 @@ import { flashcards, progress, roadmap, tasks } from "../lib/parse";
 import { useSettings } from "../lib/settings";
 import { go, openNote, setUI, toast, useUI, useVault } from "../lib/store";
 import { useSync } from "../lib/sync";
-import { useDueCards } from "../components/Review";
+import { useDueCards } from "../lib/due-cards";
 import { StudyTimer } from "../components/Timer";
 import { cx, relTime as relTimeEn, STATUS_COLOR } from "../components/ui";
 import { CustomizeHome } from "./home-customize";

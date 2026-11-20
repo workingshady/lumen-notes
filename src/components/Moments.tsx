@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from
 import { createRoot } from "react-dom/client";
 import { db } from "../lib/db";
 import { buildPath, resolveCourses, REVIEW_LADDER, type BuiltPath } from "../lib/path";
-import { useVault } from "../lib/store";
+import { noteDerived, useVault } from "../lib/store";
 import { Glyph } from "./Glyph";
 import { t } from "../lib/i18n";
 
@@ -123,13 +123,22 @@ export function usePathMoments(pathId: string, path: BuiltPath) {
 export function useAllPathMoments() {
   const v = useVault();
   const prev = useRef(new Map<string, PathState>());
+  // Built paths by note id, reused while the path note, its resolved courses (roadmap notes + space look) and the day
+  // are unchanged: every save rebuilds the vault, and rebuilding every path each time was the cost.
+  const built = useRef(new Map<string, { key: string; path: BuiltPath; state: PathState }>());
   useEffect(() => {
     if (!v.ready) return;
     let shown = false;
+    const day = new Date().toISOString().slice(0, 10);
     for (const n of v.notes) {
       if (n.type !== "path" || n.deleted) continue;
-      const path = buildPath(n.body, resolveCourses(buildPath(n.body, []).doc.courses, v.notes, v.spaces));
+      const courses = resolveCourses(noteDerived("pathCourses", n, (x) => buildPath(x.body, []).doc.courses), v.notes, v.spaces);
+      const key = `${n.updatedAt}|${day}|${courses.map((c) => `${c.note?.id}:${c.note?.updatedAt}:${c.color}:${c.spaceName}:${c.spaceIcon}:${c.spaceId}:${c.kind}`).join(",")}`;
+      const hit = built.current.get(n.id);
+      if (hit?.key === key) continue; // nothing this path depends on changed: no moment either
+      const path = buildPath(n.body, courses);
       const state: PathState = new Map(path.concepts.map((c) => [c.key, { locked: c.status === "locked", mastered: c.mastered }]));
+      built.current.set(n.id, { key, path, state });
       const before = prev.current.get(n.id);
       prev.current.set(n.id, state);
       if (before && !shown) shown = pathMoment(path, before);
@@ -161,13 +170,14 @@ export function useStreakMoment() {
   const v = useVault();
   const data = useLiveQuery(async () => ({
     sessions: (await db.sessions.where("at").above(Date.now() - 400 * DAY).toArray()).filter((x) => !x.deleted),
-    versions: await db.versions.where("createdAt").above(Date.now() - 400 * DAY).toArray(),
+    // index keys only (createdAt): the version bodies are never read here
+    versions: (await db.versions.where("createdAt").above(Date.now() - 400 * DAY).keys()) as number[],
     reviews: (await db.cards.toArray()).filter((c) => !c.deleted && (c.reps > 0 || c.lapses > 0) && c.updatedAt > Date.now() - 400 * DAY),
   }), []);
   const info = useMemo(() => {
     if (!data || !v.ready) return null;
     const days = new Set<string>();
-    for (const x of data.versions) days.add(dayKey(x.createdAt));
+    for (const at of data.versions) days.add(dayKey(at));
     for (const n of v.notes) days.add(dayKey(n.updatedAt));
     for (const x of data.sessions) days.add(dayKey(x.at));
     for (const c of data.reviews) days.add(dayKey(c.updatedAt));

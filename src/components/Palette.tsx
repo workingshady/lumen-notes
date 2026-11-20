@@ -1,6 +1,6 @@
 import { SpaceIcon } from "./SpaceIcon";
 import { MessagesSquare, Route, ArrowLeft, CornerDownLeft, FileText, Hash, LayoutDashboard, Search, Sparkles, Waypoints, X, Zap } from "lucide-react";
-import { Fragment, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, lazy, Suspense, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Note } from "../../shared/types";
 import { createNote, dailyNote } from "../lib/actions";
 import { around, matcher, narrowingFilters, normalize, parseQuery, search, searchCount } from "../lib/search";
@@ -8,8 +8,9 @@ import { activeTheme, getSettings, setSettings } from "../lib/settings";
 import { go, openNote, setUI, toggleSidebar, useUI, useVault, type Mode } from "../lib/store";
 import { syncNow } from "../lib/sync";
 import { plainText } from "./nav-text";
-import { AskSheet } from "./AskVault";
-import { openAsk } from "../lib/ask";
+// The Ask sheet (chat, tutor, Markdown answers) loads the first time it opens.
+const AskSheet = lazy(() => import("./AskVault").then((m) => ({ default: m.AskSheet })));
+import { openAsk, useAsk } from "../lib/ask";
 import { NewPathDialog } from "./NewPathDialog";
 import { NewVisualChooser } from "./NewVisualChooser";
 import { openImport, runNew } from "./NewMenu";
@@ -57,6 +58,7 @@ const shortTitle = (t: string) => { const s = t.split(/:\s+/).pop()!.trim() || t
 
 export function Palette() {
   const ui = useUI();
+  const askOpen = useAsk().open;
   const v = useVault();
   /** Committed tokens: operator chips and the plain words typed before them. */
   const [parts, setParts] = useState<string[]>([]);
@@ -235,7 +237,7 @@ export function Palette() {
     <>
       <NewVisualChooser open={chooser} onClose={() => setChooser(false)} />
       <NewPathDialog open={pathDlg} onClose={() => setPathDlg(false)} />
-      <AskSheet />
+      {askOpen && <Suspense fallback={null}><AskSheet /></Suspense>}
       <SmartEditorHost />
       {ui.palette && (
         <div className="fixed inset-0 z-50 flex items-start justify-center md:bg-[rgba(5,6,8,.6)] md:pt-[110px] fade-in" onMouseDown={(e) => e.target === e.currentTarget && close()}>

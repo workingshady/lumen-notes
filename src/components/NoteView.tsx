@@ -90,6 +90,8 @@ export function NoteView({ note }: { note: Note }) {
     const k = (e: KeyboardEvent) => {
       // Focus handles its own Esc (it may ask to save highlights first).
       if (e.key === "Escape" && (mode === "slides" || mode === "review")) setUI({ mode: wide ? "split" : "edit" });
+      // Esc closes the side panel / Assistant, unless a sheet or menu is on top or the editor has focus
+      else if (e.key === "Escape" && !e.defaultPrevented && getUI().panel && !document.querySelector(".sheet-in, [role=menu]") && !(document.activeElement as HTMLElement | null)?.closest(".cm-editor, [contenteditable=true]")) setUI({ panel: null });
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); void snapshot(note, "Manual save").then(() => toast(t("Version saved"))); }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "j" && !e.shiftKey) { e.preventDefault(); toggleAssistantRail(getUI().panel === "ai"); }
       if ((e.ctrlKey || e.metaKey) && e.key === "e") { e.preventDefault(); if (isRoadmap) setRmEdit((x) => !x); else setUI({ mode: mode === "edit" ? "read" : "edit" }); }
@@ -246,7 +248,7 @@ export function NoteView({ note }: { note: Note }) {
       ))}
     </div>
   );
-  const shareBtn = <button onClick={() => setPublish(true)} className={"flex h-7 items-center gap-1.5 rounded-[8px] border px-2.5 " + SHARE.cls}>{SHARE.icon}{SHARE.t}</button>;
+  const shareBtn = <button onClick={() => setPublish(true)} className={"flex h-7 items-center gap-1.5 rounded-[8px] border px-2.5 " + SHARE.cls}>{SHARE.icon}<span className="@max-xl:hidden">{SHARE.t}</span></button>;
   const moreBtn = <div className="relative"><button aria-label={t("More")} className={iconBtn} onClick={() => setMenu((m) => !m)}><MoreHorizontal size={16} /></button>{menuEl}</div>;
   const pw = pageWidthOf(note.body);
   // Page width switch (R4-16J): Fixed · Wide · Full, saved per note as front-matter `width:` (fixed = no key)
@@ -262,7 +264,7 @@ export function NoteView({ note }: { note: Note }) {
   );
   // Assistant (R6-31): opens / closes the in-note Assistant; Ctrl/⌘ J collapses it to the rail
   const assistantBtn = <button aria-label={t("Assistant")} title={t("Assistant (Ctrl+J)")} aria-pressed={ui.panel === "ai"} onClick={() => toggleAssistantPanel(ui.panel !== "ai")} data-act="assistant"
-    className={"flex h-[30px] items-center gap-1.5 rounded-[8px] border px-2.5 font-semibold " + (ui.panel === "ai" ? "border-accent bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]" : "border-line hover:bg-surface-2")}><Glyph name="assistant" size={15} color="var(--accent)" />{t("Assistant")}</button>;
+    className={"flex h-[30px] items-center gap-1.5 rounded-[8px] border px-2.5 font-semibold " + (ui.panel === "ai" ? "border-accent bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]" : "border-line hover:bg-surface-2")}><Glyph name="assistant" size={15} color="var(--accent)" /><span className="@max-xl:hidden">{t("Assistant")}</span></button>;
   const panelBtn = <button aria-label={t("Side panel")} title={t("Outline, links, history")} className={iconBtn + (ui.panel ? " !text-accent" : "")} onClick={() => setUI({ panel: ui.panel ? null : "outline" })}><PanelIcon size={16} /></button>;
 
   // Focus mode is a full-screen layer (7A / 7B): no chrome, Esc hint, saved state + word count in the corners.
@@ -275,12 +277,13 @@ export function NoteView({ note }: { note: Note }) {
         {/* full-height readers bring their own bar (Back · title · Edit): path map, PDF (PdfDesk), base (BaseDesk), dashboard (DashDesk) */}
         {(isPath && !rmEdit) || (ownBar && effMode !== "edit") ? null : wide ? (
           twoRows ? (
-            <header ref={hdrRef} className="bg-bg text-[13px]">
+            <header ref={hdrRef} className="@container bg-bg text-[13px]">
               <div className="flex h-11 items-center gap-2.5 pe-3 ps-5">
-                <NavButtons />
+                <span className="flex @max-lg:hidden"><NavButtons /></span>
                 {crumbsEl}
                 <span className="flex-1" />
-                <HeaderSync />
+                {/* narrow (side panel open): drop the sync line so Assistant / side-panel toggles stay on screen */}
+                <span className="hidden @3xl:flex"><HeaderSync /></span>
                 <StudyTimer noteId={note.id} />
                 {isRoadmap && <Segmented value={rmEdit ? "edit" : "map"} onChange={(x) => setRmEdit(x === "edit")} options={[{ value: "map", label: <><MapIcon size={13} /> {isPath ? t("Path") : t("Roadmap")}</> }, { value: "edit", label: <><PenLine size={13} /> {t("Edit")}</> }]} />}
                 {moreBtn}

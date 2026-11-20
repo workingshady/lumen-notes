@@ -1,11 +1,12 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { GitMerge } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { lazy, Suspense, useSyncExternalStore } from "react";
 import type { Note, Version } from "../../shared/types";
 import { updateNote } from "../lib/actions";
 import { db, now, save, uid } from "../lib/db";
 import { setUI, toast } from "../lib/store";
-import { Preview } from "./Preview";
+// Preview (markdown-it, KaTeX, highlight.js) loads only when a conflict is opened: this sheet is mounted at start-up.
+const Preview = lazy(() => import("./Preview").then((m) => ({ default: m.Preview })));
 import { Button, Sheet } from "./ui";
 import { fmtDate, fmtTime, t, tx } from "../lib/i18n";
 
@@ -94,7 +95,7 @@ export function ConflictSheet() {
       {v && (
         <div className="flex flex-col gap-3">
           <div className="text-[12.5px] text-muted">{tx("{label} · saved to history {date}. The note itself kept the newer version.", { label: <span dir="auto">{v.label}</span>, date: fmtDate(v.createdAt, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }) })}</div>
-          <div className="max-h-[56vh] overflow-y-auto rounded-[10px] border border-line bg-bg px-5 py-4"><Preview note={{ id: v.noteId, body: v.body, spaceId: note?.spaceId ?? "inbox" }} className="reading" /></div>
+          <div className="max-h-[56vh] overflow-y-auto rounded-[10px] border border-line bg-bg px-5 py-4"><Suspense fallback={null}><Preview note={{ id: v.noteId, body: v.body, spaceId: note?.spaceId ?? "inbox" }} className="reading" /></Suspense></div>
           <div className="flex flex-wrap justify-end gap-2">
             <Button variant="ghost" onClick={() => { void navigator.clipboard.writeText(v.body); toast(t("Copied")); }}>{t("Copy text")}</Button>
             <Button onClick={() => { openOther(null); if (note) setUI({ view: "notes", noteId: note.id, panel: "versions" }); }}>{t("Open history")}</Button>

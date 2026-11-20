@@ -4,7 +4,6 @@
 //   embed the used font glyphs → SVG string → (raster) draw on a canvas at scale → toBlob.
 // Browser limits: a canvas side ≤ 32,767 px and area ≤ 268,435,456 px (Chrome/Safari), so large scales are reduced.
 import { DIAGRAM_EXPORT_DEFAULTS, getSettings, setSettings, type DiagramExportPrefs } from "./settings";
-import { renderMermaidForExport } from "./markdown";
 import { t } from "./i18n";
 
 export type { DiagramExportPrefs };
@@ -56,6 +55,7 @@ export async function fontFaces(text: string): Promise<string> {
 export interface BuiltSvg { svg: string; width: number; height: number }
 /** Render `src` and return a standalone SVG with padding, background and (optionally) embedded fonts. */
 export async function buildSvg(src: string, p: DiagramExportPrefs): Promise<BuiltSvg> {
+  const { renderMermaidForExport } = await import("./markdown"); // the renderer loads with the first export
   const raw = await renderMermaidForExport(src, p.theme, p.svgText);
   const doc = new DOMParser().parseFromString(raw, "image/svg+xml");
   const svg = doc.documentElement;

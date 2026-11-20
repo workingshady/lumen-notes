@@ -94,11 +94,20 @@ export default function register(api: Hono<Env>, h: Helpers) {
   /** Real server-side usage: bytes of synced records by kind + attachment bytes in D1 (and R2 if bound). */
   api.get("/usage", h.auth, async (c) => {
     const db = c.env.DB;
-    const kinds = await db.prepare("SELECT kind, COUNT(*) AS n, SUM(deleted) AS del, COALESCE(SUM(LENGTH(CAST(data AS BLOB))), 0) AS bytes FROM items GROUP BY kind").all<{ kind: string; n: number; del: number; bytes: number }>();
-    const parts = await db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(data)), 0) AS bytes FROM file_parts").first<{ n: number; bytes: number }>();
-    const files = await db.prepare("SELECT COUNT(*) AS n FROM file_meta").first<{ n: number }>();
-    const legacy = await db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(data)), 0) AS bytes FROM files").first<{ n: number; bytes: number }>().catch(() => null);
-    const sizeProbe = await db.prepare("SELECT 1").run();
+    // One round trip for the required queries; the legacy `files` table may be missing, so it runs alongside, not in the batch.
+    const [batch, legacy] = await Promise.all([
+      db.batch([
+        db.prepare("SELECT kind, COUNT(*) AS n, SUM(deleted) AS del, COALESCE(SUM(LENGTH(CAST(data AS BLOB))), 0) AS bytes FROM items GROUP BY kind"),
+        db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(data)), 0) AS bytes FROM file_parts"),
+        db.prepare("SELECT COUNT(*) AS n FROM file_meta"),
+        db.prepare("SELECT 1"),
+      ]),
+      db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(data)), 0) AS bytes FROM files").first<{ n: number; bytes: number }>().catch(() => null),
+    ]);
+    const kinds = batch[0] as D1Result<{ kind: string; n: number; del: number; bytes: number }>;
+    const parts = (batch[1].results as { n: number; bytes: number }[])[0];
+    const files = (batch[2].results as { n: number }[])[0];
+    const sizeProbe = batch[3];
     let r2 = { n: 0, bytes: 0 };
     if (c.env.FILES) {
       let cursor: string | undefined;
@@ -157,9 +166,12 @@ export default function register(api: Hono<Env>, h: Helpers) {
     let files: string[] = [];
     try { files = ((JSON.parse(body) as { nodes?: { type: string; file?: string }[] }).nodes ?? []).filter((n) => n.type === "file" && n.file).map((n) => n.file!).slice(0, 100); } catch { /* not a canvas */ }
     const refs: Record<string, { title: string; status: string | null; excerpt: string }> = {};
-    for (const f of files) {
-      const title = f.split("/").pop()!.replace(/\.md$/, "");
-      const r = await c.env.DB.prepare("SELECT data FROM items WHERE kind = 'note' AND deleted = 0 AND json_extract(data, '$.title') = ? LIMIT 1").bind(title).first<{ data: string }>();
+    // One batched round trip instead of one query per file card.
+    const found = files.length
+      ? await c.env.DB.batch(files.map((f) => c.env.DB.prepare("SELECT data FROM items WHERE kind = 'note' AND deleted = 0 AND json_extract(data, '$.title') = ? LIMIT 1").bind(f.split("/").pop()!.replace(/\.md$/, ""))))
+      : [];
+    for (const [k, f] of files.entries()) {
+      const r = (found[k]?.results as { data: string }[] | undefined)?.[0];
       if (!r) continue;
       const n = JSON.parse(r.data) as { title: string; status: string | null; body: string; props?: Record<string, string> };
       refs[f] = { title: n.title, status: n.status, excerpt: refExcerpt(n.body) };

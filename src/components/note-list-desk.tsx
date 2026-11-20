@@ -2,11 +2,11 @@
  * filter box (typed `tag:#x status:y` and words become removable chips), Sort / Group menus with the Select / Done
  * toggle, rows (amber inset edge on the open note, max 3 tag chips then +N with a hover list), date groups with
  * Pinned on top, the "filter matches nothing" state, and the multi-select bulk bar (Tag, Move, Delete + Undo). */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Globe, Link2, Star } from "lucide-react";
 import type { Note, Space } from "../../shared/types";
 import { moveNote, restoreNote, trashNote } from "../lib/actions";
-import { fmtDate, fmtNum, t } from "../lib/i18n";
+import { fmtDate, fmtNum, t, useLang } from "../lib/i18n";
 import { smartTokens } from "../lib/smart";
 import { toast, useVault } from "../lib/store";
 import { addTagToNotes } from "../lib/tag-ops";
@@ -159,10 +159,18 @@ export function monthName(ym: string, short = false) {
 }
 
 // ------------------------------------------------------------------ row
-export function DeskRow({ n, active, selecting, selected, space, preview, time, colors, onClick, onDragStart }: {
+type DeskRowProps = {
   n: Note; active: boolean; selecting: boolean; selected: boolean; space?: Space; preview: string; time: string; colors: Record<string, string>;
+  /** Not compared by the memo: pass handlers that read current state through refs. */
   onClick: (e: React.MouseEvent) => void; onDragStart: (e: React.DragEvent) => void;
-}) {
+};
+/** Same row content: Dexie hands out new note objects on every vault rebuild, so compare the note by id + version. */
+const sameDeskRow = (a: DeskRowProps, b: DeskRowProps) =>
+  a.n.id === b.n.id && a.n.updatedAt === b.n.updatedAt && a.active === b.active && a.selecting === b.selecting && a.selected === b.selected
+  && a.space === b.space && a.preview === b.preview && a.time === b.time && a.colors === b.colors;
+/** Memoized: a save re-renders only the edited note's row, not the whole list. */
+export const DeskRow = memo(function DeskRow({ n, active, selecting, selected, space, preview, time, colors, onClick, onDragStart }: DeskRowProps) {
+  useLang(); // memoized rows still follow a live language switch
   const on = selecting && selected;
   const shown = n.tags.slice(0, 3), more = n.tags.length - shown.length;
   return (
@@ -201,7 +209,7 @@ export function DeskRow({ n, active, selecting, selected, space, preview, time, 
       </div>
     </div>
   );
-}
+}, sameDeskRow);
 
 // ------------------------------------------------------------------ empty (filter matches nothing)
 export function FilterEmpty({ filter, where, onClear, onAllSpaces }: { filter: string; where: string; onClear: () => void; onAllSpaces?: () => void }) {

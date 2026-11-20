@@ -1,6 +1,6 @@
 import { Hono, type Context, type Next } from "hono";
 import { cors } from "hono/cors";
-import type { JsonCanvas, Kind, Note, SyncItem, SyncRequest, SyncResponse } from "../shared/types";
+import type { JsonCanvas, Kind, Note, SyncItem, SyncRequest } from "../shared/types";
 import { KINDS } from "../shared/types";
 import extHome from "./ext/home";
 import extSpaces from "./ext/spaces";
@@ -59,7 +59,12 @@ function safeEqual(a: string, b: string) {
   return r === 0;
 }
 /** Token = HMAC(passcode). Changing the passcode secret signs every device out. */
-const ownerToken = (env: Env["Bindings"]) => hmac(env.APP_PASSCODE, "lumen:owner:v1");
+const ownerTokens = new Map<string, Promise<string>>(); // per isolate: skips importKey + sign on every authed request
+const ownerToken = (env: Env["Bindings"]) => {
+  let t = ownerTokens.get(env.APP_PASSCODE);
+  if (!t) { t = hmac(env.APP_PASSCODE, "lumen:owner:v1"); ownerTokens.set(env.APP_PASSCODE, t); }
+  return t;
+};
 
 // Pick the account (main or an extra one) before any route runs.
 api.use("*", authGate()); // no-op unless accounts are on and the request carries a user session (lms_…)
@@ -120,34 +125,53 @@ const PAGE = 1500;
 const UPSERT = `INSERT INTO items (kind, id, data, updated_at, deleted, rev)
   VALUES (?1, ?2, ?3, ?4, ?5, (SELECT CAST(v AS INTEGER) FROM meta WHERE k = 'rev'))
   ON CONFLICT(kind, id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at, deleted = excluded.deleted, rev = excluded.rev
-  WHERE excluded.updated_at >= items.updated_at`;
+  WHERE excluded.updated_at > items.updated_at
+    OR (excluded.updated_at = items.updated_at AND (excluded.data <> items.data OR excluded.deleted <> items.deleted))`;
+// ^ an identical re-push (e.g. a retry after a lost response) no longer rewrites the row or gets a new rev, so it is
+//   not sent again to every other device.
 const BUMP = `UPDATE meta SET v = CAST(v AS INTEGER) + 1 WHERE k = 'rev'`;
 
-function upserts(db: D1Database, items: SyncItem[]) {
+type Sent = Map<string, { data: string; updatedAt: number; deleted: number }>;
+/** `sent` (optional) collects what was written, keyed `kind\0id`, so /sync can skip echoing it back. */
+function upserts(db: D1Database, items: SyncItem[], sent?: Sent) {
   const stmts: D1PreparedStatement[] = [];
   for (const it of items) {
     if (!KINDS.includes(it.kind) || typeof it.id !== "string" || !it.id) continue;
-    stmts.push(db.prepare(BUMP), db.prepare(UPSERT).bind(it.kind, it.id, JSON.stringify(it.data), Math.floor(it.updatedAt), it.deleted ? 1 : 0));
+    const data = JSON.stringify(it.data), updatedAt = Math.floor(it.updatedAt), deleted = it.deleted ? 1 : 0;
+    sent?.set(`${it.kind}\0${it.id}`, { data, updatedAt, deleted });
+    stmts.push(db.prepare(BUMP), db.prepare(UPSERT).bind(it.kind, it.id, data, updatedAt, deleted));
   }
   return stmts;
 }
 
 type Row = { kind: Kind; id: string; data: string; updated_at: number; deleted: number; rev: number };
-const toItem = (r: Row): SyncItem => ({ kind: r.kind, id: r.id, data: JSON.parse(r.data), updatedAt: r.updated_at, deleted: r.deleted ? 1 : 0 });
 
 api.post("/sync", auth, async (c) => {
+  const db = c.env.DB;
   const body = await c.req.json<SyncRequest>();
-  const stmts = upserts(c.env.DB, (body.items ?? []).slice(0, 2000));
-  for (let i = 0; i < stmts.length; i += 100) await c.env.DB.batch(stmts.slice(i, i + 100));
+  const sent: Sent = new Map();
+  const stmts = upserts(db, (body.items ?? []).slice(0, 2000), sent);
+  for (let i = 0; i < stmts.length; i += 100) await db.batch(stmts.slice(i, i + 100));
   // First sync on a new device asks for some kinds at a time (notes first, then flashcards…: lib/sync.ts firstSync).
   const kinds = Array.isArray(body.kinds) ? body.kinds.filter((k) => /^[a-z]+$/.test(k)).slice(0, 12) : [];
-  const { results } = kinds.length
-    ? await c.env.DB.prepare(`SELECT * FROM items WHERE rev > ? AND kind IN (${kinds.map(() => "?").join(",")}) ORDER BY rev LIMIT ?`).bind(Number(body.since) || 0, ...kinds, PAGE).all<Row>()
-    : await c.env.DB.prepare("SELECT * FROM items WHERE rev > ? ORDER BY rev LIMIT ?").bind(Number(body.since) || 0, PAGE).all<Row>();
-  const head = Number((await c.env.DB.prepare("SELECT v FROM meta WHERE k = 'rev'").first<{ v: string }>())?.v ?? 0);
+  const page = kinds.length
+    ? db.prepare(`SELECT * FROM items WHERE rev > ? AND kind IN (${kinds.map(() => "?").join(",")}) ORDER BY rev LIMIT ?`).bind(Number(body.since) || 0, ...kinds, PAGE)
+    : db.prepare("SELECT * FROM items WHERE rev > ? ORDER BY rev LIMIT ?").bind(Number(body.since) || 0, PAGE);
+  // Page + head cursor in one round trip (and one consistent snapshot).
+  const [pageRes, headRes] = (await db.batch([page, db.prepare("SELECT v FROM meta WHERE k = 'rev'")])) as [D1Result<Row>, D1Result<{ v: string }>];
+  const results = pageRes.results ?? [];
+  const head = Number(headRes.results?.[0]?.v ?? 0);
   const cursor = results.length ? results[results.length - 1].rev : head;
-  const res: SyncResponse & { more: boolean } = { cursor, items: results.map(toItem), more: results.length === PAGE };
-  return c.json(res);
+  // Don't echo back records this request just wrote, byte-identical (the client already has them); cursor/more
+  // still come from the full page. Rows are emitted with their stored JSON as-is instead of parse + re-stringify
+  // (same shape as SyncItem: kind, id, data, updatedAt, deleted).
+  const out: string[] = [];
+  for (const r of results) {
+    const s = sent.get(`${r.kind}\0${r.id}`);
+    if (s && s.updatedAt === r.updated_at && s.deleted === (r.deleted ? 1 : 0) && s.data === r.data) continue;
+    out.push(`{"kind":${JSON.stringify(r.kind)},"id":${JSON.stringify(r.id)},"data":${r.data},"updatedAt":${Number(r.updated_at)},"deleted":${r.deleted ? 1 : 0}}`);
+  }
+  return c.body(`{"cursor":${Number(cursor)},"items":[${out.join(",")}],"more":${results.length === PAGE}}`, 200, { "content-type": "application/json" });
 });
 
 // ------------------------------------------------------------------ REST: notes & canvases (for scripts / agents)
@@ -291,26 +315,45 @@ const toBytes = (d: ArrayBuffer | number[]) => (d instanceof ArrayBuffer ? new U
 /** Public on purpose: ids are random UUIDs, and published posts embed their images/videos. */
 api.get("/att/:id", async (c) => {
   const id = c.req.param("id")!;
+  const rangeHdr = c.req.header("range");
   if (c.env.FILES) {
-    const obj = await c.env.FILES.get(`att/${id}`);
+    // Range (video seeking) + If-None-Match (304) handled by R2 itself; a malformed/multi range falls back to the whole file.
+    const key = `att/${id}`;
+    const obj = await c.env.FILES.get(key, { range: c.req.raw.headers, onlyIf: c.req.raw.headers }).catch(() => c.env.FILES!.get(key));
     if (obj) {
       const h = new Headers();
       obj.writeHttpMetadata(h);
       h.set("etag", obj.httpEtag);
       h.set("cache-control", IMMUTABLE);
+      h.set("accept-ranges", "bytes");
+      if (!("body" in obj)) return new Response(null, { status: 304, headers: h });
+      const r = obj.range as { offset?: number; length?: number; suffix?: number } | undefined;
+      if (rangeHdr && r) {
+        const off = r.suffix !== undefined ? Math.max(0, obj.size - r.suffix) : (r.offset ?? 0);
+        const len = r.suffix !== undefined ? obj.size - off : Math.min(r.length ?? obj.size - off, obj.size - off);
+        if (len > 0 && len < obj.size) {
+          h.set("content-range", `bytes ${off}-${off + len - 1}/${obj.size}`);
+          h.set("content-length", String(len));
+          return new Response(obj.body, { status: 206, headers: h });
+        }
+      }
       return new Response(obj.body, { headers: h });
     }
   }
+  // D1 files are immutable (random ids), so the id is a strong ETag: revalidations cost one small query, no parts.
+  const etag = `"${id}"`;
+  const notModified = (c.req.header("if-none-match") ?? "").split(",").some((t) => t.trim().replace(/^W\//, "") === etag);
   const meta = await c.env.DB.prepare("SELECT mime, size, parts FROM file_meta WHERE id = ?").bind(id).first<{ mime: string; size: number; parts: number }>();
+  if (meta && notModified) return new Response(null, { status: 304, headers: { etag, "cache-control": IMMUTABLE } });
   if (!meta) {
     // Legacy single-row files (before chunking).
     const row = await c.env.DB.prepare("SELECT mime, data FROM files WHERE id = ?").bind(id).first<{ mime: string; data: number[] | ArrayBuffer }>();
     if (!row) return c.json({ error: "Not found" }, 404);
-    return new Response(toBytes(row.data), { headers: { "content-type": row.mime, "cache-control": IMMUTABLE } });
+    return new Response(toBytes(row.data), { headers: { "content-type": row.mime, "cache-control": IMMUTABLE, etag } });
   }
   // Range support (video/audio seeking).
   let start = 0, end = meta.size - 1, status = 200;
-  const range = /^bytes=(\d*)-(\d*)$/.exec(c.req.header("range") ?? "");
+  const range = /^bytes=(\d*)-(\d*)$/.exec(rangeHdr ?? "");
   if (range) {
     if (range[1]) { start = Number(range[1]); if (range[2]) end = Math.min(end, Number(range[2])); }
     else if (range[2]) start = Math.max(0, meta.size - Number(range[2]));
@@ -320,10 +363,18 @@ api.get("/att/:id", async (c) => {
   const first = Math.floor(start / CHUNK), last = Math.floor(end / CHUNK);
   const db = c.env.DB;
   let i = first;
+  // Read one part ahead, so the next D1 query runs while the current part is being sent.
+  const fetchPart = (k: number) => {
+    const p = db.prepare("SELECT data FROM file_parts WHERE id = ? AND part = ?").bind(id, k).first<{ data: ArrayBuffer | number[] }>();
+    p.catch(() => {}); // a cancelled stream may never await it
+    return p;
+  };
+  let ahead = fetchPart(first);
   const stream = new ReadableStream<Uint8Array>({
     async pull(ctrl) {
       if (i > last) { ctrl.close(); return; }
-      const row = await db.prepare("SELECT data FROM file_parts WHERE id = ? AND part = ?").bind(id, i).first<{ data: ArrayBuffer | number[] }>();
+      const row = await ahead.catch(() => null);
+      if (i < last) ahead = fetchPart(i + 1);
       if (!row) { ctrl.error(new Error("missing part")); return; }
       const bytes = toBytes(row.data);
       const from = i === first ? start - i * CHUNK : 0;
@@ -332,7 +383,7 @@ api.get("/att/:id", async (c) => {
       i++;
     },
   });
-  const h: Record<string, string> = { "content-type": meta.mime, "cache-control": IMMUTABLE, "accept-ranges": "bytes", "content-length": String(end - start + 1) };
+  const h: Record<string, string> = { "content-type": meta.mime, "cache-control": IMMUTABLE, "accept-ranges": "bytes", "content-length": String(end - start + 1), etag };
   if (status === 206) h["content-range"] = `bytes ${start}-${end}/${meta.size}`;
   return new Response(stream, { status, headers: h });
 });
@@ -406,25 +457,29 @@ async function branding(env: Env["Bindings"]) {
   const p = r ? ((JSON.parse(r.data) as { props?: Record<string, string> }).props ?? {}) : {};
   return { name: p.blogName || env.BLOG_NAME || "Lumen", tagline: p.tagline ?? "", author: p.author ?? "", avatar: p.avatar ?? "glyph:owl" };
 }
-api.get("/public/posts", async (c) => c.json({ blog: await branding(c.env), posts: (await posts(c.env.DB)).map((n) => toPost(n)) }, 200, { "cache-control": "public, max-age=60" }));
+api.get("/public/posts", async (c) => {
+  const [blog, all] = await Promise.all([branding(c.env), posts(c.env.DB)]);
+  return c.json({ blog, posts: all.map((n) => toPost(n)) }, 200, { "cache-control": "public, max-age=60" });
+});
 api.get("/public/posts/:slug", async (c) => {
   const slug = c.req.param("slug")!;
-  const all = await posts(c.env.DB);
+  const [blog, all] = await Promise.all([branding(c.env), posts(c.env.DB)]);
   const i = all.findIndex((n) => (n.slug || n.id) === slug);
   if (i < 0) return c.json({ error: "Not found" }, 404);
-  return c.json({ blog: await branding(c.env), post: toPost(all[i], true), prev: all[i + 1] ? toPost(all[i + 1]) : null, next: all[i - 1] ? toPost(all[i - 1]) : null });
+  return c.json({ blog, post: toPost(all[i], true), prev: all[i + 1] ? toPost(all[i + 1]) : null, next: all[i - 1] ? toPost(all[i - 1]) : null }, 200, { "cache-control": "public, max-age=60" });
 });
 
 const xml = (s: string) => s.replace(/[<>&'"]/g, (ch) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[ch]!);
 app.get("/rss.xml", async (c) => {
   const origin = new URL(c.req.url).origin;
-  const items = (await posts(c.env.DB)).slice(0, 50).map((n) => {
+  const [b, all] = await Promise.all([branding(c.env), posts(c.env.DB)]);
+  const items = all.slice(0, 50).map((n) => {
     const p = toPost(n);
     return `<item><title>${xml(p.title)}</title><link>${origin}/blog/${xml(p.slug)}</link><guid>${origin}/blog/${xml(p.slug)}</guid><pubDate>${new Date(n.createdAt).toUTCString()}</pubDate><description>${xml(p.excerpt)}</description></item>`;
   });
-  const b = await branding(c.env);
   const title = xml(b.name);
-  return c.body(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>${title}</title><link>${origin}/blog</link><description>${xml(b.tagline || b.name)}</description>${items.join("")}</channel></rss>`, 200, { "content-type": "application/rss+xml; charset=utf-8" });
+  // Feed readers poll often; each hit parses every published note, so let clients/proxies reuse it for 5 minutes.
+  return c.body(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>${title}</title><link>${origin}/blog</link><description>${xml(b.tagline || b.name)}</description>${items.join("")}</channel></rss>`, 200, { "content-type": "application/rss+xml; charset=utf-8", "cache-control": "public, max-age=300" });
 });
 
 // ------------------------------------------------------------------ link previews (Open Graph)
@@ -484,9 +539,8 @@ async function spaceNotes(db: D1Database, spaceId: string) {
   return results.map((r) => JSON.parse(r.data) as Note);
 }
 api.get("/share/:token", async (c) => {
-  const row = await sharedRoot(c.env.DB, c.req.param("token")!);
+  const [row, blog] = await Promise.all([sharedRoot(c.env.DB, c.req.param("token")!), branding(c.env)]);
   if (!row) return c.json({ error: "This link doesn't exist or was turned off." }, 404);
-  const blog = await branding(c.env);
   if (row.kind === "note") return c.json({ kind: "note", blog, note: publicNote(JSON.parse(row.data) as Note) }, 200, shareHeaders);
   const sp = JSON.parse(row.data) as Space;
   const notes = await spaceNotes(c.env.DB, sp.id);

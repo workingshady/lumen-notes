@@ -262,22 +262,24 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
     active.focus();
   }
 
-  const titles = useMemo(() => vault.notes.map((n) => n.title), [vault.notes]);
+  // Completion sources read the vault through refs: a vault rebuild (every save) must not reconfigure CodeMirror.
   const notesRef = useRef(vault.notes);
   notesRef.current = vault.notes;
+  const tagsRef = useRef(vault.tags);
+  tagsRef.current = vault.tags;
   const pasteMenuRef = useRef(pasteMenu);
   pasteMenuRef.current = pasteMenu;
   const extensions = useMemo(() => {
     const wikiComplete = (ctx: CompletionContext) => {
       const m = ctx.matchBefore(/\[\[[^\]\n]*/);
       if (!m || m.text.includes("#^")) return null; // [[Note#^ → block completion (editor-blocks.ts)
-      return { from: m.from + 2, options: titles.map((x) => ({ label: x, apply: `${x}]]` })), validFor: /^[^\]\n]*$/ };
+      return { from: m.from + 2, options: notesRef.current.map((n) => ({ label: n.title, apply: `${n.title}]]` })), validFor: /^[^\]\n]*$/ };
     };
     const tagComplete = (ctx: CompletionContext) => {
       const m = ctx.matchBefore(/(?:^|\s)#[\p{L}\p{N}_/-]*/u);
       if (!m) return null;
       const start = m.text.indexOf("#") + m.from + 1;
-      return { from: start, options: vault.tags.map(([x]) => ({ label: x })), validFor: /^[\p{L}\p{N}_/-]*$/u };
+      return { from: start, options: tagsRef.current.map(([x]) => ({ label: x })), validFor: /^[\p{L}\p{N}_/-]*$/u };
     };
     const files = async (list: FileList | File[] | null, v: EditorView, pos?: number) => {
       if (!list?.length) return false;
@@ -382,7 +384,7 @@ export function Editor({ note, focus, live, page }: { note: Note; focus?: boolea
       }),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [titles, vault.tags, focus, note.type, page, live]);
+  }, [focus, note.type, page, live]);
 
   const run = (k: keyof typeof ACTIONS) => { if (active) ACTIONS[k](active); setMore(false); };
 

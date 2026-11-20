@@ -5,7 +5,7 @@ import { Capacitor } from "@capacitor/core";
 import { ConflictSheet } from "./components/ws-conflict";
 import { createNote } from "./lib/actions";
 import { DEMO, setDemo, setMeta } from "./lib/db";
-import { dismissToast, getUI, openNote, runLatestUndo, setRailAuto, setUI, sidebarRail, toast, toggleSidebar, useToasts, useUI, useVault, type Toast } from "./lib/store";
+import { dismissToast, getUI, openNote, runLatestUndo, setRailAuto, setUI, sidebarRail, toast, toggleSidebar, useToasts, useUI, useVaultSelector, sameNote, type Toast } from "./lib/store";
 import { currentIdx, installNavHistory, keepPlace, restoreFrom } from "./lib/nav-history";
 import { useDeviceHeartbeat } from "./lib/devices";
 import { useFaviconBadge } from "./lib/favicon";
@@ -14,12 +14,11 @@ import { Sidebar } from "./components/Sidebar";
 import { Skeleton } from "./components/Skeleton";
 import { NoteList } from "./components/NoteList";
 import { TagMenuHost, TagPage } from "./components/TagPage";
-import { NoteView } from "./components/NoteView";
 import { Palette } from "./components/Palette";
 import { NewMenuHost, openNewMenu } from "./components/NewMenu";
 import { ImportExportDialog, NewSpaceDialog } from "./components/Dialogs";
 import { DiagramExport } from "./components/DiagramExport";
-import { useDueCards } from "./components/Review";
+import { useDueCount } from "./lib/due-cards";
 import { cx, IconButton } from "./components/ui";
 import { LumenMark } from "./components/LumenMark";
 import { OfflineBanner } from "./components/ws-sync";
@@ -47,6 +46,9 @@ const SettingsView = lazy(() => import("./views/Settings").then((m) => ({ defaul
 const Blog = lazy(() => import("./views/Blog").then((m) => ({ default: m.Blog })));
 const Shared = lazy(() => import("./views/Shared").then((m) => ({ default: m.Shared })));
 const Remote = lazy(() => import("./views/Remote").then((m) => ({ default: m.Remote })));
+// The note screen (CodeMirror, KaTeX, highlight.js) loads on first open, behind the note skeleton.
+const loadNoteView = () => import("./components/NoteView");
+const NoteView = lazy(() => loadNoteView().then((m) => ({ default: m.NoteView })));
 const Loading = () => {
   const v = useUI().view;
   return <Skeleton kind={v === "graph" ? "graph" : v === "tasks" || v === "table" || v === "kanban" || v === "trash" ? "list" : "note"} />;
@@ -165,17 +167,17 @@ function autoRail(ui: ReturnType<typeof getUI>, note: { type: string } | undefin
 
 function Workspace() {
   const ui = useUI();
-  const v = useVault();
+  // Narrow vault reads: the shell must not re-render on every save (the open note re-renders in OpenNote).
+  const noteType = useVaultSelector((v) => (ui.noteId ? v.byId.get(ui.noteId)?.type : undefined));
+  const note = ui.noteId && noteType ? { id: ui.noteId, type: noteType } : undefined;
+  const space = useVaultSelector((v) => (ui.view === "space" ? v.spaceMap.get(ui.spaceId) : undefined));
+  const ready = useVaultSelector((v) => v.ready);
   const wide = useWide();
   const tablet = useTablet();
   const rtl = useRtl();
-  const note = ui.noteId ? v.byId.get(ui.noteId) : undefined;
-  const due = useDueCards(v.notes)?.length ?? 0;
   useBackGesture(wide);
   useDeviceHeartbeat(); // Settings › Sync › Devices (lib/devices.ts)
-  useFaviconBadge(due); // Lumen 21 · favicon review-due badge (here, not in Sidebar: phones have no docked sidebar)
-  useStreakMoment(); // Lumen 21 · moments: streak
-  useAllPathMoments(); // Lumen 21 · moments: unlock + mastered on any learning path change (Today, roadmaps, path page)
+  useEffect(() => { const t = setTimeout(() => void loadNoteView().catch(() => {}), 1500); return () => clearTimeout(t); }, []); // warm the note screen once the shell is up
 
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
@@ -194,7 +196,7 @@ function Workspace() {
   const showNote = notesView && (wide || !!note);
 
   let main: React.ReactNode = null;
-  if (notesView) main = note ? <NoteView key={note.id} note={note} /> : <PickNote />;
+  if (notesView) main = note ? <OpenNote key={note.id} id={note.id} /> : <PickNote />;
   else if (ui.view === "home") main = <Home />;
   else if (ui.view === "today") main = <TodayView />;
   else if (ui.view === "tasks") main = <TasksView />;
@@ -209,7 +211,7 @@ function Workspace() {
   else if (ui.view === "folders") main = <FoldersView />;
 
   const inNote = notesView && !!note && !wide;
-  setRailAuto(autoRail(ui, note, ui.view === "space" ? v.spaceMap.get(ui.spaceId) : undefined));
+  setRailAuto(autoRail(ui, note, space));
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -243,7 +245,7 @@ function Workspace() {
         </div>
 
         {/* phone tab bar (design: LumenTabBar) */}
-        {!wide && !inNote && <TabBar due={due} rtl={rtl} onNew={async () => { /* phone: + on the Visual list opens the "New…" sheet (R4-17 A5), on Learning paths the new-path dialog */ if (ui.view === "notes" && (ui.filter === "visual" || ui.filter === "paths")) { dispatchEvent(new Event(ui.filter === "visual" ? "lumen:new-visual" : "lumen:new-path")); return; } openNewMenu(); }} />}
+        {!wide && !inNote && <TabBar rtl={rtl} onNew={async () => { /* phone: + on the Visual list opens the "New…" sheet (R4-17 A5), on Learning paths the new-path dialog */ if (ui.view === "notes" && (ui.filter === "visual" || ui.filter === "paths")) { dispatchEvent(new Event(ui.filter === "visual" ? "lumen:new-visual" : "lumen:new-path")); return; } openNewMenu(); }} />}
       </div>
 
       <Palette />
@@ -256,7 +258,8 @@ function Workspace() {
       <ConflictSheet />
       <ShareSheet />
       <Toasts />
-      <Splash ready={v.ready} />
+      <Splash ready={ready} />
+      <VaultWatchers />
       {DEMO && (
         <div className="fixed bottom-[76px] start-3 z-[70] flex items-center md:bottom-12 gap-2 rounded-full border border-[color-mix(in_srgb,var(--learn)_45%,transparent)] bg-[color-mix(in_srgb,var(--learn)_14%,var(--bg))] py-0.5 pe-1 ps-2.5 text-[11.5px] font-medium text-learn shadow-sm">
           {t("Demo data")}
@@ -266,6 +269,20 @@ function Workspace() {
       )}
     </div>
   );
+}
+
+/** The open note: subscribes to that one note, so saving it re-renders the note screen, not the whole shell. */
+function OpenNote({ id }: { id: string }) {
+  const note = useVaultSelector((v) => v.byId.get(id), sameNote);
+  return note ? <NoteView note={note} /> : null;
+}
+
+/** App-wide vault watchers, in a leaf so their vault subscriptions don't re-render the shell. */
+function VaultWatchers() {
+  useFaviconBadge(useDueCount()); // Lumen 21 · favicon review-due badge (here, not in Sidebar: phones have no docked sidebar)
+  useStreakMoment(); // Lumen 21 · moments: streak
+  useAllPathMoments(); // Lumen 21 · moments: unlock + mastered on any learning path change (Today, roadmaps, path page)
+  return null;
 }
 
 function PickNote() {
@@ -333,8 +350,9 @@ function Toasts() {
   );
 }
 
-function TabBar({ due, onNew, rtl }: { due: number; onNew: () => void; rtl: boolean }) {
+function TabBar({ onNew, rtl }: { onNew: () => void; rtl: boolean }) {
   const ui = useUI();
+  const due = useDueCount();
   const active = ui.sidebar || ui.view === "settings" ? "more" : ui.view === "home" ? "home" : ui.view === "notes" ? "notes" : ui.view === "review" ? "review" : "none";
   const tab = (k: string, icon: React.ReactNode, label: string, onClick: () => void, badge?: number) => {
     const on = active === k;

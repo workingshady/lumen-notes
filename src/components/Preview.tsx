@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef } from "react";
 import type { Note } from "../../shared/types";
 import { findOrCreateByTitle, updateNote } from "../lib/actions";
 import { parseCanvas, previewSvg } from "../lib/canvas";
@@ -54,7 +54,10 @@ export const lastBlock = { noteId: "", line: -1 };
 export function Preview({ note, className, onLine }: { note: Pick<Note, "id" | "body" | "spaceId">; className?: string; onLine?: (line: number) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const vault = useVault();
-  const html = useMemo(() => render(note.body), [note.body]);
+  // Deferred: a save (or a keystroke in a live preview) commits first; the Markdown render + DOM swap follow in a
+  // low-priority pass, so typing never waits on KaTeX / highlight.js / Mermaid.
+  const body = useDeferredValue(note.body);
+  const html = useMemo(() => render(body), [body]);
 
   useEffect(() => {
     const el = ref.current;
@@ -95,9 +98,9 @@ export function Preview({ note, className, onLine }: { note: Pick<Note, "id" | "
     if (!el || !src || src.type === "canvas" || src.deleted) return;
     // Export file names: a .mermaid file exports under its own name.
     if (src.type === "diagram") { el.querySelectorAll<HTMLElement>(".mermaid-card").forEach((c) => { c.dataset.name = src.title; }); return; }
-    const blocks = new Map(mermaidBlocks(note.body).map((b) => [b.line, b]));
+    const blocks = new Map(mermaidBlocks(body).map((b) => [b.line, b]));
     const index = diagramFiles(vault.notes);
-    const current = () => { const cur = vault.byId.get(note.id); return cur ? { ...cur, body: note.body } : null; };
+    const current = () => { const cur = vault.byId.get(note.id); return cur ? { ...cur, body } : null; };
     const toCanvas = async (b: DiagramBlock) => {
       const cur = current();
       if (!cur) return;
@@ -152,7 +155,7 @@ export function Preview({ note, className, onLine }: { note: Pick<Note, "id" | "
       const card = b && el.querySelector<HTMLElement>(`.mermaid-card[data-line="${b.line}"]`);
       if (card) requestAnimationFrame(() => { card.scrollIntoView({ block: "center", behavior: "smooth" }); card.classList.add("mm-flash"); setTimeout(() => card.classList.remove("mm-flash"), 1800); });
     }
-  }, [html, vault, note.id, note.body]);
+  }, [html, vault, note.id, body]);
 
   async function onClick(e: React.MouseEvent) {
     if (handleCopyClick(e)) return;

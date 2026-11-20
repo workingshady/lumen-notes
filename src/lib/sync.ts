@@ -23,6 +23,9 @@ async function countDirty() {
 }
 
 let running: Promise<void> | null = null;
+/** Backoff after failed rounds: background triggers (timer, edits) wait until `retryAt`; explicit ones don't. */
+let failures = 0, retryAt = 0;
+const autoSync = () => { if (Date.now() >= retryAt) void syncNow(); };
 export function syncNow() {
   // Demo mode never syncs; the Dev simulator (sim/faults.ts) walks the status machine of the chosen network mode.
   if (DEMO) return (running ??= simSync(set, countDirty).finally(() => (running = null)));
@@ -58,7 +61,7 @@ async function run() {
             const mine = sent.filter((s) => s.kind === kind);
             if (!mine.length) continue;
             const cur = await TABLE[kind].bulkGet(mine.map((s) => s.id));
-            const done = cur.filter((c, i) => c && c.updatedAt === mine[i].updatedAt).map((c) => ({ ...c, dirty: 0 }));
+            const done = cur.filter((c, i) => c && c.dirty && c.updatedAt === mine[i].updatedAt).map((c) => ({ ...c, dirty: 0 }));
             if (done.length) await TABLE[kind].bulkPut(done);
           }
         });
@@ -71,8 +74,11 @@ async function run() {
       await new Promise((r) => setTimeout(r, 0)); // let the page paint between big pages
     }
     await compactTombstones();
+    failures = 0; retryAt = 0;
     set({ status: "idle", last: Date.now(), pending: await countDirty() });
   } catch (e) {
+    failures++;
+    retryAt = Date.now() + Math.min(60_000 * 2 ** (failures - 1), 15 * 60_000); // 1, 2, 4, 8, 15 min
     set({ status: navigator.onLine ? "error" : "offline", error: (e as Error).message, pending: await countDirty(), first: undefined });
   }
 }
@@ -122,7 +128,10 @@ async function apply(items: SyncItem[]) {
       if (!t || !mine.length) continue;
       const cur = await t.bulkGet(mine.map((it) => it.id));
       const rows = mine
-        .filter((it, i) => !(cur[i]?.dirty && cur[i].updatedAt > it.updatedAt))
+        // Skip: a newer unsynced local edit, or a clean local copy of this exact version (own echo / repeat page:
+        // re-putting it would wake every liveQuery and re-render the app for nothing).
+        .filter((it, i) => !(cur[i]?.dirty && cur[i].updatedAt > it.updatedAt)
+          && !(cur[i] && !cur[i].dirty && cur[i].updatedAt === it.updatedAt && (cur[i].deleted ?? 0) === (it.deleted ?? 0)))
         .map((it) => ({ ...(it.data as object), id: it.id, updatedAt: it.updatedAt, deleted: it.deleted, dirty: 0 }));
       if (rows.length) await t.bulkPut(rows);
     }
@@ -146,9 +155,10 @@ async function compactTombstones() {
 
 export function startSync() {
   if (DEMO) onFaults(() => { running = null; void syncNow(); });
-  onDirty(() => void syncNow());
+  onDirty(autoSync); // edits keep their dirty flag; the timer below pushes them once the backoff ends
   window.addEventListener("online", () => void syncNow());
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") void syncNow(); });
-  setInterval(() => void syncNow(), 60_000);
+  // Poll only while visible (becoming visible syncs right away anyway) and not inside a backoff window.
+  setInterval(() => { if (document.visibilityState !== "hidden") autoSync(); }, 60_000);
   void syncNow();
 }

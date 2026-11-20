@@ -5,11 +5,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Card, Note } from "../../shared/types";
 import { db, patch, save, uid } from "../lib/db";
 import { flashcards, type Flashcard } from "../lib/parse";
+import { useDueCards, type DueItem } from "../lib/due-cards";
 import { clozeEnabled, clozeSides } from "../lib/cloze";
 import { OcclusionImage } from "./OcclusionEditor";
 import { inSteps, memoryOf, previewIntervals, schedule, userParams, type FsrsCard, type Grade } from "../lib/fsrs";
-import { getSettings, useSettings } from "../lib/settings";
-import { newCard, schedule as sm2Schedule, previewIntervals as sm2Preview } from "../lib/srs";
+import { getSettings } from "../lib/settings";
+import { schedule as sm2Schedule, previewIntervals as sm2Preview } from "../lib/srs";
 import { go, noteDerived, openNote, toast, useVault } from "../lib/store";
 import { Preview } from "./Preview";
 import { cardLine, openNoteAtLine } from "./study-nav";
@@ -17,7 +18,7 @@ import { cx } from "./ui";
 import { EmptyState } from "./EmptyState";
 import { fmtNum, t, tk, tx } from "../lib/i18n";
 
-interface Item { note: Note; fc: Flashcard; card: Card }
+type Item = DueItem;
 
 const HintLine = () => <div className="text-center text-[12.5px] text-muted"><span className="hidden md:inline">{tx("{key} to show answer", { key: <span dir="ltr" className="me-1.5 rounded-[4px] border border-line px-2 py-0.5 font-mono text-[11px] font-medium">Space</span> })}</span><span className="md:hidden">{t("Tap to show answer")}</span></div>;
 
@@ -47,32 +48,7 @@ function SpecialCard({ fc, note, flipped, md }: { fc: Flashcard; note: Note; fli
   );
 }
 
-/** Collect due cards for some notes (one note in Review mode, or all notes in the Review view). Suspended cards never count. */
-export function useDueCards(notes: Note[], includeNew = true) {
-  const cards = useLiveQuery(() => db.cards.toArray(), []);
-  // Settings › Review › New cards a day (0 = no limit): new cards already started today (review log) count against it.
-  const perDay = useSettings().fsrsNewPerDay ?? 0;
-  const startedToday = useLiveQuery(() => (perDay > 0 ? db.reviews.where("at").aboveOrEqual(new Date().setHours(0, 0, 0, 0)).filter((r) => r.state === "new" && !r.deleted).count() : 0), [perDay, cards]);
-  return useMemo(() => {
-    if (!cards || startedToday === undefined) return null;
-    const map = new Map(cards.map((c) => [c.id, c]));
-    const now = Date.now();
-    const out: Item[] = [];
-    for (const n of notes) {
-      if (n.type === "canvas") continue;
-      for (const fc of noteDerived("flashcards", n, (x) => flashcards(x.body))) {
-        const id = `${n.id}:${fc.key}`;
-        const card = map.get(id) ?? newCard(id, n.id);
-        if (card.suspended) continue;
-        if (card.due <= now && (includeNew || card.reps > 0)) out.push({ note: n, fc, card });
-      }
-    }
-    out.sort((a, b) => a.card.due - b.card.due);
-    if (perDay <= 0) return out;
-    let left = Math.max(0, perDay - startedToday);
-    return out.filter((x) => memoryOf(x.card as FsrsCard, now).state !== "new" || left-- > 0);
-  }, [cards, notes, includeNew, perDay, startedToday]);
-}
+export { useDueCards } from "../lib/due-cards";
 
 const GRADES = [
   { n: tk("Again"), c: "var(--danger)" },

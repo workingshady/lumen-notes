@@ -32,8 +32,8 @@ let rail = (() => { try { return localStorage.getItem(RAIL_KEY) === "1"; } catch
 const railSubs = new Set<() => void>();
 const setRail = (on: boolean) => { rail = on; try { localStorage.setItem(RAIL_KEY, on ? "1" : "0"); } catch { /* ignore */ } railSubs.forEach((f) => f()); };
 export const useAssistantRail = () => useSyncExternalStore((f) => (railSubs.add(f), () => { railSubs.delete(f); }), () => rail);
-/** Header button: open the Assistant (expanded), or close it. */
-export function toggleAssistantPanel(open: boolean) { setRail(false); setUI({ panel: open ? "ai" : null }); }
+/** Header button: open the Assistant (as the rail when the owner last collapsed it), or close it. */
+export function toggleAssistantPanel(open: boolean) { setUI({ panel: open ? "ai" : null }); }
 /** Ctrl/⌘ J: expanded ↔ rail (opens it when closed). */
 export function toggleAssistantRail(panelOpen: boolean) { if (panelOpen && !rail) setRail(true); else { setRail(false); setUI({ panel: "ai" }); } }
 
@@ -220,7 +220,10 @@ export function AssistantPanel({ note, phone }: { note: Note; phone: boolean }) 
         </div>
         {phone
           ? <button aria-label={t("Close")} onClick={() => setUI({ panel: null })} className="flex size-7 items-center justify-center rounded-[7px] text-muted hover:bg-surface-2"><Glyph name="x" size={15} /></button>
-          : <button aria-label={t("Collapse to the rail (Ctrl+J)")} title={t("Collapse (Ctrl+J)")} onClick={() => setRail(true)} className="flex size-7 items-center justify-center rounded-[7px] text-muted hover:bg-surface-2 hover:text-ink"><Glyph name="rail" size={15} /></button>}
+          : <>
+            <button aria-label={t("Collapse to the rail (Ctrl+J)")} title={t("Collapse (Ctrl+J)")} onClick={() => setRail(true)} className="flex size-7 items-center justify-center rounded-[7px] text-muted hover:bg-surface-2 hover:text-ink"><Glyph name="rail" size={15} /></button>
+            <button aria-label={t("Close panel")} title={t("Close panel")} onClick={() => setUI({ panel: null })} className="flex size-7 items-center justify-center rounded-[7px] text-muted hover:bg-surface-2 hover:text-ink"><Glyph name="x" size={15} /></button>
+          </>}
       </div>
       {/* context chips */}
       <div className="relative flex shrink-0 flex-wrap gap-1.5 border-b border-line px-3 py-2" data-context-chips>
@@ -412,6 +415,8 @@ export function AssistantRail() {
       <button aria-label={t("Outline")} title={t("Outline")} onClick={() => { setRail(false); setUI({ panel: "outline" }); }} className={b}><Glyph name="toc" size={16} /></button>
       <button aria-label={t("Links")} title={t("Links")} onClick={() => { setRail(false); setUI({ panel: "backlinks" }); }} className={b}><Glyph name="wikilink" size={16} /></button>
       <button aria-label={t("Versions")} title={t("Versions")} onClick={() => { setRail(false); setUI({ panel: "versions" }); }} className={b}><Glyph name="history" size={16} /></button>
+      {/* close; the collapsed preference is kept, so the header button reopens the rail */}
+      <button aria-label={t("Close panel")} title={t("Close panel")} onClick={() => setUI({ panel: null })} className={b}><Glyph name="x" size={16} /></button>
     </div>
   );
 }
