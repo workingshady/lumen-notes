@@ -7,7 +7,8 @@ import type { Env } from "../index";
  * Every Workers AI route (`POST /api/ai`, `/api/ai/*`, `/api/transcribe`) passes through `meter`:
  *  - before: if today's usage (UTC day) is at the daily limit, or Cloudflare already said the free allowance is used
  *    up, it answers 429 `{ error: "Daily free AI limit reached. Try tomorrow.", code: "ai_limit" }` without calling AI;
- *  - after a successful answer: it estimates the neurons the call used and adds them to today's row for that feature.
+ *  - after a successful answer: /api/ai/visual/* bills the route's own `neurons` (real model usage) and nothing for `cached: true`;
+ *    every other route estimates the neurons the call used and adds them to today's row for that feature.
  *    Workers AI does not return neurons, so they are estimated from the text sizes with the published rates
  *    (Llama 3.3 70B fp8-fast: 26,668 neurons / M input tokens, 204,805 / M output tokens; ~4 chars per token;
  *    Whisper turbo: ~47 neurons per audio minute, audio minutes from the upload size at ~32 kbit/s).
@@ -142,6 +143,14 @@ export const meter: MiddlewareHandler<Env> = async (c: Context<Env>, next: Next)
     const [a, b] = res.body.tee();
     c.res = new Response(a, res);
     wait(new Response(b).text().then((s) => add(db, feature, est(s.length))).catch(() => {}));
+  } else if (path.startsWith("/api/ai/visual/")) {
+    // ai-visual routes return their own count from the model's real `usage` ({ neurons, cached? }): bill that, and nothing for a cache hit.
+    wait(res.clone().json().then((j0: unknown) => {
+      const j = j0 as { neurons?: unknown; cached?: unknown } | null;
+      if (j?.cached === true) return;
+      const n = Number(j?.neurons);
+      return add(db, feature, Number.isFinite(n) && n >= 0 ? (n > 0 ? n : 0) : est(0)); // body without a count: fall back to the size estimate
+    }).catch(() => {}));
   } else wait(textLen(res).then((n) => add(db, feature, est(n))).catch(() => {}));
 };
 

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./lumen-glyphs.js"></script></helmet>
+<div style="position:absolute;inset:0;overflow:hidden;background:var(--bg);font-family:Inter,system-ui,sans-serif;font-size:13px;color:var(--tx);display:flex;flex-direction:{{ rootDir }}">
+  <div style="display:{{ phS }};height:40px;flex-shrink:0;align-items:center;justify-content:space-between;padding:0 22px;font-size:13px;font-weight:600"><span>9:41</span><span style="width:16px;height:9px;border:1.5px solid var(--tx);border-radius:2px"></span></div>
+  <div style="display:{{ dkS }};width:60px;flex-shrink:0;flex-direction:column;align-items:center;gap:6px;padding-top:14px;border-inline-end:1px solid var(--bd);background:var(--sf)">
+    <sc-for list="{{ rail }}" as="r"><span style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:{{ r.bg }};color:{{ r.c }}"><svg width="19" height="19" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ r.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg></span></sc-for>
+  </div>
+  <div style="display:{{ listS }};width:270px;flex-shrink:0;flex-direction:column;border-inline-end:1px solid var(--bd);background:var(--sf)">
+    <div style="display:flex;align-items:center;gap:8px;padding:16px 14px 10px"><span style="font-size:16px;font-weight:650;flex:1">Ask</span><span style="height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-size:12.5px">+ New <span style="color:var(--mu);font-size:11px">⌘J</span></span></div>
+    <div style="margin:0 14px 10px;height:34px;border-radius:9px;border:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--mu);font-size:12.5px"><svg width="14" height="14" viewBox="0 0 24 24" style="stroke-width:1.9;stroke-linecap:round"><sc-for list="{{ gSearch }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>Search chats</div>
+    <sc-for list="{{ threads }}" as="t"><div style="display:{{ t.hS }};padding:10px 16px 4px;font-size:11px;font-weight:650;letter-spacing:.06em;color:var(--mu)">{{ t.h }}</div><div style="display:{{ t.rS }};flex-direction:column;gap:2px;margin:0 8px;padding:8px 10px;border-radius:9px;background:{{ t.bg }}"><span style="font-size:13px;font-weight:{{ t.fw }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.l }}</span><span style="font-size:11.5px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.s }}</span></div></sc-for>
+    <div style="display:{{ noThreadsS }};margin:16px;padding:14px;border-radius:12px;border:1px dashed var(--bd);font-size:12.5px;color:var(--mu);line-height:18px">Your chats show here. Each one can be saved as a note.</div>
+  </div>
+  <div style="flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;position:relative">
+    <div style="height:{{ hdrH }};flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 {{ hPadX }};border-bottom:1px solid var(--bd)">
+      <span style="display:{{ phS }};width:40px;height:40px;align-items:center;justify-content:center;font-size:22px;margin-left:-8px">‹</span>
+      <span style="font-weight:650;font-size:14px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ chatTitle }}</span>
+      <sc-for list="{{ hBtns }}" as="b"><span style="display:{{ b.s }};height:32px;padding:0 10px;border-radius:8px;border:1px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.c }};align-items:center;gap:6px;font-size:12.5px;font-weight:{{ b.fw }};white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ b.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ b.l }}</span></sc-for>
+    </div>
+    <div style="flex:1;min-height:0;display:flex">
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+        <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:0 {{ hPadX }}">
+            <span style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--ac) 14%,transparent);color:var(--ac)"><svg width="24" height="24" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ gAsk }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg></span>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center"><span style="font-size:{{ eFs }};font-weight:650">Ask your notes anything</span><span style="font-size:13.5px;color:var(--mu);max-width:460px;text-wrap:pretty">Answers come only from your vault and always show their sources. Nothing leaves this device unless you choose a cloud model.</span></div>
+            <div style="display:grid;grid-template-columns:{{ sgCols }};gap:10px;width:100%;max-width:720px">
+              <sc-for list="{{ sugg }}" as="s"><div style="display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:12px;background:var(--sf);border:1px solid var(--bd)"><span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:650;letter-spacing:.05em;color:{{ s.c }}"><svg width="13" height="13" viewBox="0 0 24 24" style="stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ s.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ s.k }}</span><span style="font-size:13px;line-height:18px">{{ s.l }}</span><span style="font-size:11px;color:var(--mu)">{{ s.src }}</span></div></sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isChat }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:18px;padding:22px {{ hPadX }} 12px;max-width:820px;width:100%;margin:0 auto;box-sizing:border-box">
+            <div style="align-self:flex-end;max-width:80%;padding:10px 14px;border-radius:14px 14px 4px 14px;background:var(--sf2);font-size:14px;line-height:21px">{{ q }}</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mu)"><span style="width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--ac) 14%,transparent);color:var(--ac)"><svg width="13" height="13" viewBox="0 0 24 24" style="stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ gAsk }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg></span>{{ stepLine }}</div>
+              <div style="display:{{ stepsS }};flex-direction:column;gap:6px;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--sf)"><sc-for list="{{ steps }}" as="s"><div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:{{ s.c }}"><span style="width:14px;height:14px;border-radius:50%;border:2px solid {{ s.bc }};border-top-color:{{ s.tc }};box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:9px">{{ s.ck }}</span>{{ s.l }}<span style="flex:1"></span><span style="color:var(--mu);font-size:11.5px">{{ s.t }}</span></div></sc-for></div>
+              <div style="display:{{ ansS }};flex-direction:column;gap:10px;font-family:'Source Serif 4',Georgia,serif;font-size:15.5px;line-height:25px">
+                <sc-for list="{{ ans }}" as="a"><p style="margin:0;text-wrap:pretty">{{ a.t }}<sc-for list="{{ a.c }}" as="c"><span style="font-family:Inter;font-size:10.5px;font-weight:700;vertical-align:2px;margin-left:3px;padding:0 5px;border-radius:5px;background:color-mix(in srgb,var(--ln) 18%,transparent);color:var(--ln)">{{ c }}</span></sc-for><span style="display:{{ a.curS }};width:8px;height:16px;background:var(--ac);vertical-align:-2px;margin-left:2px;border-radius:1px"></span></p></sc-for>
+              </div>
+              <div style="display:{{ actS }};align-items:center;gap:6px;flex-wrap:wrap;padding-top:4px"><sc-for list="{{ acts }}" as="b"><span style="height:30px;padding:0 10px;border-radius:8px;border:1px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.c }};display:flex;align-items:center;gap:6px;font-size:12px;font-weight:{{ b.fw }};white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ b.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ b.l }}</span></sc-for></div>
+              <div style="display:{{ savedS }};align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--ok) 12%,transparent);font-size:12.5px"><span style="color:var(--ok)">✓</span><span style="flex:1">Saved as <b>Attention vs convolution.md</b> in Deep learning / Q&amp;A, with 4 source links and the question as a callout.</span><span style="color:var(--ac);font-weight:600">Open</span></div>
+              <div style="display:{{ fuS }};flex-wrap:wrap;gap:6px"><sc-for list="{{ fu }}" as="f"><span style="height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;font-size:12.5px;white-space:nowrap">{{ f }}</span></sc-for></div>
+            </div>
+          </div>
+        </sc-if>
+        <div style="padding:10px {{ hPadX }} {{ cmpPb }};max-width:820px;width:100%;margin:0 auto;box-sizing:border-box;position:relative">
+          <div style="display:{{ scopeS }};position:absolute;left:{{ hPadX }};bottom:118px;width:320px;padding:6px;border-radius:12px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 16px 40px rgba(0,0,0,.35);flex-direction:column;z-index:3"><sc-for list="{{ scopes }}" as="s"><div style="display:flex;align-items:center;gap:10px;height:36px;padding:0 10px;border-radius:8px;background:{{ s.bg }};font-size:13px"><svg width="15" height="15" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;color:var(--mu)"><sc-for list="{{ s.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg><span style="flex:1">{{ s.l }}</span><span style="font-size:11px;color:var(--mu)">{{ s.n }}</span></div></sc-for></div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;border:1.5px solid {{ cmpBd }};background:var(--sf)">
+            <span style="font-size:14px;color:{{ inC }};min-height:22px">{{ inText }}</span>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ chips }}" as="c"><span style="height:30px;padding:0 10px;border-radius:999px;border:1px solid {{ c.bd }};background:{{ c.bg }};display:flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap;color:{{ c.c }}"><svg width="13" height="13" viewBox="0 0 24 24" style="stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ c.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ c.l }}</span></sc-for>
+              <span style="flex:1"></span>
+              <span style="display:{{ dkS }};font-size:11px;color:var(--mu)">{{ cmpHint }}</span>
+              <span style="height:34px;padding:0 14px;border-radius:9px;background:{{ sendBg }};color:{{ sendC }};border:1px solid {{ sendBd }};display:flex;align-items:center;gap:6px;font-weight:650;font-size:13px"><svg width="14" height="14" viewBox="0 0 24 24" style="stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ sendG }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ sendL }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:{{ srcS }};width:300px;flex-shrink:0;border-inline-start:1px solid var(--bd);background:var(--sf);flex-direction:column;gap:8px;padding:14px">
+        <div style="display:flex;align-items:center"><span style="font-weight:650;font-size:13.5px;flex:1">Sources</span><span style="font-size:11.5px;color:var(--mu)">{{ srcN }}</span></div>
+        <sc-for list="{{ srcs }}" as="s"><div style="display:flex;flex-direction:column;gap:5px;padding:10px;border-radius:10px;background:var(--bg);border:1px solid {{ s.bd }}"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10.5px;font-weight:700;padding:0 5px;border-radius:5px;background:color-mix(in srgb,var(--ln) 18%,transparent);color:var(--ln)">{{ s.n }}</span><span style="font-size:12.5px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.t }}</span></div><span style="font-size:11.5px;line-height:16px;color:var(--mu)">{{ s.q }}</span><span style="font-size:10.5px;color:var(--mu)">{{ s.p }}</span></div></sc-for>
+        <span style="font-size:11.5px;color:var(--mu);line-height:16px;padding-top:4px">Only notes in “Deep learning” were searched. Change the scope below the input.</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;empty&quot;,&quot;scope&quot;,&quot;streaming&quot;,&quot;slow&quot;,&quot;answer&quot;,&quot;saved&quot;],&quot;default&quot;:&quot;empty&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { window.__ak = this; if (!window.LUMEN_GLYPHS) { const t = setInterval(() => { if (window.LUMEN_GLYPHS) { clearInterval(t); this.forceUpdate(); } }, 50); setTimeout(() => clearInterval(t), 5000); } }
+  renderVals() {
+    const GL = window.LUMEN_GLYPHS || {};
+    const g = n => (GL[n] || []).map(p => typeof p === 'string' ? { d: p, f: 'none', s: 'currentColor' } : { d: p.d, f: p.fill ? 'currentColor' : 'none', s: p.stroke || (p.fill ? 'none' : 'currentColor') });
+    const P = Object.assign({}, this.props, window.__akOv || {}), ph = !!P.phone, st = P.state || 'empty';
+    const AC = 'color-mix(in srgb,var(--ac) 16%,transparent)';
+    const empty = st === 'empty' || st === 'scope';
+    const streaming = st === 'streaming', slow = st === 'slow', saved = st === 'saved';
+    const rail = [['home', 0], ['today', 0], ['calendar', 0], ['task', 0], ['flashcards', 0], ['timeline', 0], ['assistant', 1], ['note', 0], ['search', 0]].map(([a, on]) => ({ g: g(a), bg: on ? AC : 'transparent', c: on ? 'var(--ac)' : 'var(--mu)' }));
+    const TH = [['TODAY'], ['Attention vs convolution', 'Deep learning · 4 sources', 1], ['What is on my plate this week?', 'Whole vault · 6 sources'], ['YESTERDAY'], ['Quiz me on IAM policies', 'AWS SA · tutor · 12 Q'], ['Summarise sprint review', 'Lumen 2.0 · 3 sources'], ['PREVIOUS 7 DAYS'], ['Snell’s law derivation', 'Physics 101 · 2 sources'], ['Present perfect vs past', 'English · tutor']];
+    const threads = TH.map(([l, s, on]) => s === undefined ? { hS: 'block', rS: 'none', h: l, l: '', s: '', bg: '', fw: 400 } : { hS: 'none', rS: 'flex', h: '', l, s, bg: on && !empty ? AC : 'transparent', fw: on && !empty ? 600 : 400 });
+    const btn = (gl, l, o = {}) => ({ g: g(gl), l, s: o.dk && ph ? 'none' : 'flex', bd: o.pri ? 'transparent' : (o.nb ? 'transparent' : 'var(--bd)'), bg: o.pri ? 'var(--ac)' : 'transparent', c: o.pri ? 'var(--af)' : o.c || 'var(--tx)', fw: o.pri ? 650 : 500 });
+    const ansFull = [
+      { t: 'Both pick out patterns, but they decide what to look at differently. A convolution looks at a fixed local window (3×3 in your CIFAR lab) with the same weights everywhere, so locality is built in.', c: ['1', '2'] },
+      { t: 'Attention lets every token weigh every other token, with weights computed from the content itself, so the “window” is global and learned. That is why it needs positional encodings and costs O(n²) in sequence length.', c: ['3'] },
+      { t: 'Your note from 18 Nov makes the same link: a CNN is like attention with a fixed, local, content-independent mask. Vision Transformers drop that bias and need more data to make up for it.', c: ['4'] }
+    ];
+    const ans = streaming ? [ansFull[0], { t: 'Attention lets every token weigh every other token, with weights computed from', c: [], cur: 1 }] : ansFull;
+    const out = {
+      rootDir: ph ? 'column' : 'row', phS: ph ? 'flex' : 'none', dkS: ph ? 'none' : 'flex', listS: ph ? 'none' : 'flex', rail, threads, noThreadsS: 'none', gSearch: g('search'), gAsk: g('assistant'),
+      hdrH: ph ? '52px' : '56px', hPadX: ph ? '16px' : '28px', chatTitle: empty ? 'New chat' : 'Attention vs convolution',
+      hBtns: empty ? [btn('history', 'History', { dk: 1, nb: 1, c: 'var(--mu)' }), btn('more', '', { nb: 1 })] : [btn('note', saved ? 'Saved' : 'Save as note', { pri: !saved }), btn('link', 'Share', { dk: 1 }), btn('more', '', { nb: 1 })],
+      isEmpty: empty, isChat: !empty, eFs: ph ? '19px' : '22px', sgCols: ph ? '1fr' : '1fr 1fr',
+      sugg: [['note', 'SUMMARISE', 'Summarise what I wrote this week', 'From 14 notes edited since Mon', 'var(--ln)'], ['flashcards', 'QUIZ ME', 'Quiz me on IAM policies, 10 questions', 'AWS SA · 34 cards due', 'var(--wa)'], ['graph', 'CONNECT', 'How does attention relate to convolution?', 'Deep learning · 2 notes link both', 'var(--le)'], ['task', 'PLAN', 'What should I do first today?', 'Today · 4 tasks, 1 overdue', 'var(--ac)']].slice(0, ph ? 3 : 4).map(([gl, k, l, src, c]) => ({ g: g(gl), k, l, src, c })),
+      q: 'How does attention relate to convolution? Use my notes.', stepsS: streaming || slow ? 'flex' : 'none',
+      stepLine: slow ? 'Still working · 9 s · large scope' : streaming ? 'Writing · 1.2 s to first word' : 'Answered in 3.4 s · Workers AI · 2 neurons · from 4 notes',
+      steps: [['Searched 1,240 notes', '0.3 s', 'done'], ['Read 4 best matches', '0.6 s', 'done'], [slow ? 'Waiting for the model (busy)' : 'Writing the answer', slow ? '8 s' : '', 'run']].map(([l, t, s]) => ({ l, t, c: s === 'done' ? 'var(--mu)' : 'var(--tx)', bc: s === 'done' ? 'var(--ok)' : 'var(--bd)', tc: s === 'done' ? 'var(--ok)' : 'var(--ac)', ck: s === 'done' ? '✓' : '' })),
+      ansS: slow ? 'none' : 'flex', ans: ans.map(a => ({ t: a.t, c: a.c, curS: a.cur ? 'inline-block' : 'none' })),
+      actS: !streaming && !slow ? 'flex' : 'none', acts: [btn('note', 'Save as note'), btn('plus', 'Append to note…'), btn('flashcards', 'Make 5 flashcards'), btn('copy', 'Copy'), btn('refresh', 'Retry'), btn('thumbs-up', ''), btn('thumbs-down', '')].map(b => ({ ...b, bd: 'var(--bd)', bg: 'transparent', fw: 500 })),
+      savedS: saved ? 'flex' : 'none', fuS: !streaming && !slow ? 'flex' : 'none', fu: ['Explain O(n²) with an example', 'Quiz me on this', 'Which of my notes disagree?'],
+      cmpPb: ph ? '28px' : '20px', cmpBd: streaming || slow ? 'var(--bd)' : 'color-mix(in srgb,var(--ac) 60%,var(--bd))', inC: empty ? 'var(--mu)' : 'var(--mu)', inText: streaming || slow ? 'Type your next question; it sends when this one finishes…' : empty ? 'Ask your notes… type @ to pick a note, / for actions' : 'Ask a follow-up…',
+      chips: [['folder', empty ? 'Whole vault ▾' : 'Deep learning ▾', st === 'scope'], ['lesson', 'Tutor mode', 0, 1], ['model', ph ? '' : 'Fast · on device', 0]].filter(c => c[1]).map(([gl, l, on, tog]) => ({ g: g(gl), l: tog ? l + ' · off' : l, bd: on ? 'var(--ac)' : 'var(--bd)', bg: on ? AC : 'transparent', c: 'var(--tx)' })),
+      cmpHint: 'Enter to send · Shift+Enter new line', sendBg: streaming || slow ? 'transparent' : 'var(--ac)', sendC: streaming || slow ? 'var(--tx)' : 'var(--af)', sendBd: streaming || slow ? 'var(--bd)' : 'transparent', sendG: g(streaming || slow ? 'stop' : 'send'), sendL: streaming || slow ? 'Stop' : 'Send',
+      scopeS: st === 'scope' ? 'flex' : 'none', scopes: [['globe', 'Whole vault', '1,240 notes', 1], ['folder', 'A space or folder…', ''], ['note', 'This note + its links', ''], ['tag', 'A tag…', ''], ['timeline', 'A plan (course, project)', ''], ['pdf', 'A PDF or attachment', '']].map(([gl, l, n, on]) => ({ g: g(gl), l, n, bg: on ? AC : 'transparent' })),
+      srcS: !empty && !ph && !slow ? 'flex' : 'none', srcN: '4 notes', srcs: [['1', 'CNN lab notes', '“3×3 kernels, same weights at every position: translation equivariance for free.”', 'Deep learning / Module 3 · ¶ 2'], ['2', 'Convolutions & pooling', '“Receptive field grows with depth…”', 'Deep learning / Module 3 · ¶ 5'], ['3', 'Attention is all you need', '“softmax(QKᵀ/√d)V, every position attends to every other.”', 'Papers · ¶ 7'], ['4', 'Today I learned · 18 Nov', '“CNN ≈ attention with a fixed local mask.”', 'Journal · 2026-11-18']].map(([n, t, q, p], i) => ({ n, t, q, p, bd: i === 0 ? 'color-mix(in srgb,var(--ln) 50%,var(--bd))' : 'var(--bd)' }))
+    };
+    return out;
+  }
+}
+</script>
+</body>
+</html>

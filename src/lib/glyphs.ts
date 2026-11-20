@@ -1,5 +1,4 @@
-// Lumen glyph set (design round 7 handoff, "Lumen 13 Icon System" + round 6 brief additions): 24 px grid, 1.75 stroke, round caps/joins.
-// Source of truth: design/handoffs/2026-11-20-round-7/lumen-glyphs.js, ported verbatim by a script (body unchanged) + app-only glyphs below.
+// Lumen glyph set, ported verbatim by script from design/handoffs/2026-11-21-round-8/lumen-glyphs.js (+ app-only glyphs below).
 /* eslint-disable */
 // @ts-nocheck -- verbatim port of the design's plain-JS glyph file; the exported types below are what callers use.
 export type GlyphPart = string | { d: string; fill?: boolean; stroke?: string };
@@ -207,6 +206,17 @@ Object.assign(G, {
 for (let n = 1; n <= 9; n++) G['number-' + n] = [C(12,12,9), NUM[n]];
 const A = { 'eraser':'eraser-stroke', 'shape-ellipse':'ellipse', 'user':'owner', 'internet':'globe', 'drag-handle':'grip', 'code-view':'code', 'stamp-pin':'pin', 'stamp-star':'star', 'stamp-heart':'heart', 'stamp-question':'c-question', 'stamp-idea':'c-tip', 'stamp-warning':'c-warning', 'calendar-chip':'due', 'notebook':'k-notebook', 'convert':'switch', 'image-export':'image', 'shape-cloud':'cloud', 'shape-database':'database', 'arrowhead-triangle-filled':'arrowhead-triangle', 'mermaid-file':'mermaid', 'canvas-ws':'canvas', 'eye-on':'eye', 'pen':'pen-ballpoint', 'stamp-arrow':'select', 'stamp-see-note':'note-card', 'board-settings':'gear' };
 for (const k in A) if (!G[k]) G[k] = G[A[k]];
+
+
+Object.assign(G, {
+  'sort': ['M7 4v16 M4 17l3 3 3-3', 'M17 20V4 M14 7l3-3 3 3'], 'refresh': ['M20 11a8 8 0 0 0-14.5-4.5L4 8', 'M4 3v5h5', 'M4 13a8 8 0 0 0 14.5 4.5L20 16', 'M20 21v-5h-5'],
+  'stop': [R(6,6,12,12,2)], 'send': ['M4 12l16-8-6 16-2-6z', 'M12 14l8-10'], 'headphones': ['M4 15v-3a8 8 0 0 1 16 0v3', R(3,14,5,7,2), R(16,14,5,7,2)], 'mic': [R(9,3,6,11,3), 'M5 11a7 7 0 0 0 14 0', 'M12 18v3'],
+  'sun': [C(12,12,4), 'M12 2v2 M12 20v2 M4.9 4.9l1.4 1.4 M17.7 17.7l1.4 1.4 M2 12h2 M20 12h2 M4.9 19.1l1.4-1.4 M17.7 6.3l1.4-1.4'], 'bell': ['M6 16V11a6 6 0 0 1 12 0v5l2 2H4z', 'M10 21h4'],
+  'target': [C(12,12,9), C(12,12,5), F(C(12,12,1.6))], 'calendar': [R(3,5,18,16,2), 'M3 10h18 M8 3v4 M16 3v4'], 'keyboard': [R(2,6,20,12,2), 'M6 10h.1 M10 10h.1 M14 10h.1 M18 10h.1 M7 14h10'],
+  'shuffle': ['M3 6h3c5 0 7 12 12 12h3', 'M3 18h3c2 0 3.5-2 4.7-4.5 M13.3 10.5C14.5 8 16 6 18 6h3', 'M18 3l3 3-3 3 M18 15l3 3-3 3'], 'today': [R(3,5,18,16,2), 'M3 10h18 M8 3v4 M16 3v4', F(R(10,13,4,4,1))],
+  'agenda': [R(3,4,18,16,2), 'M7 9h2 M11 9h6 M7 13h2 M11 13h6 M7 17h2 M11 17h4'], 'lanes': ['M3 6h18 M3 12h18 M3 18h18', R(5,4,7,4,1.5), R(10,10,9,4,1.5), R(7,16,6,4,1.5)],
+  's-new': [C(12,12,8), 'M12 8v8 M8 12h8'], 's-review': [C(12,12,8), 'M12 8v4l3 2'], 'flag': ['M5 21V4', 'M5 4h11l-2 4 2 4H5'], 'grade': ['M4 20V10 M10 20V4 M16 20v-7 M22 20H2']
+});
 
 // App-only glyphs (not in the design file; keep until the design adds them)
 G["footnote"] = ["M3 9h11 M3 14h11 M3 19h7","M17 6l2-1.5V10 M17 10h4"];

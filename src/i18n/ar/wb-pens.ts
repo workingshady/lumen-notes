@@ -41,4 +41,7 @@ export const ar: Catalog = {
   "Okabe orange": "برتقالي أوكابي", "Sky blue": "أزرق سماوي", "Bluish green": "أخضر مزرق", "Yellow": "أصفر", "Blue": "أزرق", "Vermillion": "قرمزي", "Reddish purple": "أرجواني محمر", "Black": "أسود",
   "Ink": "حبر", "Grey": "رمادي", "Red": "أحمر", "Amber": "كهرماني", "Gold": "ذهبي", "Green": "أخضر", "Teal": "أزرق مخضر", "Violet": "بنفسجي", "Pink": "وردي",
   "Butter": "زبدي", "Mint": "نعناعي", "Sky": "سماوي", "Peach": "خوخي", "Lilac": "ليلكي", "Rose": "وردي فاتح", "Orange": "برتقالي",
+  // stage 5b: palm rejection
+  "Finger draws": "الإصبع يرسم", "Finger draws (palm rejection off)": "الإصبع يرسم (رفض راحة اليد متوقف)",
+  "Stylus detected: pen mode on. Finger pans, your palm is ignored.": "تم اكتشاف القلم: وضع القلم مفعّل. الإصبع يحرّك اللوحة وتُتجاهل راحة اليد.",
 };

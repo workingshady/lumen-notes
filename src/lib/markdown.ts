@@ -253,6 +253,23 @@ function build() {
     },
   });
   md.use(footnote).use(taskLists, { enabled: true, label: true }).use(mark).use(sub).use(sup); // ==mark==, H~2~O, x^2^
+  // `- [/] task` (in progress): a half-filled box like Edit and Live mode. It is a span, not a checkbox, so the index mapping of
+  // real checkboxes (Preview toggles by index, tasks() without { doing: true }) stays intact.
+  md.core.ruler.after("inline", "task-doing", (state) => {
+    const tk = state.tokens;
+    for (let i = 2; i < tk.length; i++) {
+      const inl = tk[i];
+      if (inl.type !== "inline" || tk[i - 1].type !== "paragraph_open" || tk[i - 2].type !== "list_item_open" || !inl.children?.length) continue;
+      const first = inl.children[0];
+      if (first.type !== "text" || !/^[/]s/.test(first.content)) continue;
+      first.content = first.content.replace(/^[/]s+/, "");
+      const mark = new state.Token("html_inline", "", 0);
+      mark.content = '<span class="task-doing" role="img" aria-label="In progress"></span>';
+      inl.children.unshift(mark);
+      tk[i - 2].attrJoin("class", "task-list-item task-list-item-doing");
+      for (let j = i - 3; j >= 0; j--) if (tk[j].type === "bullet_list_open" && tk[j].level === tk[i - 2].level - 1) { tk[j].attrJoin("class", "contains-task-list"); break; }
+    }
+  });
   // Highlight colours (lib/highlights.ts): ==text=={.hl-green} → <mark class="hl-green">; plain ==text== stays yellow.
   md.core.ruler.after("inline", "hl-color", (state) => {
     for (const blk of state.tokens) {

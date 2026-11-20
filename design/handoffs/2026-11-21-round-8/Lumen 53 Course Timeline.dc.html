@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 53 Course timeline &amp; topic panel</span></div><div style="font-size:14px;color:#9A9890;max-width:1100px">Fixes for long courses (178 topics, 94 weeks): readable time axis, modules as bars instead of one row per topic, collapsible levels, and a cleaner topic panel.</div></div>
+  </div>
+  <section style="display:flex;flex-direction:column;gap:14px;max-width:1100px">
+    <div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">WHAT WAS WRONG → FIX</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 28px;font-size:14px;line-height:21px;color:#CFCBC3">
+      <sc-for list="{{ fixes }}" as="f"><div style="display:flex;gap:10px"><b style="color:#F25C9A">·</b><span><b style="color:#ECE9E2">{{ f.a }}</b> {{ f.b }}</span></div></sc-for>
+    </div>
+  </section>
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="2">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ sec.k }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ sec.t }}</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">{{ sec.d }}</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+        <sc-for list="{{ sec.frames }}" as="f" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)">
+              <dc-import name="CourseTimeline" zoom="{{ f.o.zoom }}" expanded="{{ f.o.expanded }}" collapse-from="{{ f.o.cf }}" behind="{{ f.o.behind }}" panel="{{ f.o.panel }}" phone="{{ f.ph }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+            </div>
+            <div style="max-width:{{ f.w }};font-size:13px;line-height:20px;color:#CFCBC3;display:{{ f.nS }};gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B' };
+    const F = (id, l, t, n, o = {}) => ({ id, l, t, n, nS: n ? 'flex' : 'none', o: { zoom: 'month', expanded: '', cf: 2, behind: false, panel: '', ...o }, ph: !!o.ph, w: o.ph ? '412px' : '1440px', h: o.ph ? '915px' : (o.h || '900px'), r: o.ph ? '28px' : '12px' });
+    const fixes = [
+      ['Week labels overlapped into one unreadable line.', 'Two-tier axis: year on top, months below. At Week zoom, day numbers under month names. Labels never go narrower than their text.'],
+      ['One row per topic made a module 14 rows tall.', 'One bar per module, split into topic segments. Expand a module to see its topics as compact rows.'],
+      ['178 topics meant endless scrolling.', 'Levels A1–C2 are collapsible bands with one summary bar each; later levels start collapsed.'],
+      ['Topic chips were all the same.', 'Status shows in the bar: done fill, up-next accent, locked tint, and a red hatched overrun when behind.'],
+      ['Title and Continue button were truncated.', 'Title and description split onto two lines; Continue shows the module above the topic name.'],
+      ['No sense of “now”.', 'Today line, current month in accent, and a Today button.'],
+      ['Topic panel cut off the status control and centred wrapped chips.', 'Status sits under the title; chips are left-aligned rows with ellipsis, and the repeated “A1 Grammar:” prefix is dropped.'],
+      ['The lock reason was buried at the bottom; Delete sat next to Rename.', 'The lock is a banner at the top with an action. Delete is on its own in the footer, away from the main action.']
+    ].map(([a, b]) => ({ a, b }));
+    const sections = [
+      { k:'TIMELINE · DESKTOP', t:'Month zoom fits the whole course', d:'94 weeks fit across the screen at Month zoom. A1 and A2 are open; B1–C2 are summary bars. Modules within a level run in parallel, and the checkpoint is a diamond.', frames:[
+        F('53A','Month · Lamplight', L, 'Up next: A1 Vocabulary has the accent border. Pace and level filters sit next to the zoom control.'),
+        F('53B','Month · Paper', P, '')
+      ]},
+      { k:'EXPANDED MODULE', t:'Topics only when you ask', d:'Expanding a module shows its topics as rows with a dot-sized bar. At Month zoom it lists 6 topics and offers Week for the rest.', frames:[
+        F('53C','A1 Grammar expanded · Month', L, '', { expanded:'A1Grammar' }),
+        F('53D','A1 Grammar expanded · Week', L, 'Week zoom: each topic gets a bar with its name beside it. The axis shows month names over week start dates and scrolls sideways.', { expanded:'A1Grammar', zoom:'week', cf: 1 })
+      ]},
+      { k:'STATES', t:'Behind schedule and Quarter zoom', d:'', frames:[
+        F('53E','Behind schedule', L, 'Done topics fill the bar. A red hatched overrun shows the projected slip, with Replan next to it.', { behind: true, expanded:'A1Grammar' }),
+        F('53F','Quarter zoom · all levels collapsed · Paper', P, '', { zoom:'quarter', cf: 0 })
+      ]},
+      { k:'TOPIC PANEL', t:'Topic panel, fixed', d:'Opens from a topic row or bar. Header shows level, module and position; the lock reason comes first. Fields use one column of left-aligned rows, and Unlocks shows 4 then “3 more”.', frames:[
+        F('53G','Locked topic', L, '“Study anyway” lets you start before the prerequisite is done.', { expanded:'A1Grammar', panel:'locked' }),
+        F('53H','Ready to start · Paper', P, '', { expanded:'A1Grammar', panel:'todo' })
+      ]},
+      { k:'PHONE', t:'Phone', d:'A vertical timeline: level headers, one row per module with its share of the level and its dates. The topic panel is a bottom sheet.', frames:[
+        F('53I','Timeline', L, '', { ph: 1 }),
+        F('53J','Topic sheet', L, '', { ph: 1, panel:'locked' }),
+        F('53K','Timeline · Paper', P, '', { ph: 1 })
+      ]}
+    ];
+    return { sections, fixes };
+  }
+}
+</script>
+</body>
+</html>

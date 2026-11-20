@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ {{ pageTitle }}</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 7</span></div><div style="font-size:14px;color:#9A9890;max-width:1100px">{{ pageDesc }}</div></div>
+  </div>
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="3">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ sec.k }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ sec.t }}</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">{{ sec.d }}</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+        <sc-for list="{{ sec.frames }}" as="f" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)">
+              <sc-if value="{{ f.isWB }}" hint-placeholder-val="{{ true }}"><dc-import name="WBStudio" overlay="{{ f.o.overlay }}" phone="{{ f.ph }}" light="{{ f.light }}" kind="{{ f.o.kind }}" bg-color="{{ f.o.bgColor }}" pattern="{{ f.o.pattern }}" review="{{ f.o.review }}" rv-tab="{{ f.o.rvTab }}" rtl="{{ f.o.rtl }}" sel="{{ f.o.sel }}" tool="{{ f.o.tool }}" palette="{{ f.o.palette }}" pal-open="{{ f.o.palOpen }}" pal-sel="{{ f.o.palSel }}" contrast="{{ f.o.contrast }}" notes="{{ f.o.notes }}" minimap="{{ f.o.minimap }}" searchable="{{ f.o.searchable }}" pen-mode="{{ f.o.penMode }}" last-shape="{{ f.o.lastShape }}" pen-glyph="{{ f.o.penGlyph }}" pen-color="{{ f.o.penColor }}" pages="{{ f.o.pages }}" zen="{{ f.o.zen }}" card-sel="{{ f.o.cardSel }}" title="{{ f.o.title }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></sc-if><sc-if value="{{ f.isArch }}" hint-placeholder-val="{{ false }}"><dc-import name="ArchStudio" state="{{ f.o.as }}" split="{{ f.o.split }}" code-tab="{{ f.o.codeTab }}" lib="{{ f.o.lib }}" vendor="{{ f.o.vendor }}" search="{{ f.o.search }}" phone="{{ f.ph }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></sc-if><sc-if value="{{ f.isEx }}" hint-placeholder-val="{{ false }}"><dc-import name="ExportDlg" ws="{{ f.o.ws }}" state="{{ f.o.state }}" fmt="{{ f.o.fmt }}" phone="{{ f.ph }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></sc-if><sc-if value="{{ f.isPart }}" hint-placeholder-val="{{ false }}"><dc-import name="R6Parts" part="{{ f.o.part }}" light="{{ f.light }}" phone="{{ f.ph }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></sc-if>
+            </div>
+            <div style="max-width:{{ f.w }};font-size:13px;line-height:20px;color:#CFCBC3;display:{{ f.nS }};gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', inn:'#7AA2F7', le:'#B48EF0' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', inn:'#2F5BD3', le:'#7A4BD1' };
+    const F = (id, l, t, n, o = {}) => ({ id, l, t, n, nS: n ? 'flex' : 'none', o, ph: !!o.ph, light: t === P, isWB: !o.part && !o.ws && !o.as, isPart: !!o.part, isEx: !!o.ws, isArch: !!o.as, w: o.w || (o.ph ? '412px' : '1440px'), h: o.h || (o.ph ? '915px' : '900px'), r: o.ph ? '28px' : '12px' });
+    const sections = [
+ { k:'§11.4 · LAYOUT', t:'Layout', d:'elkjs layered with nested groups and orthogonal routing, in a worker. Ghost outlines preview the new positions.', frames:[ F('48A','Layout preview', L, '', { as:'layout' }), F('48B','Layout · canvas only · Paper', P, '', { as:'layout', split:'canvas' }) ]},
+ { k:'§11.5 · AI', t:'Create, edit by instruction, review', d:'One review pattern. AI output is always diagram code, validated before it touches the canvas.', frames:[
+  F('48C','Describe → diagram', L, 'Also code, OpenAPI, docker-compose, k8s, Terraform, SQL, an RFC note, or a whiteboard sketch.', { as:'describe' }),
+  F('48D','Edit by instruction · diff', L, 'Added green, removed red, changed amber, on the canvas and in the code. Accept or Reject.', { as:'diff' }),
+  F('48E','Review', L, 'Explanation, single points of failure, missing auth / encryption / backups, STRIDE. Turn into a note or tasks; Docs and Flashcards tabs.', { as:'review' }),
+  F('48F','Diff · Paper', P, '', { as:'diff' })
+ ]},
+ { k:'§11.6 · MODEL', t:'Reused objects, C4 levels, version diff', d:'', frames:[
+  F('48G','Insert existing object', L, 'Linked objects show “Used in 3 diagrams”; edits update everywhere.', { as:'reused' }),
+  F('48H','C4 component level', L, 'Double-click a container to go in; breadcrumb back.', { as:'c4' }),
+  F('48I','Version diff', L, 'Compare two versions from History.', { as:'versions' }),
+  F('48J','Phone · describe', L, '', { as:'describe', ph:1 })
+ ]}
+];
+    return { sections, pageTitle: "48 Layout, AI flows & model features", pageDesc: "Auto layout with preview → Apply → Undo; AI create, edit-by-instruction as a diff, and review; reused objects, C4 levels and version diff." };
+  }
+}
+</script>
+</body>
+</html>

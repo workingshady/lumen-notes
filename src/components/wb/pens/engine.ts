@@ -4,6 +4,7 @@
 import { restoreElements } from "@excalidraw/excalidraw";
 import type { WbAPI } from "../hooks";
 import { absPoints, isScratch, recognise, snappedElement, type Recognised } from "./shapes";
+import { circleBox, InkIndex, polyBox } from "./spatial";
 
 export type El = Record<string, unknown> & { id: string; type: string; x: number; y: number; width: number; height: number; isDeleted?: boolean; angle?: number; points?: [number, number][]; pressures?: number[]; groupIds?: string[]; containerId?: string | null; boundElements?: { id: string; type: string }[] | null; locked?: boolean; customData?: Record<string, unknown> };
 type Pt = [number, number];
@@ -44,10 +45,18 @@ function corners(e: El): Pt[] {
 }
 const linear = (e: El) => e.type === "freedraw" || e.type === "line" || e.type === "arrow";
 
+/** One spatial index for the open board (erase, lasso, scratch-out): synced from the scene before each query. */
+export const inkIndex = new InkIndex<El>();
+/** Candidates near a circle / polygon / box: bounding-box pre-filter through the index. */
+export const nearCircle = (els: readonly El[], p: Pt, r: number) => { inkIndex.sync(els); return inkIndex.search(circleBox(p, r)); };
+
 /** Elements a closed lasso path encloses: strokes by their points (≥ 70 % inside), boxes by centre + 3 of 4 corners. */
 export function lassoed(els: readonly El[], poly: Pt[]): El[] {
   if (poly.length < 3) return [];
-  const hit = els.filter((e) => {
+  inkIndex.sync(els);
+  const pb = polyBox(poly);
+  // an enclosed element's box overlaps the lasso's box: only those candidates get the exact test
+  const hit = inkIndex.search(pb).filter((e) => {
     if (e.isDeleted || e.locked || (e.type === "text" && e.containerId)) return false;
     if (linear(e)) { const pts = absPoints(e); return pts.length > 0 && pts.filter((p) => pointInPoly(p, poly)).length / pts.length >= 0.7; }
     const cs = corners(e);
@@ -87,16 +96,20 @@ export function commit(api: WbAPI, next: El[], capture: "IMMEDIATELY" | "EVENTUA
 export function deleteIds(api: WbAPI, ids: Set<string>, capture: "IMMEDIATELY" | "EVENTUALLY" | "NEVER" = "IMMEDIATELY") {
   const all = api.getSceneElementsIncludingDeleted() as El[];
   withBound(all, ids);
-  commit(api, all.map((e) => (ids.has(e.id) ? bump({ ...e, isDeleted: true }) : e)), capture, { selectedElementIds: {} });
+  // pure deletions keep valid elements: skip restoreElements (O(n) normalisation, the main cost on big boards)
+  api.updateScene({ elements: all.map((e) => (ids.has(e.id) ? bump({ ...e, isDeleted: true }) : e)) as never, captureUpdate: capture, appState: { selectedElementIds: {} } });
+  inkIndex.remove(ids);
 }
 
 /** Partial eraser: cut the parts of freedraw strokes inside the circle; strokes split into pieces. Returns true if changed. */
 export function partialErase(api: WbAPI, p: Pt, r: number, capture: "IMMEDIATELY" | "EVENTUALLY") {
   const all = api.getSceneElementsIncludingDeleted() as El[];
+  const near = new Set(nearCircle(api.getSceneElements() as El[], p, r).filter((e) => touches(e, p, r)).map((e) => e.id));
+  if (!near.size) return false;
   let changed = false;
   const out: El[] = [];
   for (const e of all) {
-    if (e.isDeleted || e.locked || !touches(e, p, r)) { out.push(e); continue; }
+    if (!near.has(e.id)) { out.push(e); continue; }
     changed = true;
     if (e.type !== "freedraw") { out.push(bump({ ...e, isDeleted: true })); continue; }
     const pts = absPoints(e), pr = e.pressures ?? [];
@@ -125,6 +138,7 @@ export function scratchOut(api: WbAPI, stroke: El): number {
   if (!box) return 0;
   const all = api.getSceneElements() as El[];
   const area = box.w * box.h || 1;
+  // already a bounding-box test per element, once per stroke: a plain scan beats an index sync here (measured)
   const hit = all.filter((e) => {
     if (e.id === stroke.id || e.isDeleted || e.locked || e.type === "frame" || (e.type === "text" && e.containerId)) return false;
     const x0 = Math.max(e.x, box.x), x1 = Math.min(e.x + e.width, box.x + box.w), y0 = Math.max(e.y, box.y), y1 = Math.min(e.y + e.height, box.y + box.h);

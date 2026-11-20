@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-family:Inter,system-ui,sans-serif">
+  <sc-for list="{{ dow }}" as="d"><span style="text-align:center;font-size:10.5px;color:var(--mu);padding-bottom:4px">{{ d }}</span></sc-for>
+  <sc-for list="{{ days }}" as="d"><div style="height:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:7px;background:{{ d.bg }};color:{{ d.c }};font-size:11.5px;font-weight:{{ d.fw }}">{{ d.n }}<span style="width:4px;height:4px;border-radius:50%;background:{{ d.dot }}"></span></div></sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:280,&quot;height&quot;:200}}">
+class Component extends DCLogic {
+  renderVals() {
+    const dots = { 3: '#B48EF0', 9: '#5CC8C2', 12: '#B48EF0', 16: '#E8893A', 18: '#F2A93B', 21: '#B48EF0', 23: '#E8893A', 26: '#F2A93B', 29: '#5CC8C2', 30: '#B48EF0' };
+    const days = []; for (let i = 0; i < 35; i++) { const n = i - 6 + 1; const inM = n >= 1 && n <= 30; days.push({ n: inM ? n : '', bg: n === 20 ? 'var(--ac)' : 'transparent', c: n === 20 ? 'var(--af)' : n < 20 ? 'var(--mu)' : 'var(--tx)', fw: n === 20 ? 700 : 400, dot: inM && dots[n] ? dots[n] : 'transparent' }); }
+    return { dow: ['M', 'T', 'W', 'T', 'F', 'S', 'S'], days };
+  }
+}
+</script>
+</body>
+</html>

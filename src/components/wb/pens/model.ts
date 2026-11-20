@@ -67,12 +67,14 @@ export interface InkPrefs {
   byType: Record<PenType, PenSettings>;
   autoShape: AutoShape;
   eraser: EraserMode; eraserSize: EraserSize; scratchOut: boolean; stylusErases: boolean;
+  /** Palm rejection off: a finger draws even after a stylus was seen (no automatic pen mode). */
+  fingerDraws: boolean;
   ruler: boolean; rulerAngle: number; rulerSnap: boolean; rulerCm: boolean;
   /** Index into the saved pens, when the current pen came from one. */
   savedId: string | null;
 }
 const KEY = "lumen.wbPens";
-const DEFAULT_PREFS: InkPrefs = { current: "fountain", byType: PEN_DEFAULTS, autoShape: "hold", eraser: "stroke", eraserSize: "M", scratchOut: true, stylusErases: true, ruler: false, rulerAngle: 0, rulerSnap: true, rulerCm: false, savedId: null };
+const DEFAULT_PREFS: InkPrefs = { current: "fountain", byType: PEN_DEFAULTS, autoShape: "hold", eraser: "stroke", eraserSize: "M", scratchOut: true, stylusErases: true, fingerDraws: false, ruler: false, rulerAngle: 0, rulerSnap: true, rulerCm: false, savedId: null };
 let prefs: InkPrefs = (() => {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? "null") as Partial<InkPrefs> | null;
@@ -130,15 +132,30 @@ export const penSub = (p: PenSettings) => `${penMeta(p.type).label} · ${p.width
 
 // ------------------------------------------------------------------ stroke post-processing
 type Pt = [number, number];
-const smooth = (pts: Pt[], win: number): Pt[] => {
-  if (win < 1 || pts.length < 5) return pts;
-  return pts.map((p, i) => {
-    if (i === 0 || i === pts.length - 1) return p;
-    let sx = 0, sy = 0, n = 0;
-    for (let j = Math.max(0, i - win); j <= Math.min(pts.length - 1, i + win); j++) { sx += pts[j][0]; sy += pts[j][1]; n++; }
-    return [sx / n, sy / n] as Pt;
-  });
-};
+/** Stabiliser gain per smoothing level (1 = raw samples). */
+const STAB_K: Record<Smoothing, number> = { off: 1, low: 0.35, high: 0.18 };
+/**
+ * One-pole stabiliser, applied in sample order (causal): point i depends only on samples 0..i, so the live overlay (a prefix
+ * of the stroke) and the saved stroke agree point for point and nothing shifts on release. The gain is speed-gated: when the
+ * filtered point lags far behind the pen (fast moves, corners) it catches up, so corners are kept and only slow jitter is
+ * smoothed. The raw last sample closes the stroke so the ink ends under the pen. Replaces the old moving average.
+ */
+export function stabilise(pts: Pt[], s: Smoothing, width = 2): Pt[] {
+  const k = STAB_K[s];
+  if (k >= 1 || pts.length < 3) return pts;
+  const ref = 6 + width * 2;
+  const out: Pt[] = [pts[0]];
+  let sx = pts[0][0], sy = pts[0][1];
+  for (let i = 1; i < pts.length; i++) {
+    const [x, y] = pts[i], d = Math.hypot(x - sx, y - sy), g = Math.min(1, d / ref);
+    const kk = k + (1 - k) * g * g;
+    sx += (x - sx) * kk; sy += (y - sy) * kk;
+    out.push([sx, sy]);
+  }
+  const last = pts[pts.length - 1];
+  if (Math.hypot(last[0] - sx, last[1] - sy) > 0.5) out.push([last[0], last[1]]);
+  return out;
+}
 const curveOf = (c: Curve) => (p: number) => (c === "soft" ? Math.pow(p, 0.6) : c === "firm" ? Math.pow(p, 1.7) : p);
 /** Seeded noise so a pencil stroke keeps its grain on every render. */
 const grain = (i: number) => { const x = Math.sin(i * 12.9898) * 43758.5453; return x - Math.floor(x); };
@@ -178,7 +195,13 @@ export function penPressures(pts: Pt[], pr: number[], stylus: boolean, p: PenSet
       // fixed 45° nib: width follows the stroke direction
       return pts.map((_, i) => { const r = pts[Math.min(n - 1, i + 2)], l = pts[Math.max(0, i - 2)]; const a = Math.atan2(r[1] - l[1], r[0] - l[0]); return clamp(0.04 + 0.96 * Math.abs(Math.sin(a - Math.PI / 4))); });
     case "pencil": return pts.map((_, i) => clamp((p.pressure && stylus ? real(i) * 0.5 : 0.2) + (grain(i) - 0.5) * 0.36));
-    case "marker": case "highlighter": return pts.map(() => 1);
+    case "marker": case "highlighter":
+      // blunt ends: Excalidraw's freedraw caps are always round (no cap/taper options in 0.18), so the end points drop to a
+      // small pressure right at the tip: the full-width ribbon stops almost square instead of in a half disc
+      // Later (needs patches/@excalidraw+excalidraw+0.18.1.patch): a true flat / chisel nib = getFreeDrawSvgPath passing
+      // start/end {cap:false} from customData.lumenPen; real pencil grain = filling the pencil Path2D with a seeded noise
+      // CanvasPattern (static canvas, SVG and PNG export paths, dev + prod bundles). Freedraw in 0.18 cannot do either.
+      return pts.map((_, i) => (n < 4 ? 1 : i === 0 || i === n - 1 ? 0.06 : i === 1 || i === n - 2 ? 0.75 : 1));
     default: return pts.map((_, i) => (p.pressure && stylus ? clamp(real(i) * 0.5 + 0.05) : 0.25));
   }
 }
@@ -212,7 +235,10 @@ export function finishStroke<E extends Record<string, unknown>>(el: E, p: PenSet
     pts = Array.from({ length: steps + 1 }, (_, i) => [a[0] + ((b[0] - a[0]) * i) / steps, a[1] + ((b[1] - a[1]) * i) / steps] as Pt);
     pr = pts.map(() => 0.5);
   } else {
-    pts = smooth(pts, p.smoothing === "high" ? 4 : p.smoothing === "low" ? 1 : 0);
+    const st = stabilise(pts, p.smoothing, p.width);
+    // pressures follow their samples (the closing raw point repeats the last one)
+    if (st.length !== pts.length && pr.length === pts.length) pr = [...pr, pr[pr.length - 1]];
+    pts = st;
   }
   const pressures = penPressures(pts, pr, hadPressure && !o.straight, p, !!o.straight);
   const simulate = false;

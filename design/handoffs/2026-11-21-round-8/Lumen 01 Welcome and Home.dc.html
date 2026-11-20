@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<style>body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:120px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227">
+  <div style="display:flex;align-items:center;gap:16px">
+    <div style="width:40px;height:40px;border-radius:11px;background:#161A21;border:1px solid #2A303B;position:relative"><div style="position:absolute;left:14px;top:9px;width:11px;height:11px;border-radius:50%;background:#F2A93B;box-shadow:0 0 14px rgba(242,169,59,.7)"></div><div style="position:absolute;left:9px;right:9px;bottom:11px;height:2px;background:#E8E6E1;border-radius:1px"></div></div>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 01 Welcome &amp; Home</span></div><div style="font-size:14px;color:#9A9890">Screens 2 (unlock + first-run) and 3 (home). Pink markers = annotated interactions.</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 02</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Unlock &amp; welcome</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">One primary path (unlock), one quiet escape hatch (offline). Nothing else on screen.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">2A</span><span>Unlock · Desktop 1440 · Lamplight</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg)">
+          <dc-import name="ScreenUnlock" theme="dark" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+          <div style="position:absolute;left:496px;top:436px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">1</div>
+          <div style="position:absolute;left:496px;top:672px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">2</div>
+          <div style="position:absolute;right:110px;bottom:28px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">3</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3">
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>Field is focused on load; <b>Enter</b> submits. Wrong passcode shakes nothing — inline “Try again · 4 left” in danger color.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">2</b><span>Offline goes straight to Home. Sync can be enabled later in Settings › Sync; status pill shows “Local only”.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">3</b><span>Theme toggle is the only other control; it follows <code>prefers-color-scheme</code> until touched.</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">2B</span><span>Unlock · Desktop 1440 · Paper</span></div>
+        <div style="--bg:#FAF8F3;--sf:#FFFFFF;--sf2:#F2EFE7;--bd:#E4DFD3;--tx:#1F1D1A;--mu:#6A655C;--ac:#B45F0E;--af:#FFFFFF;--ln:#0F7C78;--ok:#1F8A4C;--wa:#A86A00;--da:#C42B2B;--in:#2F5BD3;--le:#7A4BD1;--sh:0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .06);width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg)">
+          <dc-import name="ScreenUnlock" theme="light" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">2C</span><span>Unlock · Phone 412</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:radial-gradient(420px 320px at 50% -60px, rgba(242,169,59,.09), transparent 70%), var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500;flex-shrink:0"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:0 24px">
+            <div style="width:64px;height:64px;border-radius:18px;background:var(--sf);border:1px solid var(--bd);position:relative"><div style="position:absolute;left:24px;top:15px;width:16px;height:16px;border-radius:50%;background:var(--ac);box-shadow:0 0 22px rgba(242,169,59,.7)"></div><div style="position:absolute;left:15px;right:15px;bottom:17px;height:2px;background:var(--tx);border-radius:1px"></div></div>
+            <div style="font-size:34px;font-weight:600;letter-spacing:-.045em;line-height:1">lumen</div>
+            <div style="color:var(--mu)">Welcome back, Amir</div>
+          </div>
+          <div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;font-weight:500;color:var(--mu)">Passcode</span>
+              <div style="height:52px;box-sizing:border-box;border-radius:10px;background:var(--sf);border:1px solid var(--ac);box-shadow:0 0 0 3px rgba(242,169,59,.2);display:flex;align-items:center;padding:0 16px;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:var(--tx)"></span><span style="width:8px;height:8px;border-radius:50%;background:var(--tx)"></span><span style="width:8px;height:8px;border-radius:50%;background:var(--tx)"></span><span style="width:8px;height:8px;border-radius:50%;background:var(--tx)"></span><span style="width:1.5px;height:20px;background:var(--ac)"></span><span style="flex:1"></span><i class="icon-fingerprint" style="font-size:20px;color:var(--mu)"></i></div>
+            </div>
+            <div style="height:52px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px">Unlock sync</div>
+            <div style="height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--tx);font-weight:500"><i class="icon-cloud-off" style="font-size:16px;color:var(--mu)"></i>Continue offline <span style="color:var(--mu);font-weight:400">· local only</span></div>
+          </div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+          <div style="position:absolute;right:14px;top:745px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">4</div>
+        </div>
+        <div style="max-width:412px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">4</b><span>Actions live in the thumb zone. Fingerprint unlock (Capacitor biometric) appears after the first successful passcode.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 02 · FIRST RUN</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Three small steps</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Theme → accent → blog name. Every step is skippable and changeable later in Settings. Each step previews live.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">2D</span><span>Step 1 · Theme</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500;flex-shrink:0"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="padding:16px 20px 0;display:flex;align-items:center;gap:6px"><span style="flex:1;height:4px;border-radius:2px;background:var(--ac)"></span><span style="flex:1;height:4px;border-radius:2px;background:var(--bd)"></span><span style="flex:1;height:4px;border-radius:2px;background:var(--bd)"></span><span style="margin-left:10px;color:var(--mu);font-size:13px">Skip</span></div>
+          <div style="padding:28px 20px 20px;display:flex;flex-direction:column;gap:6px"><div style="font-size:13px;color:var(--mu)">1 of 3</div><div style="font-size:26px;font-weight:650;letter-spacing:-.02em">Choose a theme</div><div style="color:var(--mu);line-height:22px">Pick what's easy on your eyes at 1 a.m.</div></div>
+          <div style="padding:0 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <sc-for list="{{ themes }}" as="t" hint-placeholder-count="6">
+              <div style="border-radius:14px;padding:8px;border:{{ t.border }};display:flex;flex-direction:column;gap:10px;background:var(--sf)">
+                <div style="height:84px;border-radius:8px;background:{{ t.bg }};padding:12px;box-sizing:border-box;display:flex;flex-direction:column;gap:7px">
+                  <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:{{ t.ac }}"></span><span style="height:6px;width:50px;border-radius:3px;background:{{ t.tx }};opacity:.9"></span></div>
+                  <span style="height:5px;width:80%;border-radius:3px;background:{{ t.tx }};opacity:.35"></span><span style="height:5px;width:62%;border-radius:3px;background:{{ t.tx }};opacity:.35"></span>
+                  <span style="height:14px;width:44px;border-radius:4px;background:{{ t.ac }};margin-top:2px"></span>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 2px;font-size:13px;font-weight:500"><span>{{ t.n }}</span><i class="{{ t.check }}" style="color:var(--ac);font-size:16px"></i></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="flex:1"></div>
+          <div style="padding:0 20px 16px"><div style="height:52px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px">Continue</div></div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">2E</span><span>Step 2 · Accent</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500;flex-shrink:0"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="padding:16px 20px 0;display:flex;align-items:center;gap:6px"><span style="flex:1;height:4px;border-radius:2px;background:var(--ac)"></span><span style="flex:1;height:4px;border-radius:2px;background:var(--ac)"></span><span style="flex:1;height:4px;border-radius:2px;background:var(--bd)"></span><span style="margin-left:10px;color:var(--mu);font-size:13px">Skip</span></div>
+          <div style="padding:28px 20px 20px;display:flex;flex-direction:column;gap:6px"><div style="font-size:13px;color:var(--mu)">2 of 3</div><div style="font-size:26px;font-weight:650;letter-spacing:-.02em">Your lamp colour</div><div style="color:var(--mu);line-height:22px">It marks only what's current: the active note, the primary button, the cursor.</div></div>
+          <div style="margin:0 20px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="font-size:12px;color:var(--mu)">02 Optimization</div>
+            <div style="font-size:20px;font-weight:650;letter-spacing:-.01em">Gradient descent</div>
+            <div style="font-family:'Source Serif 4',serif;font-size:16px;line-height:26px;color:var(--tx)">Step against the gradient, scaled by a <span style="color:var(--ln);text-decoration:underline;text-underline-offset:3px">learning rate</span><span style="display:inline-block;width:2px;height:18px;background:var(--ac);vertical-align:-3px;margin-left:1px"></span></div>
+            <div style="display:flex;gap:8px"><span style="height:34px;padding:0 14px;border-radius:10px;background:var(--ac);color:var(--af);font-weight:600;font-size:13px;display:flex;align-items:center">Start review</span><span style="height:34px;padding:0 14px;border-radius:10px;border:1px solid var(--bd);font-size:13px;display:flex;align-items:center">Later</span></div>
+          </div>
+          <div style="padding:28px 20px 0;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:500">Hue</span><span style="color:var(--mu);font-family:'JetBrains Mono',monospace">72°</span></div>
+            <div style="position:relative;height:28px;border-radius:14px;background:linear-gradient(90deg,oklch(.79 .15 0),oklch(.79 .15 60),oklch(.79 .15 120),oklch(.79 .15 180),oklch(.79 .15 240),oklch(.79 .15 300),oklch(.79 .15 360))"><div style="position:absolute;left:72px;top:-4px;width:36px;height:36px;border-radius:50%;background:#F2A93B;border:3px solid var(--tx);box-sizing:border-box"></div></div>
+            <div style="display:flex;justify-content:space-between">
+              <span style="width:36px;height:36px;border-radius:50%;background:#F2A93B;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--tx)"></span><span style="width:36px;height:36px;border-radius:50%;background:oklch(.79 .15 25)"></span><span style="width:36px;height:36px;border-radius:50%;background:oklch(.79 .15 140)"></span><span style="width:36px;height:36px;border-radius:50%;background:oklch(.79 .15 200)"></span><span style="width:36px;height:36px;border-radius:50%;background:oklch(.79 .15 265)"></span><span style="width:36px;height:36px;border-radius:50%;background:oklch(.79 .15 320)"></span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mu)"><i class="icon-circle-check" style="color:#6BCB8B;font-size:14px"></i>Lightness and chroma are locked — contrast stays AA at every hue.</div>
+          </div>
+          <div style="flex:1"></div>
+          <div style="padding:0 20px 16px;display:flex;gap:10px"><div style="width:52px;height:52px;border-radius:12px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><i class="icon-arrow-left" style="font-size:18px"></i></div><div style="flex:1;height:52px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px">Continue</div></div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">2F</span><span>Step 3 · Blog name</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500;flex-shrink:0"><span>21:42</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="padding:16px 20px 0;display:flex;align-items:center;gap:6px"><span style="flex:1;height:4px;border-radius:2px;background:var(--ac)"></span><span style="flex:1;height:4px;border-radius:2px;background:var(--ac)"></span><span style="flex:1;height:4px;border-radius:2px;background:var(--ac)"></span><span style="margin-left:10px;color:var(--mu);font-size:13px">Skip</span></div>
+          <div style="padding:28px 20px 20px;display:flex;flex-direction:column;gap:6px"><div style="font-size:13px;color:var(--mu)">3 of 3</div><div style="font-size:26px;font-weight:650;letter-spacing:-.02em">Name your blog</div><div style="color:var(--mu);line-height:22px">Only notes you publish appear there. You can leave this for later.</div></div>
+          <div style="padding:0 20px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:500;color:var(--mu)">Blog name</span><div style="height:48px;box-sizing:border-box;border-radius:10px;background:var(--sf);border:1px solid var(--ac);box-shadow:0 0 0 3px rgba(242,169,59,.2);display:flex;align-items:center;padding:0 14px">Night Shift Notes<span style="width:1.5px;height:20px;background:var(--ac);margin-left:1px"></span></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:500;color:var(--mu)">Tagline</span><div style="height:48px;box-sizing:border-box;border-radius:10px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;padding:0 14px">Learning in public, one lamp-lit page at a time</div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:500;color:var(--mu)">Author &amp; avatar</span>
+              <div style="display:flex;gap:10px;align-items:center"><div style="flex:1;height:48px;box-sizing:border-box;border-radius:10px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;padding:0 14px">Amir Hakim</div>
+              <span style="width:44px;height:44px;border-radius:50%;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ac)"><dc-import name="LumenGlyph" glyph="owl" size="{{ 17 }}" color="#F2A93B" hint-size="17px,17px"></dc-import></span><span style="width:44px;height:44px;border-radius:50%;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:20px"><dc-import name="LumenGlyph" glyph="flame" size="{{ 17 }}" color="#F2A93B" hint-size="17px,17px"></dc-import></span><span style="width:44px;height:44px;border-radius:50%;border:1px dashed var(--bd);display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-image-plus" style="font-size:18px"></i></span></div>
+            </div>
+          </div>
+          <div style="margin:24px 20px 0;padding:16px;border-radius:14px;background:#FAF8F3;color:#1F1D1A;display:flex;flex-direction:column;gap:6px">
+            <div style="font:500 11px 'JetBrains Mono',monospace;color:#6A655C">PREVIEW · /blog</div>
+            <div style="font-family:'Source Serif 4',serif;font-size:22px;font-weight:700;letter-spacing:-.01em">Night Shift Notes</div>
+            <div style="font-size:13px;color:#6A655C">Learning in public, one lamp-lit page at a time · <dc-import name="LumenGlyph" glyph="owl" size="{{ 15 }}" color="#F2A93B" hint-size="15px,15px"></dc-import> Amir Hakim</div>
+          </div>
+          <div style="flex:1"></div>
+          <div style="padding:0 20px 16px;display:flex;gap:10px"><div style="width:52px;height:52px;border-radius:12px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><i class="icon-arrow-left" style="font-size:18px"></i></div><div style="flex:1;height:52px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px">Start writing</div></div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 03</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Home / dashboard</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">One primary action — <b style="color:#E8E6E1">Start review</b>. Everything else is a calm summary that links somewhere.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">3A</span><span>Home · Desktop 1440 · Lamplight</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="home" hint-size="240px,900px" style="height:100%"></dc-import>
+          <div style="flex:1;min-width:0;padding:32px 56px;display:flex;flex-direction:column;gap:20px;box-sizing:border-box">
+            <div style="display:flex;align-items:flex-end;justify-content:space-between">
+              <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:26px;font-weight:650;letter-spacing:-.02em">Good evening, Amir</div><div style="color:var(--mu);font-size:13px">Friday, 13 November · <dc-import name="LumenGlyph" glyph="neural" size="{{ 15 }}" color="#A371F7" hint-size="15px,15px"></dc-import> ML Foundations</div></div>
+              <div style="display:flex;align-items:center;gap:8px;height:32px;padding:0 6px 0 12px;border-radius:999px;border:1px solid var(--bd);background:var(--sf)"><i class="icon-timer" style="font-size:14px;color:var(--mu)"></i><span style="font:500 13px 'JetBrains Mono',monospace">25:00</span><span style="width:24px;height:24px;border-radius:50%;background:var(--sf2);display:flex;align-items:center;justify-content:center"><i class="icon-play" style="font-size:12px"></i></span></div>
+            </div>
+            <div style="height:48px;border-radius:10px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:12px;padding:0 16px;position:relative">
+              <i class="icon-plus" style="font-size:16px;color:var(--mu)"></i><span style="flex:1;color:var(--mu);font-size:14px">Capture a thought, link or task…</span><span style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu);padding:2px 6px;border:1px solid var(--bd);border-radius:4px">↵ to Inbox</span>
+              <div style="position:absolute;left:-34px;top:13px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">1</div>
+            </div>
+            <div style="display:grid;grid-template-columns:7fr 5fr;gap:20px">
+              <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:18px 20px;display:flex;flex-direction:column;gap:4px;position:relative">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-weight:600;font-size:14px">Due today</span><span style="color:var(--mu);font-size:12px">30 items</span></div>
+                <div style="display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--bd)">
+                  <span style="width:32px;height:32px;border-radius:8px;background:color-mix(in srgb,var(--le) 16%,transparent);color:var(--le);display:flex;align-items:center;justify-content:center"><i class="icon-layers" style="font-size:16px"></i></span>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:14px">23 flashcards</span><span style="color:var(--mu);font-size:12px">4 decks · about 12 min</span></div>
+                  <span style="height:34px;padding:0 14px;border-radius:10px;background:var(--ac);color:var(--af);font-weight:600;display:flex;align-items:center;gap:8px">Start review <span style="font:500 11px 'JetBrains Mono',monospace;opacity:.65">R</span></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--bd)">
+                  <span style="width:32px;height:32px;border-radius:8px;background:color-mix(in srgb,var(--wa) 14%,transparent);color:var(--wa);display:flex;align-items:center;justify-content:center"><i class="icon-list-checks" style="font-size:16px"></i></span>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:14px">4 tasks</span><span style="color:var(--mu);font-size:12px"><span style="color:var(--da)">2 overdue</span> · Problem set 3, read §4.2</span></div>
+                  <i class="icon-chevron-right" style="color:var(--mu);font-size:16px"></i>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:10px 0 0">
+                  <span style="width:32px;height:32px;border-radius:8px;background:color-mix(in srgb,var(--in) 14%,transparent);color:var(--in);display:flex;align-items:center;justify-content:center"><i class="icon-eye" style="font-size:16px"></i></span>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:14px">3 notes to revisit</span><span style="color:var(--mu);font-size:12px">Status “review” · Eigenvectors, Idafa, Convexity</span></div>
+                  <i class="icon-chevron-right" style="color:var(--mu);font-size:16px"></i>
+                </div>
+              </div>
+              <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:18px 20px;display:flex;flex-direction:column;gap:16px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:600;font-size:14px">Learning progress</span><span style="color:var(--mu);font-size:12px">94 notes</span></div>
+                <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px"><span style="width:19%;background:var(--mu);opacity:.55"></span><span style="width:26%;background:var(--in)"></span><span style="width:12%;background:var(--wa)"></span><span style="width:43%;background:var(--ok)"></span></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 20px">
+                  <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;border:1.5px solid var(--mu);box-sizing:border-box"></span><span style="flex:1;color:var(--mu)">Todo</span><b style="font-weight:600">18</b></div>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:var(--in)"></span><span style="flex:1;color:var(--mu)">Learning</span><b style="font-weight:600">24</b></div>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:var(--wa)"></span><span style="flex:1;color:var(--mu)">Review</span><b style="font-weight:600">11</b></div>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></span><span style="flex:1;color:var(--mu)">Mastered</span><b style="font-weight:600">41</b></div>
+                </div>
+                <div style="border-top:1px solid var(--bd);padding-top:12px;display:flex;align-items:center;gap:10px;color:var(--mu);font-size:12px"><span><dc-import name="LumenGlyph" glyph="neural" size="{{ 15 }}" color="#A371F7" hint-size="15px,15px"></dc-import> ML Foundations</span><span style="flex:1;height:4px;border-radius:2px;background:var(--sf2);overflow:hidden"><span style="display:block;width:62%;height:100%;background:var(--tx);opacity:.7"></span></span><span>62%</span></div>
+              </div>
+            </div>
+            <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:18px 20px;display:flex;gap:40px;align-items:flex-end;position:relative">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:600;font-size:14px">Study activity</span></div>
+                <div style="display:flex;gap:3px;font-size:10px;color:var(--mu);padding-left:0"><span style="width:60px">Jul</span><span style="width:60px">Aug</span><span style="width:75px">Sep</span><span style="width:60px">Oct</span><span>Nov</span></div>
+                <div style="display:flex;gap:3px">
+                  <sc-for list="{{ weeks }}" as="w" hint-placeholder-count="20">
+                    <div style="display:flex;flex-direction:column;gap:3px">
+                      <sc-for list="{{ w.days }}" as="d" hint-placeholder-count="7"><span style="width:12px;height:12px;border-radius:3px;background:{{ d.bg }}"></span></sc-for>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--mu)">Less<span style="width:10px;height:10px;border-radius:2px;background:var(--sf2)"></span><span style="width:10px;height:10px;border-radius:2px;background:color-mix(in srgb,var(--ac) 22%,var(--sf2))"></span><span style="width:10px;height:10px;border-radius:2px;background:color-mix(in srgb,var(--ac) 45%,var(--sf2))"></span><span style="width:10px;height:10px;border-radius:2px;background:color-mix(in srgb,var(--ac) 70%,var(--sf2))"></span><span style="width:10px;height:10px;border-radius:2px;background:var(--ac)"></span>More</div>
+              </div>
+              <div style="display:flex;gap:40px;padding-bottom:22px">
+                <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:28px;font-weight:650;letter-spacing:-.02em;display:flex;align-items:center;gap:8px"><i class="icon-flame" style="font-size:22px;color:var(--ac)"></i>12</span><span style="color:var(--mu)">day streak · best 31</span></div>
+                <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:28px;font-weight:650;letter-spacing:-.02em">6h 40m</span><span style="color:var(--mu)">studied this week</span></div>
+              </div>
+              <div style="position:absolute;right:18px;top:16px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">2</div>
+            </div>
+            <div style="display:grid;grid-template-columns:7fr 5fr;gap:20px">
+              <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:14px 8px 8px;display:flex;flex-direction:column">
+                <div style="padding:0 12px 6px;font-weight:600;font-size:14px">Continue</div>
+                <sc-for list="{{ recent }}" as="r" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;gap:12px;height:34px;padding:0 12px;border-radius:6px;background:{{ r.bg }}">
+                    <span style="width:7px;height:7px;border-radius:50%;background:{{ r.st }};flex-shrink:0"></span>
+                    <span style="font-weight:500;white-space:nowrap">{{ r.t }}</span><span style="flex:1;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.p }}</span><span style="color:var(--mu);font-size:12px">{{ r.time }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:14px 8px 8px;display:flex;flex-direction:column">
+                <div style="padding:0 12px 6px;font-weight:600;font-size:14px;display:flex;justify-content:space-between">Pinned<i class="icon-pin" style="font-size:14px;color:var(--mu)"></i></div>
+                <sc-for list="{{ pinned }}" as="p" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:6px">
+                    <i class="{{ p.icon }}" style="font-size:16px;color:var(--mu)"></i>
+                    <div style="display:flex;flex-direction:column;gap:1px"><span style="font-weight:500">{{ p.t }}</span><span style="color:var(--mu);font-size:12px">{{ p.s }}</span></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3">
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>Quick capture: <code>⌘⇧N</code> from anywhere. <code>- [ ]</code> makes a task, a pasted URL becomes a link card, <code>&gt;</code> appends to today's daily note.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">2</b><span>Heatmap cells reveal “Thu 6 Nov · 48 min · 3 notes” on hover; click filters Calendar to that day. Amber = the lamp burning longer.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Cards are summaries, not tools: each row is a link. Rearranging / hiding cards sits behind <b>⋯ › Customize home</b>.</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">3B</span><span>Home · Tablet 1024 · rail sidebar</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:1024px;height:768px;position:relative;overflow:hidden;border-radius:18px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="home" collapsed="{{ true }}" hint-size="56px,768px" style="height:100%"></dc-import>
+          <div style="flex:1;min-width:0;padding:28px 32px;display:flex;flex-direction:column;gap:18px;box-sizing:border-box">
+            <div style="display:flex;align-items:flex-end;justify-content:space-between"><div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:24px;font-weight:650;letter-spacing:-.02em">Good evening, Amir</div><div style="color:var(--mu)">Friday, 13 November</div></div><span style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span>Synced 2m ago</span></div>
+            <div style="height:48px;border-radius:10px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:12px;padding:0 16px"><i class="icon-plus" style="font-size:16px;color:var(--mu)"></i><span style="flex:1;color:var(--mu);font-size:14px">Capture a thought, link or task…</span></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:14px">
+                <span style="font-weight:600;font-size:14px">Due today</span>
+                <div style="display:flex;align-items:center;gap:12px"><span style="width:32px;height:32px;border-radius:8px;background:color-mix(in srgb,var(--le) 16%,transparent);color:var(--le);display:flex;align-items:center;justify-content:center"><i class="icon-layers" style="font-size:16px"></i></span><div style="flex:1;display:flex;flex-direction:column;gap:2px"><b style="font-weight:600;font-size:14px">23 flashcards</b><span style="color:var(--mu);font-size:12px">about 12 min</span></div></div>
+                <div style="height:40px;border-radius:10px;background:var(--ac);color:var(--af);font-weight:600;display:flex;align-items:center;justify-content:center">Start review</div>
+                <div style="display:flex;gap:16px;color:var(--mu);font-size:12px"><span><b style="color:var(--tx);font-weight:600">4</b> tasks · <span style="color:var(--da)">2 overdue</span></span><span><b style="color:var(--tx);font-weight:600">3</b> notes to revisit</span></div>
+              </div>
+              <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:18px;display:flex;flex-direction:column;gap:14px">
+                <div style="display:flex;justify-content:space-between"><span style="font-weight:600;font-size:14px">Learning progress</span><span style="color:var(--mu);font-size:12px">94 notes</span></div>
+                <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px"><span style="width:19%;background:var(--mu);opacity:.55"></span><span style="width:26%;background:var(--in)"></span><span style="width:12%;background:var(--wa)"></span><span style="width:43%;background:var(--ok)"></span></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px">
+                  <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;border:1.5px solid var(--mu);box-sizing:border-box"></span><span style="flex:1;color:var(--mu)">Todo</span><b style="font-weight:600">18</b></div>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:var(--in)"></span><span style="flex:1;color:var(--mu)">Learning</span><b style="font-weight:600">24</b></div>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:var(--wa)"></span><span style="flex:1;color:var(--mu)">Review</span><b style="font-weight:600">11</b></div>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></span><span style="flex:1;color:var(--mu)">Mastered</span><b style="font-weight:600">41</b></div>
+                </div>
+              </div>
+            </div>
+            <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:18px;display:flex;justify-content:space-between;align-items:flex-end">
+              <div style="display:flex;flex-direction:column;gap:10px"><span style="font-weight:600;font-size:14px">Study activity</span>
+                <div style="display:flex;gap:3px"><sc-for list="{{ weeks }}" as="w" hint-placeholder-count="20"><div style="display:flex;flex-direction:column;gap:3px"><sc-for list="{{ w.days }}" as="d" hint-placeholder-count="7"><span style="width:12px;height:12px;border-radius:3px;background:{{ d.bg }}"></span></sc-for></div></sc-for></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:14px;text-align:right"><div><div style="font-size:24px;font-weight:650">12 days</div><div style="color:var(--mu)">streak</div></div><div><div style="font-size:24px;font-weight:650">6h 40m</div><div style="color:var(--mu)">this week</div></div></div>
+            </div>
+            <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:14px 8px 8px;display:flex;flex-direction:column">
+              <div style="padding:0 12px 6px;font-weight:600;font-size:14px">Continue</div>
+              <sc-for list="{{ recent }}" as="r" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:12px;height:34px;padding:0 12px;border-radius:6px"><span style="width:7px;height:7px;border-radius:50%;background:{{ r.st }}"></span><span style="font-weight:500">{{ r.t }}</span><span style="flex:1;color:var(--mu)">{{ r.p }}</span><span style="color:var(--mu);font-size:12px">{{ r.time }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="max-width:1024px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Tablet = 2 panes: rail + content. Rail icons show tooltips on hover/long-press; swipe from the left edge opens the full 240 px sidebar as an overlay.</span></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">3C</span><span>Home · Phone 412</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500;flex-shrink:0"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="flex:1;overflow:hidden;padding:12px 16px 0;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="flex:1;display:flex;flex-direction:column;gap:3px"><span style="font-size:22px;font-weight:650;letter-spacing:-.02em">Good evening, Amir</span><span style="color:var(--mu);font-size:13px;display:flex;align-items:center;gap:6px">Fri 13 Nov · <span style="width:6px;height:6px;border-radius:50%;background:var(--ok)"></span>Synced</span></div>
+              <div style="width:40px;height:40px;border-radius:50%;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:18px"><dc-import name="LumenGlyph" glyph="owl" size="{{ 15 }}" color="#F2A93B" hint-size="15px,15px"></dc-import></div>
+            </div>
+            <div style="height:48px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--mu)"><i class="icon-pen-line" style="font-size:16px"></i><span style="flex:1">Capture a thought…</span><i class="icon-mic" style="font-size:18px"></i></div>
+            <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:16px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:600">Due today</span><span style="color:var(--mu);font-size:12px">30 items</span></div>
+              <div style="display:flex;align-items:center;gap:12px"><span style="width:36px;height:36px;border-radius:10px;background:color-mix(in srgb,var(--le) 16%,transparent);color:var(--le);display:flex;align-items:center;justify-content:center"><i class="icon-layers" style="font-size:18px"></i></span><div style="flex:1;display:flex;flex-direction:column;gap:2px"><b style="font-weight:600">23 flashcards</b><span style="color:var(--mu);font-size:12px">4 decks · about 12 min</span></div></div>
+              <div style="height:48px;border-radius:12px;background:var(--ac);color:var(--af);font-weight:600;font-size:15px;display:flex;align-items:center;justify-content:center">Start review</div>
+              <div style="display:flex;gap:8px"><span style="flex:1;height:40px;border-radius:10px;background:var(--sf2);display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px"><i class="icon-list-checks" style="color:var(--wa);font-size:15px"></i>4 tasks</span><span style="flex:1;height:40px;border-radius:10px;background:var(--sf2);display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px"><i class="icon-eye" style="color:var(--in);font-size:15px"></i>3 to revisit</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <span style="font-weight:600">Continue</span>
+              <div style="display:flex;gap:10px;margin-right:-16px">
+                <sc-for list="{{ recentPhone }}" as="r" hint-placeholder-count="3">
+                  <div style="width:150px;flex-shrink:0;border-radius:12px;background:var(--sf);border:1px solid var(--bd);padding:12px;display:flex;flex-direction:column;gap:6px;box-sizing:border-box"><span style="width:7px;height:7px;border-radius:50%;background:{{ r.st }}"></span><span style="font-weight:600;font-size:13px;line-height:18px">{{ r.t }}</span><span style="color:var(--mu);font-size:11px">{{ r.time }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:16px;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:600">Activity</span><span style="font-size:13px;color:var(--mu);display:flex;align-items:center;gap:4px"><i class="icon-flame" style="color:var(--ac);font-size:14px"></i>12 days · 6h 40m wk</span></div>
+              <div style="display:flex;gap:3px;justify-content:space-between"><sc-for list="{{ weeks }}" as="w" hint-placeholder-count="20"><div style="display:flex;flex-direction:column;gap:3px"><sc-for list="{{ w.days }}" as="d" hint-placeholder-count="7"><span style="width:14px;height:14px;border-radius:3px;background:{{ d.bg }}"></span></sc-for></div></sc-for></div>
+              <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px;margin-top:4px"><span style="width:19%;background:var(--mu);opacity:.55"></span><span style="width:26%;background:var(--in)"></span><span style="width:12%;background:var(--wa)"></span><span style="width:43%;background:var(--ok)"></span></div>
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mu)"><span>Todo 18</span><span>Learning 24</span><span>Review 11</span><span>Mastered 41</span></div>
+            </div>
+          </div>
+          <dc-import name="LumenTabBar" active="home" hint-size="412px,88px"></dc-import>
+        </div>
+        <div style="max-width:412px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Same content, single column; Start review is full-width in thumb reach. FAB = new note; long-press FAB for Daily note / Voice note / Flashcard.</span></div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const pct = [0, 22, 45, 70, 100];
+    const lv = (w, d) => { const x = Math.sin(w * 12.9898 + d * 78.233) * 43758.5453; const r = x - Math.floor(x); const v = r + (w > 13 ? 0.3 : 0) - (d === 5 || d === 6 ? 0.15 : 0); return v < 0.38 ? 0 : v < 0.62 ? 1 : v < 0.82 ? 2 : v < 0.96 ? 3 : 4; };
+    const weeks = Array.from({ length: 20 }, (_, w) => ({ days: Array.from({ length: 7 }, (_, d) => {
+      if (w === 19 && d > 4) return { bg: 'transparent' };
+      const l = (w === 19 || (w === 18 && d > 2)) ? 3 + (d % 2) : lv(w, d);
+      return { bg: l === 0 ? 'var(--sf2)' : `color-mix(in srgb, var(--ac) ${pct[l]}%, var(--sf2))` };
+    }) }));
+    const recent = [
+      { t: 'Gradient descent', p: '02 Optimization', time: '12 min ago', st: 'var(--in)' },
+      { t: 'Linear algebra: eigenvectors', p: '01 Linear algebra', time: '2 h ago', st: 'var(--wa)' },
+      { t: 'Arabic grammar: idafa', p: 'Arabic · Nahw', time: 'Yesterday', st: 'var(--in)' },
+      { t: 'TCP handshake', p: 'Networking · Transport', time: 'Tue', st: 'var(--ok)' },
+      { t: 'Backpropagation', p: '03 Neural networks', time: 'Mon', st: 'var(--mu)' }
+    ].map((r, i) => ({ ...r, bg: i === 0 ? 'var(--sf2)' : 'transparent' }));
+    return {
+      weeks, recent, recentPhone: recent.slice(0, 3),
+      pinned: [
+        { icon: 'icon-map', t: 'ML Foundations — map of content', s: 'MOC · 24 links' },
+        { icon: 'icon-file-text', t: 'Exam 2 cheat sheet', s: 'Due Fri 28 Nov' },
+        { icon: 'icon-layers', t: 'Arabic: verb forms I–X', s: 'Flashcards · 40 cards' }
+      ],
+      themes: [
+        ['Lamplight', '#0F1115', '#F2A93B', '#E8E6E1', 1], ['Paper', '#FAF8F3', '#B45F0E', '#1F1D1A'], ['Midnight', '#0B1020', '#8EA8FF', '#E3E8F5'],
+        ['Sepia', '#F4ECD8', '#9C4A1A', '#3B2F1E'], ['Forest', '#0E1512', '#7FD49B', '#E2EBE4'], ['High contrast', '#000000', '#FFD400', '#FFFFFF']
+      ].map(([n, bg, ac, tx, s]) => ({ n, bg, ac, tx, border: s ? '2px solid var(--ac)' : '2px solid var(--bd)', check: s ? 'icon-circle-check' : '' }))
+    };
+  }
+}
+</script>
+</body>
+</html>

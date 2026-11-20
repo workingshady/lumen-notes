@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./lumen-glyphs.js"></script></helmet>
+<div style="position:absolute;inset:0;overflow:hidden;background:var(--bg);font-family:Inter,system-ui,sans-serif;font-size:13px;color:var(--tx);display:flex;flex-direction:column">
+  <div style="display:{{ phS }};height:40px;flex-shrink:0;align-items:center;justify-content:space-between;padding:0 22px;font-size:13px;font-weight:600"><span>9:41</span><span style="width:16px;height:9px;border:1.5px solid var(--tx);border-radius:2px"></span></div>
+
+  <sc-if value="{{ isHub }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;align-items:center;gap:12px;padding:{{ hPad }};flex-wrap:wrap">
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:{{ tFs }};font-weight:650;letter-spacing:-.02em">Review</span><span style="font-size:13px;color:var(--mu)">86 due · 30 new · about 14 min. 12-day streak.</span></div>
+      <span style="display:{{ dkS }};height:36px;padding:0 12px;border-radius:9px;border:1px solid var(--bd);align-items:center;gap:6px;font-size:12.5px">Custom study…</span>
+      <span style="height:42px;padding:0 18px;border-radius:11px;background:var(--ac);color:var(--af);display:flex;align-items:center;gap:8px;font-weight:650;font-size:14px;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" style="fill:currentColor"></path></svg>Review all · 86</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:{{ tbPad }};border-bottom:1px solid var(--bd);flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--mu)">Group decks by</span>
+      <div style="display:flex;padding:3px;border-radius:10px;background:var(--sf2);gap:2px"><sc-for list="{{ grpSeg }}" as="s"><span style="height:28px;padding:0 10px;border-radius:7px;display:flex;align-items:center;font-size:12.5px;background:{{ s.bg }};color:{{ s.c }};font-weight:{{ s.fw }};box-shadow:{{ s.sh }};white-space:nowrap">{{ s.l }}</span></sc-for></div>
+    </div>
+    <div style="flex:1;min-height:0;display:flex;gap:20px;padding:{{ bodyPad }};overflow:hidden">
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+        <div style="display:{{ dkS }};align-items:center;gap:10px;padding:10px 12px;font-size:11px;font-weight:650;letter-spacing:.06em;color:var(--mu)"><span style="flex:1">DECK</span><span style="width:52px;text-align:right;color:var(--ln)">NEW</span><span style="width:60px;text-align:right;color:var(--wa)">LEARN</span><span style="width:52px;text-align:right;color:var(--ok)">DUE</span><span style="width:90px;text-align:right">RETENTION</span><span style="width:84px"></span></div>
+        <sc-for list="{{ decks }}" as="d">
+          <div style="display:{{ d.hS }};align-items:center;gap:8px;padding:14px 12px 6px;font-size:12px;font-weight:650;color:var(--mu)"><span style="width:8px;height:8px;border-radius:2px;background:{{ d.c }}"></span>{{ d.h }}<span style="font-weight:400">{{ d.hn }}</span></div>
+          <div style="display:{{ d.rS }};align-items:center;gap:10px;min-height:{{ d.mh }};padding:0 12px 0 {{ d.pl }};border-radius:10px;background:{{ d.bg }};border-bottom:1px solid color-mix(in srgb,var(--bd) 50%,transparent)">
+            <svg width="16" height="16" viewBox="0 0 24 24" style="flex-shrink:0;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;color:{{ d.gc }}"><sc-for list="{{ d.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:13.5px;font-weight:{{ d.fw }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.l }}</span><span style="font-size:11.5px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.s }}</span></div>
+            <span style="width:52px;text-align:right;font-variant-numeric:tabular-nums;color:{{ d.nC }}">{{ d.n }}</span>
+            <span style="display:{{ dkB }};width:60px;text-align:right;font-variant-numeric:tabular-nums;color:{{ d.lC }}">{{ d.ln }}</span>
+            <span style="width:52px;text-align:right;font-variant-numeric:tabular-nums;font-weight:650;color:{{ d.dC }}">{{ d.du }}</span>
+            <div style="display:{{ dkS }};width:90px;justify-content:flex-end;align-items:center;gap:6px"><div style="width:44px;height:4px;border-radius:2px;background:var(--sf2)"><div style="height:100%;width:{{ d.ret }};border-radius:2px;background:{{ d.retC }}"></div></div><span style="font-size:11.5px;color:var(--mu);width:30px;text-align:right">{{ d.ret }}</span></div>
+            <span style="display:{{ d.goS }};width:84px;height:30px;border-radius:8px;border:1px solid var(--bd);align-items:center;justify-content:center;font-size:12px">Study</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="width:300px;flex-shrink:0;display:{{ dkS }};flex-direction:column;gap:14px">
+        <div style="padding:14px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;font-weight:650;color:var(--mu);letter-spacing:.05em">DUE · NEXT 7 DAYS</span><div style="display:flex;align-items:flex-end;gap:6px;height:90px"><sc-for list="{{ fc }}" as="b"><div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:10px;color:var(--mu)">{{ b.n }}</span><div style="width:100%;height:{{ b.h }};border-radius:4px;background:{{ b.c }}"></div><span style="font-size:10.5px;color:var(--mu)">{{ b.l }}</span></div></sc-for></div></div>
+        <div style="padding:14px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:grid;grid-template-columns:1fr 1fr;gap:12px"><sc-for list="{{ stats }}" as="s"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:20px;font-weight:650;color:{{ s.c }}">{{ s.v }}</span><span style="font-size:11.5px;color:var(--mu)">{{ s.l }}</span></div></sc-for></div>
+        <div style="padding:14px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column;gap:6px;font-size:12.5px;line-height:18px"><b>All, or by category?</b><span style="color:var(--mu)">Both. Review all mixes every due card, spaced across decks. Pick a deck, plan, tag or smart deck to study only that. Cards live in notes, so a card can be in a space deck and a tag deck at once; it is still reviewed once.</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isCard }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;align-items:center;gap:12px;padding:{{ cPad }}">
+      <span style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--mu)">×</span>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mu)"><span style="display:flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;background:color-mix(in srgb,{{ dc }} 16%,transparent);color:{{ dc }};font-weight:600;white-space:nowrap">{{ deck }}</span><span style="white-space:nowrap">{{ cardType }}</span><span style="flex:1"></span><span style="font-variant-numeric:tabular-nums">{{ prog }}</span></div><div style="height:4px;border-radius:2px;background:var(--sf2);display:flex;overflow:hidden"><div style="width:22%;background:var(--ok)"></div><div style="width:4%;background:var(--da)"></div></div></div>
+      <span style="display:{{ dkS }};gap:4px"><sc-for list="{{ cTools }}" as="t"><span title="{{ t.l }}" style="width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><svg width="17" height="17" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ t.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg></span></sc-for></span>
+    </div>
+    <div style="flex:1;min-height:0;display:flex;align-items:{{ cAlign }};justify-content:center;padding:{{ cBodyPad }}">
+      <div style="width:100%;max-width:720px;display:flex;flex-direction:column;gap:18px;padding:{{ cardPad }};border-radius:20px;background:var(--sf);border:1px solid var(--bd);box-shadow:0 20px 50px rgba(0,0,0,.25)">
+        <span style="font-size:11px;font-weight:650;letter-spacing:.08em;color:var(--mu)">QUESTION</span>
+        <div style="font-family:'Source Serif 4',Georgia,serif;font-size:{{ qFs }};line-height:1.45;text-wrap:pretty"><sc-for list="{{ qParts }}" as="p"><span style="background:{{ p.bg }};color:{{ p.c }};border-bottom:{{ p.ul }};padding:{{ p.pad }};border-radius:4px;font-weight:{{ p.fw }}">{{ p.t }}</span></sc-for></div>
+        <div style="display:{{ ansS }};flex-direction:column;gap:12px;padding-top:16px;border-top:1px dashed var(--bd)">
+          <span style="font-size:11px;font-weight:650;letter-spacing:.08em;color:var(--mu)">ANSWER</span>
+          <span style="font-family:'Source Serif 4',Georgia,serif;font-size:{{ aFs }};line-height:1.5;text-wrap:pretty">{{ answer }}</span>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;background:var(--bg);border:1px solid var(--bd);font-size:12px;color:var(--mu)"><svg width="14" height="14" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;color:var(--ln)"><sc-for list="{{ gNote }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">From <span style="color:var(--ln)">{{ srcNote }}</span></span><span style="white-space:nowrap">Open ↗</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:center;padding:{{ rbPad }}">
+      <div style="display:{{ showS }};width:100%;max-width:720px;height:54px;border-radius:14px;background:var(--sf2);border:1px solid var(--bd);align-items:center;justify-content:center;gap:10px;font-size:14px;font-weight:600">Show answer<span style="display:{{ dkS }};font-size:11px;color:var(--mu);border:1px solid var(--bd);padding:1px 7px;border-radius:5px">Space</span></div>
+      <div style="display:{{ rateS }};width:100%;max-width:720px;gap:8px"><sc-for list="{{ rate }}" as="r"><div style="flex:1;height:{{ rH }};border-radius:14px;background:color-mix(in srgb,{{ r.c }} 14%,var(--sf));border:1px solid color-mix(in srgb,{{ r.c }} 45%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"><span style="font-size:14px;font-weight:650;color:{{ r.c }}">{{ r.l }}</span><span style="font-size:11.5px;color:var(--mu);white-space:nowrap">{{ r.i }}<span style="display:{{ dkS2 }}"> · {{ r.k }}</span></span></div></sc-for></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div style="width:100%;max-width:560px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center">
+        <span style="width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok);font-size:26px">✓</span>
+        <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:24px;font-weight:650">Done for today</span><span style="font-size:14px;color:var(--mu)">86 cards in 13 min. Next reviews tomorrow: 40.</span></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%"><sc-for list="{{ doneStats }}" as="s"><div style="padding:12px 6px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column;gap:2px"><span style="font-size:18px;font-weight:650;color:{{ s.c }}">{{ s.v }}</span><span style="font-size:11px;color:var(--mu)">{{ s.l }}</span></div></sc-for></div>
+        <div style="width:100%;display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);text-align:left"><span style="font-size:12px;font-weight:650;color:var(--mu)">MISSED MOST · 3 cards</span><sc-for list="{{ missed }}" as="m"><div style="display:flex;align-items:center;gap:8px;font-size:12.5px"><span style="width:7px;height:7px;border-radius:2px;background:{{ m.c }}"></span><span style="flex:1">{{ m.l }}</span><span style="color:var(--da)">{{ m.n }}</span></div></sc-for></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><span style="height:38px;padding:0 14px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center">Review missed again</span><span style="height:38px;padding:0 14px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center">Study 10 new</span><span style="height:38px;padding:0 16px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:650">Back to Today</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isCustom }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,.5)"></div>
+    <div style="position:absolute;left:{{ cuL }};right:{{ cuR }};top:{{ cuT }};bottom:{{ cuB }};background:var(--sf);border:1px solid var(--bd);border-radius:{{ cuRad }};box-shadow:0 30px 80px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:16px;padding:20px">
+      <div style="display:flex;align-items:center"><span style="font-weight:650;font-size:16px;flex:1">Custom study</span><span style="color:var(--mu);font-size:18px">×</span></div>
+      <sc-for list="{{ cu }}" as="o"><div style="display:flex;flex-direction:column;gap:7px"><span style="font-size:11px;font-weight:650;letter-spacing:.06em;color:var(--mu)">{{ o.h }}</span><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ o.opts }}" as="x"><span style="height:32px;padding:0 11px;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:12.5px;border:1px solid {{ x.bd }};background:{{ x.bg }};font-weight:{{ x.fw }};white-space:nowrap"><span style="display:{{ x.dS }};width:8px;height:8px;border-radius:2px;background:{{ x.dc }}"></span>{{ x.l }}</span></sc-for></div></div></sc-for>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:12.5px;color:var(--mu)">54 cards match · ~9 min · doesn’t change your schedule</span><span style="height:38px;padding:0 16px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:650">Start</span></div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;hub&quot;,&quot;custom&quot;,&quot;q&quot;,&quot;a&quot;,&quot;cloze&quot;,&quot;done&quot;],&quot;default&quot;:&quot;hub&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;group&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Space&quot;,&quot;Plan&quot;,&quot;Tag&quot;,&quot;Type&quot;],&quot;default&quot;:&quot;Space&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { window.__rv = this; if (!window.LUMEN_GLYPHS) { const t = setInterval(() => { if (window.LUMEN_GLYPHS) { clearInterval(t); this.forceUpdate(); } }, 50); setTimeout(() => clearInterval(t), 5000); } }
+  renderVals() {
+    const GL = window.LUMEN_GLYPHS || {};
+    const g = n => (GL[n] || []).map(p => typeof p === 'string' ? { d: p, f: 'none', s: 'currentColor' } : { d: p.d, f: p.fill ? 'currentColor' : 'none', s: p.stroke || (p.fill ? 'none' : 'currentColor') });
+    const P = Object.assign({}, this.props, window.__rvOv || {}), ph = !!P.phone, scr = P.screen || 'hub', grp = P.group || 'Space';
+    const AC = 'color-mix(in srgb,var(--ac) 16%,transparent)';
+    const C = { dl: '#B48EF0', en: '#5CC8C2', ex: '#E8893A', th: '#7AA2F7', ph: '#6BCB8B' };
+    const seg = (arr, on) => arr.map(l => ({ l, bg: l === on ? 'var(--sf)' : 'transparent', c: l === on ? 'var(--tx)' : 'var(--mu)', fw: l === on ? 600 : 400, sh: l === on ? '0 1px 2px rgba(0,0,0,.2)' : 'none' }));
+    const out = { phS: ph ? 'flex' : 'none', dkS: ph ? 'none' : 'flex', dkS2: ph ? 'none' : 'inline', dkB: ph ? 'none' : 'block', isHub: scr === 'hub' || scr === 'custom', isCard: scr === 'q' || scr === 'a' || scr === 'cloze', isDone: scr === 'done', isCustom: scr === 'custom', hPad: ph ? '6px 16px 12px' : '22px 28px 14px', tFs: ph ? '22px' : '26px', tbPad: ph ? '0 16px 10px' : '0 28px 12px', bodyPad: ph ? '0 8px' : '8px 28px 20px' };
+    if (out.isHub) {
+      const H = (h, c, hn) => ({ hS: 'flex', rS: 'none', h, c, hn: hn || '' });
+      const D = (gl, l, s, n, ln, du, ret, c, o = {}) => ({ hS: 'none', rS: 'flex', g: g(gl), gc: c, l, s, n, ln, du, ret, retC: parseInt(ret) < 80 ? 'var(--wa)' : 'var(--ok)', nC: n === '0' ? 'var(--mu)' : 'var(--ln)', lC: ln === '0' ? 'var(--mu)' : 'var(--wa)', dC: du === '0' ? 'var(--mu)' : 'var(--ok)', fw: o.top ? 650 : 500, pl: o.top ? '12px' : (ph ? '12px' : '30px'), bg: o.top ? 'var(--sf)' : 'transparent', mh: o.top ? '54px' : '48px', goS: ph ? 'none' : 'flex' });
+      const GROUPS = {
+        Space: [H('ALL', 'var(--ac)'), D('flashcards', 'All decks', '1,206 cards · 8 decks', '30', '9', '86', '89%', 'var(--ac)', { top: 1 }), H('Deep learning', C.dl, '3 decks'), D('flashcards', 'Concepts', '212 cards', '0', '3', '8', '91%', C.dl), D('cloze', 'Equations (cloze)', '64 cards', '5', '0', '6', '84%', C.dl), D('image', 'Architectures (image occlusion)', '38 cards', '0', '1', '2', '88%', C.dl), H('AWS SA exam', C.ex, '2 decks'), D('flashcards', 'Security · IAM, KMS', '180 cards', '20', '4', '34', '78%', C.ex), D('flashcards', 'Resilience', '140 cards', '0', '0', '0', '—', C.ex), H('English A1–C2', C.en, '2 decks'), D('language', 'Vocabulary A1', '320 cards', '10', '1', '12', '93%', C.en), D('cloze', 'Grammar patterns', '96 cards', '0', '0', '4', '90%', C.en), H('SMART DECKS', 'var(--mu)'), D('c-warning', 'Leeches · missed 4+ times', '7 cards', '0', '0', '7', '41%', 'var(--da)'), D('clock', 'Due soon · next 3 days', '118 cards', '0', '0', '0', '—', 'var(--mu)')],
+        Plan: [H('ALL', 'var(--ac)'), D('flashcards', 'All plans', '1,206 cards', '30', '9', '86', '89%', 'var(--ac)', { top: 1 }), H('Deep learning · Module 3', C.dl, 'current'), D('lesson', 'Convolutions & pooling', '42 cards', '5', '2', '9', '86%', C.dl), H('AWS SA · Secure architectures', C.ex), D('lesson', 'IAM, KMS, VPC security', '180 cards', '20', '4', '34', '78%', C.ex), H('English · A1 Vocabulary', C.en), D('lesson', 'Greetings and personal info', '48 cards', '10', '1', '12', '93%', C.en)],
+        Tag: [H('ALL', 'var(--ac)'), D('flashcards', 'All tags', '1,206 cards', '30', '9', '86', '89%', 'var(--ac)', { top: 1 }), H('TAGS', 'var(--mu)'), D('tag', '#exam', '410 cards', '20', '4', '40', '80%', C.ex), D('tag', '#definition', '388 cards', '5', '2', '22', '92%', C.th), D('tag', '#formula', '102 cards', '5', '0', '9', '83%', C.dl), D('tag', '#mistake', '31 cards', '0', '1', '11', '62%', 'var(--da)')],
+        Type: [H('ALL', 'var(--ac)'), D('flashcards', 'All types', '1,206 cards', '30', '9', '86', '89%', 'var(--ac)', { top: 1 }), H('CARD TYPE', 'var(--mu)'), D('flashcards', 'Basic Q → A', '702 cards', '20', '6', '51', '90%', C.th), D('switch', 'Reversed', '214 cards', '0', '1', '9', '88%', C.th), D('cloze', 'Cloze', '160 cards', '5', '1', '14', '86%', C.dl), D('image', 'Image occlusion', '38 cards', '0', '1', '2', '88%', C.dl), D('headphones', 'Listening', '92 cards', '5', '0', '10', '84%', C.en)]
+      };
+      out.grpSeg = seg(['Space', 'Plan', 'Tag', 'Type'], grp);
+      out.decks = (GROUPS[grp] || GROUPS.Space).slice(0, ph ? 11 : 99).map(d => ({ hS: 'none', rS: 'none', g: [], gc: '', l: '', s: '', n: '', ln: '', du: '', ret: '0%', retC: '', nC: '', lC: '', dC: '', fw: 400, pl: '12px', bg: '', mh: '0', goS: 'none', h: '', hn: '', c: '', ...d }));
+      out.fc = [['Fri', 86], ['Sat', 40], ['Sun', 22], ['Mon', 51], ['Tue', 33], ['Wed', 18], ['Thu', 47]].map(([l, n], i) => ({ l, n, h: (n / 86 * 70) + 'px', c: i === 0 ? 'var(--ac)' : 'color-mix(in srgb,var(--mu) 45%,transparent)' }));
+      out.stats = [['89%', 'Retention · 30 d', 'var(--ok)'], ['12', 'Day streak', 'var(--ac)'], ['13 min', 'Avg / day', 'var(--tx)'], ['7', 'Leeches', 'var(--da)']].map(([v, l, c]) => ({ v, l, c }));
+      out.cu = [
+        { h: 'FROM', opts: [['Deep learning', C.dl, 1], ['AWS SA exam', C.ex, 1], ['English', C.en], ['#mistake', 'var(--da)', 1], ['+ deck or tag', '']].map(([l, dc, on]) => ({ l, dS: dc ? 'block' : 'none', dc, bd: on ? 'var(--ac)' : 'var(--bd)', bg: on ? AC : 'transparent', fw: on ? 600 : 400 })) },
+        { h: 'WHICH CARDS', opts: ['Due', 'Forgotten in last 7 days', 'New only', 'Leeches', 'All, ignore schedule'].map((l, i) => ({ l, dS: 'none', dc: '', bd: i === 1 ? 'var(--ac)' : 'var(--bd)', bg: i === 1 ? AC : 'transparent', fw: i === 1 ? 600 : 400 })) },
+        { h: 'ORDER', opts: ['Interleave decks', 'Deck by deck', 'Hardest first', 'Random'].map((l, i) => ({ l, dS: 'none', dc: '', bd: !i ? 'var(--ac)' : 'var(--bd)', bg: !i ? AC : 'transparent', fw: !i ? 600 : 400 })) },
+        { h: 'LIMIT', opts: ['20', '50', '100', 'No limit', '15 min'].map((l, i) => ({ l, dS: 'none', dc: '', bd: i === 1 ? 'var(--ac)' : 'var(--bd)', bg: i === 1 ? AC : 'transparent', fw: i === 1 ? 600 : 400 })) }
+      ];
+      Object.assign(out, { cuL: ph ? '0' : 'calc(50% - 280px)', cuR: ph ? '0' : 'calc(50% - 280px)', cuT: ph ? '120px' : '120px', cuB: ph ? '0' : 'auto', cuRad: ph ? '20px 20px 0 0' : '16px' });
+    }
+    if (out.isCard) {
+      const cloze = scr === 'cloze', showA = scr !== 'q';
+      const CARDS = {
+        basic: { deck: 'AWS SA · Security', dc: C.ex, type: 'Basic · review · last seen 6 d ago', q: [{ t: 'An S3 bucket must only accept requests from one VPC. Which policy condition key do you use?' }], a: 'aws:SourceVpce (or aws:SourceVpc) in the bucket policy, combined with a VPC gateway endpoint for S3.', src: 'AWS SA / Security / S3 bucket policies' },
+        cloze: { deck: 'Deep learning · Equations', dc: C.dl, type: 'Cloze 2 of 3 · learning', q: [{ t: 'Scaled dot-product attention is ' }, { t: showA ? 'softmax(QKᵀ / √dₖ) · V' : '[ … ]', cz: 1 }, { t: ', where the √dₖ keeps the softmax from saturating.' }], a: 'Dividing by √dₖ keeps the dot products’ variance near 1 as dₖ grows.', src: 'Papers / Attention is all you need · ¶ 7' }
+      };
+      const K = cloze ? CARDS.cloze : CARDS.basic;
+      Object.assign(out, { cPad: ph ? '4px 12px 8px' : '16px 28px', deck: K.deck, dc: K.dc, cardType: ph ? '' : K.type, prog: '23 / 86', cTools: [['pen', 'Edit card · E'], ['flag', 'Flag · F'], ['pause', 'Bury until tomorrow · B'], ['eye-off', 'Suspend · S'], ['undo', 'Undo · Z'], ['more', 'More']].map(([a, l]) => ({ g: g(a), l })),
+        cAlign: ph ? 'flex-start' : 'center', cBodyPad: ph ? '8px 12px' : '0 28px', cardPad: ph ? '20px' : '32px 36px', qFs: ph ? '20px' : '26px', aFs: ph ? '16px' : '18px',
+        qParts: K.q.map(p => ({ t: p.t, bg: p.cz ? (showA ? 'color-mix(in srgb,var(--ln) 16%,transparent)' : 'var(--sf2)') : 'transparent', c: p.cz && showA ? 'var(--ln)' : 'var(--tx)', ul: p.cz ? '2px solid var(--ln)' : 'none', pad: p.cz ? '0 6px' : '0', fw: p.cz ? 600 : 400 })),
+        ansS: showA && !cloze ? 'flex' : (showA && cloze ? 'flex' : 'none'), answer: K.a, srcNote: K.src, gNote: g('note'),
+        rbPad: ph ? '10px 12px 30px' : '18px 28px 28px', showS: showA ? 'none' : 'flex', rateS: showA ? 'flex' : 'none', rH: ph ? '60px' : '64px',
+        rate: [['Again', '1 min', '1', 'var(--da)'], ['Hard', '8 min', '2', 'var(--wa)'], ['Good', '4 days', '3', 'var(--ok)'], ['Easy', '11 days', '4', 'var(--ln)']].map(([l, i, k, c]) => ({ l, i, k, c })) });
+    }
+    if (out.isDone) Object.assign(out, { doneStats: [['86', 'Reviewed', 'var(--tx)'], ['91%', 'Correct', 'var(--ok)'], ['13 m', 'Time', 'var(--tx)'], ['13', 'Day streak', 'var(--ac)']].map(([v, l, c]) => ({ v, l, c })), missed: [['S3 VPC endpoint condition key', '×3', C.ex], ['KMS key policy vs IAM policy', '×2', C.ex], ['Present perfect with “since”', '×2', C.en]].map(([l, n, c]) => ({ l, n, c })) });
+    return out;
+  }
+}
+</script>
+</body>
+</html>

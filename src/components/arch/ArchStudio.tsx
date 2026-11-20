@@ -15,6 +15,8 @@ import { back, openNote, setUI, toast, useVault } from "../../lib/store";
 import { openExportJob } from "../../lib/export-job";
 import { archJob } from "../../lib/export-arch";
 import { uid } from "../../lib/db";
+import { applyMinimalEdit } from "../../lib/arch-ops";
+import { diffDsl, diffSummary } from "../../lib/ai-convert";
 import { applyDsl, dslFor, parseDsl, printDsl, type DslError } from "../../lib/arch-dsl";
 import {
   childrenMap, depthOf, descendants, unreadCount, seqLayout, seqLife, laneLayout, diffArch, displayOf, EDGE_STYLE, fitGroups, hiddenBy, isGroup, kindOfIcon, nameOf, parentOf, parseArch, setParent, stringifyArch,
@@ -675,8 +677,16 @@ function Studio({ note }: { note: Note }) {
     const { doc, errors: errs } = parseDsl(p.dsl, cur.lumenArch.kind);
     if (errs.length) { toast(t("The AI wrote diagram code that didn’t check out (line {n}). Try again or add detail.", { n: errs[0].line }), undefined, { icon: "error" }); return; }
     const put = (next: ArchCanvas) => { setAiProp({ p, next }); setSel(null); setTimeout(() => rf.fitView({ ...FIT, duration: 250 }), 60); };
-    const next = applyDsl(base, doc, p.dsl, ai === "describe" ? undefined : prevLines.current);
-    if (ai !== "describe") { put(next); return; }
+    if (ai !== "describe") {
+      // edit by instruction: apply the answer as minimal ops onto the current canvas (ids, positions, bend points, label styles and comments survive)
+      try {
+        const m = applyMinimalEdit(cur, p.base || code, p.dsl);
+        const rows = diffDsl(p.base || code, m.dsl);
+        setAiProp({ p: { ...p, dsl: m.dsl, rows, summary: diffSummary(rows) }, next: m.canvas }); setSel(null); setTimeout(() => rf.fitView({ ...FIT, duration: 250 }), 60);
+      } catch (e) { toast((e as Error).message, undefined, { icon: "error" }); }
+      return;
+    }
+    const next = applyDsl(base, doc, p.dsl, undefined);
     void import("../../lib/arch-layout").then(({ elkLayout }) => elkLayout(next, { ...lopts, keep: false, scope: "all" })).then(put, () => put(next));
   };
   /** Accept = one undo step (validated DSL → canvas → code), Reject = nothing changed. */

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./lumen-glyphs.js"></script></helmet>
+<div style="position:absolute;inset:0;overflow:hidden;background:var(--bg);font-family:Inter,system-ui,sans-serif;font-size:13px;color:var(--tx);display:flex;flex-direction:{{ rootDir }}">
+  <div style="display:{{ phS }};height:40px;flex-shrink:0;align-items:center;justify-content:space-between;padding:0 22px;font-size:13px;font-weight:600"><span>9:41</span><span style="width:16px;height:9px;border:1.5px solid var(--tx);border-radius:2px"></span></div>
+  <div style="display:{{ dkS }};width:60px;flex-shrink:0;flex-direction:column;align-items:center;gap:6px;padding-top:14px;border-inline-end:1px solid var(--bd);background:var(--sf)">
+    <sc-for list="{{ rail }}" as="r"><span title="{{ r.l }}" style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:{{ r.bg }};color:{{ r.c }}"><svg width="19" height="19" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ r.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg></span></sc-for>
+  </div>
+  <div style="flex:1;min-width:0;min-height:0;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:12px;padding:{{ hPad }};flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="font-size:{{ tFs }};font-weight:650;letter-spacing:-.02em">{{ title }}</span><span style="font-size:13px;color:var(--mu)">{{ sub }}</span></div>
+      <div style="display:{{ segS }};padding:3px;border-radius:10px;background:var(--sf2);gap:2px"><sc-for list="{{ seg }}" as="s"><span style="height:30px;padding:0 12px;border-radius:7px;display:flex;align-items:center;font-size:12.5px;background:{{ s.bg }};color:{{ s.c }};font-weight:{{ s.fw }};box-shadow:{{ s.sh }};white-space:nowrap">{{ s.l }}</span></sc-for></div>
+      <sc-for list="{{ hBtns }}" as="b"><span style="display:{{ b.s }};height:34px;padding:0 12px;border-radius:9px;align-items:center;gap:6px;font-size:12.5px;border:1px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.c }};font-weight:{{ b.fw }};white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ b.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ b.l }}</span></sc-for>
+    </div>
+
+    <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:{{ tdCols }};gap:16px;padding:{{ bodyPad }};align-content:start">
+        <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+          <div style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;background:linear-gradient(135deg,color-mix(in srgb,var(--ac) 18%,var(--sf)),var(--sf));border:1px solid color-mix(in srgb,var(--ac) 40%,var(--bd))">
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ac)">NOW · 10:30 – 12:00</span><span style="font-size:{{ nowFs }};font-weight:650">Train a CNN on CIFAR-10</span><span style="font-size:12.5px;color:var(--mu)">Deep learning · Module 3 lab · 4 days overdue</span></div>
+            <span style="height:40px;padding:0 16px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;gap:8px;font-weight:650;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" style="fill:currentColor"></path></svg>Start · 90 min</span>
+          </div>
+          <div style="display:grid;grid-template-columns:{{ tdInner }};gap:14px">
+            <div style="display:flex;flex-direction:column;gap:2px;padding:14px;border-radius:14px;background:var(--sf);border:1px solid var(--bd)">
+              <div style="display:flex;align-items:center;gap:8px;padding-bottom:8px"><span style="font-weight:650;font-size:13.5px;flex:1">Schedule</span><span style="font-size:12px;color:var(--mu)">6 blocks · 5 h 15</span></div>
+              <sc-for list="{{ sched }}" as="e"><div style="display:flex;gap:10px;min-height:{{ e.h }};position:relative">
+                <span style="width:44px;flex-shrink:0;font-size:11.5px;color:var(--mu);padding-top:3px;font-variant-numeric:tabular-nums">{{ e.t }}</span>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding:6px 10px;border-radius:8px;background:{{ e.bg }};border-left:3px solid {{ e.c }};opacity:{{ e.op }}"><span style="font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:{{ e.td }}">{{ e.l }}</span><span style="font-size:11px;color:var(--mu)">{{ e.s }}</span></div>
+                <div style="display:{{ e.nowS }};position:absolute;left:44px;right:0;top:-1px;height:2px;background:var(--ac)"></div>
+              </div></sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+              <div style="display:flex;flex-direction:column;padding:14px;border-radius:14px;background:var(--sf);border:1px solid var(--bd)">
+                <div style="display:flex;align-items:center;gap:8px;padding-bottom:6px"><span style="font-weight:650;font-size:13.5px;flex:1">Tasks today</span><span style="font-size:12px;color:var(--mu)">2 of 6</span><span style="font-size:12px;color:var(--ac)">+ Add</span></div>
+                <sc-for list="{{ tTasks }}" as="t"><dc-import name="PDTask" t="{{ t }}" hint-size="100%,40px"></dc-import></sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:14px;background:var(--sf);border:1px solid var(--bd)">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:650;font-size:13.5px;flex:1">Reviews due</span><span style="font-size:12px;color:var(--mu)">86 cards · ~14 min</span></div>
+                <sc-for list="{{ decks }}" as="d"><div style="display:flex;align-items:center;gap:10px;min-height:32px"><span style="width:8px;height:8px;border-radius:2px;background:{{ d.c }}"></span><span style="flex:1;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.l }}</span><span style="font-size:11.5px;color:var(--ln);font-variant-numeric:tabular-nums">{{ d.n }}</span><span style="font-size:11.5px;color:var(--wa);font-variant-numeric:tabular-nums;width:22px;text-align:right">{{ d.r }}</span></div></sc-for>
+                <span style="height:34px;border-radius:9px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600">Review all · or pick a deck</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:{{ sideS }};flex-direction:column;gap:14px;min-width:0">
+          <div style="display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:14px;background:var(--sf);border:1px solid var(--bd)"><span style="font-weight:650;font-size:13.5px">November</span><dc-import name="PDMini" hint-size="100%,190px"></dc-import></div>
+          <div style="display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:14px;background:var(--sf);border:1px solid var(--bd)">
+            <span style="font-weight:650;font-size:13.5px">Plans</span>
+            <sc-for list="{{ plans }}" as="p"><div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;align-items:center;gap:8px;font-size:12.5px"><span style="width:8px;height:8px;border-radius:2px;background:{{ p.c }}"></span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.l }}</span><span style="font-size:11.5px;color:{{ p.sc }}">{{ p.s }}</span></div><div style="height:4px;border-radius:2px;background:var(--sf2)"><div style="height:100%;width:{{ p.p }};border-radius:2px;background:{{ p.c }}"></div></div></div></sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:14px;background:var(--sf);border:1px solid var(--bd)"><span style="font-weight:650;font-size:13.5px">Today I learned</span><span style="min-height:56px;padding:10px;border-radius:9px;background:var(--bg);border:1px solid var(--bd);font-size:12.5px;color:var(--mu)">One line is enough. Saved to today’s journal.</span></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isMonth }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;min-height:0;display:flex;gap:16px;padding:{{ bodyPad }}">
+        <div style="width:220px;flex-shrink:0;display:{{ sideS }};flex-direction:column;gap:16px">
+          <span style="height:38px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:650;gap:6px">+ Schedule</span>
+          <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;font-weight:650;letter-spacing:.06em;color:var(--mu);padding-bottom:4px">CALENDARS</span><sc-for list="{{ cals }}" as="c"><div style="display:flex;align-items:center;gap:9px;min-height:30px;font-size:12.5px;opacity:{{ c.op }}"><span style="width:14px;height:14px;border-radius:4px;background:{{ c.bg }};border:2px solid {{ c.c }};box-sizing:border-box"></span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.l }}</span><span style="font-size:11px;color:var(--mu)">{{ c.s }}</span></div></sc-for></div>
+          <div style="display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);font-size:12px;line-height:17px;color:var(--mu)"><b style="color:var(--tx)">Busy week ahead</b>Week of 7 Dec has 14 h planned against a 12 h pace. Spread to the next week?<span style="color:var(--ac);font-weight:600">Rebalance</span></div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;border:1px solid var(--bd);border-radius:14px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--bd)"><sc-for list="{{ dow }}" as="d"><span style="padding:8px 10px;font-size:11.5px;color:var(--mu);font-weight:600">{{ d }}</span></sc-for></div>
+          <div style="flex:1;display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr">
+            <sc-for list="{{ days }}" as="d"><div style="border-right:1px solid color-mix(in srgb,var(--bd) 60%,transparent);border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent);padding:6px;display:flex;flex-direction:column;gap:3px;min-width:0;background:{{ d.bg }};overflow:hidden">
+              <div style="display:flex;align-items:center;gap:6px"><span style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:{{ d.fw }};background:{{ d.nbg }};color:{{ d.nc }}">{{ d.n }}</span><span style="flex:1"></span><span style="display:{{ d.rvS }};font-size:10.5px;color:var(--wa);font-variant-numeric:tabular-nums">{{ d.rv }}</span></div>
+              <sc-for list="{{ d.ev }}" as="e"><div style="display:flex;align-items:center;gap:5px;height:{{ e.h }};padding:0 6px;border-radius:5px;background:{{ e.bg }};border-left:2px solid {{ e.c }};font-size:11px;white-space:nowrap;overflow:hidden;color:{{ e.tc }};font-weight:{{ e.fw }}"><span style="color:var(--mu);display:{{ e.tS }}">{{ e.t }}</span>{{ e.l }}</div></sc-for>
+              <span style="display:{{ d.moreS }};font-size:10.5px;color:var(--mu);padding-left:4px">{{ d.more }}</span>
+            </div></sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isWeek }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;min-height:0;display:flex;flex-direction:column;margin:{{ wkMargin }};border:1px solid var(--bd);border-radius:14px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:{{ wkCols }};border-bottom:1px solid var(--bd)"><span></span><sc-for list="{{ wkDays }}" as="d"><div style="padding:8px 10px;display:flex;flex-direction:column;gap:2px;border-left:1px solid var(--bd)"><span style="font-size:11px;color:var(--mu)">{{ d.d }}</span><span style="font-size:18px;font-weight:{{ d.fw }};color:{{ d.c }}">{{ d.n }}</span><div style="display:flex;gap:3px;flex-wrap:wrap"><sc-for list="{{ d.all }}" as="a"><span style="font-size:10.5px;padding:1px 6px;border-radius:4px;background:{{ a.bg }};color:{{ a.c }};white-space:nowrap">{{ a.l }}</span></sc-for></div></div></sc-for></div>
+        <div style="flex:1;position:relative;display:grid;grid-template-columns:{{ wkCols }}">
+          <div style="position:relative"><sc-for list="{{ hours }}" as="h"><span style="position:absolute;top:{{ h.y }};right:8px;font-size:10.5px;color:var(--mu);transform:translateY(-50%)">{{ h.l }}</span></sc-for></div>
+          <sc-for list="{{ wkDays }}" as="d"><div style="position:relative;border-left:1px solid var(--bd);background:{{ d.bg }}">
+            <sc-for list="{{ hours }}" as="h"><div style="position:absolute;left:0;right:0;top:{{ h.y }};height:1px;background:color-mix(in srgb,var(--bd) 50%,transparent)"></div></sc-for>
+            <sc-for list="{{ d.ev }}" as="e"><div style="position:absolute;left:3px;right:3px;top:{{ e.y }};height:{{ e.h }};border-radius:6px;background:{{ e.bg }};border-left:3px solid {{ e.c }};outline:{{ e.ol }};outline-offset:-1px;padding:4px 6px;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;font-weight:600;line-height:14px">{{ e.l }}</span><span style="font-size:10px;color:var(--mu)">{{ e.t }}</span></div></sc-for>
+            <div style="display:{{ d.nowS }};position:absolute;left:0;right:0;top:{{ nowY }};height:2px;background:var(--ac)"></div>
+          </div></sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isTasks }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;min-height:0;display:flex;gap:18px;padding:{{ bodyPad }}">
+        <div style="width:210px;flex-shrink:0;display:{{ sideS }};flex-direction:column;gap:2px">
+          <sc-for list="{{ tFilters }}" as="f"><div style="display:flex;align-items:center;gap:9px;min-height:34px;padding:0 10px;border-radius:8px;background:{{ f.bg }};color:{{ f.c }};font-size:13px;font-weight:{{ f.fw }};margin-top:{{ f.mt }}"><svg width="15" height="15" viewBox="0 0 24 24" style="display:{{ f.gS }};stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;color:{{ f.gc }}"><sc-for list="{{ f.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg><span style="display:{{ f.dS }};width:8px;height:8px;border-radius:2px;background:{{ f.dc }}"></span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.l }}</span><span style="font-size:11.5px;color:{{ f.nc }}">{{ f.n }}</span></div></sc-for>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);background:var(--sf);font-size:13px;color:var(--mu)"><span style="font-size:16px">+</span><span style="flex:1">Add a task… try “lab report fri #dl !high”</span><span style="display:{{ dkS }};font-size:11px;border:1px solid var(--bd);padding:1px 6px;border-radius:5px">N</span></div>
+          <div style="display:{{ tListS }};flex-direction:column">
+            <sc-for list="{{ tGroups }}" as="gp"><div style="display:flex;flex-direction:column;padding-top:10px">
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 2px;font-size:12.5px;font-weight:650;color:{{ gp.c }}"><span>⌄</span>{{ gp.l }}<span style="font-weight:400;color:var(--mu)">{{ gp.n }}</span></div>
+              <sc-for list="{{ gp.items }}" as="t"><dc-import name="PDTask" t="{{ t }}" hint-size="100%,44px"></dc-import></sc-for>
+            </div></sc-for>
+          </div>
+          <div style="display:{{ tBoardS }};gap:12px;padding-top:12px;flex:1;min-height:0">
+            <sc-for list="{{ tCols }}" as="c"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:14px;background:var(--sf);border:1px solid var(--bd)"><div style="display:flex;align-items:center;gap:8px;padding:2px 4px 6px"><span style="width:8px;height:8px;border-radius:50%;background:{{ c.c }}"></span><b style="font-size:13px">{{ c.l }}</b><span style="color:var(--mu);font-size:12px">{{ c.n }}</span></div><sc-for list="{{ c.items }}" as="t"><div style="display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:10px;background:var(--bg);border:1px solid var(--bd)"><span style="font-size:13px;font-weight:600">{{ t.l }}</span><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="font-size:11px;padding:1px 7px;border-radius:999px;background:var(--sf2);color:var(--mu)">{{ t.src }}</span><span style="font-size:11px;color:{{ t.dc }}">{{ t.due }}</span></div></div></sc-for></div></sc-for>
+          </div>
+        </div>
+        <div style="width:330px;flex-shrink:0;display:{{ detS }};flex-direction:column;gap:12px;padding:16px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);align-self:flex-start">
+          <div style="display:flex;align-items:flex-start;gap:10px"><span style="width:20px;height:20px;border-radius:6px;border:1.5px solid var(--da);margin-top:2px;flex-shrink:0"></span><span style="font-size:16px;font-weight:650;flex:1;line-height:22px">Lab report: CNN results</span></div>
+          <sc-for list="{{ det }}" as="f"><div style="display:grid;grid-template-columns:84px 1fr;gap:10px;font-size:12.5px;align-items:center;min-height:30px"><span style="color:var(--mu)">{{ f.k }}</span><span style="color:{{ f.c }}">{{ f.v }}</span></div></sc-for>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11px;font-weight:650;letter-spacing:.06em;color:var(--mu)">CHECKLIST · 2 / 4</span><sc-for list="{{ checklist }}" as="c"><div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:{{ c.c }};text-decoration:{{ c.td }}"><span style="width:15px;height:15px;border-radius:4px;border:1.5px solid {{ c.bc }};background:{{ c.bg }}"></span>{{ c.l }}</div></sc-for></div>
+          <div style="display:flex;gap:8px;padding-top:4px"><span style="flex:1;height:34px;border-radius:9px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:12.5px">Snooze ▾</span><span style="flex:1;height:34px;border-radius:9px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:650">Start focus</span></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display:{{ phNavS }};height:84px;flex-shrink:0;margin-top:auto;border-top:1px solid var(--bd);background:var(--sf);justify-content:space-around;padding-top:8px"><sc-for list="{{ phNav }}" as="n"><span style="width:64px;height:48px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10.5px;color:{{ n.c }};background:{{ n.bg }}"><svg width="22" height="22" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ n.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ n.l }}</span></sc-for></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;today&quot;,&quot;month&quot;,&quot;week&quot;,&quot;tasks&quot;],&quot;default&quot;:&quot;today&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;tview&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;list&quot;,&quot;board&quot;],&quot;default&quot;:&quot;list&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { window.__pd = this; if (!window.LUMEN_GLYPHS) { const t = setInterval(() => { if (window.LUMEN_GLYPHS) { clearInterval(t); this.forceUpdate(); } }, 50); setTimeout(() => clearInterval(t), 5000); } }
+  renderVals() {
+    const GL = window.LUMEN_GLYPHS || {};
+    const g = n => (GL[n] || []).map(p => typeof p === 'string' ? { d: p, f: 'none', s: 'currentColor' } : { d: p.d, f: p.fill ? 'currentColor' : 'none', s: p.stroke || (p.fill ? 'none' : 'currentColor') });
+    const P = Object.assign({}, this.props, window.__pdOv || {}), ph = !!P.phone, scr = P.screen || 'today', tv = P.tview || 'list';
+    const AC = 'color-mix(in srgb,var(--ac) 16%,transparent)';
+    const C = { dl: '#B48EF0', en: '#5CC8C2', pr: '#F2A93B', ex: '#E8893A', th: '#7AA2F7', ev: '#9AA0AA', rv: '#E8B34A' };
+    const tint = c => `color-mix(in srgb,${c} 16%,var(--bg))`;
+    const rail = [['home', 'Home', 1], ['today', 'Today', scr === 'today'], ['calendar', 'Calendar', scr === 'month' || scr === 'week'], ['task', 'Tasks', scr === 'tasks'], ['flashcards', 'Review', 0], ['timeline', 'Plans', 0], ['assistant', 'Ask', 0], ['note', 'Notes', 0], ['search', 'Search', 0]].map(([a, l, on], i) => ({ g: g(a), l, bg: on && i ? AC : 'transparent', c: on && i ? 'var(--ac)' : 'var(--mu)' }));
+    const segOf = (arr, on) => arr.map(l => ({ l, bg: l === on ? 'var(--sf)' : 'transparent', c: l === on ? 'var(--tx)' : 'var(--mu)', fw: l === on ? 600 : 400, sh: l === on ? '0 1px 2px rgba(0,0,0,.2)' : 'none' }));
+    const btn = (gl, l, o = {}) => ({ g: g(gl), l, s: o.dk && ph ? 'none' : 'flex', bd: o.pri ? 'transparent' : 'var(--bd)', bg: o.pri ? 'var(--ac)' : 'transparent', c: o.pri ? 'var(--af)' : 'var(--tx)', fw: o.pri ? 650 : 500 });
+    const task = (l, o = {}) => ({ l, src: o.src || '', sc: o.sc || 'var(--mu)', due: o.due || '', dc: o.late ? 'var(--da)' : o.today ? 'var(--ac)' : 'var(--mu)', pr: o.pr || '', done: !!o.done, sel: !!o.sel, sub: o.sub || '', tags: o.tags || [], rep: !!o.rep, ph });
+    const out = { rootDir: ph ? 'column' : 'row', phS: ph ? 'flex' : 'none', dkS: ph ? 'none' : 'flex', sideS: ph ? 'none' : 'flex', rail, hPad: ph ? '6px 16px 10px' : '20px 28px 14px', tFs: ph ? '20px' : '24px', bodyPad: ph ? '0 16px' : '0 28px 24px', isToday: scr === 'today', isMonth: scr === 'month', isWeek: scr === 'week', isTasks: scr === 'tasks', phNavS: ph ? 'flex' : 'none',
+      phNav: [['today', 'Today', scr === 'today'], ['calendar', 'Calendar', scr === 'month' || scr === 'week'], ['task', 'Tasks', scr === 'tasks'], ['flashcards', 'Review', 0], ['more', 'More', 0]].map(([a, l, on]) => ({ g: g(a), l, c: on ? 'var(--ac)' : 'var(--mu)', bg: on ? AC : 'transparent' })) };
+    if (scr === 'today') {
+      Object.assign(out, { title: ph ? 'Today' : 'Friday, 20 November', sub: ph ? 'Fri 20 Nov · 6 blocks · 86 reviews' : 'Good morning, Ahmed. 6 blocks, 4 tasks left and 86 reviews. 12-day streak.', segS: 'none', seg: [], hBtns: [btn('plus', 'Quick add', { dk: 1 }), btn('timeline', 'Plan my day', { pri: 1 })],
+        tdCols: ph ? '1fr' : 'minmax(0,1fr) 300px', tdInner: ph ? '1fr' : '1fr 1fr', nowFs: ph ? '16px' : '19px',
+        sched: [['08:00', 'Morning reviews', '86 cards · 14 min', C.rv, 'done'], ['09:00', 'Lecture · Transformers intro', 'Deep learning · watch + notes', C.dl, 'done'], ['10:30', 'Train a CNN on CIFAR-10', 'Lab · 90 min', C.dl, 'now'], ['14:00', 'Team sync · Lumen 2.0', 'Calendar · 30 min', C.ev, ''], ['16:00', 'Sync conflict UI', 'Lumen 2.0 · due Sun', C.pr, ''], ['19:30', 'AWS · IAM policies', 'Exam prep · 45 min', C.ex, '']].slice(0, ph ? 4 : 6).map(([t, l, s, c, st]) => ({ t, l, s, c, h: ph ? '44px' : '50px', bg: st === 'now' ? tint(c) : 'color-mix(in srgb,' + c + ' 8%,transparent)', op: st === 'done' ? .55 : 1, td: st === 'done' ? 'line-through' : 'none', nowS: st === 'now' ? 'block' : 'none' })),
+        tTasks: [task('Email Dr. Lim about sign convention', { src: 'Physics 101', done: 1 }), task('Lab report: CNN results', { src: 'Deep learning', due: 'Overdue 4d', late: 1, pr: 'high' }), task('Review PR #212', { src: 'Lumen 2.0', due: '16:00', today: 1 }), task('Read ResNet paper', { src: 'Deep learning', due: 'Today', today: 1 })].slice(0, ph ? 3 : 4),
+        decks: [['AWS SA · Security', C.ex, '20', '34'], ['English A1 · Vocabulary', C.en, '10', '12'], ['Deep learning · Concepts', C.dl, '0', '8'], ['Physics 101', C.th, '0', '2']].map(([l, c, n, r]) => ({ l, c, n: n + ' new', r })),
+        plans: [['Deep learning', C.dl, '31%', '1 overdue', 'var(--da)'], ['Lumen 2.0 launch', C.pr, '27%', 'at risk', 'var(--da)'], ['AWS SA exam', C.ex, '4%', '85 days', 'var(--mu)'], ['English A1–C2', C.en, '1%', 'on track', 'var(--ok)']].map(([l, c, p, s, sc]) => ({ l, c, p, s, sc })) });
+    }
+    if (scr === 'month') {
+      const first = new Date(2026, 10, 1), offset = (first.getDay() + 6) % 7, days = [];
+      const EV = { 3: [['Lecture · CNNs', C.dl]], 6: [['Sprint review', C.pr, '10:00']], 9: [['A1 Grammar · 3', C.en]], 12: [['Midterm quiz', C.dl, '', 1]], 16: [['Start AWS prep', C.ex]], 18: [['Lecture · ResNet', C.dl], ['Bug triage', C.pr]], 20: [['CNN lab', C.dl, '10:30'], ['Team sync', C.ev, '14:00'], ['IAM policies', C.ex, '19:30'], ['PR review', C.pr]], 21: [['Read ResNet', C.dl]], 23: [['Practice set A', C.ex], ['A1 Vocab', C.en]], 24: [['Lecture · Attention', C.dl]], 26: [['Design freeze', C.pr, '', 1]], 27: [['Mock quiz', C.ex]], 29: [['Due: Verb to be', C.en]], 30: [['nanoGPT lab', C.dl], ['Sync engine', C.pr]] };
+      const RV = { 20: 86, 21: 40, 22: 22, 23: 51, 24: 33, 25: 18, 26: 47, 27: 29, 28: 12, 29: 38, 30: 61 };
+      for (let i = 0; i < 35; i++) { const dn = i - offset + 1, D = new Date(2026, 10, dn), inM = D.getMonth() === 10, today = inM && dn === 20, evs = (inM && EV[dn]) || [];
+        const max = ph ? 0 : 3; days.push({ n: D.getDate(), fw: today ? 700 : 500, nbg: today ? 'var(--ac)' : 'transparent', nc: today ? 'var(--af)' : inM ? 'var(--tx)' : 'var(--mu)', bg: inM ? 'transparent' : 'color-mix(in srgb,var(--sf) 60%,transparent)', rvS: RV[dn] && inM && !ph ? 'block' : 'none', rv: RV[dn] ? RV[dn] + ' due' : '',
+          ev: (ph ? evs.slice(0, 3).map(([l, c]) => ({ l: '', c, h: '4px', bg: c, tS: 'none', t: '', tc: '', fw: 400 })) : evs.slice(0, max).map(([l, c, t, ms]) => ({ l: (ms ? '◆ ' : '') + l, c, h: '20px', bg: ms ? 'transparent' : tint(c), tS: t ? 'inline' : 'none', t: t || '', tc: ms ? c : 'var(--tx)', fw: ms ? 650 : 500 }))), moreS: evs.length > max && !ph ? 'block' : 'none', more: '+' + (evs.length - max) + ' more' }); }
+      Object.assign(out, { title: 'November 2026', sub: ph ? '' : '14 sessions · 3 milestones · 486 reviews scheduled', segS: 'flex', seg: segOf(ph ? ['Month', 'Week', 'Agenda'] : ['Day', 'Week', 'Month', 'Agenda'], 'Month'), hBtns: [btn('chevron-right', 'Today', { dk: 1 })], dow: ph ? ['M', 'T', 'W', 'T', 'F', 'S', 'S'] : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], days,
+        cals: [['Deep learning', C.dl, '12'], ['Lumen 2.0 launch', C.pr, '8'], ['AWS SA exam', C.ex, '9'], ['English A1–C2', C.en, '6'], ['Tasks with dates', 'var(--tx)', '23'], ['Review load', C.rv, 'counts'], ['Google · Work', C.ev, 'read-only'], ['Holidays', 'var(--mu)', '', .5]].map(([l, c, s, op]) => ({ l, c, bg: op ? 'transparent' : c, s, op: op || 1 })) });
+      if (ph) out.bodyPad = '0 12px';
+    }
+    if (scr === 'week') {
+      const H0 = 8, H1 = 21, PX = ph ? 40 : 46; const hours = []; for (let h = H0; h <= H1; h++) hours.push({ y: ((h - H0) * PX) + 'px', l: (h < 10 ? '0' : '') + h + ':00' });
+      const Y = h => ((h - H0) * PX) + 'px', Hh = d => (d * PX - 2) + 'px';
+      const E = { 0: [[9, 1.5, 'Lecture · Attention', C.dl], [14, 1, 'Bug triage', C.pr], [19.5, .75, 'AWS · VPC', C.ex]], 1: [[10, 2, 'nanoGPT lab', C.dl], [16, 1.5, 'Sync engine', C.pr]], 2: [[9, 1, 'A1 Vocabulary', C.en], [13, 1, 'Office hours', C.ev], [19.5, .75, 'AWS · Practice A', C.ex]], 3: [[10.5, 1.5, 'CNN lab', C.dl], [14, .5, 'Team sync', C.ev], [16, 2, 'Sync conflict UI', C.pr], [19.5, .75, 'IAM policies', C.ex]], 4: [[9, 1, 'Read ResNet', C.dl, 1], [11, 1, 'A1 Grammar', C.en]], 5: [[10, 3, 'Capstone brainstorm', C.dl, 1]], 6: [] };
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => ({ d, n: 17 + i, fw: i === 3 ? 700 : 500, c: i === 3 ? 'var(--ac)' : 'var(--tx)', bg: i === 3 ? 'color-mix(in srgb,var(--ac) 4%,transparent)' : 'transparent', nowS: i === 3 ? 'block' : 'none', all: (i === 2 ? [['◆ Midterm', C.dl]] : i === 3 ? [['86 reviews', C.rv]] : []).map(([l, c]) => ({ l, c, bg: tint(c) })), ev: (E[i] || []).map(([h, d, l, c, sug]) => ({ y: Y(h), h: Hh(d), l, t: `${Math.floor(h)}:${h % 1 ? (h % 1 * 60) : '00'} · ${d * 60} min${sug ? ' · suggested' : ''}`, c, bg: sug ? 'transparent' : tint(c), ol: sug ? '1.5px dashed ' + c : 'none' })) }));
+      const wk = ph ? days.slice(2, 5) : days;
+      Object.assign(out, { title: ph ? '19 – 21 Nov' : 'Week of 17 November', sub: ph ? '' : 'Dashed blocks are suggestions from your plans’ pace; drag to accept.', segS: 'flex', seg: segOf(ph ? ['Month', 'Week', 'Agenda'] : ['Day', 'Week', 'Month', 'Agenda'], 'Week'), hBtns: [btn('target', 'Auto-schedule', { dk: 1 })], hours, wkDays: wk, wkCols: `52px repeat(${wk.length},1fr)`, nowY: Y(10.75), wkMargin: ph ? '0 12px 0' : '0 28px 24px' });
+    }
+    if (scr === 'tasks') {
+      const T = [
+        ['Overdue', 'var(--da)', [task('Lab report: CNN results', { src: 'Deep learning · Module 3', due: '16 Nov', late: 1, pr: 'high', sel: tv === 'list' && !ph, sub: '2/4' }), task('Reply to beta tester feedback', { src: 'Lumen 2.0', due: '18 Nov', late: 1 })]],
+        ['Today', 'var(--ac)', [task('Review PR #212', { src: 'Lumen 2.0', due: '16:00', today: 1, tags: ['#code'] }), task('Read ResNet paper', { src: 'Deep learning', due: 'Today', today: 1, tags: ['#paper'] }), task('Email Dr. Lim about sign convention', { src: 'Physics 101 · note', done: 1 })]],
+        ['Tomorrow', 'var(--tx)', [task('Practice set A · 30 questions', { src: 'AWS SA exam', due: 'Sat' }), task('Water plants', { src: 'Home', due: 'Sat', rep: 1 })]],
+        ['This week', 'var(--tx)', [task('Design freeze checklist', { src: 'Lumen 2.0', due: 'Thu 26', pr: 'high' }), task('A1 Grammar: Verb to be', { src: 'English A1–C2 · topic', due: 'Sun 29' })]]
+      ];
+      Object.assign(out, { title: 'Tasks', sub: ph ? '2 overdue · 3 today' : 'Tasks from notes, plans and your inbox. They stay as Markdown in the note they came from.', segS: 'flex', seg: segOf(['List', 'Board'], tv === 'board' ? 'Board' : 'List'), hBtns: [btn('filter', 'Group: Due', { dk: 1 }), btn('sort', 'Sort', { dk: 1 })],
+        tFilters: [['inbox', 'Inbox', '3'], ['today', 'Today', '5', 1], ['calendar', 'Upcoming', '14'], ['c-warning', 'Overdue', '2', 0, 'var(--da)'], ['check', 'Completed', ''], ['', 'PLANS', '', 0, 0, 1], ['', 'Deep learning', '6', 0, 0, 0, C.dl], ['', 'Lumen 2.0 launch', '9', 0, 0, 0, C.pr], ['', 'AWS SA exam', '4', 0, 0, 0, C.ex], ['', 'English A1–C2', '2', 0, 0, 0, C.en], ['', 'SMART LISTS', '', 0, 0, 1], ['star', 'High priority', '3'], ['tag', '#paper', '5'], ['note', 'From notes', '11']].map(([a, l, n, on, nc, hd, dc]) => ({ g: g(a), gS: a ? 'block' : 'none', gc: nc || 'currentColor', l, n, nc: nc || 'var(--mu)', dS: dc ? 'block' : 'none', dc: dc || '', bg: on ? AC : 'transparent', c: hd ? 'var(--mu)' : on ? 'var(--tx)' : 'var(--tx)', fw: hd ? 650 : on ? 600 : 400, mt: hd ? '12px' : '0' })),
+        tListS: tv === 'board' ? 'none' : 'flex', tBoardS: tv === 'board' ? 'flex' : 'none',
+        tGroups: (ph ? T.slice(0, 3) : T).map(([l, c, items]) => ({ l, c, n: String(items.length), items })),
+        tCols: [['To do', 'var(--mu)', [['Practice set A', 'AWS SA exam', 'Sat'], ['Design freeze checklist', 'Lumen 2.0', 'Thu 26'], ['A1 Grammar: Verb to be', 'English', 'Sun 29']]], ['Doing', 'var(--ac)', [['Lab report: CNN results', 'Deep learning', 'Overdue 4d', 1], ['Review PR #212', 'Lumen 2.0', '16:00']]], ['Waiting', 'var(--ln)', [['Beta feedback replies', 'Lumen 2.0', '18 Nov', 1]]], ['Done', 'var(--ok)', [['Email Dr. Lim', 'Physics 101', 'Today']]]].map(([l, c, its]) => ({ l, c, n: String(its.length), items: its.map(([a, b, d, late]) => ({ l: a, src: b, due: d, dc: late ? 'var(--da)' : 'var(--mu)' })) })),
+        detS: tv === 'list' && !ph ? 'flex' : 'none',
+        det: [['Due', 'Mon 16 Nov · 4 days overdue', 'var(--da)'], ['Plan', 'Deep learning › Module 3', 'var(--tx)'], ['Note', 'CNN lab notes', 'var(--ln)'], ['Priority', 'High', 'var(--tx)'], ['Estimate', '90 min', 'var(--tx)'], ['Repeat', 'Never', 'var(--mu)'], ['Reminder', '30 min before', 'var(--tx)']].map(([k, v, c]) => ({ k, v, c })),
+        checklist: [['Load data + augment', 1], ['Baseline ResNet-18', 1], ['Tune lr / batch', 0], ['Write up results', 0]].map(([l, d]) => ({ l, c: d ? 'var(--mu)' : 'var(--tx)', td: d ? 'line-through' : 'none', bc: d ? 'var(--ok)' : 'var(--bd)', bg: d ? 'var(--ok)' : 'transparent' })) });
+    }
+    return out;
+  }
+}
+</script>
+</body>
+</html>

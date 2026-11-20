@@ -1,4 +1,6 @@
-import { Excalidraw, convertToExcalidrawElements, exportToBlob, exportToSvg, restore, restoreElements, serializeAsJSON } from "@excalidraw/excalidraw";
+import { Excalidraw, convertToExcalidrawElements, exportToBlob, exportToSvg, reconcileElements, restore, restoreElements, serializeAsJSON } from "@excalidraw/excalidraw";
+import { carriedFrom } from "../lib/board-merge";
+import { ensureIndices } from "../../shared/board-index";
 import "@excalidraw/excalidraw/index.css";
 import { Check, Shapes, StickyNote, GitFork, Workflow, X } from "lucide-react";
 import { Component, memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -47,7 +49,7 @@ import { orderedFrames } from "./wb/present/frames";
 import { getCommonBounds } from "@excalidraw/excalidraw";
 import { appStyle, currentPen, ERASER_PX, finishStroke, getInk, setInk, hlPen, pxToSw, onInk, PEN_DEFAULTS, setPen, swToPx, useInk, type PenSettings, type PenType } from "./wb/pens/model";
 import { live as wbLive, setLive } from "./wb/pens/live";
-import { alongRuler, bump, commit, deleteIds, lassoed, partialErase, scratchOut, sendBehindInk, snapStroke, toScene, toScreen, touches as touchesEl, unsnap } from "./wb/pens/engine";
+import { alongRuler, bump, commit, deleteIds, lassoed, nearCircle, partialErase, scratchOut, sendBehindInk, snapStroke, toScene, toScreen, touches as touchesEl, unsnap } from "./wb/pens/engine";
 import { recognise, snappedElement, absPoints, SNAP_NAME } from "./wb/pens/shapes";
 import { EraserBar } from "./wb/pens/InkBars";
 import { INK_TABLE, inkFlip, LiveInk } from "./wb/pens/LiveInk";
@@ -69,6 +71,8 @@ type El = Record<string, unknown> & { id: string; type: string; x: number; y: nu
 /** Output-line markers OutputStrip (VisualCodePanel) turns into a check / x icon; the characters never render. */
 const LOG_OK = "✓", LOG_ERR = "✖";
 const PERF_LIMIT = 3000;
+/** Palm rejection: touches this soon after stylus activity are ignored. */
+const PALM_MS = 500;
 const isSticky = (e: El) => e.type === "rectangle" && PAPER.includes(String(e.backgroundColor).toLowerCase());
 const rid = () => Math.random().toString(36).slice(2, 12) + Date.now().toString(36).slice(-4);
 
@@ -217,6 +221,14 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   const boardDiv = useRef<HTMLDivElement>(null);
   const pendingStroke = useRef<{ held: boolean; shift: boolean; t: ReturnType<typeof setTimeout> } | null>(null);
   const penDown = useRef<{ lastMove: number; x: number; y: number; shift: boolean } | null>(null);
+  /** Lumen's own sample list for the stroke in progress (coalesced pointer samples, scene coords): feeds the live overlay and
+   *  replaces Excalidraw's points on commit, so fast strokes keep their shape. `pred` = predicted samples, display only. */
+  const rawStroke = useRef<{ id: number; pts: [number, number][]; pr: number[]; pen: boolean; pred: [number, number][] } | null>(null);
+  const rawDone = useRef<{ id: number; pts: [number, number][]; pr: number[]; pen: boolean } | null>(null);
+  /** Palm rejection: last stylus activity (down, move, hover, up) and the touches being ignored. */
+  const lastPen = useRef(0);
+  const palmIds = useRef(new Set<number>());
+  const autoPenShown = useRef(false);
   const gesture = useRef<null | { kind: "lasso" | "lasso-erase" | "erase"; pts: [number, number][]; mode?: "stroke" | "partial"; hit: Set<string> }>(null);
   const [lassoPts, setLassoPts] = useState<[number, number][]>([]);
   const [lassoScene, setLassoScene] = useState<[number, number][] | null>(null);
@@ -747,16 +759,25 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     toast(t("Added {n} elements from the API", { n: pending.length }));
   };
 
-  // External change (sync / REST / another device).
+  // External change (sync / REST / another device): merged into the live scene per element (reconcileElements: higher
+  // version wins), so edits made here since the last save survive; tombstones in the body delete here too.
   useEffect(() => {
-    if (!api.current || note.body === lastSaved.current) return;
+    const a = api.current;
+    if (!a || note.body === lastSaved.current || carriedFrom(note.body) === lastSaved.current) return; // own save (+ tombstones)
     const { scene, error } = parseScene(note.body);
     if (error) return;
     lastSaved.current = note.body;
-    const r = restore({ elements: scene.elements as never }, null, null);
+    const incoming = ensureIndices(scene.elements as unknown as El[]); // index-less elements keep their array place
+    const restored = restore({ elements: incoming as never }, null, null).elements as unknown as El[];
+    const mine = [...(a.getSceneElementsIncludingDeleted() as El[]), ...layerStore.hiddenElements()];
+    const byId = new Map(mine.map((e) => [e.id, e]));
+    const got = new Set(restored.map((e) => e.id));
+    // Compact tombstones restore() dropped still delete the live copy (as a deleted version of it).
+    const dead = incoming.filter((e) => e.isDeleted && !got.has(e.id) && byId.has(e.id)).map((e) => ({ ...byId.get(e.id)!, isDeleted: true, version: e.version, versionNonce: e.versionNonce, updated: e.updated }));
+    const els = reconcileElements(mine as never, [...restored, ...dead] as never, a.getAppState() as never);
     const sc = scene as Scene & { lumenBoard?: Partial<LumenBoard>; lumenLayers?: Partial<LayersMeta> };
     boardStore.replace(sc.lumenBoard);
-    api.current.updateScene({ elements: layerStore.reload(sc.lumenLayers, r.elements as never) });
+    a.updateScene({ elements: layerStore.reload(sc.lumenLayers, els as never) });
     void hydrate(scene.files as Record<string, SceneFile>);
     applyPending(scene);
   }, [note.body]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -820,6 +841,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   const press = useRef<{ t: ReturnType<typeof setTimeout>; x: number; y: number } | null>(null);
   const touches = useRef(new Map<number, { x: number; y: number }>());
   const onPointerDownCapture = (e: React.PointerEvent) => {
+    if (palmDown(e)) return;
     if (inkDown(e)) return;
     if (e.pointerType !== "touch" || !(e.target as HTMLElement).closest("canvas")) return;
     touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -835,16 +857,65 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
       if (need === 1 && hitTest(cx, cy)) return;
       openWheel(cx, cy);
       const shut = () => api.current?.updateScene({ appState: { contextMenu: null } as never });
-      shut(); requestAnimationFrame(shut); setTimeout(shut, 120);
-    }, 550) };
+      shut(); requestAnimationFrame(shut); setTimeout(shut, 120); setTimeout(shut, 250);
+    }, 350) };
   };
   const onPointerMoveCapture = (e: React.PointerEvent) => {
+    if (e.pointerType === "pen") lastPen.current = performance.now();
+    if (palmIds.current.has(e.pointerId)) { e.stopPropagation(); return; }
     if (inkMove(e)) return;
     if (e.pointerType !== "touch") return;
     const p0 = touches.current.get(e.pointerId);
     if (p0 && press.current && Math.hypot(e.clientX - p0.x, e.clientY - p0.y) > 10) { clearTimeout(press.current.t); press.current = null; }
   };
-  const onPointerUpCapture = (e: React.PointerEvent) => { if (inkUp(e)) return; touches.current.delete(e.pointerId); if (press.current) { clearTimeout(press.current.t); press.current = null; } };
+  const onPointerUpCapture = (e: React.PointerEvent) => {
+    if (e.pointerType === "pen") lastPen.current = performance.now();
+    if (palmIds.current.delete(e.pointerId)) { e.stopPropagation(); return; }
+    if (inkUp(e)) return; touches.current.delete(e.pointerId); if (press.current) { clearTimeout(press.current.t); press.current = null; } };
+  // ------------------------------------------------------------------ palm rejection (stage 5b)
+  /** Touches that start while a stylus is down or within PALM_MS after any stylus activity (hover, lift) are a resting hand:
+   *  neither Excalidraw nor Lumen sees them. Unusually large contacts are dropped too once a stylus was seen (Chrome reports
+   *  width / height; iPadOS already stops finger events while the Pencil is used). "Finger draws" turns all of this off. */
+  const palmDown = (e: React.PointerEvent): boolean => {
+    if (e.pointerType === "pen") { lastPen.current = performance.now(); autoPenMode(); return false; }
+    if (e.pointerType !== "touch" || !lastPen.current || getInk().fingerDraws) return false;
+    const recent = !!rawStroke.current?.pen || performance.now() - lastPen.current < PALM_MS;
+    if (!recent && Math.max(e.width || 0, e.height || 0) <= 48) return false;
+    palmIds.current.add(e.pointerId);
+    e.stopPropagation(); e.preventDefault();
+    return true;
+  };
+  /** First stylus touch turns pen mode on (stylus draws, finger pans), once, with a way back. */
+  const autoPenMode = () => {
+    const a = api.current;
+    if (!a || getInk().fingerDraws || a.getAppState().penMode) return;
+    a.updateScene({ appState: { penMode: true, penDetected: true } });
+    if (autoPenShown.current) return;
+    autoPenShown.current = true;
+    toast(t("Stylus detected: pen mode on. Finger pans, your palm is ignored."), { label: t("Finger draws"), run: () => { setInk({ fingerDraws: true }); api.current?.updateScene({ appState: { penMode: false, penDetected: true } }); } });
+  };
+  // ------------------------------------------------------------------ low-latency ink: coalesced + predicted samples
+  const sceneMap = () => { const a = api.current!, st = a.getAppState() as { zoom: { value: number }; scrollX: number; scrollY: number }, r = host.current!.getBoundingClientRect(); return (x: number, y: number): [number, number] => [(x - r.left) / st.zoom.value - st.scrollX, (y - r.top) / st.zoom.value - st.scrollY]; };
+  /** The live element from Lumen's samples (style from Excalidraw's current item; finishStroke applies the pen look). */
+  const rawEl = (rs: { pts: [number, number][]; pr: number[]; pen: boolean }, base?: El | null) => {
+    const [ox, oy] = rs.pts[0];
+    const st = api.current!.getAppState() as { currentItemStrokeColor?: string };
+    return { ...(base ?? {}), x: ox, y: oy, points: rs.pts.map(([x, y]) => [x - ox, y - oy] as [number, number]), pressures: rs.pen ? rs.pr : [], simulatePressure: !rs.pen, strokeWidth: 1, opacity: 100, strokeColor: (base?.strokeColor as string | undefined) ?? st.currentItemStrokeColor ?? "#1e1e1e" };
+  };
+  const rawSample = (e: React.PointerEvent) => {
+    const rs = rawStroke.current;
+    if (!rs || e.pointerId !== rs.id || !api.current || !host.current) return;
+    const ne = e.nativeEvent as PointerEvent, map = sceneMap();
+    const list = (typeof ne.getCoalescedEvents === "function" ? ne.getCoalescedEvents() : []) as PointerEvent[];
+    for (const q of list.length ? list : [ne]) {
+      const pt = map(q.clientX, q.clientY), l = rs.pts[rs.pts.length - 1];
+      if (Math.abs(pt[0] - l[0]) + Math.abs(pt[1] - l[1]) < 0.3) continue;
+      rs.pts.push(pt); rs.pr.push(q.pressure || 0.5);
+    }
+    const pred = (typeof ne.getPredictedEvents === "function" ? ne.getPredictedEvents() : []) as PointerEvent[];
+    rs.pred = pred.slice(0, 2).map((q) => map(q.clientX, q.clientY));
+    if (rs.pts.length > 1) liveInk.current?.draw(rawEl(rs) as never, hlMode.current ? hlPen() : currentPen(), api.current.getAppState() as never, hlMode.current, dark, { predicted: rs.pred, now: true });
+  };
   // ------------------------------------------------------------------ W2-A ink input: lasso, erasers, pen timing
   const hostXY = (e: { clientX: number; clientY: number }): [number, number] => { const r = host.current!.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
   const zoomNow = () => (api.current!.getAppState() as { zoom: { value: number } }).zoom.value;
@@ -860,7 +931,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     const p = toScene(a, host.current!, e.clientX, e.clientY);
     const r = ERASER_PX[getInk().eraserSize] / 2 / zoomNow();
     if (g.mode === "partial") { partialErase(a, p, r, "EVENTUALLY"); return; }
-    const hit = (a.getSceneElements() as El[]).filter((x) => !g.hit.has(x.id) && touchesEl(x as never, p, r));
+    const hit = (nearCircle(a.getSceneElements() as never, p, r) as El[]).filter((x) => !g.hit.has(x.id) && touchesEl(x as never, p, r));
     if (!hit.length) return;
     hit.forEach((x) => g.hit.add(x.id));
     deleteIds(a, new Set(hit.map((x) => x.id)), "EVENTUALLY");
@@ -886,7 +957,11 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
       kind = "lasso";
     } else if (tl === "eraser" || stylusErase) kind = ink0.eraser === "lasso" ? "lasso-erase" : "erase";
     if (!kind) {
-      if (tl === "pen" || tl === "hl") penDown.current = { lastMove: performance.now(), x: e.clientX, y: e.clientY, shift: e.shiftKey };
+      if (tl === "pen" || tl === "hl") {
+        penDown.current = { lastMove: performance.now(), x: e.clientX, y: e.clientY, shift: e.shiftKey };
+        rawStroke.current = { id: e.pointerId, pts: [sceneMap()(e.clientX, e.clientY)], pr: [e.pressure || 0.5], pen: e.pointerType === "pen", pred: [] };
+        rawDone.current = null;
+      }
       return false;
     }
     e.stopPropagation(); e.preventDefault();
@@ -901,6 +976,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     const pd = penDown.current;
     if (pd && Math.hypot(e.clientX - pd.x, e.clientY - pd.y) > 3) { pd.lastMove = performance.now(); pd.x = e.clientX; pd.y = e.clientY; }
     if (pd) pd.shift = e.shiftKey;
+    if (pd) rawSample(e);
     const g = gesture.current;
     if (!g) return false;
     e.stopPropagation();
@@ -911,6 +987,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   const inkUp = (e: React.PointerEvent): boolean => {
     const pd = penDown.current;
     penDown.current = null;
+    if (rawStroke.current && rawStroke.current.id === e.pointerId) { rawDone.current = rawStroke.current; rawStroke.current = null; }
     if (pd) {
       const held = performance.now() - pd.lastMove >= 450, shift = pd.shift;
       if (pendingStroke.current) clearTimeout(pendingStroke.current.t);
@@ -948,8 +1025,12 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     const a = api.current, id = strokeId.current;
     strokeId.current = null;
     if (!a || !id) return;
-    const el = (a.getSceneElements() as El[]).find((x) => x.id === id);
+    let el = (a.getSceneElements() as El[]).find((x) => x.id === id);
     if (!el || el.type !== "freedraw" || (el.customData as Record<string, unknown> | undefined)?.lumenPen) return;
+    // Lumen's coalesced samples replace Excalidraw's (one sample per frame) when they belong to this stroke
+    const rs = rawDone.current;
+    rawDone.current = null;
+    if (rs && rs.pts.length > 1 && Math.hypot(rs.pts[0][0] - el.x, rs.pts[0][1] - el.y) < 2) el = { ...el, ...rawEl(rs, el), strokeWidth: el.strokeWidth, opacity: el.opacity } as El;
     const isHl = hlMode.current, ix = getInk();
     const pen = isHl ? hlPen() : currentPen();
     if (!isHl && ix.scratchOut) { const n = scratchOut(a, el as never); if (n) { toast(t("Scratched out {n} items", { n })); return; } }
@@ -1242,7 +1323,8 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   live.current.onChange = (els, st) => {
     // live ink: draw the stroke in progress with the pen's real look; once Excalidraw finalizes it, commit + clear
     const ne = st.newElement as El | null | undefined, li = liveInk.current;
-    if (li && ne?.type === "freedraw" && (toolRef.current === "pen" || toolRef.current === "hl")) li.draw(ne as never, hlMode.current ? hlPen() : currentPen(), st as never, hlMode.current, dark);
+    const rs = rawStroke.current ?? rawDone.current;
+    if (li && ne?.type === "freedraw" && (toolRef.current === "pen" || toolRef.current === "hl")) li.draw((rs && rs.pts.length > 1 ? rawEl(rs, ne) : ne) as never, hlMode.current ? hlPen() : currentPen(), st as never, hlMode.current, dark, { predicted: rawStroke.current?.pred });
     else if (li?.active && !ne) { if (pendingStroke.current) queueMicrotask(runPendingStroke); else li.clear(); }
     track(els, st);
     backdrop.current?.update(st as never);

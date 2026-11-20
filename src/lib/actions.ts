@@ -4,6 +4,8 @@ import { NOTE_TYPES, STATUSES, type NoteType, type Status } from "../../shared/t
 import { firstH1, fmList, inlineTags, setFrontMatter, slugify, splitFrontMatter } from "./parse";
 import { TEMPLATES, type Template } from "./templates";
 import { versionsToPrune } from "./sync-plan";
+import { carryTombstones } from "./board-merge";
+import { isWbType } from "../../shared/types";
 import { activityHint, activityQuiet, activityVersion, purgeActivity, thisDevice } from "./activity";
 
 export async function createNote(p: Partial<Note> & { template?: string; fm?: Record<string, string> } = {}) {
@@ -44,6 +46,8 @@ export async function updateNote(id: string, changes: Partial<Note>, opts: { kee
     if (changes.title !== undefined && firstH1(old.body)) body = body.replace(/^#\s+.+$/m, `# ${next.title}`);
     next.body = body;
   }
+  // Boards keep deletion tombstones for 7 days so a two-device merge (lib/board-merge.ts) doesn't bring them back.
+  if (changes.body !== undefined && isWbType(next.type) && old.body && next.body !== old.body) next.body = carryTombstones(old.body, next.body);
   if (next.published && !next.slug) next.slug = slugify(next.title);
   if (opts.keepTime) activityQuiet(id); // automatic conversion: not something the user did
   await save("note", next);

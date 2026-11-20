@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./lumen-glyphs.js"></script></helmet>
+<div style="position:absolute;inset:0;overflow:hidden;background:var(--bg);font-family:Inter,system-ui,sans-serif;font-size:13px;color:var(--tx);display:flex;flex-direction:column">
+  <sc-if value="{{ desk }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;align-items:flex-start;gap:16px;padding:22px 28px 0">
+      <span style="width:48px;height:48px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--ln) 16%,transparent);color:var(--ln)"><svg width="24" height="24" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ gLang }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg></span>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span style="font-size:24px;font-weight:650;letter-spacing:-.02em">English A1 to C2</span><span style="font-size:13px;color:var(--mu)">in English</span></div>
+        <span style="font-size:13.5px;color:var(--mu);text-wrap:pretty">Roadmap, learning path, lessons, skills, resources and study plan</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px;font-size:12px;color:var(--mu)">
+          <sc-for list="{{ meta }}" as="m"><span style="display:flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:999px;background:var(--sf2);white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24" style="stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ m.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ m.l }}</span></sc-for>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
+        <div style="display:flex;align-items:center;gap:10px"><svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" style="fill:none;stroke:var(--bd);stroke-width:4"></circle><circle cx="20" cy="20" r="16" style="fill:none;stroke:var(--ac);stroke-width:4;stroke-linecap:round;stroke-dasharray:{{ ring }};transform:rotate(-90deg);transform-origin:20px 20px"></circle></svg><div style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:650">{{ pct }}</span><span style="font-size:11px;color:var(--mu);white-space:nowrap">{{ doneOf }}</span></div></div>
+        <div style="display:flex;align-items:center;gap:10px;height:52px;padding:0 16px 0 12px;border-radius:12px;background:var(--ac);color:var(--af);max-width:340px">
+          <span style="width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" style="fill:currentColor"></path></svg></span>
+          <div style="display:flex;flex-direction:column;min-width:0"><span style="font-size:11px;font-weight:600;opacity:.75;white-space:nowrap">{{ contK }}</span><span style="font-size:13.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ contT }}</span></div>
+        </div>
+        <span style="width:40px;height:40px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;color:var(--mu)"><svg width="18" height="18" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ gMore }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg></span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 28px 0;border-bottom:1px solid var(--bd)">
+      <sc-for list="{{ tabs }}" as="t"><span style="display:flex;align-items:center;gap:7px;height:40px;padding:0 4px;margin-right:14px;font-size:13.5px;font-weight:{{ t.fw }};color:{{ t.c }};border-bottom:2px solid {{ t.bd }};margin-bottom:-1px"><svg width="16" height="16" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ t.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ t.l }}</span></sc-for>
+      <span style="flex:1"></span>
+      <div style="display:flex;align-items:center;gap:8px;padding-bottom:6px">
+        <span style="display:flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);font-size:12px;white-space:nowrap"><span style="color:var(--mu)">Pace</span> {{ pace }} ▾</span>
+        <span style="display:flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);font-size:12px;white-space:nowrap"><span style="color:var(--mu)">Levels</span> All ▾</span>
+        <div style="display:flex;padding:2px;border-radius:8px;background:var(--sf2);gap:2px"><sc-for list="{{ zooms }}" as="z"><span style="height:26px;padding:0 11px;border-radius:6px;display:flex;align-items:center;font-size:12px;background:{{ z.bg }};color:{{ z.c }};font-weight:{{ z.fw }};box-shadow:{{ z.sh }}">{{ z.l }}</span></sc-for></div>
+        <span style="height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;font-size:12px">Today</span>
+        <span title="Collapse all" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;color:var(--mu)"><svg width="15" height="15" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ gFit }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg></span>
+      </div>
+    </div>
+
+    <div style="flex:1;min-height:0;display:flex;position:relative">
+      <div style="width:{{ colW }};flex-shrink:0;border-inline-end:1px solid var(--bd);display:flex;flex-direction:column;background:var(--bg);z-index:2">
+        <div style="height:52px;flex-shrink:0;display:flex;align-items:flex-end;padding:0 16px 8px 28px;font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--mu);border-bottom:1px solid var(--bd);box-sizing:border-box">MODULE</div>
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="14">
+          <div style="height:{{ r.h }};flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 14px 0 {{ r.pl }};box-sizing:border-box;background:{{ r.bg }};border-bottom:1px solid {{ r.bb }};border-inline-start:3px solid {{ r.bl }}">
+            <span style="width:14px;display:{{ r.chevS }};color:var(--mu);font-size:12px">{{ r.chev }}</span>
+            <span style="display:{{ r.lvS }};height:20px;min-width:26px;padding:0 6px;border-radius:5px;font-size:11px;font-weight:700;align-items:center;justify-content:center;background:{{ r.lvBg }};color:{{ r.lvC }}">{{ r.lv }}</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" style="display:{{ r.gS }};flex-shrink:0;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;color:{{ r.gc }}"><sc-for list="{{ r.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>
+            <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:{{ r.fs }};font-weight:{{ r.fw }};color:{{ r.c }}">{{ r.l }}</span>
+            <span style="font-size:11.5px;color:var(--mu);white-space:nowrap;font-variant-numeric:tabular-nums">{{ r.n }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="flex:1;min-width:0;position:relative;overflow:hidden">
+        <div style="position:absolute;left:{{ scrollX }};top:0;width:{{ gridW }};height:100%">
+          <sc-for list="{{ bands }}" as="b"><div style="position:absolute;left:{{ b.x }};width:{{ b.w }};top:52px;bottom:0;background:{{ b.bg }}"></div></sc-for>
+          <sc-for list="{{ ticks }}" as="t" hint-placeholder-count="20"><div style="position:absolute;left:{{ t.x }};top:{{ t.top }};bottom:0;width:1px;background:{{ t.c }}"></div></sc-for>
+          <div style="position:absolute;left:0;right:0;top:0;height:52px;border-bottom:1px solid var(--bd);background:var(--bg)">
+            <sc-for list="{{ years }}" as="y"><span style="position:absolute;left:{{ y.x }};top:8px;font-size:11px;font-weight:650;color:var(--tx);padding-left:6px;border-left:1px solid var(--bd);white-space:nowrap">{{ y.l }}</span></sc-for>
+            <sc-for list="{{ labels }}" as="l" hint-placeholder-count="20"><span style="position:absolute;left:{{ l.x }};width:{{ l.w }};top:28px;font-size:11.5px;color:{{ l.c }};font-weight:{{ l.fw }};text-align:center;white-space:nowrap;overflow:hidden">{{ l.l }}</span></sc-for>
+          </div>
+          <sc-for list="{{ bars }}" as="b" hint-placeholder-count="12">
+            <div title="{{ b.tip }}" style="position:absolute;left:{{ b.x }};top:{{ b.y }};width:{{ b.w }};height:{{ b.h }};border-radius:{{ b.r }};background:{{ b.bg }};border:1px solid {{ b.bd }};box-sizing:border-box;overflow:hidden;display:flex;align-items:center;box-shadow:{{ b.ring }}">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:{{ b.prog }};background:{{ b.pc }}"></div>
+              <sc-for list="{{ b.segs }}" as="s"><div style="position:absolute;left:{{ s }};top:4px;bottom:4px;width:1px;background:{{ b.sc }}"></div></sc-for>
+              <span style="position:relative;display:flex;align-items:center;gap:6px;padding:0 8px;font-size:{{ b.fs }};font-weight:600;color:{{ b.c }};white-space:nowrap">{{ b.l }}</span>
+            </div>
+            <span style="position:absolute;left:{{ b.ox }};top:{{ b.oy }};display:{{ b.oS }};align-items:center;gap:6px;font-size:12px;color:{{ b.oc }};white-space:nowrap;font-weight:{{ b.ofw }}"><svg width="12" height="12" viewBox="0 0 24 24" style="display:{{ b.ogS }};stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ b.og }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ b.ol }}<span style="display:{{ b.chipS }};height:18px;padding:0 7px;border-radius:999px;font-size:10.5px;font-weight:650;align-items:center;background:var(--ac);color:var(--af)">Up next</span></span>
+          </sc-for>
+          <sc-for list="{{ diamonds }}" as="d"><div title="{{ d.tip }}" style="position:absolute;left:{{ d.x }};top:{{ d.y }};width:12px;height:12px;margin-left:-6px;transform:rotate(45deg);background:var(--bg);border:2px solid {{ d.c }};box-sizing:border-box"></div><span style="position:absolute;left:{{ d.lx }};top:{{ d.ly }};font-size:11.5px;color:var(--mu);white-space:nowrap">{{ d.l }}</span></sc-for>
+          <div style="position:absolute;left:{{ todayX }};top:40px;bottom:0;width:2px;background:var(--ac)"></div>
+          <span style="position:absolute;left:{{ todayX }};top:36px;transform:translateX(-50%);height:16px;padding:0 6px;border-radius:999px;background:var(--ac);color:var(--af);font-size:10px;font-weight:700;display:flex;align-items:center">Today</span>
+        </div>
+        <div style="display:{{ fadeS }};position:absolute;right:0;top:0;bottom:0;width:40px;background:linear-gradient(90deg,transparent,var(--bg))"></div>
+        <div style="position:absolute;right:16px;bottom:14px;display:{{ hintS }};align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;background:var(--sf2);border:1px solid var(--bd);font-size:11.5px;color:var(--mu)">{{ hint }}</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasPanel }}">
+    <div style="position:absolute;inset:0;background:{{ scrim }}"></div>
+    <div style="position:absolute;right:{{ pnR }};left:{{ pnL }};top:{{ pnT }};bottom:{{ pnB }};width:{{ pnW }};background:var(--sf);border:1px solid var(--bd);border-radius:{{ pnRad }};box-shadow:0 24px 60px rgba(0,0,0,.4);display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:{{ grabS }};justify-content:center;padding-top:8px"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:16px 18px 12px">
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu)"><span style="height:18px;padding:0 6px;border-radius:5px;font-size:10.5px;font-weight:700;display:flex;align-items:center;background:color-mix(in srgb,#5CC8C2 20%,transparent);color:#5CC8C2">A1</span>Grammar<span>·</span>topic 1 of 14</div>
+          <span style="font-size:20px;font-weight:650;letter-spacing:-.01em;line-height:1.25;text-wrap:pretty">Verb to be</span>
+        </div>
+        <span title="More" style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><svg width="18" height="18" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ gMore }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg></span>
+        <span title="Close · Esc" style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--mu);font-size:18px">×</span>
+      </div>
+      <div style="display:{{ lockS }};align-items:center;gap:10px;margin:0 18px;padding:10px 12px;border-radius:10px;background:var(--sf2);font-size:12.5px;line-height:18px">
+        <svg width="16" height="16" viewBox="0 0 24 24" style="flex-shrink:0;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;color:var(--mu)"><sc-for list="{{ gLock }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>
+        <span style="flex:1">Locked until <b>Alphabet and sounds</b> is done.</span>
+        <span style="height:28px;padding:0 10px;border-radius:7px;border:1px solid var(--bd);display:flex;align-items:center;font-size:12px;white-space:nowrap">Unlock now</span>
+      </div>
+      <div style="padding:14px 18px 0">
+        <div style="display:flex;padding:3px;border-radius:10px;background:var(--sf2);gap:2px"><sc-for list="{{ stat }}" as="s"><span style="flex:1;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;background:{{ s.bg }};color:{{ s.c }};font-weight:{{ s.fw }};box-shadow:{{ s.sh }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ s.dot }}"></span>{{ s.l }}</span></sc-for></div>
+      </div>
+      <div style="flex:1;min-height:0;overflow:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:0;padding:8px 18px 0">
+        <sc-for list="{{ fields }}" as="f">
+          <div style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;padding:10px 0;border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent);align-items:start">
+            <span style="font-size:12.5px;color:var(--mu);padding-top:6px;display:flex;align-items:center;gap:6px">{{ f.k }}<span style="display:{{ f.cS }};font-size:11px;padding:0 6px;border-radius:999px;background:var(--sf2)">{{ f.cnt }}</span></span>
+            <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+              <sc-for list="{{ f.items }}" as="it">
+                <div style="display:flex;align-items:center;gap:8px;min-height:32px;padding:0 10px;border-radius:8px;background:{{ it.bg }};border:1px solid {{ it.bd }};color:{{ it.c }};font-size:13px;min-width:0">
+                  <svg width="15" height="15" viewBox="0 0 24 24" style="display:{{ it.gS }};flex-shrink:0;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;color:{{ it.gc }}"><sc-for list="{{ it.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>
+                  <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:{{ it.fw }}">{{ it.l }}</span>
+                  <span style="font-size:11.5px;color:var(--mu);white-space:nowrap">{{ it.sub }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+        <div style="display:flex;flex-direction:column;gap:6px;padding:12px 0">
+          <span style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--mu)">ORGANIZE</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ org }}" as="o"><span title="{{ o.tip }}" style="height:32px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;color:var(--mu)"><sc-for list="{{ o.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ o.l }}</span></sc-for></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:12px 18px {{ footPb }};border-top:1px solid var(--bd)">
+        <span style="height:36px;padding:0 10px;border-radius:9px;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--da)"><svg width="15" height="15" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ gTrash }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>Delete</span>
+        <span style="flex:1"></span>
+        <span style="height:36px;padding:0 14px;border-radius:9px;border:1px solid var(--bd);display:flex;align-items:center;font-size:13px;white-space:nowrap">Open note</span>
+        <span style="height:36px;padding:0 14px;border-radius:9px;background:var(--ac);color:var(--af);display:flex;align-items:center;gap:6px;font-size:13px;font-weight:650;white-space:nowrap">{{ cta }}</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ phone }}" hint-placeholder-val="{{ false }}">
+    <div style="height:40px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:13px;font-weight:600"><span>9:41</span><span style="width:16px;height:9px;border:1.5px solid var(--tx);border-radius:2px"></span></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:4px 10px 0"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px">‹</span><div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:650">English A1 to C2</span><span style="font-size:11.5px;color:var(--mu)">0 of 178 topics · Nov 2026 – Sep 2028</span></div><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--mu)">⋯</span></div>
+    <div style="margin:10px 14px 0;display:flex;align-items:center;gap:10px;height:56px;padding:0 14px 0 12px;border-radius:14px;background:var(--ac);color:var(--af)"><span style="width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" style="fill:currentColor"></path></svg></span><div style="display:flex;flex-direction:column;min-width:0"><span style="font-size:11px;font-weight:600;opacity:.75">Continue · A1 Vocabulary</span><span style="font-size:14px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Greetings and personal information</span></div></div>
+    <div style="display:flex;gap:4px;margin:12px 14px 0;padding:3px;border-radius:10px;background:var(--sf2)"><sc-for list="{{ phTabs }}" as="t"><span style="flex:1;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;background:{{ t.bg }};color:{{ t.c }};font-weight:{{ t.fw }}">{{ t.l }}</span></sc-for></div>
+    <div style="flex:1;min-height:0;overflow:hidden;padding:8px 14px 0;display:flex;flex-direction:column">
+      <sc-for list="{{ phRows }}" as="r" hint-placeholder-count="10">
+        <div style="display:{{ r.hS }};align-items:center;gap:8px;padding:14px 0 6px;font-size:12px;font-weight:650;color:var(--mu);letter-spacing:.04em"><span style="height:20px;min-width:26px;padding:0 6px;border-radius:5px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;background:{{ r.lvBg }};color:{{ r.lvC }}">{{ r.lv }}</span><span style="flex:1">{{ r.h }}</span><span style="font-weight:500">{{ r.hr }}</span></div>
+        <div style="display:{{ r.mS }};gap:12px;padding:8px 0;min-height:44px;align-items:center;border-bottom:1px solid var(--bd)">
+          <div style="display:flex;flex-direction:column;align-items:center;width:14px;align-self:stretch"><span style="width:10px;height:10px;border-radius:50%;margin-top:6px;background:{{ r.dot }};box-shadow:0 0 0 3px {{ r.dotRing }}"></span><span style="flex:1;width:2px;background:var(--bd)"></span></div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:14px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.l }}</span><span style="font-size:11.5px;color:var(--mu)">{{ r.n }}</span></div>
+            <div style="position:relative;height:6px;border-radius:3px;background:var(--sf2)"><div style="position:absolute;left:{{ r.bx }};width:{{ r.bw }};top:0;bottom:0;border-radius:3px;background:{{ r.bc }}"></div></div>
+            <span style="font-size:11.5px;color:{{ r.dc }}">{{ r.d }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;zoom&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;week&quot;,&quot;month&quot;,&quot;quarter&quot;],&quot;default&quot;:&quot;month&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;expanded&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;&quot;,&quot;A1Grammar&quot;,&quot;A1Vocabulary&quot;],&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;collapseFrom&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:2,&quot;tsType&quot;:&quot;number&quot;},&quot;behind&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;panel&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;&quot;,&quot;todo&quot;,&quot;locked&quot;,&quot;learning&quot;],&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { if (!window.LUMEN_GLYPHS) { const t = setInterval(() => { if (window.LUMEN_GLYPHS) { clearInterval(t); this.forceUpdate(); } }, 50); setTimeout(() => clearInterval(t), 5000); } }
+  renderVals() {
+    const GL = window.LUMEN_GLYPHS || {};
+    const g = n => (GL[n] || []).map(p => typeof p === 'string' ? { d: p, f: 'none', s: 'currentColor' } : { d: p.d, f: p.fill ? 'currentColor' : 'none', s: p.stroke || (p.fill ? 'none' : 'currentColor') });
+    const P = this.props, ph = !!P.phone, zoom = P.zoom || 'month', exp = P.expanded || '', behind = !!P.behind;
+    const LV = [['A1', 'Beginner', '#5CC8C2', [14, 6, 3, 2, 2]], ['A2', 'Elementary', '#7AA2F7', [14, 8, 3, 2, 2]], ['B1', 'Intermediate', '#6BCB8B', [18, 8, 3, 2, 2]], ['B2', 'Upper-intermediate', '#E3B341', [17, 9, 3, 2, 2]], ['C1', 'Advanced', '#E8893A', [16, 8, 3, 2, 2]], ['C2', 'Proficient', '#B48EF0', [12, 6, 3, 2, 2]]];
+    const MODS = [['Grammar', 'lesson'], ['Vocabulary', 'language'], ['Listening & speaking', 'headphones'], ['Reading & writing', 'book'], ['Milestone', 'flag']];
+    const start = new Date(2026, 10, 16), DAY = 864e5, wkPerTopic = 0.53;
+    const today = new Date(2026, 10, 20);
+    // schedule
+    let cursor = 0; const levels = [];
+    LV.forEach(([lv, name, col, counts], li) => {
+      const total = counts.reduce((a, b) => a + b, 0), dur = Math.round(total * wkPerTopic * 7);
+      const s0 = cursor, mods = [];
+      const spans = [[0, .85], [0, .8], [.15, .95], [.45, .95], [.95, 1]];
+      counts.forEach((n, mi) => { const [a, b] = spans[mi]; mods.push({ lv, name: MODS[mi][0], g: MODS[mi][1], n, s: s0 + Math.round(dur * a), e: s0 + Math.round(dur * b), col, mi }); });
+      levels.push({ lv, name, col, total, s: s0, e: s0 + dur, mods, li }); cursor += dur;
+    });
+    const totalDays = cursor;
+    const dt = d => new Date(start.getTime() + d * DAY);
+    const MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const fmt = d => { const D = dt(d); return D.getDate() + ' ' + MN[D.getMonth()]; };
+    const fmtM = d => { const D = dt(d); return MN[D.getMonth()] + ' ' + D.getFullYear(); };
+    const lvBg = c => `color-mix(in srgb,${c} 20%,transparent)`;
+    const pct = behind ? '9%' : '0%';
+    const AC = 'color-mix(in srgb,var(--ac) 16%,transparent)';
+    const pst = P.panel || '';
+    const locked = pst === 'locked';
+    const it = (gl, l, o = {}) => ({ g: g(gl), gS: gl ? 'block' : 'none', gc: o.gc || 'var(--mu)', l, sub: o.sub || '', bg: o.bg || 'transparent', bd: o.bd || 'transparent', c: o.c || 'var(--tx)', fw: o.fw || 400 });
+    const F = (k, items, cnt) => ({ k, items, cnt: cnt || '', cS: cnt ? 'block' : 'none' });
+    const curStat = locked ? 'To do' : pst === 'learning' ? 'Learning' : 'To do';
+    const panelVals = !pst ? { hasPanel: false } : {
+      hasPanel: true, scrim: ph ? 'rgba(0,0,0,.5)' : 'rgba(0,0,0,.25)', grabS: ph ? 'flex' : 'none',
+      pnR: ph ? '0' : '16px', pnL: ph ? '0' : 'auto', pnT: ph ? '56px' : '16px', pnB: ph ? '0' : '16px', pnW: ph ? 'auto' : '420px', pnRad: ph ? '20px 20px 0 0' : '16px', footPb: ph ? '28px' : '12px',
+      gLock: g('lock'), gTrash: g('trash'), lockS: locked ? 'flex' : 'none',
+      stat: [['To do', 'var(--mu)'], ['Learning', 'var(--ac)'], ['Done', 'var(--ok)'], ['Skipped', 'var(--bd)']].map(([l, dot]) => { const on = l === curStat; return { l, dot, bg: on ? 'var(--sf)' : 'transparent', c: on ? 'var(--tx)' : 'var(--mu)', fw: on ? 600 : 400, sh: on ? '0 1px 2px rgba(0,0,0,.25)' : 'none' }; }),
+      fields: [
+        F('Due', [it('due', 'Sun 29 Nov', { sub: 'week 2 · in 9 days', bd: 'var(--bd)' })]),
+        F('Needs', [it(locked ? 'status-planned' : 'check', 'Alphabet and sounds', { gc: locked ? 'var(--mu)' : 'var(--ok)', sub: locked ? 'A1 · 0 of 8 cards' : 'done', bd: 'var(--bd)' }), it('plus', 'Add prerequisite', { c: 'var(--mu)' })]),
+        F('Note', [it('note', 'Verb to be', { gc: 'var(--ln)', c: 'var(--ln)', fw: 500, sub: '18 notes · 311 cards' })]),
+        F('Unlocks', [it('lock', 'Pronouns and possessives'), it('lock', 'Articles'), it('lock', 'Present simple'), it('lock', 'Introducing yourself', { sub: 'Speaking' }), it('chevron-down', '3 more', { c: 'var(--ac)' })], '7')
+      ],
+      org: [['chevron-right', 'Move to module…', 'Move'], ['text', 'Rename', 'F2'], ['due', 'Change date', ''], ['duplicate', 'Duplicate', '']].map(([a, l, tip]) => ({ g: g(a), l, tip })),
+      cta: locked ? 'Study anyway' : pst === 'learning' ? 'Continue' : 'Start topic'
+    };
+    if (ph) {
+      const phRows = [];
+      levels.forEach((L, i) => {
+        phRows.push({ hS: 'flex', mS: 'none', lv: L.lv, lvBg: lvBg(L.col), lvC: L.col, h: L.name.toUpperCase(), hr: fmtM(L.s).replace(' 20', ' ’') + ' – ' + fmtM(L.e).replace(' 20', ' ’'), l: '', n: '', bx: '0', bw: '0', bc: '', d: '', dc: '', dot: '', dotRing: '' });
+        if (i < 2) L.mods.forEach(m => { const now = m.s * 1 <= 4 && m.mi === 1; phRows.push({ hS: 'none', mS: 'flex', l: m.name, n: '0/' + m.n, bx: ((m.s - L.s) / (L.e - L.s) * 100) + '%', bw: ((m.e - m.s) / (L.e - L.s) * 100) + '%', bc: now ? 'var(--ac)' : L.col, d: m.mi === 4 ? 'Checkpoint · ' + fmt(m.s) : fmt(m.s) + ' – ' + fmt(m.e) + (now ? ' · in progress' : ''), dc: now ? 'var(--ac)' : 'var(--mu)', dot: now ? 'var(--ac)' : 'var(--bg)', dotRing: now ? AC : 'var(--bd)', lv: '', lvBg: '', lvC: '', h: '', hr: '' }); });
+      });
+      return { ...panelVals, gMore: g('more'), desk: false, phone: true, phRows, phTabs: ['Outline', 'Skills', 'Timeline'].map(l => ({ l, bg: l === 'Timeline' ? 'var(--sf)' : 'transparent', c: l === 'Timeline' ? 'var(--tx)' : 'var(--mu)', fw: l === 'Timeline' ? 600 : 400 })) };
+    }
+    // desktop geometry
+    const colW = 280, viewW = 1440 - colW - 2;
+    const pxDay = zoom === 'week' ? 44 / 7 : zoom === 'quarter' ? (viewW - 40) / totalDays * .8 : (viewW - 30) / totalDays;
+    const X = d => Math.round(d * pxDay) + 'px';
+    const scrollXd = zoom === 'week' ? -(Math.max(0, (exp ? 0 : 0)) * pxDay) : 0;
+    // header ticks
+    const ticks = [], labels = [], years = [];
+    if (zoom === 'week') {
+      for (let d = 0; d < 200; d += 7) { const D = dt(d); ticks.push({ x: X(d), top: '52px', c: D.getDate() <= 7 ? 'var(--bd)' : 'color-mix(in srgb,var(--bd) 45%,transparent)' }); labels.push({ x: X(d), w: (7 * pxDay) + 'px', l: String(D.getDate()), c: 'var(--mu)', fw: 400 }); if (D.getDate() <= 7) years.push({ x: X(d), l: MN[D.getMonth()] + (D.getMonth() === 0 || d === 0 ? ' ' + D.getFullYear() : '') }); }
+    } else {
+      const step = zoom === 'quarter' ? 3 : 1;
+      for (let m = 0; m < 26; m += 1) { const D = new Date(2026, 10 + m, 1), d = Math.max(0, (D - start) / DAY), D2 = new Date(2026, 11 + m, 1), d2 = (D2 - start) / DAY; if (d > totalDays) break; ticks.push({ x: X(d), top: D.getMonth() === 0 ? '0' : '52px', c: D.getMonth() === 0 ? 'var(--mu)' : 'var(--bd)' }); if (m % step === 0) labels.push({ x: X(d), w: ((Math.min(d2, totalDays) - d) * pxDay * step) + 'px', l: zoom === 'quarter' ? 'Q' + (Math.floor(D.getMonth() / 3) + 1) : MN[D.getMonth()], c: D.getMonth() === today.getMonth() && D.getFullYear() === 2026 ? 'var(--ac)' : 'var(--mu)', fw: D.getMonth() === 10 && D.getFullYear() === 2026 ? 650 : 400 }); if (m === 0 || D.getMonth() === 0) years.push({ x: X(d), l: String(D.getFullYear()) }); }
+    }
+    // rows + bars
+    const rows = [], bars = [], diamonds = [], bands = [];
+    let y = 52; const RH = 40, LH = 36, TH = 30;
+    const row = (o) => rows.push({ h: o.h + 'px', pl: o.pl || '16px', bg: o.bg || 'transparent', bb: o.bb || 'color-mix(in srgb,var(--bd) 50%,transparent)', bl: o.bl || 'transparent', chevS: o.chev !== undefined ? 'block' : 'none', chev: o.chev || '', lvS: o.lv ? 'flex' : 'none', lv: o.lv || '', lvBg: o.lvBg || '', lvC: o.lvC || '', gS: o.g ? 'block' : 'none', g: o.g ? g(o.g) : [], gc: o.gc || 'var(--mu)', l: o.l, n: o.n || '', fs: o.fs || '13px', fw: o.fw || 500, c: o.c || 'var(--tx)' });
+    const collapsedLv = P.collapseFrom ?? 2;
+    const TOP = ['Verb to be', 'Pronouns and possessives', 'Articles', 'Plurals and countable nouns', 'This, that, these and those', 'There is and have got', 'Present simple', 'Question words', 'Like and want', 'Can and imperatives', 'Present continuous', 'Prepositions of time and place', 'Adjectives and word order', 'Was and were'];
+    levels.forEach((L, li) => {
+      const open = li < collapsedLv;
+      const done = behind && li === 0 ? .32 : 0;
+      row({ h: LH, chev: open ? '⌄' : '›', lv: L.lv, lvBg: lvBg(L.col), lvC: L.col, l: L.name, n: (behind && li === 0 ? '9' : '0') + '/' + L.total, fw: 650, bg: 'var(--sf)', bb: 'var(--bd)' });
+      bands.push({ x: X(L.s), w: X(L.e - L.s), bg: li % 2 ? 'transparent' : 'color-mix(in srgb,var(--sf) 55%,transparent)' });
+      const bw = (L.e - L.s) * pxDay;
+      bars.push({ x: X(L.s), y: (y + 9) + 'px', w: bw + 'px', h: '18px', r: '5px', bg: lvBg(L.col), bd: 'transparent', ring: 'none', prog: (done * 100) + '%', pc: L.col, segs: [], sc: '', l: bw > 150 ? L.lv + ' · ' + fmtM(L.s) + ' – ' + fmtM(L.e) : L.lv, fs: '11px', c: 'var(--tx)', tip: L.lv + ' ' + L.name, oS: 'none', ox: '0', oy: '0', ol: '', oc: '', ofw: 400, ogS: 'none', og: [], chipS: 'none' });
+      y += LH;
+      if (!open) return;
+      L.mods.forEach(m => {
+        const isExp = exp === L.lv + m.name;
+        const now = li === 0 && m.mi === 1;
+        const mdone = behind && li === 0 ? [.43, .5, .33, 0, 0][m.mi] : 0;
+        const late = behind && li === 0 && m.mi === 0;
+        row({ h: RH, pl: '28px', chev: m.mi === 4 ? '' : (isExp ? '⌄' : '›'), g: m.g, gc: L.col, l: m.name, n: Math.round(mdone * m.n) + '/' + m.n, bg: isExp ? 'color-mix(in srgb,var(--ac) 7%,transparent)' : 'transparent', bl: now ? 'var(--ac)' : 'transparent', fw: now ? 600 : 500 });
+        if (m.mi === 4) {
+          diamonds.push({ x: X(m.s), y: (y + 14) + 'px', c: L.col, tip: L.lv + ' checkpoint', lx: (m.s * pxDay + 12) + 'px', ly: (y + 12) + 'px', l: L.lv + ' checkpoint · ' + fmt(m.s) });
+        } else {
+          const w = (m.e - m.s) * pxDay, segs = [];
+          for (let i = 1; i < m.n; i++) segs.push((i / m.n * 100) + '%');
+          bars.push({ x: X(m.s), y: (y + 8) + 'px', w: w + 'px', h: '24px', r: '6px', bg: `color-mix(in srgb,${L.col} ${late ? 10 : 16}%,var(--bg))`, bd: late ? 'var(--da)' : now ? 'var(--ac)' : `color-mix(in srgb,${L.col} 45%,transparent)`, ring: now ? '0 0 0 3px color-mix(in srgb,var(--ac) 22%,transparent)' : 'none', prog: (mdone * 100) + '%', pc: `color-mix(in srgb,${L.col} 55%,transparent)`, segs: w / m.n > 5 ? segs : [], sc: `color-mix(in srgb,${L.col} 35%,transparent)`, l: w > 120 ? m.n + ' topics' : '', fs: '11px', c: 'var(--tx)', tip: `${L.lv} ${m.name} · ${fmt(m.s)} – ${fmt(m.e)}`, oS: w > 120 ? 'none' : 'flex', ox: (m.e * pxDay + 8) + 'px', oy: (y + 12) + 'px', ol: m.n + ' topics · ' + fmt(m.s) + ' – ' + fmt(m.e), oc: 'var(--mu)', ofw: 400, ogS: 'none', og: [], chipS: 'none' });
+          if (late) bars.push({ x: X(m.e), y: (y + 8) + 'px', w: (21 * pxDay) + 'px', h: '24px', r: '0 6px 6px 0', bg: 'repeating-linear-gradient(135deg,color-mix(in srgb,var(--da) 22%,transparent) 0 4px,transparent 4px 8px)', bd: 'var(--da)', ring: 'none', prog: '0', pc: '', segs: [], sc: '', l: '', fs: '11px', c: '', tip: 'Projected 3 weeks late', oS: 'flex', ox: ((m.e + 21) * pxDay + 8) + 'px', oy: (y + 12) + 'px', ol: '3 weeks behind · Replan', oc: 'var(--da)', ofw: 600, ogS: 'none', og: [], chipS: 'none' });
+        }
+        y += RH;
+        if (isExp) {
+          const per = (m.e - m.s) / m.n, show = zoom === 'week' ? m.n : 6;
+          for (let i = 0; i < Math.min(show, m.n); i++) {
+            const s = m.s + per * i, st = i === 0 && !behind ? 'next' : (behind && i < 6 ? 'done' : 'locked');
+            row({ h: TH, pl: '50px', g: st === 'done' ? 'check' : st === 'next' ? 'play' : 'lock', gc: st === 'done' ? 'var(--ok)' : st === 'next' ? 'var(--ac)' : 'var(--mu)', l: TOP[i], fs: '12.5px', fw: st === 'next' ? 600 : 400, c: st === 'locked' ? 'var(--mu)' : 'var(--tx)', n: fmt(s), bb: 'transparent' });
+            bars.push({ x: X(s), y: (y + 9) + 'px', w: Math.max(6, per * pxDay - 2) + 'px', h: '12px', r: '3px', bg: st === 'done' ? L.col : st === 'next' ? 'var(--ac)' : `color-mix(in srgb,${L.col} 30%,transparent)`, bd: 'transparent', ring: P.panel && i === 0 ? '0 0 0 2px var(--bg), 0 0 0 4px var(--ac)' : 'none', prog: '0', pc: '', segs: [], sc: '', l: '', fs: '10px', c: '', tip: TOP[i], oS: zoom === 'week' ? 'flex' : 'none', ox: ((s + per) * pxDay + 6) + 'px', oy: (y + 7) + 'px', ol: TOP[i], oc: st === 'locked' ? 'var(--mu)' : 'var(--tx)', ofw: st === 'next' ? 600 : 400, ogS: 'none', og: [], chipS: st === 'next' ? 'flex' : 'none' });
+            y += TH;
+          }
+          if (show < m.n) { row({ h: TH, pl: '50px', l: '+ ' + (m.n - show) + ' more topics · switch to Week to see each one', fs: '12px', c: 'var(--ac)', bb: 'transparent' }); y += TH; }
+        }
+      });
+    });
+    const todayD = (today - start) / DAY;
+    const gridW = Math.max(viewW, totalDays * pxDay + 40);
+    const tabs = [['list', 'Outline'], ['tree', 'Skill tree'], ['timeline', 'Timeline']].map(([a, l]) => ({ g: g(a), l, fw: l === 'Timeline' ? 600 : 500, c: l === 'Timeline' ? 'var(--tx)' : 'var(--mu)', bd: l === 'Timeline' ? 'var(--ac)' : 'transparent' }));
+    const zooms = ['Week', 'Month', 'Quarter'].map(l => { const on = l.toLowerCase() === zoom; return { l, bg: on ? 'var(--sf)' : 'transparent', c: on ? 'var(--tx)' : 'var(--mu)', fw: on ? 600 : 400, sh: on ? '0 1px 2px rgba(0,0,0,.2)' : 'none' }; });
+    const meta = [['lesson', 'Self-study course'], ['s-mastered', 'CEFR A1 – C2'], ['due', fmtM(0) + ' – ' + fmtM(totalDays) + ' · ' + Math.round(totalDays / 7) + ' weeks'], ['clock', '4 h / week']].map(([a, l]) => ({ g: g(a), l }));
+    return { ...panelVals,
+      desk: true, phone: false, gLang: g('language'), gMore: g('more'), gFit: g('fit'), meta, tabs, zooms, pace: '4 h/wk',
+      ring: `${behind ? 9 : 0.5} 200`, pct, doneOf: behind ? '16 of 178' : '0 of 178',
+      contK: behind ? 'Continue · A1 Grammar' : 'Continue · A1 Vocabulary', contT: behind ? 'Present simple' : 'Greetings and personal information',
+      colW: colW + 'px', rows, bars, diamonds, bands, ticks, labels, years, gridW: gridW + 'px', scrollX: scrollXd + 'px', todayX: X(todayD),
+      fadeS: zoom === 'week' ? 'block' : 'none', hintS: zoom === 'week' ? 'flex' : 'none', hint: 'Showing Nov 2026 – Apr 2027 · scroll or Shift + wheel for more'
+    };
+  }
+}
+</script>
+</body>
+</html>

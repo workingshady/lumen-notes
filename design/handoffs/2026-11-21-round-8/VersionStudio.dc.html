@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./lumen-glyphs.js"></script></helmet>
+<div style="position:absolute;inset:0;overflow:hidden;background:var(--bg);font-family:Inter,system-ui,sans-serif;font-size:13px;color:var(--tx);display:flex;flex-direction:column">
+  <div style="display:{{ phS }};height:40px;flex-shrink:0;align-items:center;justify-content:space-between;padding:0 22px;font-size:13px;font-weight:600"><span>9:41</span><span style="width:16px;height:9px;border:1.5px solid var(--tx);border-radius:2px"></span></div>
+  <div style="height:{{ hdrH }};flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 {{ hPadX }};border-bottom:1px solid var(--bd)">
+    <span style="display:{{ phS }};width:40px;height:40px;align-items:center;justify-content:center;font-size:22px;margin-left:-8px">‹</span>
+    <svg width="18" height="18" viewBox="0 0 24 24" style="flex-shrink:0;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;color:var(--mu)"><sc-for list="{{ fileG }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>
+    <span style="display:{{ dkS }};color:var(--mu);font-size:12.5px;white-space:nowrap">{{ crumb }}</span>
+    <span style="font-weight:650;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ fileName }}</span>
+    <span style="display:{{ modeS }};height:24px;padding:0 10px;border-radius:999px;background:color-mix(in srgb,var(--ac) 16%,transparent);color:var(--ac);font-size:11.5px;font-weight:650;align-items:center;white-space:nowrap">{{ modeL }}</span>
+    <span style="flex:1"></span>
+    <sc-for list="{{ hBtns }}" as="b"><span style="display:{{ b.s }};height:32px;padding:0 11px;border-radius:8px;border:1px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.c }};align-items:center;gap:6px;font-size:12.5px;font-weight:{{ b.fw }};white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" style="display:{{ b.gS }};stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ b.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ b.l }}</span></sc-for>
+  </div>
+  <div style="flex:1;min-height:0;display:flex;flex-direction:{{ bodyDir }}">
+    <div style="flex:1;min-width:0;min-height:0;display:{{ mainS }};flex-direction:column;overflow:hidden">
+      <div style="display:{{ dbarS }};align-items:center;gap:10px;padding:10px {{ hPadX }};border-bottom:1px solid var(--bd);flex-wrap:wrap">
+        <span style="display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;border-radius:8px;background:var(--sf2);font-size:12.5px;white-space:nowrap"><span style="width:8px;height:8px;border-radius:50%;background:var(--da)"></span>{{ fromL }} ▾</span>
+        <span style="color:var(--mu)">→</span>
+        <span style="display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;border-radius:8px;background:var(--sf2);font-size:12.5px;white-space:nowrap"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></span>{{ toL }} ▾</span>
+        <span style="font-size:12px;color:var(--mu);white-space:nowrap">{{ diffStat }}</span>
+        <span style="flex:1"></span>
+        <div style="display:flex;padding:3px;border-radius:9px;background:var(--sf2);gap:2px"><sc-for list="{{ dmodes }}" as="s"><span style="height:26px;padding:0 10px;border-radius:6px;display:flex;align-items:center;font-size:12px;background:{{ s.bg }};color:{{ s.c }};font-weight:{{ s.fw }};white-space:nowrap">{{ s.l }}</span></sc-for></div>
+      </div>
+      <div style="flex:1;min-height:0;display:flex;overflow:hidden">
+        <sc-for list="{{ panes }}" as="pn"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding:{{ docPad }};border-inline-start:{{ pn.bl }};overflow:hidden">
+          <span style="display:{{ pn.hS }};font-size:11px;font-weight:650;letter-spacing:.06em;color:{{ pn.hc }};padding-bottom:8px">{{ pn.h }}</span>
+          <sc-for list="{{ pn.lines }}" as="l"><div style="display:flex;gap:10px;padding:{{ l.pad }};border-radius:6px;background:{{ l.bg }};border-left:3px solid {{ l.bl }}"><span style="width:12px;flex-shrink:0;font:600 12px 'JetBrains Mono',monospace;color:{{ l.mc }};padding-top:{{ l.mt }}">{{ l.m }}</span><span style="flex:1;min-width:0;font-family:{{ l.ff }};font-size:{{ l.fs }};font-weight:{{ l.fw }};line-height:1.6;color:{{ l.c }};text-decoration:{{ l.td }};text-wrap:pretty"><sc-for list="{{ l.t }}" as="w"><span style="background:{{ w.bg }};text-decoration:{{ w.td }};border-radius:3px;padding:0 1px">{{ w.s }}</span></sc-for></span></div></sc-for>
+        </div></sc-for>
+        <sc-if value="{{ isDoc }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-width:0;display:flex;gap:18px;padding:{{ docPad }};overflow:hidden;justify-content:center">
+            <sc-for list="{{ pages }}" as="pg"><div style="display:flex;flex-direction:column;gap:8px;width:{{ pgW }}"><span style="font-size:11px;font-weight:650;letter-spacing:.06em;color:{{ pg.hc }}">{{ pg.h }}</span><div style="position:relative;aspect-ratio:1/1.3;border-radius:6px;background:#FBFAF7;box-shadow:0 10px 30px rgba(0,0,0,.3);padding:8% 9%;box-sizing:border-box;display:flex;flex-direction:column;gap:7px;overflow:hidden"><span style="height:12px;width:60%;background:#2A2723;border-radius:2px"></span><span style="height:7px;width:35%;background:#9A958C;border-radius:2px;margin-bottom:6px"></span><sc-for list="{{ pg.rows }}" as="r"><span style="height:6px;width:{{ r.w }};background:{{ r.c }};border-radius:2px;outline:{{ r.o }};outline-offset:2px"></span></sc-for><div style="display:{{ pg.figS }};height:70px;margin-top:6px;border-radius:4px;background:repeating-linear-gradient(135deg,#E4E0D6 0 6px,#F1EEE7 6px 12px);outline:{{ pg.figO }};outline-offset:3px"></div></div><span style="font-size:11.5px;color:var(--mu)">{{ pg.cap }}</span></div></sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <div style="display:{{ restS }};align-items:center;gap:10px;padding:12px {{ hPadX }} {{ restPb }};border-top:1px solid var(--bd);background:var(--sf);flex-wrap:wrap">
+        <span style="flex:1;min-width:180px;font-size:12.5px;color:var(--mu)">{{ restNote }}</span>
+        <sc-for list="{{ restBtns }}" as="b"><span style="height:36px;padding:0 14px;border-radius:9px;display:flex;align-items:center;font-size:13px;font-weight:{{ b.fw }};background:{{ b.bg }};color:{{ b.c }};border:1px solid {{ b.bd }};white-space:nowrap">{{ b.l }}</span></sc-for>
+      </div>
+    </div>
+    <div style="display:{{ sideS }};width:{{ sideW }};flex-shrink:0;flex-direction:column;border-inline-start:{{ sideBl }};border-top:{{ sideBt }};margin:{{ sideM }};background:var(--sf);overflow:hidden;max-height:{{ sideMax }}">
+      <div style="display:flex;align-items:center;gap:8px;padding:14px 14px 8px"><span style="font-weight:650;font-size:14px;flex:1">{{ sideT }}</span><span style="font-size:11.5px;color:var(--mu)">{{ sideSub }}</span></div>
+      <div style="display:{{ filtS }};gap:4px;padding:0 14px 8px;flex-wrap:wrap"><sc-for list="{{ filt }}" as="f"><span style="height:26px;padding:0 9px;border-radius:999px;font-size:11.5px;display:flex;align-items:center;border:1px solid {{ f.bd }};background:{{ f.bg }};white-space:nowrap">{{ f.l }}</span></sc-for></div>
+      <sc-for list="{{ vers }}" as="v">
+        <div style="display:{{ v.hS }};padding:10px 16px 4px;font-size:11px;font-weight:650;letter-spacing:.06em;color:var(--mu)">{{ v.h }}</div>
+        <div style="display:{{ v.rS }};gap:10px;margin:0 8px;padding:8px 8px 8px 10px;border-radius:9px;background:{{ v.bg }};border:1px solid {{ v.bd }};position:relative">
+          <div style="display:flex;flex-direction:column;align-items:center;width:14px;padding-top:4px"><span style="width:{{ v.dw }};height:{{ v.dw }};border-radius:{{ v.dr }};background:{{ v.dc }};box-shadow:0 0 0 3px var(--sf);transform:{{ v.dt }}"></span></div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:{{ v.fw }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">{{ v.l }}</span><span style="font-size:11.5px;color:var(--mu);white-space:nowrap">{{ v.t }}</span></div>
+            <span style="font-size:11.5px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ v.s }}</span>
+            <div style="display:{{ v.statS }};align-items:center;gap:8px;font:500 11px 'JetBrains Mono',monospace;white-space:nowrap"><span style="color:var(--ok)">{{ v.add }}</span><span style="color:var(--da)">{{ v.del }}</span><span style="display:{{ v.tagS }};font-family:Inter;font-size:10.5px;font-weight:650;padding:0 6px;border-radius:999px;border:1px solid {{ v.tagC }};color:{{ v.tagC }}">{{ v.tag }}</span></div>
+          </div>
+        </div>
+      </sc-for>
+      <sc-for list="{{ blocks }}" as="bk"><div style="padding:0 14px 12px"><dc-import name="R6Block" bk="{{ bk }}" hint-size="100%,40px"></dc-import></div></sc-for>
+    </div>
+  </div>
+  <sc-if value="{{ hasDlg }}">
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,.5)"></div>
+    <div style="position:absolute;left:{{ dlL }};right:{{ dlR }};top:{{ dlT }};bottom:{{ dlB }};background:var(--sf);border:1px solid var(--bd);border-radius:{{ dlRad }};box-shadow:0 30px 80px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:14px;padding:20px">
+      <div style="display:flex;align-items:center"><span style="font-weight:650;font-size:16px;flex:1">{{ dlT2 }}</span><span style="color:var(--mu);font-size:18px">×</span></div>
+      <sc-for list="{{ dlFields }}" as="f"><div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--mu)">{{ f.k }}</span><span style="min-height:{{ f.h }};padding:9px 12px;border-radius:9px;border:1px solid {{ f.bd }};background:var(--bg);font-size:13.5px;color:{{ f.c }}">{{ f.v }}</span></div></sc-for>
+      <sc-for list="{{ dlBlocks }}" as="bk"><dc-import name="R6Block" bk="{{ bk }}" hint-size="100%,40px"></dc-import></sc-for>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px"><sc-for list="{{ dlBtns }}" as="b"><span style="height:38px;padding:0 16px;border-radius:10px;display:flex;align-items:center;font-size:13px;font-weight:{{ b.fw }};background:{{ b.bg }};color:{{ b.c }};border:1px solid {{ b.bd }};white-space:nowrap">{{ b.l }}</span></sc-for></div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;history&quot;,&quot;compare&quot;,&quot;name&quot;,&quot;conflict&quot;,&quot;doc&quot;,&quot;settings&quot;],&quot;default&quot;:&quot;history&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;dmode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Inline&quot;,&quot;Side by side&quot;],&quot;default&quot;:&quot;Inline&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { window.__vs = this; if (!window.LUMEN_GLYPHS) { const t = setInterval(() => { if (window.LUMEN_GLYPHS) { clearInterval(t); this.forceUpdate(); } }, 50); setTimeout(() => clearInterval(t), 5000); } }
+  renderVals() {
+    const GL = window.LUMEN_GLYPHS || {};
+    const g = n => (GL[n] || []).map(p => typeof p === 'string' ? { d: p, f: 'none', s: 'currentColor' } : { d: p.d, f: p.fill ? 'currentColor' : 'none', s: p.stroke || (p.fill ? 'none' : 'currentColor') });
+    const P = Object.assign({}, this.props, window.__vsOv || {}), ph = !!P.phone, scr = P.screen || 'history', dm = P.dmode || (scr === 'compare' ? 'Side by side' : 'Inline');
+    const AC = 'color-mix(in srgb,var(--ac) 16%,transparent)';
+    const btn = (l, o = {}) => ({ l, g: o.g ? g(o.g) : [], gS: o.g ? 'block' : 'none', s: o.dk && ph ? 'none' : 'flex', fw: o.pri ? 650 : 500, bg: o.pri ? 'var(--ac)' : 'transparent', c: o.pri ? 'var(--af)' : o.c || 'var(--tx)', bd: o.pri ? 'transparent' : 'var(--bd)' });
+    const W = (s, k) => ({ s, bg: k === '+' ? 'color-mix(in srgb,var(--ok) 26%,transparent)' : k === '-' ? 'color-mix(in srgb,var(--da) 26%,transparent)' : 'transparent', td: k === '-' ? 'line-through' : 'none' });
+    const LN = (t, o = {}) => ({ t: Array.isArray(t) ? t : [W(t)], m: o.m || '', mc: o.m === '+' ? 'var(--ok)' : o.m === '-' ? 'var(--da)' : 'var(--mu)', bg: o.m === '+' ? 'color-mix(in srgb,var(--ok) 10%,transparent)' : o.m === '-' ? 'color-mix(in srgb,var(--da) 10%,transparent)' : o.m === '~' ? 'color-mix(in srgb,var(--wa) 8%,transparent)' : 'transparent', bl: o.m === '+' ? 'var(--ok)' : o.m === '-' ? 'var(--da)' : o.m === '~' ? 'var(--wa)' : 'transparent', td: o.m === '-' ? 'line-through' : 'none', c: o.m === '-' ? 'var(--mu)' : 'var(--tx)', ff: o.h ? 'Inter' : "'Source Serif 4',Georgia,serif", fs: o.h ? (o.h === 1 ? '22px' : '16px') : (ph ? '14.5px' : '15.5px'), fw: o.h ? 650 : 400, pad: o.h ? '8px 8px 2px' : '3px 8px', mt: o.h === 1 ? '8px' : '4px' });
+    const docL = [LN('Attention vs convolution', { h: 1 }), LN('Both pick out patterns, but they decide what to look at differently.'), LN('Convolution', { h: 2 }), LN([W('A 3×3 kernel slides over the image with '), W('the same', '-'), W('shared', '+'), W(' weights at every position, so locality and translation equivariance are built in.')], { m: '~' }), LN('Receptive field grows with depth: two 3×3 layers see 5×5.', { m: '+' }), LN('Attention', { h: 2 }), LN('Every token attends to every other token. Weights come from the content (QKᵀ).'), LN('Cost is linear in sequence length.', { m: '-' }), LN('Cost is O(n²) in sequence length, which is why long contexts are expensive.', { m: '+' }), LN([W('See also: '), W('[[CNN lab notes]]', '+'), W(', [[Attention is all you need]]')], { m: '~' })];
+    const out = { mainS: scr === 'settings' ? 'none' : 'flex', sideBl: '1px solid var(--bd)', sideM: '0', phS: ph ? 'flex' : 'none', dkS: ph ? 'none' : 'flex', hdrH: ph ? '52px' : '52px', hPadX: ph ? '14px' : '24px', fileG: g('note'), crumb: 'Deep learning / Q&A /', fileName: 'Attention vs convolution', modeS: 'flex', modeL: 'Viewing v14 · 18 Nov 14:40', bodyDir: ph ? 'column' : 'row', docPad: ph ? '12px 14px' : '22px 40px', isDoc: false, panes: [], dbarS: 'flex', restS: 'flex', restPb: ph ? '28px' : '12px', hasDlg: false, blocks: [], filtS: 'none', filt: [], vers: [] };
+    const VERS = [['NOW'], ['Current', 'You · MacBook · editing', '', '', '', 'cur'], ['TODAY'], ['12 edits', 'You · MacBook · 14:02 – 14:40', '+6', '−2', '', 'auto', 1], ['★ Before restructure', 'Named · You · kept forever', '', '', 'Named', 'named'], ['Synced from Pixel 8', 'You · phone · 09:12', '+1', '', 'Sync', 'sync'], ['YESTERDAY'], ['AI edit: “tighten wording”', 'Ask · applied by you · 21:30', '+3', '−5', 'AI', 'ai'], ['Restored from v9', 'You · 18:04', '', '', 'Restore', 'restore'], ['18 NOVEMBER'], ['Created from Ask chat', 'Ask · 16:20', '+24', '', '', 'auto']];
+    const timesFor = ['', '', '', '14:40', '13:55', '09:12', '', '21:30', '18:04', '', '16:20'];
+    const vers = VERS.map(([l, s, add, del, tag, kind, sel], i) => s === undefined ? { hS: 'block', rS: 'none', h: l, l: '', s: '', t: '', add: '', del: '', tag: '', tagS: 'none', tagC: '', statS: 'none', dc: '', dw: '0', dr: '', dt: '', bg: '', bd: '', fw: 400 } :
+      { hS: 'none', rS: 'flex', h: '', l, s, t: timesFor[i], add, del, tag, tagS: tag ? 'inline' : 'none', tagC: tag === 'AI' ? 'var(--le)' : tag === 'Named' ? 'var(--ac)' : tag === 'Sync' ? 'var(--ln)' : 'var(--mu)', statS: add || del || tag ? 'flex' : 'none', dc: kind === 'named' ? 'var(--ac)' : kind === 'cur' ? 'var(--ok)' : kind === 'ai' ? 'var(--le)' : 'var(--mu)', dw: kind === 'named' ? '10px' : '8px', dr: kind === 'named' ? '2px' : '50%', dt: kind === 'named' ? 'rotate(45deg)' : 'none', bg: (sel && scr === 'history') ? AC : 'transparent', bd: (sel && scr === 'history') ? 'color-mix(in srgb,var(--ac) 50%,transparent)' : 'transparent', fw: kind === 'named' || sel ? 650 : 500 });
+    const filt = ['All', 'Named', 'By me', 'AI edits', 'Synced'].map((l, i) => ({ l, bd: !i ? 'var(--ac)' : 'var(--bd)', bg: !i ? AC : 'transparent' }));
+    const dmodes = s => ['Inline', 'Side by side', 'Preview'].map(l => ({ l, bg: l === s ? 'var(--sf)' : 'transparent', c: l === s ? 'var(--tx)' : 'var(--mu)', fw: l === s ? 600 : 400 }));
+    if (scr === 'history' || scr === 'name' || scr === 'compare') {
+      const side = scr === 'compare' || dm === 'Side by side';
+      const oldL = docL.filter(l => l.bl !== 'var(--ok)').map(l => l.bl === 'var(--wa)' ? { ...l, t: l.t.filter(w => w.td !== 'none' || w.bg === 'transparent').map(w => w.td === 'line-through' ? { ...w, td: 'none' } : w) } : l);
+      const newL = docL.filter(l => l.bl !== 'var(--da)').map(l => l.bl === 'var(--wa)' ? { ...l, t: l.t.filter(w => w.td !== 'line-through') } : l);
+      Object.assign(out, { fromL: 'v14 · Today 14:40', toL: 'Current', diffStat: '+3 lines · −1 line · 2 changed', dmodes: dmodes(side ? 'Side by side' : 'Inline'),
+        panes: ph ? [{ h: '', hS: 'none', hc: '', bl: 'none', lines: docL.slice(0, 9) }] : side ? [{ h: 'V14 · TODAY 14:40', hS: 'block', hc: 'var(--da)', bl: 'none', lines: oldL }, { h: 'CURRENT', hS: 'block', hc: 'var(--ok)', bl: '1px solid var(--bd)', lines: newL }] : [{ h: '', hS: 'none', hc: '', bl: 'none', lines: docL }],
+        hBtns: [btn('Name this version', { g: 'star', dk: 1 }), btn('Close', { g: 'x' })],
+        restNote: ph ? 'Restoring keeps the current text as a version.' : 'Restoring makes a new version; nothing is lost. Select lines to restore only those.', restBtns: [btn('Open as copy', { dk: 1 }), btn('Restore selection', { dk: 1 }), btn('Restore v14', { pri: 1 })],
+        sideS: 'flex', sideW: ph ? 'auto' : '340px', sideBt: ph ? '1px solid var(--bd)' : 'none', sideMax: ph ? '300px' : 'none', sideT: 'History', sideSub: ph ? '' : '38 versions · 30 days', filtS: 'flex', filt, vers: ph ? vers.slice(0, 6) : vers });
+      if (scr === 'compare' && !ph) { out.panes[0].h = '★ BEFORE RESTRUCTURE · 13:55'; out.panes[1].h = 'V14 · TODAY 14:40'; }
+      if (scr === 'compare') Object.assign(out, { modeL: 'Comparing 2 versions', fromL: '★ Before restructure', toL: 'v14 · 14:40', diffStat: 'Pick any two in History', sideS: ph ? 'none' : 'flex' });
+      if (scr === 'name') Object.assign(out, { hasDlg: true, dlT2: 'Name this version', dlL: ph ? '0' : 'calc(50% - 230px)', dlR: ph ? '0' : 'calc(50% - 230px)', dlT: ph ? 'auto' : '170px', dlB: ph ? '0' : 'auto', dlRad: ph ? '20px 20px 0 0' : '16px',
+        dlFields: [{ k: 'Name', v: 'Before restructure', h: '20px', bd: 'var(--ac)', c: 'var(--tx)' }, { k: 'Note (optional)', v: 'Moving the derivation to its own note.', h: '44px', bd: 'var(--bd)', c: 'var(--tx)' }],
+        dlBlocks: [{ items: [{ l: 'Keep forever', tog: true, sub: 'named versions are never pruned' }, { l: 'Also name linked notes', tog: false, sub: '3 notes' }], gap: '2px' }], dlBtns: [btn('Cancel'), btn('Save version', { pri: 1 })] });
+    }
+    if (scr === 'conflict') {
+      const A = [LN('Convolution', { h: 2 }), LN('A 3×3 kernel slides over the image with shared weights.'), LN('Receptive field grows with depth: two 3×3 layers see 5×5.', { m: '+' })];
+      const B = [LN('Convolution', { h: 2 }), LN('A 3×3 kernel slides over the image with shared weights.'), LN('Pooling halves the resolution and widens the receptive field.', { m: '+' })];
+      Object.assign(out, { modeL: 'Sync conflict', dbarS: 'flex', fromL: 'MacBook · 14:40', toL: 'Pixel 8 · 14:38 (offline)', diffStat: '1 block differs · the rest merged automatically', dmodes: dmodes('Side by side'),
+        panes: ph ? [{ h: 'THIS DEVICE', hS: 'block', hc: 'var(--ac)', bl: 'none', lines: A }, { h: 'PIXEL 8', hS: 'block', hc: 'var(--ln)', bl: 'none', lines: B }] : [{ h: 'THIS DEVICE · MACBOOK', hS: 'block', hc: 'var(--ac)', bl: 'none', lines: A }, { h: 'PIXEL 8 · EDITED OFFLINE', hS: 'block', hc: 'var(--ln)', bl: '1px solid var(--bd)', lines: B }],
+        hBtns: [btn('Decide later', { dk: 1 })], restNote: 'Both versions are kept in History whatever you pick.', restBtns: [btn('Keep this device'), btn('Keep Pixel 8', { dk: 1 }), btn('Keep both lines', { pri: 1 })], sideS: 'none' });
+      if (ph) out.panes = [{ h: '', hS: 'none', hc: '', bl: 'none', lines: [LN('THIS DEVICE', { h: 2 }), ...A.slice(1), LN('PIXEL 8', { h: 2 }), B[2]] }];
+    }
+    if (scr === 'doc') {
+      const rows = (chg) => Array.from({ length: 14 }, (_, i) => ({ w: [92, 88, 95, 70, 90, 84, 93, 60, 91, 86, 94, 78, 89, 55][i] + '%', c: chg && (i === 4 || i === 5) ? 'color-mix(in srgb,#C42B2B 55%,#2A2723)' : chg && i === 9 ? 'color-mix(in srgb,#1F8A4C 60%,#2A2723)' : '#C9C5BB', o: chg && (i === 4 || i === 5) ? '2px solid rgba(196,43,43,.55)' : chg && i === 9 ? '2px solid rgba(31,138,76,.55)' : 'none' }));
+      Object.assign(out, { fileG: g('pdf'), crumb: 'Thesis / Drafts /', fileName: 'thesis-chapter-3.pdf', modeL: 'Compare v4 → v5', fromL: 'v4 · sent to supervisor', toL: 'v5 · today', diffStat: 'Page 12 of 38 · 3 pages changed', dmodes: ['Pages', 'Overlay', 'Text'].map((l, i) => ({ l, bg: !i ? 'var(--sf)' : 'transparent', c: !i ? 'var(--tx)' : 'var(--mu)', fw: !i ? 600 : 400 })),
+        isDoc: true, pgW: ph ? '170px' : '330px', pages: [{ h: 'V4 · 12 NOV', hc: 'var(--da)', rows: rows(false), figS: 'block', figO: 'none', cap: 'p. 12' }, { h: 'V5 · TODAY', hc: 'var(--ok)', rows: rows(true), figS: 'block', figO: '2px solid rgba(183,95,14,.6)', cap: 'p. 12 · 2 paragraphs, 1 figure changed' }],
+        hBtns: [btn('Upload new version', { g: 'export', pri: !ph }), btn('', { g: 'more' })], restNote: ph ? '5 versions · 18.4 MB' : 'Older versions stay in the vault under .lumen/versions; links always open the newest.', restBtns: [btn('Download v4', { dk: 1 }), btn('Make v4 current')],
+        sideS: 'flex', sideW: ph ? 'auto' : '340px', sideBt: ph ? '1px solid var(--bd)' : 'none', sideMax: ph ? '290px' : 'none', sideT: 'Versions', sideSub: ph ? '' : '5 · 18.4 MB', filtS: 'none',
+        vers: [['v5 · Current', 'You · today 10:12 · 3.9 MB', '3 pages', '', 'Current', 'cur'], ['v4', 'You · 12 Nov · 3.8 MB', '', '', 'Sent to supervisor', 'named', 1], ['v3', 'Dr. Lim’s comments · 5 Nov', '41 comments', '', 'Reviewed', 'sync'], ['v2', 'You · 28 Oct', '', '', '', 'auto'], ['v1', 'You · 14 Oct · first draft', '', '', '', 'auto']].map(([l, s, add, del, tag, kind, sel]) => ({ hS: 'none', rS: 'flex', h: '', l, s, t: '', add, del, tag, tagS: tag ? 'inline' : 'none', tagC: kind === 'named' ? 'var(--ac)' : kind === 'cur' ? 'var(--ok)' : 'var(--ln)', statS: 'flex', dc: kind === 'named' ? 'var(--ac)' : kind === 'cur' ? 'var(--ok)' : 'var(--mu)', dw: kind === 'named' ? '10px' : '8px', dr: kind === 'named' ? '2px' : '50%', dt: kind === 'named' ? 'rotate(45deg)' : 'none', bg: sel ? AC : 'transparent', bd: sel ? 'color-mix(in srgb,var(--ac) 50%,transparent)' : 'transparent', fw: sel || kind === 'cur' ? 650 : 500 })),
+        blocks: [] });
+    }
+    if (scr === 'settings') {
+      Object.assign(out, { fileG: g('gear'), crumb: 'Settings /', fileName: 'Versions & history', modeS: 'none', dbarS: 'none', restS: 'none', hBtns: [], sideS: 'none',
+        panes: [{ h: '', hS: 'none', hc: '', bl: 'none', lines: [] }] , isDoc: false });
+      out.panes = [];
+      out.hasDlg = false;
+      out.settingsBlocks = true;
+      out.sideS = 'flex'; out.sideW = ph ? 'auto' : 'min(100%, 960px)'; out.sideBt = 'none'; out.sideMax = 'none'; out.sideT = 'Keep versions'; out.sideBl = 'none'; out.sideM = ph ? '0' : '0 auto'; out.bodyDir = 'row'; out.sideSub = 'Uses 412 MB of 2 GB';
+      out.blocks = [
+        { h: 'How long', items: [{ l: 'Every save', sub: 'for 7 days' }, { l: 'One per hour', sub: 'for 30 days' }, { l: 'One per day', sub: 'for 1 year' }, { l: 'Named versions', sub: 'forever' }, { l: 'Deleted notes', sub: 'Trash · 30 days' }], cols: ph ? '1fr' : '1fr 1fr 1fr', gap: '6px', note: 'Thinning happens on this device; synced devices keep the same history.' },
+        { h: 'Automatic named versions', items: [{ l: 'Before AI edits are applied', tog: true }, { l: 'Before a restore', tog: true }, { l: 'Before converting a visual', tog: true }, { l: 'When a plan topic is marked done', tog: false }, { l: 'Before a big paste (500+ words)', tog: true }, { l: 'Daily snapshot of the whole vault', tog: true, sub: '03:00' }], cols: ph ? '1fr' : '1fr 1fr', gap: '2px 16px' },
+        { h: 'Per space', items: [['Deep learning', 'Default'], ['Thesis', 'Keep every save 90 days'], ['Journal', 'One per day only'], ['Lumen 2.0 launch', 'Default · shared, history visible to members']].map(([l, sub]) => ({ g: 'folder', l, sub, bd: 'var(--bd)' })), cols: ph ? '1fr' : '1fr 1fr', gap: '6px' },
+        { h: 'Storage', items: [{ l: 'Notes', sl: '18%', sub: '74 MB' }, { l: 'Attachments & PDFs', sl: '62%', sub: '296 MB' }, { l: 'Visuals', sl: '10%', sub: '42 MB' }, { g: 'trash', l: 'Prune now', sub: 'frees ~120 MB', bd: 'var(--bd)' }], cols: ph ? '1fr' : '1fr 1fr', gap: '6px 16px' }
+      ];
+    }
+    return out;
+  }
+}
+</script>
+</body>
+</html>

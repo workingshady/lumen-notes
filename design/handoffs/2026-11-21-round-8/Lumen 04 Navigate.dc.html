@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:120px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227">
+  <div style="display:flex;align-items:center;gap:16px">
+    <div style="width:40px;height:40px;border-radius:11px;background:#161A21;border:1px solid #2A303B;position:relative"><div style="position:absolute;left:14px;top:9px;width:11px;height:11px;border-radius:50%;background:#F2A93B;box-shadow:0 0 14px rgba(242,169,59,.7)"></div><div style="position:absolute;left:9px;right:9px;bottom:11px;height:2px;background:#E8E6E1;border-radius:1px"></div></div>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 04 Navigate &amp; connect</span></div><div style="font-size:14px;color:#9A9890">Screens 8 (command palette), 9 (graph), 10 (canvas), 11 (version history).</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 08</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Command palette / search</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">One field for notes, commands and tags. Operators narrow without leaving the keyboard.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">8A</span><span>Palette · Desktop · ⌘K</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);font-size:13px">
+          <dc-import name="ScreenWorkspace" mode="Split" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+          <div style="position:absolute;inset:0;background:rgba(5,6,8,.6)"></div>
+          <div style="position:absolute;left:50%;top:110px;transform:translateX(-50%);width:660px;border-radius:14px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 24px 64px rgba(0,0,0,.5);display:flex;flex-direction:column;overflow:hidden">
+            <div style="height:56px;padding:0 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)">
+              <i class="icon-search" style="font-size:18px;color:var(--mu)"></i>
+              <span style="font-size:16px">eig</span>
+              <span style="padding:2px 8px;border-radius:6px;background:color-mix(in srgb,var(--ln) 14%,transparent);color:var(--ln);font:500 13px 'JetBrains Mono',monospace">type:lesson</span><span style="width:1.5px;height:20px;background:var(--ac);margin-left:-6px"></span>
+              <span style="flex:1"></span><span style="font-size:12px;color:var(--mu)">in <dc-import name="LumenGlyph" glyph="neural" size="{{ 15 }}" color="#A371F7" hint-size="15px,15px"></dc-import> ML Foundations</span><span style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu);padding:2px 6px;border:1px solid var(--bd);border-radius:4px">Esc</span>
+            </div>
+            <div style="padding:6px;display:flex;flex-direction:column">
+              <div style="padding:8px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Notes</div>
+              <sc-for list="{{ palNotes }}" as="r" hint-placeholder-count="3">
+                <div style="padding:9px 10px;border-radius:8px;display:flex;align-items:center;gap:12px;background:{{ r.bg }}">
+                  <i class="icon-file-text" style="font-size:16px;color:{{ r.ic }}"></i>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                    <div style="display:flex;gap:8px;align-items:baseline"><span style="font-weight:500;font-size:14px">{{ r.a }}<b style="font-weight:700;color:var(--ac)">{{ r.hit }}</b>{{ r.b }}</span><span style="color:var(--mu);font-size:12px">{{ r.path }}</span></div>
+                    <span style="color:var(--mu);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.s1 }}<b style="font-weight:600;color:var(--tx)">{{ r.sh }}</b>{{ r.s2 }}</span>
+                  </div>
+                  <span style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu);display:{{ r.kd }}">↵</span>
+                </div>
+              </sc-for>
+              <div style="padding:10px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Commands</div>
+              <div style="height:38px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:12px"><i class="icon-sparkles" style="font-size:16px;color:var(--mu)"></i><span style="flex:1">Generate flashcards from “<b style="color:var(--ac);font-weight:700">Eig</b>envectors”</span><span style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu)">⌘⇧G</span></div>
+              <div style="height:38px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:12px"><i class="icon-waypoints" style="font-size:16px;color:var(--mu)"></i><span style="flex:1">Open local graph for “<b style="color:var(--ac);font-weight:700">Eig</b>envectors”</span><span style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu)">⌘⇧L</span></div>
+              <div style="padding:10px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Tags</div>
+              <div style="height:38px;padding:0 10px;border-radius:8px;display:flex;align-items:center;gap:12px"><i class="icon-hash" style="font-size:16px;color:var(--mu)"></i><span style="flex:1"><b style="color:var(--ac);font-weight:700">eig</b>en-decomposition</span><span style="font-size:12px;color:var(--mu)">3 notes</span></div>
+            </div>
+            <div style="padding:10px 16px;border-top:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu)">
+              <span style="padding:1px 6px;border-radius:4px;background:var(--bg);font-family:'JetBrains Mono',monospace;font-size:11.5px">tag:</span><span style="padding:1px 6px;border-radius:4px;background:var(--bg);font-family:'JetBrains Mono',monospace;font-size:11.5px">type:</span><span style="padding:1px 6px;border-radius:4px;background:var(--bg);font-family:'JetBrains Mono',monospace;font-size:11.5px">status:</span><span style="padding:1px 6px;border-radius:4px;background:var(--bg);font-family:'JetBrains Mono',monospace;font-size:11.5px">in:</span>
+              <span style="flex:1"></span><span>↑↓ move</span><span style="opacity:.4">·</span><span>↵ open</span><span style="opacity:.4">·</span><span>⌘↵ open in split</span><span style="opacity:.4">·</span><span>&gt; commands only</span>
+            </div>
+          </div>
+          <div style="position:absolute;left:356px;top:126px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">1</div>
+          <div style="position:absolute;left:356px;top:536px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">2</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3">
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>Typing a recognised operator turns it into a chip; Backspace on a chip edits it. Scope follows the current space; <code>in:all</code> or ⌘0 widens. Fuzzy, typo-tolerant, matches highlighted in amber.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">2</b><span>Operator hints sit in the footer, not in the results. Starting with <code>&gt;</code> shows commands only, <code>#</code> tags only. Empty query shows Recent notes + Suggested commands.</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">8B</span><span>Search · Phone</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="padding:8px 12px;display:flex;align-items:center;gap:6px">
+            <span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><i class="icon-arrow-left" style="font-size:20px"></i></span>
+            <div style="flex:1;height:48px;border-radius:12px;background:var(--sf);border:1px solid var(--ac);display:flex;align-items:center;gap:8px;padding:0 12px;font-size:16px">eig<span style="width:1.5px;height:20px;background:var(--ac)"></span><span style="flex:1"></span><i class="icon-x" style="font-size:16px;color:var(--mu)"></i></div>
+          </div>
+          <div style="padding:4px 16px 12px;display:flex;gap:8px">
+            <span style="height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;font:500 13px 'JetBrains Mono',monospace;color:var(--mu)">tag:</span><span style="height:34px;padding:0 12px;border-radius:999px;background:color-mix(in srgb,var(--ln) 14%,transparent);color:var(--ln);display:flex;align-items:center;font:500 13px 'JetBrains Mono',monospace">type:lesson</span><span style="height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;font:500 13px 'JetBrains Mono',monospace;color:var(--mu)">status:</span><span style="height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;font:500 13px 'JetBrains Mono',monospace;color:var(--mu)">in:</span>
+          </div>
+          <div style="padding:8px 20px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Notes · 3</div>
+          <sc-for list="{{ palNotes }}" as="r" hint-placeholder-count="3">
+            <div style="padding:12px 20px;display:flex;flex-direction:column;gap:4px;border-bottom:1px solid var(--bd)">
+              <span style="font-weight:600;font-size:15px">{{ r.a }}<b style="color:var(--ac)">{{ r.hit }}</b>{{ r.b }}</span>
+              <span style="color:var(--mu);font-size:13px;line-height:19px">{{ r.s1 }}<b style="font-weight:600;color:var(--tx)">{{ r.sh }}</b>{{ r.s2 }}</span>
+              <span style="color:var(--mu);font-size:12px">{{ r.path }}</span>
+            </div>
+          </sc-for>
+          <div style="padding:16px 20px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Commands</div>
+          <div style="height:52px;padding:0 20px;display:flex;align-items:center;gap:14px"><i class="icon-sparkles" style="font-size:18px;color:var(--mu)"></i>Generate flashcards from “<b style="color:var(--ac)">Eig</b>envectors”</div>
+          <div style="height:52px;padding:0 20px;display:flex;align-items:center;gap:14px"><i class="icon-waypoints" style="font-size:18px;color:var(--mu)"></i>Open local graph</div>
+          <div style="flex:1"></div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 09</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Graph view</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Nodes sized by link count, coloured by folder. Hovering Eigenvectors lights its neighbours; everything else steps back.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">9A</span><span>Graph · Desktop · hover + selected preview</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="graph" hint-size="240px,900px" style="height:100%"></dc-import>
+          <div style="flex:1;position:relative;overflow:hidden">
+            <sc-for list="{{ gd.edges }}" as="e" hint-placeholder-count="40"><div style="position:absolute;left:{{ e.x }};top:{{ e.y }};width:{{ e.w }};height:{{ e.h }};background:{{ e.c }};opacity:{{ e.o }};transform:rotate({{ e.a }});transform-origin:0 50%"></div></sc-for>
+            <sc-for list="{{ gd.nodes }}" as="n" hint-placeholder-count="40">
+              <div style="position:absolute;left:{{ n.l }};top:{{ n.t }};width:{{ n.d }};height:{{ n.d }};border-radius:50%;background:{{ n.c }};opacity:{{ n.o }};box-shadow:{{ n.ring }}"></div>
+              <span style="position:absolute;left:{{ n.x }};top:{{ n.ly }};transform:translateX(-50%);font-size:{{ n.fs }};font-weight:{{ n.fw }};color:var(--tx);opacity:{{ n.lo }};white-space:nowrap;display:{{ n.ld }}">{{ n.n }}</span>
+            </sc-for>
+            <div style="position:absolute;left:20px;top:16px;display:flex;align-items:center;gap:10px"><span style="font-size:16px;font-weight:650">Graph</span><span style="height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);background:var(--sf);display:flex;align-items:center;gap:6px;color:var(--mu)"><dc-import name="LumenGlyph" glyph="neural" size="{{ 15 }}" color="#A371F7" hint-size="15px,15px"></dc-import> This space<i class="icon-chevron-down" style="font-size:12px"></i></span><span style="color:var(--mu);font-size:12px">41 notes · 78 links</span></div>
+            <div style="position:absolute;left:{{ cardX }};top:{{ cardY }};width:268px;border-radius:14px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 16px 40px rgba(0,0,0,.45);padding:14px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu)"><span style="width:8px;height:8px;border-radius:3px;background:#39C5CF"></span>01 Linear algebra<span style="flex:1"></span><span style="display:flex;align-items:center;gap:4px;color:var(--wa)"><span style="width:6px;height:6px;border-radius:50%;background:var(--wa)"></span>Review</span></div>
+              <span style="font-weight:650;font-size:15px">Linear algebra: eigenvectors</span>
+              <span style="color:var(--mu);font-size:12.5px;line-height:19px">An eigenvector of A is a non-zero vector v that A only stretches: Av = λv…</span>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:2px"><span style="height:30px;padding:0 12px;border-radius:8px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;font-weight:500">Open</span><span style="height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px"><i class="icon-locate" style="font-size:13px"></i>Local graph</span><span style="flex:1"></span><span style="color:var(--mu);font-size:12px">9 links</span></div>
+            </div>
+            <div style="position:absolute;right:16px;top:16px;width:272px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column">
+              <div style="height:44px;padding:0 10px 0 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd)"><i class="icon-sliders-horizontal" style="font-size:14px;color:var(--mu)"></i><span style="font-weight:600;flex:1">Display</span><i class="icon-chevron-up" style="font-size:15px;color:var(--mu)"></i></div>
+              <div style="padding:12px 14px;display:flex;flex-direction:column;gap:14px">
+                <div style="height:32px;border-radius:6px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--mu)"><i class="icon-search" style="font-size:13px"></i>Filter… tag:#math</div>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <div style="display:flex;align-items:center"><span style="flex:1">Tags as nodes</span><span style="width:30px;height:18px;border-radius:9px;background:var(--sf2);border:1px solid var(--bd);position:relative;box-sizing:border-box"><span style="position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--mu)"></span></span></div>
+                  <div style="display:flex;align-items:center"><span style="flex:1">Orphans</span><span style="width:30px;height:18px;border-radius:9px;background:var(--ac);position:relative"><span style="position:absolute;right:3px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--af)"></span></span></div>
+                  <div style="display:flex;align-items:center"><span style="flex:1">Journal notes</span><span style="width:30px;height:18px;border-radius:9px;background:var(--ac);position:relative"><span style="position:absolute;right:3px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--af)"></span></span></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px"><span style="color:var(--mu);font-size:12px">Colour by</span><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:3px;border-radius:8px;background:var(--bg);border:1px solid var(--bd)"><span style="height:24px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:600">Folder</span><span style="height:24px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Type</span><span style="height:24px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Status</span></div></div>
+                <div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--mu)">Local graph depth</span><span>2</span></div><div style="position:relative;height:4px;border-radius:2px;background:var(--sf2)"><span style="position:absolute;left:0;top:0;width:50%;height:100%;border-radius:2px;background:var(--tx);opacity:.7"></span><span style="position:absolute;left:50%;top:-6px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--tx)"></span></div></div>
+                <div style="border-top:1px solid var(--bd);padding-top:12px;display:flex;flex-direction:column;gap:7px">
+                  <sc-for list="{{ legend }}" as="l" hint-placeholder-count="6"><div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:50%;background:{{ l.c }}"></span><span style="flex:1">{{ l.n }}</span><span style="color:var(--mu);font-size:12px">{{ l.k }}</span></div></sc-for>
+                </div>
+              </div>
+            </div>
+            <div style="position:absolute;left:16px;bottom:16px;display:flex;gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="width:30px;height:28px;display:flex;align-items:center;justify-content:center"><i class="icon-plus" style="font-size:14px"></i></span><span style="width:30px;height:28px;display:flex;align-items:center;justify-content:center"><i class="icon-minus" style="font-size:14px"></i></span><span style="width:30px;height:28px;display:flex;align-items:center;justify-content:center"><i class="icon-scan" style="font-size:14px"></i></span></div>
+            <div style="position:absolute;right:296px;top:24px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">1</div>
+            <div style="position:absolute;left:{{ mkX }};top:{{ mkY }};width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">2</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3">
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>Display panel floats and collapses to a single icon (state remembered). Defaults show only search + legend; toggles and sliders are one click away.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">2</b><span>Hover: neighbours + edges light up in amber, others fade to 18%. Click selects and pins the preview card; double-click opens; drag repositions (physics resumes on release).</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">9B</span><span>Graph · Tablet 1024 · panel collapsed</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--in:#7AA2F7;--le:#B48EF0;width:1024px;height:768px;position:relative;overflow:hidden;border-radius:18px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="graph" collapsed="{{ true }}" hint-size="56px,768px" style="height:100%"></dc-import>
+          <div style="flex:1;position:relative;overflow:hidden">
+            <sc-for list="{{ gt.edges }}" as="e" hint-placeholder-count="40"><div style="position:absolute;left:{{ e.x }};top:{{ e.y }};width:{{ e.w }};height:{{ e.h }};background:{{ e.c }};opacity:{{ e.o }};transform:rotate({{ e.a }});transform-origin:0 50%"></div></sc-for>
+            <sc-for list="{{ gt.nodes }}" as="n" hint-placeholder-count="40">
+              <div style="position:absolute;left:{{ n.l }};top:{{ n.t }};width:{{ n.d }};height:{{ n.d }};border-radius:50%;background:{{ n.c }};opacity:{{ n.o }}"></div>
+              <span style="position:absolute;left:{{ n.x }};top:{{ n.ly }};transform:translateX(-50%);font-size:{{ n.fs }};font-weight:{{ n.fw }};opacity:{{ n.lo }};white-space:nowrap;display:{{ n.ld }}">{{ n.n }}</span>
+            </sc-for>
+            <div style="position:absolute;left:20px;top:16px;display:flex;align-items:center;gap:10px"><span style="font-size:16px;font-weight:650">Graph</span><span style="color:var(--mu);font-size:12px">41 notes · 78 links</span></div>
+            <span style="position:absolute;right:16px;top:12px;width:44px;height:44px;border-radius:12px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><i class="icon-sliders-horizontal" style="font-size:18px"></i></span>
+            <div style="position:absolute;left:16px;bottom:16px;right:16px;display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ legend }}" as="l" hint-placeholder-count="6"><span style="height:28px;padding:0 10px;border-radius:999px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-size:12px"><span style="width:8px;height:8px;border-radius:50%;background:{{ l.c }}"></span>{{ l.n }}</span></sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="max-width:1024px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Touch: pinch to zoom, two-finger pan, tap a node for the preview card, long-press to drag. Legend becomes tappable chips (tap = isolate folder).</span></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">9C</span><span>Graph · Phone · Local, node selected</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--wa:#E8B34A;--le:#B48EF0;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500;position:relative;z-index:2"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 8px;display:flex;align-items:center;gap:8px;position:relative;z-index:2">
+            <span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><i class="icon-arrow-left" style="font-size:20px"></i></span><span style="font-weight:650;font-size:17px;flex:1">Graph</span>
+            <div style="display:flex;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="height:32px;padding:0 12px;display:flex;align-items:center;color:var(--mu);font-size:13px">Global</span><span style="height:32px;padding:0 12px;border-radius:7px;background:var(--sf2);display:flex;align-items:center;font-weight:600;font-size:13px">Local · 2</span></div>
+            <span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><i class="icon-sliders-horizontal" style="font-size:20px"></i></span>
+          </div>
+          <div style="flex:1;position:relative;overflow:hidden">
+            <sc-for list="{{ gp.edges }}" as="e" hint-placeholder-count="20"><div style="position:absolute;left:{{ e.x }};top:{{ e.y }};width:{{ e.w }};height:{{ e.h }};background:{{ e.c }};opacity:{{ e.o }};transform:rotate({{ e.a }});transform-origin:0 50%"></div></sc-for>
+            <sc-for list="{{ gp.nodes }}" as="n" hint-placeholder-count="20">
+              <div style="position:absolute;left:{{ n.l }};top:{{ n.t }};width:{{ n.d }};height:{{ n.d }};border-radius:50%;background:{{ n.c }};opacity:{{ n.o }};box-shadow:{{ n.ring }}"></div>
+              <span style="position:absolute;left:{{ n.x }};top:{{ n.ly }};transform:translateX(-50%);font-size:{{ n.fs }};font-weight:{{ n.fw }};opacity:{{ n.lo }};white-space:nowrap;display:{{ n.ld }}">{{ n.n }}</span>
+            </sc-for>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--sf);border-radius:14px 14px 0 0;border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:10px;padding:10px 20px 0">
+            <div style="display:flex;justify-content:center"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu)"><span style="width:8px;height:8px;border-radius:3px;background:#39C5CF"></span>01 Linear algebra · 9 links</div>
+            <span style="font-weight:650;font-size:17px">Linear algebra: eigenvectors</span>
+            <span style="color:var(--mu);font-size:13.5px;line-height:20px">An eigenvector of A is a non-zero vector v that A only stretches…</span>
+            <div style="display:flex;gap:10px;padding:4px 0 8px"><span style="flex:1;height:48px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600">Open note</span><span style="width:48px;height:48px;border-radius:12px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><i class="icon-locate" style="font-size:18px"></i></span></div>
+            <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 10</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Canvas</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">JSON Canvas 1.0 board. The same file can be edited by hand, as raw JSON, or by script — three surfaces, one source.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">10A</span><span>Board · Desktop</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="canvas" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+          <div style="flex:1;position:relative;display:flex;flex-direction:column">
+            <div style="height:48px;padding:0 12px 0 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd);background:var(--bg);position:relative;z-index:2"><span style="color:var(--mu)">Canvases</span><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="font-weight:600">Backprop study board</span><span style="flex:1"></span><span style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span>Saved · Synced just now</span><i class="icon-ellipsis" style="font-size:16px;color:var(--mu);padding:0 6px"></i></div>
+            <div style="flex:1;position:relative">
+              <dc-import name="CanvasBoard" ox="{{ 70 }}" oy="{{ 70 }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+              <div style="position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;align-items:center;gap:2px;padding:4px;border-radius:12px;background:var(--sf);border:1px solid var(--bd)">
+                <sc-for list="{{ ctools }}" as="t" hint-placeholder-count="7">
+                  <span style="display:{{ t.sep }};width:1px;height:20px;background:var(--bd);margin:0 4px"></span>
+                  <span style="display:{{ t.show }};height:32px;padding:0 10px;border-radius:8px;align-items:center;gap:6px;background:{{ t.bg }};color:{{ t.c }}"><i class="{{ t.i }}" style="font-size:15px"></i><span style="font-size:12.5px">{{ t.l }}</span></span>
+                </sc-for>
+              </div>
+              <div style="position:absolute;left:16px;bottom:16px;display:flex;align-items:center;gap:2px;padding:3px;border-radius:10px;background:var(--sf);border:1px solid var(--bd)"><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center"><i class="icon-minus" style="font-size:14px"></i></span><span style="font-size:12px;width:40px;text-align:center">100%</span><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center"><i class="icon-plus" style="font-size:14px"></i></span></div>
+              <div style="position:absolute;left:870px;top:190px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">1</div>
+              <div style="position:absolute;left:1040px;top:20px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">2</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3">
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>Selected node: amber outline, 4 resize handles, and a connect dot — drag it to another card to create an edge; double-click an edge to label it. Double-click empty space = new text card. Snap-to-grid on by default (hold Alt to ignore).</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">2</b><span>Toolbar is 7 items: add text / note / link / group, auto-layout, fit, and the <code>&lt;/&gt;</code> Code toggle. Colour, align, delete appear on a small floating bar above the selection only.</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">10B</span><span>Code split · board ↔ JSON</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="canvas" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+          <div style="flex:1;display:flex;flex-direction:column">
+            <div style="height:48px;padding:0 12px 0 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><span style="color:var(--mu)">Canvases</span><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="font-weight:600">Backprop study board</span><span style="flex:1"></span>
+              <span style="height:30px;padding:0 10px;border-radius:8px;background:var(--sf2);border:1px solid var(--ac);display:flex;align-items:center;gap:6px;font-weight:600"><i class="icon-code" style="font-size:14px;color:var(--ac)"></i>Code</span><i class="icon-ellipsis" style="font-size:16px;color:var(--mu);padding:0 6px"></i></div>
+            <div style="flex:1;display:grid;grid-template-columns:600px 1fr;min-height:0">
+              <div style="position:relative;border-right:1px solid var(--bd)"><dc-import name="CanvasBoard" ox="{{ 14 }}" oy="{{ 90 }}" scale="{{ 0.52 }}" minimap="{{ false }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></div>
+              <div style="display:flex;flex-direction:column;background:var(--sf);min-width:0">
+                <div style="height:36px;padding:0 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd);font-size:12px;color:var(--mu)"><span style="font-family:'JetBrains Mono',monospace;color:var(--tx)">backprop-study.canvas</span><span>JSON Canvas 1.0</span><span style="flex:1"></span><span>Format ⇧⌥F</span></div>
+                <div style="flex:1;overflow:hidden;padding:12px 0;font:400 12.5px/21px 'JetBrains Mono',monospace">
+                  <sc-for list="{{ json }}" as="l" hint-placeholder-count="30">
+                    <div style="display:flex;background:{{ l.bg }}"><span style="width:44px;flex-shrink:0;text-align:right;padding-right:14px;color:var(--mu);opacity:.5;font-size:11px">{{ l.n }}</span><span style="white-space:pre"><sc-for list="{{ l.seg }}" as="s" hint-placeholder-count="3"><span style="color:{{ s.c }}">{{ s.t }}</span></sc-for></span></div>
+                  </sc-for>
+                </div>
+                <div style="height:36px;padding:0 14px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--bd);font-size:12px"><i class="icon-circle-check" style="font-size:14px;color:var(--ok)"></i><span style="color:var(--ok);font-weight:500">Valid</span><span style="color:var(--mu)">9 nodes · 4 edges · live round-trip</span><span style="flex:1"></span><span style="color:var(--mu)">Ln 18, Col 22</span></div>
+              </div>
+            </div>
+          </div>
+          <div style="position:absolute;left:950px;top:440px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">3</div>
+        </div>
+        <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">3</b><span>Selecting a node on the board highlights its JSON object, and vice versa. Edits apply on valid parse (debounced 300 ms); invalid JSON shows “Line 23: expected ,” in danger and the board keeps the last good state.</span></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">10C</span><span>Script console drawer</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="canvas" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+          <div style="flex:1;display:flex;flex-direction:column">
+            <div style="height:48px;padding:0 12px 0 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><span style="color:var(--mu)">Canvases</span><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="font-weight:600">Backprop study board</span><span style="flex:1"></span><i class="icon-ellipsis" style="font-size:16px;color:var(--mu);padding:0 6px"></i></div>
+            <div style="flex:1;position:relative"><dc-import name="CanvasBoard" ox="{{ 90 }}" oy="{{ 50 }}" scale="{{ 0.82 }}" selected="{{ false }}" minimap="{{ false }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></div>
+            <div style="height:300px;border-top:1px solid var(--bd);background:var(--sf);display:flex;flex-direction:column">
+              <div style="height:40px;padding:0 12px 0 16px;display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--bd)"><span style="display:flex;align-items:center;gap:6px;font-weight:600"><i class="icon-terminal" style="font-size:14px;color:var(--ac)"></i>Script</span><span style="color:var(--mu)">API reference</span><span style="flex:1"></span><span style="height:28px;padding:0 12px;border-radius:8px;background:var(--ac);color:var(--af);display:flex;align-items:center;gap:6px;font-weight:600"><i class="icon-play" style="font-size:12px"></i>Run <span style="font:500 11px 'JetBrains Mono',monospace;opacity:.65">⌘↵</span></span><i class="icon-chevron-down" style="font-size:16px;color:var(--mu)"></i></div>
+              <div style="flex:1;display:grid;grid-template-columns:1fr 440px;min-height:0">
+                <div style="padding:14px 0;font:400 13px/22px 'JetBrains Mono',monospace;border-right:1px solid var(--bd)">
+                  <div style="display:flex"><span style="width:40px;text-align:right;padding-right:14px;color:var(--mu);opacity:.5;font-size:11px">1</span><span><span style="color:var(--le)">const</span> idea = canvas.<span style="color:var(--in)">addNode</span>({ type: <span style="color:#E3B341">'text'</span>, text: <span style="color:#E3B341">'# Idea'</span> });</span></div>
+                  <div style="display:flex"><span style="width:40px;text-align:right;padding-right:14px;color:var(--mu);opacity:.5;font-size:11px">2</span><span>canvas.<span style="color:var(--in)">addEdge</span>({ fromNode: idea.id, toNode: <span style="color:#E3B341">'n-backprop'</span>, label: <span style="color:#E3B341">'explains'</span> });</span></div>
+                  <div style="display:flex;background:var(--sf2)"><span style="width:40px;text-align:right;padding-right:14px;color:var(--mu);opacity:.5;font-size:11px">3</span><span>canvas.<span style="color:var(--in)">layout</span>(<span style="color:#E3B341">'tree'</span>);<span style="display:inline-block;width:2px;height:16px;background:var(--ac);vertical-align:-3px"></span></span></div>
+                  <div style="display:flex"><span style="width:40px;text-align:right;padding-right:14px;color:var(--mu);opacity:.5;font-size:11px">4</span><span></span></div>
+                  <div style="display:flex"><span style="width:40px;text-align:right;padding-right:14px;color:var(--mu);opacity:.5;font-size:11px">5</span><span style="color:var(--mu)">// canvas.fromOutline('[[Backpropagation]]') builds a board from headings</span></div>
+                </div>
+                <div style="padding:12px 16px;display:flex;flex-direction:column;gap:6px;font:400 12.5px/20px 'JetBrains Mono',monospace;color:var(--mu)">
+                  <span style="font:600 11px Inter;letter-spacing:.06em;text-transform:uppercase">Output</span>
+                  <span>› addNode → <span style="color:var(--tx)">text#k3f9</span> at (0, 0)</span>
+                  <span>› addEdge → <span style="color:var(--tx)">e5</span> k3f9 → n-backprop</span>
+                  <span>› layout('tree') · <span style="color:var(--tx)">10 nodes moved</span> · 48 ms</span>
+                  <span style="color:var(--ok);display:flex;align-items:center;gap:6px"><i class="icon-check" style="font-size:13px"></i>Done · undo with ⌘Z</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="position:absolute;left:1236px;top:618px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">4</div>
+        </div>
+        <div style="max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">4</b><span>Drawer opens from ⋯ › Script console or <code>⌘`</code>. A script run is one undo step. Same API is exposed over REST (<code>PUT /api/canvas/:id</code>) — documented in “API reference”.</span></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">10D</span><span>Canvas · Phone</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--in:#7AA2F7;--le:#B48EF0;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 4px;display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--bd)"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-arrow-left" style="font-size:20px"></i></span><span style="flex:1;font-weight:600">Backprop study board</span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-code" style="font-size:20px"></i></span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-ellipsis-vertical" style="font-size:20px"></i></span></div>
+          <div style="flex:1;position:relative"><dc-import name="CanvasBoard" ox="{{ -40 }}" oy="{{ 40 }}" scale="{{ 0.62 }}" minimap="{{ false }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></div>
+          <div style="position:absolute;left:16px;right:16px;bottom:40px;height:60px;border-radius:16px;background:var(--sf2);border:1px solid var(--bd);display:grid;grid-template-columns:repeat(5,1fr);align-items:center">
+            <span style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px"><i class="icon-type" style="font-size:20px"></i>Text</span><span style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px"><i class="icon-file-plus" style="font-size:20px"></i>Note</span><span style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px"><i class="icon-link-2" style="font-size:20px"></i>Link</span><span style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px"><i class="icon-frame" style="font-size:20px"></i>Group</span><span style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px"><i class="icon-scan" style="font-size:20px"></i>Fit</span>
+          </div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+        </div>
+        <div style="max-width:412px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>Pinch/pan; tap selects, long-press drags, tap-hold a connect dot to draw an edge. Code opens the JSON as a bottom sheet.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 11</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Version history</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Nothing is ever lost: restoring never overwrites — it creates a new version on top.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">11A</span><span>Versions panel + diff · Desktop</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex;font-size:13px">
+          <dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+            <div style="height:48px;padding:0 16px 0 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><span style="color:var(--mu)">02 Optimization</span><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="font-weight:500">Gradient descent</span><span style="padding:0 8px;border-radius:6px;background:var(--sf2);line-height:22px;font-size:12px;color:var(--mu)">Viewing version · read-only</span><span style="flex:1"></span>
+              <span style="height:32px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px"><i class="icon-copy" style="font-size:14px"></i>Copy</span>
+              <span style="height:32px;padding:0 14px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;gap:6px;font-weight:600"><i class="icon-history" style="font-size:14px"></i>Restore as new version</span>
+            </div>
+            <div style="height:44px;padding:0 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd);color:var(--mu)"><span>Comparing</span><span style="color:var(--tx);font-weight:500">Today 21:12</span><i class="icon-arrow-right" style="font-size:13px"></i><span style="color:var(--tx);font-weight:500">Current</span><span style="flex:1"></span><span style="color:var(--ok)">+142</span><span style="color:var(--da)">−18</span><span style="display:flex;gap:2px;padding:3px;border-radius:8px;background:var(--sf);border:1px solid var(--bd);margin-left:8px"><span style="height:22px;padding:0 8px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;color:var(--tx);font-size:12px">Inline</span><span style="height:22px;padding:0 8px;display:flex;align-items:center;font-size:12px">Side by side</span></span></div>
+            <div style="flex:1;overflow:hidden;padding:16px 20px;font:400 13px/24px 'JetBrains Mono',monospace">
+              <div style="border:1px solid var(--bd);border-radius:10px;overflow:hidden">
+                <sc-for list="{{ diff }}" as="d" hint-placeholder-count="15">
+                  <div style="display:flex;background:{{ d.bg }};color:{{ d.c }}"><span style="width:44px;text-align:right;padding-right:8px;color:var(--mu);opacity:.6;font-size:11px">{{ d.a }}</span><span style="width:44px;text-align:right;padding-right:8px;color:var(--mu);opacity:.6;font-size:11px">{{ d.b }}</span><span style="width:22px;text-align:center;color:{{ d.sc }}">{{ d.s }}</span><span style="white-space:pre;flex:1;font-family:{{ d.ff }};font-size:{{ d.fs }}">{{ d.t }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="width:300px;flex-shrink:0;border-left:1px solid var(--bd);background:var(--sf);display:flex;flex-direction:column">
+            <div style="height:48px;padding:0 8px;display:flex;align-items:center;gap:2px;border-bottom:1px solid var(--bd)">
+              <span style="width:32px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-list-tree" style="font-size:15px"></i></span><span style="width:32px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-link-2" style="font-size:15px"></i></span><span style="width:32px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-sliders-horizontal" style="font-size:15px"></i></span>
+              <span style="height:30px;padding:0 10px;border-radius:6px;display:flex;align-items:center;gap:6px;background:var(--sf2);font-weight:600"><i class="icon-history" style="font-size:15px;color:var(--ac)"></i>Versions</span>
+              <span style="width:32px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--mu)"><i class="icon-sparkles" style="font-size:15px"></i></span>
+            </div>
+            <div style="padding:12px;display:flex;gap:8px"><div style="flex:1;height:32px;border-radius:6px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;padding:0 10px;color:var(--mu)">Label (optional)</div><span style="height:32px;padding:0 10px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;font-weight:500">Save</span></div>
+            <div style="padding:0 8px;display:flex;flex-direction:column;gap:2px">
+              <sc-for list="{{ versions }}" as="v" hint-placeholder-count="7">
+                <div style="display:{{ v.hdr }};padding:10px 8px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">{{ v.g }}</div>
+                <div style="display:{{ v.row }};padding:9px 10px;border-radius:8px;gap:10px;align-items:flex-start;background:{{ v.bg }};box-shadow:{{ v.ring }}">
+                  <i class="{{ v.i }}" style="font-size:14px;color:{{ v.ic }};margin-top:2px"></i>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-weight:{{ v.fw }}">{{ v.t }}</span><span style="font-size:12px;color:var(--mu)">{{ v.l }}</span></div>
+                  <span style="font:500 11.5px 'JetBrains Mono',monospace;display:flex;gap:6px"><span style="color:var(--ok)">{{ v.p }}</span><span style="color:var(--da)">{{ v.m }}</span></span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="position:absolute;left:1122px;top:12px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">1</div>
+          <div style="position:absolute;left:104px;top:116px;width:22px;height:22px;border-radius:50%;background:#F25C9A;color:#fff;font:700 11px/22px Inter;text-align:center;box-shadow:0 0 0 4px rgba(242,92,154,.25)">2</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3">
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>Restore copies the old text into a new version labelled “Restored from Today 21:12”. The current version stays in the list. A toast offers Undo for 8 s.</span></div>
+          <div style="display:flex;gap:10px"><b style="color:#F25C9A">2</b><span>Unchanged runs collapse to a single row — click to expand. <code>↑↓</code> steps through versions; <code>Esc</code> returns to the live note.</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">11B</span><span>Version history · Phone full-screen sheet</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ok:#6BCB8B;--da:#EF6B6B;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--sf);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 4px 0 20px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd)"><div style="flex:1;display:flex;flex-direction:column"><span style="font-weight:650;font-size:17px">Version history</span><span style="font-size:12px;color:var(--mu)">Gradient descent · 23 versions</span></div><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-x" style="font-size:20px"></i></span></div>
+          <div style="display:flex;gap:8px;padding:12px 16px;overflow:hidden">
+            <sc-for list="{{ versionsPhone }}" as="v" hint-placeholder-count="3"><div style="flex-shrink:0;width:150px;padding:10px 12px;border-radius:12px;border:{{ v.b }};background:var(--bg);display:flex;flex-direction:column;gap:4px;box-sizing:border-box"><span style="font-weight:600;font-size:13.5px">{{ v.t }}</span><span style="font-size:12px;color:var(--mu)">{{ v.l }}</span><span style="font:500 11.5px 'JetBrains Mono',monospace"><span style="color:var(--ok)">{{ v.p }}</span> <span style="color:var(--da)">{{ v.m }}</span></span></div></sc-for>
+          </div>
+          <div style="flex:1;overflow:hidden;margin:0 16px;border:1px solid var(--bd);border-radius:12px;background:var(--bg);font:400 12.5px/24px 'JetBrains Mono',monospace">
+            <sc-for list="{{ diffPhone }}" as="d" hint-placeholder-count="12"><div style="display:flex;background:{{ d.bg }};color:{{ d.c }};padding-right:10px"><span style="width:22px;text-align:center;color:{{ d.sc }}">{{ d.s }}</span><span style="white-space:pre-wrap;flex:1;font-family:{{ d.ff }};font-size:{{ d.fs }}">{{ d.t }}</span></div></sc-for>
+          </div>
+          <div style="padding:12px 16px;display:flex;gap:10px"><span style="width:52px;height:52px;border-radius:12px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><i class="icon-copy" style="font-size:18px"></i></span><span style="flex:1;height:52px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px">Restore as new version</span></div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div></x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  graph({ s = 1, ox = 0, oy = 0, hover = null, only = null, fit = null }) {
+    const F = { la:'#39C5CF', op:'#E8893A', nn:'#A371F7', pr:'#57AB5A', un:'#E3B341', moc:'#E8E6E1', j:'#6B7280', o:'#4B5260' };
+    const N = {
+      moc:['ML Foundations MOC','moc',520,420], eig:['Eigenvectors','la',320,290], svd:['SVD','la',220,220], mat:['Matrix multiplication','la',250,370], det:['Determinants','la',380,200], vec:['Vectors & norms','la',170,320],
+      pca:['PCA','un',330,520], spc:['Spectral clustering','un',240,600], km:['k-means','un',390,610],
+      gd:['Gradient descent','op',680,300], adam:['Adam','op',800,230], mom:['Momentum','op',770,350], cvx:['Convexity','op',620,200], lr:['LR schedules','op',830,310], nwt:['Newton\u2019s method','op',710,170],
+      bp:['Backpropagation','nn',700,540], cnn:['CNNs','nn',810,600], att:['Attention','nn',830,490], per:['Perceptron','nn',640,630], drp:['Dropout','nn',760,670],
+      bay:['Bayes rule','pr',490,660], mle:['MLE vs MAP','pr',420,730], gau:['Gaussian','pr',560,740], kl:['KL divergence','pr',600,670],
+      j0:['','j',150,470], j1:['','j',910,420], j2:['','j',540,120], j3:['','j',120,650], j4:['','j',900,700], j5:['','j',460,130], j6:['','j',650,780], j7:['','j',190,150], o1:['','o',960,160], o2:['','o',80,770]
+    };
+    const E = 'moc-eig moc-gd moc-bp moc-bay moc-pca moc-svd moc-adam moc-att moc-cvx moc-mat eig-svd eig-mat eig-det eig-vec eig-pca eig-gd eig-spc svd-pca mat-vec gd-adam gd-mom gd-cvx gd-lr gd-nwt mom-adam gd-bp bp-cnn bp-att bp-per bp-drp att-cnn pca-spc pca-km bay-mle bay-gau bay-kl mle-gau kl-att nwt-cvx j0-vec j1-att j2-det j3-spc j4-drp j5-nwt j6-gau j7-svd'.split(' ').map(p => p.split('-'));
+    const deg = {}; E.forEach(([a,b]) => { deg[a]=(deg[a]||0)+1; deg[b]=(deg[b]||0)+1; });
+    const nb = new Set(); if (hover) { nb.add(hover); E.forEach(([a,b]) => { if (a===hover) nb.add(b); if (b===hover) nb.add(a); }); }
+    let keys = Object.keys(N);
+    if (only) { const set = new Set([only]); E.forEach(([a,b]) => { if (a===only) set.add(b); if (b===only) set.add(a); }); const s2 = new Set(set); E.forEach(([a,b]) => { if (set.has(a)&&N[b][1]!=='j') s2.add(b); if (set.has(b)&&N[a][1]!=='j') s2.add(a); }); keys = keys.filter(k => s2.has(k)); }
+    if (fit) { const xs = keys.map(k=>N[k][2]), ys = keys.map(k=>N[k][3]); const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+      s = Math.min((fit.w-2*fit.p)/(maxX-minX),(fit.h-2*fit.p)/(maxY-minY)); ox = fit.p - minX*s + ((fit.w-2*fit.p)-(maxX-minX)*s)/2; oy = fit.p + (fit.top||0) - minY*s; }
+    const P = k => [ox + N[k][2]*s, oy + N[k][3]*s];
+    const has = new Set(keys);
+    const edges = E.filter(([a,b]) => has.has(a)&&has.has(b)).map(([a,b]) => { const [x1,y1]=P(a),[x2,y2]=P(b); const hl = hover && (a===hover||b===hover);
+      return { x:x1+'px', y:y1+'px', w:Math.hypot(x2-x1,y2-y1)+'px', a:Math.atan2(y2-y1,x2-x1)+'rad', h:hl?'1.5px':'1px', c:hl?'var(--ac)':'var(--mu)', o:hover?(hl?.9:.1):.35 }; });
+    const nodes = keys.map(k => { const [n,f] = N[k]; const [x,y] = P(k); const d = Math.max(5, (6 + (deg[k]||0)*2.1)) * Math.max(.75, Math.min(1, s*1.1)); const on = !hover || nb.has(k);
+      const showL = n && ((deg[k]||0) >= 3 || (hover && nb.has(k)) || only);
+      return { n, x:x+'px', l:(x-d/2)+'px', t:(y-d/2)+'px', d:d+'px', ly:(y+d/2+4)+'px', c:F[f], o:on?1:.18, lo:on?.95:.2, ld:showL?'block':'none', fs:k===hover||k===only?'13px':'11.5px', fw:k===hover||k===only?650:450, ring:k===hover||k===only?'0 0 0 3px var(--bg), 0 0 0 5px var(--ac)':'none' }; });
+    return { nodes, edges, P };
+  }
+  renderVals() {
+    const gd = this.graph({ s:.88, ox:40, oy:70, hover:'eig' });
+    const [ex, ey] = gd.P('eig');
+    const gt = this.graph({ s:.92, ox:20, oy:10 });
+    const gp = this.graph({ only:'eig', fit:{ w:412, h:470, p:40 } });
+    const legend = [['01 Linear algebra','#39C5CF','8'],['02 Optimization','#E8893A','12'],['03 Neural networks','#A371F7','9'],['04 Probability','#57AB5A','6'],['05 Unsupervised','#E3B341','5'],['Map of content','#E8E6E1','1'],['Journal','#6B7280','8']].map(([n,c,k]) => ({ n, c, k }));
+    const palNotes = [
+      { a:'Linear algebra: ', hit:'eig', b:'envectors', path:'01 Linear algebra', s1:'An ', sh:'eig', s2:'envector of a square matrix A is a non-zero vector v…', bg:'var(--sf)', ic:'var(--ac)', kd:'inline' },
+      { a:'', hit:'Eig', b:'en-decomposition practice', path:'90 Exams', s1:'Diagonalise A = PDP⁻¹ where D holds the ', sh:'eig', s2:'envalues…', bg:'transparent', ic:'var(--mu)', kd:'none' },
+      { a:'PCA from scratch', hit:'', b:'', path:'05 Unsupervised', s1:'…project onto the top-k ', sh:'eig', s2:'envectors of the covariance Σ', bg:'transparent', ic:'var(--mu)', kd:'none' }
+    ];
+    const ctools = [['type','',0],['file-plus','',0],['link-2','',0],['frame','',0],['|'],['network','Auto-layout',0],['scan','',0],['|'],['code','Code',0]]
+      .map(([i,l]) => i==='|' ? { sep:'block', show:'none', i:'', l:'', bg:'', c:'' } : { sep:'none', show:'flex', i:'icon-'+i, l, bg:'transparent', c:'var(--tx)' });
+    const jsonSrc = `{
+  "nodes": [
+    { "id": "g-forward", "type": "group", "label": "Forward pass",
+      "x": 60, "y": 80, "width": 420, "height": 330, "color": "5" },
+    { "id": "n-idea", "type": "text",
+      "text": "## Idea\\nCompute activations layer by layer…",
+      "x": 84, "y": 130, "width": 180, "height": 120 },
+    { "id": "n-backprop", "type": "file",
+      "file": "ML Foundations/03 Neural networks/Backpropagation.md",
+      "x": 584, "y": 130, "width": 190, "height": 160 },
+    { "id": "n-question", "type": "text", "color": "1",
+      "text": "Why do gradients vanish with sigmoid?",
+      "x": 794, "y": 276, "width": 186, "height": 112 },
+    { "id": "n-cs231n", "type": "link",
+      "url": "https://cs231n.github.io/optimization-2/",
+      "x": 584, "y": 470, "width": 270, "height": 84 }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "g-forward", "fromSide": "right",
+      "toNode": "g-backward", "toSide": "left", "label": "feeds" },
+    { "id": "e2", "fromNode": "n-backprop", "toNode": "n-cs231n",
+      "toEnd": "arrow", "label": "explained in" }
+  ]
+}`;
+    const json = jsonSrc.split('\n').map((line, i) => {
+      const seg = []; const re = /("(?:[^"\\]|\\.)*")(\s*:)?|(-?\d+(?:\.\d+)?)|([^"\d-]+|-)/g; let m;
+      while ((m = re.exec(line))) { if (m[1]) { seg.push({ t:m[1], c:m[2]?'var(--in)':'var(--ln)' }); if (m[2]) seg.push({ t:m[2], c:'var(--mu)' }); } else if (m[3]) seg.push({ t:m[3], c:'#E8893A' }); else seg.push({ t:m[4], c:'var(--mu)' }); }
+      return { n:i+1, seg, bg:(i>=7&&i<=9)?'color-mix(in srgb,var(--ac) 10%,transparent)':'transparent' };
+    });
+    const D = (k,t,a,b) => { const m = { ctx:['transparent','var(--tx)','',''], add:['color-mix(in srgb,var(--ok) 13%,transparent)','var(--tx)','+','var(--ok)'], del:['color-mix(in srgb,var(--da) 13%,transparent)','var(--tx)','−','var(--da)'], fold:['var(--sf)','var(--mu)','',''] }[k];
+      return { t, a:a||'', b:b||'', bg:m[0], c:m[1], s:m[2], sc:m[3], ff:k==='fold'?'Inter,system-ui,sans-serif':"'JetBrains Mono',monospace", fs:k==='fold'?'12px':'13px' }; };
+    const diff = [
+      D('fold','⋯  12 unchanged lines'), D('ctx','## Variants','13','13'), D('del','- [ ] Batch GD','14',''), D('add','- [x] Batch GD','','14'), D('add','- [x] Stochastic GD','','15'),
+      D('ctx','- [ ] Mini-batch + momentum','15','16'), D('ctx','','16','17'), D('del','See [[Learning rate schedules]].','17',''), D('add','See [[Learning rate schedules]] #optimization','','18'),
+      D('add','','','19'), D('add','> [!tip] Choosing η','','20'), D('add','> Too large diverges, too small crawls.','','21'), D('add','> Start at `1e-3`, then sweep.','','22'),
+      D('fold','⋯  6 unchanged lines'), D('ctx','What does η control? :: The step size.','24','29')
+    ];
+    const diffPhone = diff.slice(1, 13).map(d => ({ ...d, fs: d.fs==='13px' ? '12.5px' : d.fs }));
+    const V = (g,t,l,i,p,m,o={}) => { const r=[]; if (g) r.push({ hdr:'block', row:'none', g, t:'', l:'', p:'', m:'', i:'' }); r.push({ hdr:'none', row:'flex', g:'', t, l, i:'icon-'+i, p, m, ic:o.sel?'var(--ac)':'var(--mu)', bg:o.sel?'var(--sf2)':'transparent', ring:o.sel?'inset 0 0 0 1px var(--ac)':'none', fw:o.sel||o.label?600:450 }); return r; };
+    const versions = [
+      ...V('Today','Current','Now · this device','circle-dot','',''), ...V('','21:12','Auto-save','clock','+142','−18',{sel:1}), ...V('','19:40','“Before exam rewrite”','bookmark','+1,204','',{label:1}),
+      ...V('Earlier','Yesterday 23:05','Auto-save · Pixel 8','clock','+36','−4'), ...V('','Mon 10 Nov 20:18','Auto-save','clock','+410',''), ...V('','Sun 9 Nov 22:30','Restored from 8 Nov','history','+88','−312'), ...V('','Sat 8 Nov 18:02','“First draft”','bookmark','+880','',{label:1})
+    ];
+    const versionsPhone = [['21:12','Auto-save','+142','−18',1],['19:40','Before exam rewrite','+1,204',''],['Yesterday','Auto · Pixel 8','+36','−4']].map(([t,l,p,m,s]) => ({ t,l,p,m, b:s?'1.5px solid var(--ac)':'1px solid var(--bd)' }));
+    return { gd:{ nodes:gd.nodes, edges:gd.edges }, gt:{ nodes:gt.nodes, edges:gt.edges }, gp:{ nodes:gp.nodes, edges:gp.edges }, legend,
+      cardX:'360px', cardY:'60px', mkX:(ex+18)+'px', mkY:(ey-34)+'px', palNotes, ctools, json, diff, diffPhone, versions, versionsPhone };
+  }
+}
+</script>
+</body>
+</html>

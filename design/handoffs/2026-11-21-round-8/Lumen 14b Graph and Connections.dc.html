@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 14b Graphs &amp; connections</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 4</span></div><div style="font-size:14px;color:#9A9890">One connection language for learning paths, course skill trees and the notes graph — plus Tidy up, so a 101-concept path stays readable.</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">14b · 1</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Connection vocabulary</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Line pattern says what kind of link it is. Colour says progress — only for prerequisites. Arrows only where order matters.</p></div>
+    <div style="display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:20px">
+      <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ok:#6BCB8B;--in:#7AA2F7;--ln:#5CC8C2;border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:20px;display:flex;flex-direction:column;gap:2px">
+        <span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);padding-bottom:10px">Link types</span>
+        <sc-for list="{{ types }}" as="t" hint-placeholder-count="7"><div style="display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;min-height:46px;border-top:1px solid var(--bd)"><svg width="96" height="14"><path d="M4 7H84" style="fill:none;stroke:{{ t.c }};stroke-width:{{ t.w }};stroke-dasharray:{{ t.dash }};stroke-linecap:round;opacity:{{ t.o }}"></path><path d="{{ t.ah }}" style="fill:{{ t.c }};opacity:{{ t.o }}"></path></svg><span style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">{{ t.n }}</span><span style="color:var(--mu);font-size:12px">{{ t.d }}</span></span><span style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu)">{{ t.md }}</span></div></sc-for>
+      </div>
+      <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ok:#6BCB8B;--in:#7AA2F7;border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:20px;display:flex;flex-direction:column;gap:14px">
+        <span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Edge shapes · one choice for the whole view</span>
+        <sc-for list="{{ shapes }}" as="s" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:14px;padding:8px 10px;border-radius:10px;background:{{ s.bg }};box-shadow:{{ s.ring }}"><svg width="110" height="54"><rect x="2" y="4" width="26" height="14" rx="4" style="fill:var(--sf2);stroke:var(--bd)"></rect><rect x="82" y="36" width="26" height="14" rx="4" style="fill:var(--sf2);stroke:var(--bd)"></rect><path d="{{ s.d }}" style="fill:none;stroke:var(--in);stroke-width:1.8;stroke-linecap:round"></path></svg><span style="display:flex;flex-direction:column;gap:2px;flex:1"><span style="font-weight:600">{{ s.n }}</span><span style="color:var(--mu);font-size:12px;line-height:17px">{{ s.d2 }}</span></span><span style="font-size:12px;color:var(--ac)">{{ s.def }}</span></div></sc-for>
+      </div>
+      <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ok:#6BCB8B;--in:#7AA2F7;border-radius:14px;background:var(--bg);border:1px solid var(--bd);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">Node shapes</span>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:10px;background:var(--sf);border:1.5px solid var(--in)"><dc-import name="LumenGlyph" glyph="s-learning" size="{{ 15 }}" color="var(--in)" hint-size="15px,15px"></dc-import><span style="flex:1;font-weight:500">Concept · rounded card</span><span style="display:flex;gap:2px"><span style="width:5px;height:12px;border-radius:2px;background:#39C5CF"></span><span style="width:5px;height:12px;border-radius:2px;background:#E3B341"></span></span></div>
+        <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 14px 0 4px;border-radius:999px;background:var(--sf);border:1px solid var(--bd);align-self:flex-start"><span style="width:4px;height:22px;border-radius:2px;background:#39C5CF"></span><dc-import name="LumenGlyph" glyph="k-lecture" size="{{ 15 }}" hint-size="15px,15px"></dc-import>Course · pill with colour bar</div>
+        <div style="display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:12px;border:1px dashed var(--bd);background:var(--sf)"><span style="font-weight:600">Stage summary · dashed</span><span style="color:var(--mu);font-size:12px">collapsed stage, 3 concepts</span></div>
+        <div style="display:flex;align-items:center;gap:18px"><span style="display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;border-radius:50%;background:#39C5CF"></span>Note</span><span style="display:flex;align-items:center;gap:8px"><span style="width:26px;height:26px;border-radius:50%;background:var(--tx)"></span>Map of content</span><span style="display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;border-radius:50%;border:2px solid var(--mu);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--mu);font-weight:700">#</span>Tag</span></div>
+        <span style="color:var(--mu);font-size:12px;line-height:17px">Status lives in the glyph and border, never in the fill colour. Course colour bars (max 3, then “+2”) show where a concept is taught.</span>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">14b · 2</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Tidy up</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">One button that lays out by stage, removes crossings, hides links already implied by others, and straightens edges. Always previewed, always undoable, never touches cards you pinned.</p></div>
+    <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">14b-A</span> Before · after drags and imports (23 links, 31 crossings)</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ok:#6BCB8B;--in:#7AA2F7;--ln:#5CC8C2;--wa:#E8B34A;--da:#EF6B6B;width:820px;height:440px;position:relative;border-radius:12px;overflow:hidden"><dc-import name="ConnGraph" layout="messy" focus="{{ false }}" scale="{{ 0.76 }}" ox="{{ 4 }}" oy="{{ 10 }}" hint-size="820px,440px" style="position:absolute;inset:0"></dc-import></div></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">14b-B</span> After Tidy up · by stage · 4 implied links hidden · 0 crossings</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ok:#6BCB8B;--in:#7AA2F7;--ln:#5CC8C2;--wa:#E8B34A;--da:#EF6B6B;width:820px;height:440px;position:relative;border-radius:12px;overflow:hidden"><dc-import name="ConnGraph" focus="{{ false }}" scale="{{ 0.76 }}" ox="{{ 4 }}" oy="{{ 10 }}" hint-size="820px,440px" style="position:absolute;inset:0"></dc-import></div></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">14b-C</span> Learning path · Graph tab · Display panel + Tidy up preview · Lamplight</div>
+      <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ok:#6BCB8B;--in:#7AA2F7;--ln:#5CC8C2;--wa:#E8B34A;--da:#EF6B6B;--le:#B48EF0;--sh:none;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);display:flex">
+        <dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+        <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+          <div style="height:56px;padding:0 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--bd)"><dc-import name="LumenGlyph" glyph="path" size="{{ 18 }}" color="#A371F7" tile="#A371F7" hint-size="32px,32px"></dc-import><span style="font-weight:650;font-size:16px">AI Engineer</span><span style="color:var(--mu)">41 / 101 learned</span><span style="flex:1"></span>
+            <div style="display:flex;gap:16px;align-self:stretch;align-items:flex-end"><sc-for list="{{ ptabs }}" as="t" hint-placeholder-count="5"><span style="padding-bottom:16px;box-shadow:{{ t.sh }};color:{{ t.c }};font-weight:{{ t.w }}">{{ t.l }}</span></sc-for></div></div>
+          <div style="flex:1;position:relative">
+            <dc-import name="ConnGraph" focus="{{ true }}" scale="{{ 0.98 }}" ox="{{ 10 }}" oy="{{ 30 }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+            <div style="position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:8px 8px 8px 14px;border-radius:12px;background:var(--sf2);border:1px solid var(--ac);box-shadow:0 14px 32px rgba(0,0,0,.4)"><dc-import name="LumenGlyph" glyph="wide" size="{{ 16 }}" color="var(--ac)" hint-size="16px,16px"></dc-import><span><b style="font-weight:600">Tidy up preview</b> <span style="color:var(--mu)">· moves 14 cards · hides 4 implied links · 31 → 0 crossings · 2 pinned cards kept</span></span><span style="height:30px;padding:0 10px;display:flex;align-items:center;color:var(--mu)">Cancel</span><span style="height:30px;padding:0 12px;border-radius:8px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">Apply</span></div>
+            <div style="position:absolute;left:16px;bottom:16px;display:flex;gap:6px"><span style="height:30px;padding:0 10px;border-radius:8px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:6px;color:var(--mu)">Focus: <b style="color:var(--tx);font-weight:600">Backpropagation</b> · 2 up, all down</span><span style="height:30px;width:30px;border-radius:8px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center">+</span><span style="height:30px;width:30px;border-radius:8px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center">−</span></div>
+          </div>
+        </div>
+        <div style="width:290px;flex-shrink:0;border-left:1px solid var(--bd);background:var(--sf);display:flex;flex-direction:column;padding:14px;gap:16px">
+          <div style="display:flex;align-items:center"><span style="font-weight:600;flex:1">Display</span><span style="color:var(--mu);font-size:12px">Reset</span></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--mu)">Layout</span><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:3px;border-radius:8px;background:var(--bg);border:1px solid var(--bd);font-size:12px"><span style="height:26px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:600">By stage</span><span style="height:26px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Top-down</span><span style="height:26px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Radial</span><span style="height:26px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Free</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--mu)">Edges</span><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:3px;border-radius:8px;background:var(--bg);border:1px solid var(--bd);font-size:12px"><sc-for list="{{ edgeSeg }}" as="e" hint-placeholder-count="3"><span style="height:30px;border-radius:6px;background:{{ e.bg }};display:flex;align-items:center;justify-content:center;gap:5px;font-weight:{{ e.w }};color:{{ e.c }}"><svg width="16" height="12"><path d="{{ e.d }}" style="fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round"></path></svg>{{ e.l }}</span></sc-for></div></div>
+          <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;color:var(--mu);padding-bottom:4px">Show links</span>
+            <sc-for list="{{ toggles }}" as="t" hint-placeholder-count="5"><div style="height:32px;display:flex;align-items:center;gap:10px"><svg width="26" height="10"><path d="M2 5H24" style="fill:none;stroke:{{ t.c }};stroke-width:2;stroke-dasharray:{{ t.dash }};stroke-linecap:round"></path></svg><span style="flex:1">{{ t.n }}</span><span style="color:var(--mu);font-size:12px">{{ t.k }}</span><span style="width:28px;height:16px;border-radius:8px;background:{{ t.tb }};position:relative"><span style="position:absolute;top:2px;left:{{ t.kl }};width:12px;height:12px;border-radius:50%;background:{{ t.kc }}"></span></span></div></sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;border-top:1px solid var(--bd);padding-top:12px"><span style="font-size:12px;color:var(--mu);padding-bottom:4px">Declutter</span>
+            <sc-for list="{{ declutter }}" as="t" hint-placeholder-count="4"><div style="height:32px;display:flex;align-items:center;gap:10px"><span style="flex:1">{{ t.n }}</span><span style="width:28px;height:16px;border-radius:8px;background:{{ t.tb }};position:relative"><span style="position:absolute;top:2px;left:{{ t.kl }};width:12px;height:12px;border-radius:50%;background:{{ t.kc }}"></span></span></div></sc-for>
+            <div style="height:32px;display:flex;align-items:center;gap:10px"><span style="flex:1">Spacing</span><div style="display:flex;gap:2px;padding:2px;border-radius:7px;background:var(--bg);border:1px solid var(--bd);font-size:12px"><span style="height:22px;padding:0 8px;border-radius:5px;background:var(--sf2);display:flex;align-items:center;font-weight:600">Compact</span><span style="height:22px;padding:0 8px;display:flex;align-items:center;color:var(--mu)">Roomy</span></div></div>
+          </div>
+          <span style="margin-top:auto;height:38px;border-radius:10px;border:1px solid var(--ac);background:color-mix(in srgb,var(--ac) 12%,transparent);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600"><dc-import name="LumenGlyph" glyph="wide" size="{{ 16 }}" color="var(--ac)" hint-size="16px,16px"></dc-import>Tidy up <span style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu)">⇧T</span></span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;max-width:1440px;font-size:13px;line-height:20px;color:#CFCBC3">
+        <div style="display:flex;gap:10px"><b style="color:#F25C9A">1</b><span>Tidy up never applies silently: a preview banner states what will change. Apply → toast “Tidied up · Undo”. Cards you dragged by hand get a pin and stay put unless you untick “Keep pinned cards”.</span></div>
+        <div style="display:flex;gap:10px"><b style="color:#F25C9A">2</b><span>“Hide implied links” removes a link when the same order is already reached through other links (A→C when A→B→C). They come back on hover of either end, drawn as faint dots.</span></div>
+        <div style="display:flex;gap:10px"><b style="color:#F25C9A">3</b><span>The same Display panel serves the course Skill tree and the notes Graph; options that don't apply are hidden, not disabled. Choices are saved per view.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">14b · 3</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Edge shapes &amp; bundling</h2></div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap">
+      <sc-for list="{{ variants }}" as="v" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ v.id }}</span> {{ v.l }}</div>
+        <div style="--bg:{{ v.t.bg }};--sf:{{ v.t.sf }};--sf2:{{ v.t.sf2 }};--bd:{{ v.t.bd }};--tx:{{ v.t.tx }};--mu:{{ v.t.mu }};--ac:{{ v.t.ac }};--ok:{{ v.t.ok }};--in:{{ v.t.inn }};--ln:{{ v.t.ln }};--wa:{{ v.t.wa }};--da:{{ v.t.da }};width:820px;height:440px;position:relative;border-radius:12px;overflow:hidden"><dc-import name="ConnGraph" edge="{{ v.e }}" bundle="{{ v.b }}" collapsed="{{ v.c }}" scale="{{ 0.76 }}" ox="{{ 4 }}" oy="{{ 10 }}" hint-size="820px,440px" style="position:absolute;inset:0"></dc-import></div></div></sc-for>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">14b · 4</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Making a connection, correctly</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Drag from the amber dot on a selected card. While dragging, every possible target is checked before you let go — so a bad link is explained, not silently accepted.</p></div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap">
+      <sc-for list="{{ edits }}" as="v" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ v.id }}</span> {{ v.l }}</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--ok:#6BCB8B;--in:#7AA2F7;--ln:#5CC8C2;--wa:#E8B34A;--da:#EF6B6B;width:640px;height:400px;position:relative;border-radius:12px;overflow:hidden"><dc-import name="ConnGraph" edit="{{ v.e }}" edgeMenu="{{ v.m }}" focus="{{ false }}" stages="{{ false }}" scale="{{ 0.9 }}" ox="{{ v.ox }}" oy="{{ v.oy }}" hint-size="640px,400px" style="position:absolute;inset:0"></dc-import></div>
+        <span style="max-width:640px;font-size:13px;line-height:20px;color:#CFCBC3">{{ v.n }}</span></div></sc-for>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">14b · 5</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Phone · Paper desktop</h2></div>
+    <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">14b-P1</span> Path graph · phone · top-down</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ok:#6BCB8B;--in:#7AA2F7;--ln:#5CC8C2;width:412px;height:915px;border-radius:28px;background:var(--bg);color:var(--tx);position:relative;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;font-size:13px;font-weight:500">21:41</div>
+          <div style="height:56px;padding:0 6px;display:flex;align-items:center;gap:4px"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:18px">←</span><span style="flex:1;font-weight:650;font-size:16px">AI Engineer · Graph</span><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><dc-import name="LumenGlyph" glyph="v-board" size="{{ 20 }}" hint-size="20px,20px"></dc-import></span></div>
+          <div style="flex:1;position:relative"><dc-import name="ConnGraph" edge="elbow" scale="{{ 0.5 }}" ox="{{ -10 }}" oy="{{ 4 }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import></div>
+          <div style="background:var(--sf);border-radius:14px 14px 0 0;border-top:1px solid var(--bd);padding:10px 16px 0;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:center"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+            <span style="font-weight:650;font-size:16px">Display</span>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:3px;border-radius:10px;background:var(--bg);border:1px solid var(--bd)"><sc-for list="{{ edgeSeg }}" as="e" hint-placeholder-count="3"><span style="height:40px;border-radius:8px;background:{{ e.bgp }};display:flex;align-items:center;justify-content:center;gap:6px;font-weight:{{ e.wp }};color:{{ e.cp }}"><svg width="16" height="12"><path d="{{ e.d }}" style="fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round"></path></svg>{{ e.l }}</span></sc-for></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="height:36px;padding:0 12px;border-radius:999px;background:color-mix(in srgb,var(--in) 14%,transparent);color:var(--in);display:flex;align-items:center">Prerequisites</span><span style="height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center">Recommended</span><span style="height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;color:var(--mu)">Related</span></div>
+            <span style="height:52px;border-radius:12px;border:1px solid var(--ac);background:color-mix(in srgb,var(--ac) 12%,transparent);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600">Tidy up</span>
+            <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+          </div>
+        </div></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">14b-P2</span> Long-press a link · phone</div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ok:#6BCB8B;--in:#7AA2F7;--ln:#5CC8C2;--da:#EF6B6B;width:412px;height:915px;border-radius:28px;background:var(--bg);color:var(--tx);position:relative;overflow:hidden;display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px"></div>
+          <div style="flex:1;position:relative"><dc-import name="ConnGraph" scale="{{ 0.62 }}" ox="{{ -120 }}" oy="{{ 10 }}" stages="{{ false }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import><div style="position:absolute;inset:0;background:rgba(5,6,8,.5)"></div></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--sf);border-radius:14px 14px 0 0;padding:10px 16px 0;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;justify-content:center;padding-bottom:6px"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+            <span style="font-weight:650;font-size:16px">Backpropagation → Batch normalization</span><span style="color:var(--mu);font-size:13px;padding-bottom:6px">Prerequisite · added from CS231n roadmap</span>
+            <sc-for list="{{ phoneMenu }}" as="m" hint-placeholder-count="5"><div style="height:52px;display:flex;align-items:center;gap:12px;border-top:1px solid var(--bd);color:{{ m.c }}"><svg width="26" height="10"><path d="M2 5H24" style="fill:none;stroke:{{ m.lc }};stroke-width:2;stroke-dasharray:{{ m.dash }};stroke-linecap:round"></path></svg><span style="flex:1">{{ m.l }}</span><span style="color:var(--ac)">{{ m.chk }}</span></div></sc-for>
+            <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+          </div>
+        </div></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">14b-P3</span> Path graph · desktop · Paper · elbow edges, bundled</div>
+        <div style="--bg:#FAF8F3;--sf:#FFFFFF;--sf2:#F2EFE7;--bd:#E4DFD3;--tx:#1F1D1A;--mu:#6A655C;--ac:#B45F0E;--af:#FFFFFF;--ok:#1F8A4C;--in:#2F5BD3;--ln:#0F7C78;--wa:#A86A00;--da:#C42B2B;--le:#7A4BD1;--sh:0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .06);width:1440px;height:900px;border-radius:12px;background:var(--bg);color:var(--tx);position:relative;overflow:hidden;display:flex">
+          <dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+          <div style="flex:1;display:flex;flex-direction:column">
+            <div style="height:56px;padding:0 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--bd);background:var(--sf)"><dc-import name="LumenGlyph" glyph="path" size="{{ 18 }}" color="#7A4BD1" tile="#A371F7" hint-size="32px,32px"></dc-import><span style="font-weight:650;font-size:16px">AI Engineer</span><span style="color:var(--mu)">Graph</span><span style="flex:1"></span><span style="height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px">Display</span><span style="height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--ac);color:var(--ac);display:flex;align-items:center;font-weight:600">Tidy up</span></div>
+            <div style="flex:1;position:relative"><dc-import name="ConnGraph" edge="elbow" bundle="{{ false }}" scale="{{ 1.18 }}" ox="{{ 20 }}" oy="{{ 30 }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+              <div style="position:absolute;left:50%;bottom:20px;transform:translateX(-50%);height:40px;padding:0 8px 0 14px;border-radius:10px;background:var(--tx);color:var(--bg);display:flex;align-items:center;gap:14px;box-shadow:0 8px 24px rgba(0,0,0,.2)">Tidied up · 14 cards moved<span style="height:28px;padding:0 10px;border-radius:7px;background:rgba(255,255,255,.14);display:flex;align-items:center;font-weight:600">Undo</span></div></div>
+          </div>
+        </div></div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const ah = 'M84 7L76 3L76 11Z';
+    const types = [
+      ['Prerequisite','Must learn first. Green when the source is learned, blue while learning, grey when locked.','var(--ok)','none',1.8,1,ah,'(needs: A)'],
+      ['Prerequisite · locked','Target still blocked','var(--mu)','none',1.8,.45,ah,''],
+      ['Recommended order','Better first, not required','var(--mu)','6 5',1.8,1,ah,'(after: A)'],
+      ['Related','See also. No order, no arrow','var(--ln)','1.5 5',2,1,'M0 0','[[A]]'],
+      ['Added in this path','Your own link on top of the courses. Removable','var(--ac)','6 5',1.8,1,ah,'path-added'],
+      ['Implied','Already reached through other links. Hidden by default','var(--mu)','2 4',1.6,.6,ah,'auto'],
+      ['Tag link · notes graph','Note ↔ #tag, thin, no arrow','var(--mu)','none',1,.6,'M0 0','#tag']
+    ].map(([n,d,c,dash,w,o,a,md]) => ({ n, d, c, dash, w, o, ah:a, md }));
+    const shapes = [
+      ['Curved','Default. Calm, follows the flow left to right.','M28 11C55 11 55 43 82 43','Default',1],
+      ['Elbow','Right angles with soft corners. Best for big paths and printing.','M28 11H50Q55 11 55 16V38Q55 43 60 43H82','',0],
+      ['Straight','Shortest line. Best for the free-form notes graph.','M28 11L82 43','',0]
+    ].map(([n,d2,d,def,sel]) => ({ n, d2, d, def, bg: sel?'var(--sf)':'transparent', ring: sel?'inset 0 0 0 1.5px var(--ac)':'none' }));
+    const ptabs = ['Stages','Graph','Matrix','Timeline','Revise 3'].map((l,i) => ({ l, sh:i===1?'inset 0 -2px 0 var(--ac)':'none', c:i===1?'var(--tx)':'var(--mu)', w:i===1?600:450 }));
+    const edgeSeg = [['Curved','M2 2C8 2 8 10 14 10',1],['Elbow','M2 2H7Q8 2 8 3V9Q8 10 9 10H14',0],['Straight','M2 2L14 10',0]].map(([l,d,s],i) => ({ l, d, bg:s?'var(--sf2)':'transparent', w:s?600:450, c:s?'var(--tx)':'var(--mu)', bgp:i===1?'var(--sf2)':'transparent', wp:i===1?600:450, cp:i===1?'var(--tx)':'var(--mu)' }));
+    const tg = on => ({ tb: on?'var(--ac)':'var(--bd)', kl: on?'14px':'2px', kc: on?'var(--af)':'var(--mu)' });
+    const toggles = [['Prerequisites','var(--in)','none','18',1],['Recommended','var(--mu)','6 5','2',1],['Related','var(--ln)','1.5 5','2',1],['Added by you','var(--ac)','6 5','1',1],['Implied','var(--mu)','2 4','4 hidden',0]].map(([n,c,dash,k,on]) => ({ n, c, dash, k, ...tg(on) }));
+    const declutter = [['Group by stage',1],['Bundle links between stages',0],['Dim cards outside focus',1],['Keep pinned cards',1]].map(([n,on]) => ({ n, ...tg(on) }));
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', ok:'#6BCB8B', inn:'#7AA2F7', ln:'#5CC8C2', wa:'#E8B34A', da:'#EF6B6B' };
+    const Pp = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', ok:'#1F8A4C', inn:'#2F5BD3', ln:'#0F7C78', wa:'#A86A00', da:'#C42B2B' };
+    const variants = [['14b-D','Curved · focus on Backpropagation','curved',false,false,L],['14b-E','Elbow · Paper','elbow',false,false,Pp],['14b-F','Straight','straight',false,false,L],['14b-G','Curved · bundled between stages · last stage collapsed','curved',true,true,L]].map(([id,l,e,b,c,t]) => ({ id, l, e, b, c, t }));
+    const edits = [
+      ['14b-H','Valid target','valid','Target lights green with “Becomes a prerequisite”. Release to create a solid prerequisite (from a course: it is written to that course roadmap; in a path: added as a path link).',0,-70,false],
+      ['14b-I','Refused · loop','loop','Red line, refused. The message names the existing chain so it can be fixed.',30,-20,false],
+      ['14b-J','Warning · already implied','redundant','Amber. Allowed, but asks first, since it would only add clutter.',-200,-20,false],
+      ['14b-K','Duplicate','duplicate','Grey. Nothing happens on release.',-200,-70,false],
+      ['14b-L','Click a link · change type, reverse, remove','none','Selected link thickens in amber. Type changes keep the link but rewrite it (needs → after → related).',-200,-60,true]
+    ].map(([id,l,e,n,ox,oy,m]) => ({ id, l, e, n, ox, oy, m }));
+    const phoneMenu = [['Prerequisite','var(--in)','none','✓',''],['Recommended order','var(--mu)','6 5','',''],['Related (no order)','var(--ln)','1.5 5','',''],['Reverse direction','var(--mu)','none','',''],['Remove link','var(--da)','none','','d']].map(([l,lc,dash,chk,d]) => ({ l, lc, dash, chk, c: d?'var(--da)':'var(--tx)' }));
+    return { types, shapes, ptabs, edgeSeg, toggles, declutter, variants, edits, phoneMenu };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,15 +1,16 @@
 // Vector PDF: SVG output drawn into the PDF as paths and real (selectable) text, via jsPDF + svg2pdf.js (both lazy).
 // Needs the DOM (svg2pdf measures the SVG), so it runs on the main thread and yields between pages; raster PDFs stay in the worker.
-import { pageGeometry, type PdfLayout, type PdfPageIn } from "./export-encode";
+import { pageGeometry, type PdfLayout } from "./export-encode";
 
-export interface VectorPage { svg: string; width: number; height: number; bg: string | null }
-export type PdfUnit = ({ kind: "vector" } & VectorPage) | ({ kind: "raster" } & PdfPageIn);
+export type PdfUnit =
+  | { vector: true; svg: string; width: number; height: number; bg: string | null }
+  | { vector: false; bytes: Uint8Array; fmt: "png" | "jpg"; width: number; height: number };
 
 /** Why an SVG cannot be drawn faithfully as vectors (null = it can). */
 export function vectorBlocker(svg: string): string | null {
   if (/<foreignObject\b/i.test(svg)) return "foreignObject";
   if (/<image\b/i.test(svg)) return "image";
-  if (/<(filter|mask)\b|filter="/i.test(svg)) return "filter";
+  if (/<filter\b|\sfilter="/i.test(svg)) return "filter";
   if (/<video\b|<canvas\b/i.test(svg)) return "media";
   // PDF's built-in fonts cover Latin-1 / WinAnsi only: other scripts (Arabic shaping, CJK, emoji) would turn to garbage
   const text = [...svg.matchAll(/>([^<>]+)</g)].map((m) => m[1]).join("");
@@ -19,12 +20,10 @@ export function vectorBlocker(svg: string): string | null {
 }
 
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
-const BASE_FONTS: Record<string, string> = {};
 
 /** One PDF; vector pages are drawn from SVG text, raster pages are placed as images. */
 export async function buildVectorPdf(units: PdfUnit[], lay: PdfLayout & { lang?: string }, progress?: (i: number) => void): Promise<Uint8Array> {
   const [{ jsPDF }, { svg2pdf }] = await Promise.all([import("jspdf"), import("svg2pdf.js")]);
-  void BASE_FONTS;
   let doc: InstanceType<typeof jsPDF> | null = null;
   const host = document.createElement("div");
   host.setAttribute("aria-hidden", "true");
@@ -37,7 +36,7 @@ export async function buildVectorPdf(units: PdfUnit[], lay: PdfLayout & { lang?:
       const orient = g.pw > g.ph ? "l" : "p";
       if (!doc) { doc = new jsPDF({ unit: "pt", format: [g.pw, g.ph], orientation: orient, compress: true, putOnlyUsedFonts: true }); doc.setProperties({ title: lay.title, creator: "Lumen", subject: lay.title }); try { doc.setLanguage((lay.lang || "en-US") as never); } catch { /* unsupported tag */ } }
       else doc.addPage([g.pw, g.ph], orient);
-      if (u.kind === "raster") doc.addImage(u.bytes, u.kind === "raster" && u.bytes[0] === 0x89 ? "PNG" : "JPEG", g.x, g.y, g.w, g.h, undefined, "FAST");
+      if (!u.vector) doc.addImage(u.bytes, u.fmt === "png" ? "PNG" : "JPEG", g.x, g.y, g.w, g.h, undefined, "FAST");
       else {
         const parsed = new DOMParser().parseFromString(u.svg.replace(/^<\?xml[^>]*\?>\s*/, ""), "image/svg+xml");
         const el = document.importNode(parsed.documentElement, true) as unknown as SVGSVGElement;

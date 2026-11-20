@@ -20,7 +20,9 @@ import {
 
 export interface DslError { line: number; col: number; endCol: number; message: string }
 export interface DslNode { name: string; attrs: Record<string, string>; parent: string | null; line: number; isGroup: boolean; fields?: Field[]; implicit?: boolean }
-export interface DslEdge { from: string; to: string; ends: Ends; style?: EdgeStyle; label?: string; line: number }
+/** Identity of an edge in the DSL: `A>B` for the first edge between two names, `A>B#1`, `A>B#2`… for parallel ones. */
+export const edgeKey = (from: string, to: string, nth: number) => (nth ? `${from}>${to}#${nth}` : `${from}>${to}`);
+export interface DslEdge { from: string; to: string; ends: Ends; style?: EdgeStyle; label?: string; line: number; key: string }
 export interface DslComment { anchor: string; text: string; inline: boolean }
 export interface DslDoc { direction: Direction | null; nodes: DslNode[]; edges: DslEdge[]; comments: DslComment[]; lineOf: Map<string, number> }
 
@@ -91,6 +93,7 @@ export function parseDsl(text: string, kind: ArchKind = "architecture"): { doc: 
     if (inline !== null) comments.push({ anchor: key, text: inline, inline: true });
   };
   const fieldsMode = FIELDS_KINDS.includes(kind);
+  const pairSeen = new Map<string, number>();
   const lines = text.split("\n");
   lines.forEach((raw, i) => {
     const ln = i + 1;
@@ -143,12 +146,14 @@ export function parseDsl(text: string, kind: ArchKind = "architecture"): { doc: 
         const ends: Ends = op === "<>" || op === "<->" || op === "<-->" ? "both" : op === "-" || op === "--" ? "none" : "one";
         for (const a of parts[s]) for (const b of parts[s + 1]) {
           const [from, to] = op === "<" ? [b, a] : [a, b];
-          edges.push({ from, to, ends, style: style ?? (dashed ? "async" : undefined), label, line: ln });
+          const pk = `${from}>${to}`, nth = pairSeen.get(pk) ?? 0;
+          pairSeen.set(pk, nth + 1);
+          edges.push({ from, to, ends, style: style ?? (dashed ? "async" : undefined), label, line: ln, key: edgeKey(from, to, nth) });
           for (const nm of [from, to]) if (!byName.has(nm)) { const n: DslNode = { name: nm, attrs: {}, parent: null, line: ln, isGroup: false, implicit: true }; byName.set(nm, n); nodes.push(n); }
         }
       }
-      const first = edges[edges.length - 1];
-      anchor(`e:${first.from}>${first.to}`, comment);
+      const first = edges.find((e) => e.line === ln)!;
+      anchor(`e:${first.key}`, comment);
       return;
     }
     // node / group: Name [attrs] {
@@ -260,13 +265,16 @@ export function printDsl(c: ArchCanvas, cached?: string): string {
     }
   };
   walk(undefined, 0);
+  const nthOf = new Map<string, number>();
   for (const e of c.edges) {
     const a = names.get(e.fromNode), b = names.get(e.toNode);
     if (!a || !b) continue;
+    const pk = `${a}>${b}`, nth = nthOf.get(pk) ?? 0;
+    nthOf.set(pk, nth + 1);
     const st = e.lumenEdge?.style;
     const suffix = st && st !== "sync" && !(st === "async" && OP_OF(e).includes("--")) ? ` (${st})` : "";
     const lbl = e.label ? `: ${/[:"]/.test(e.label) ? `"${e.label.replace(/"/g, "'")}"` : e.label}` : "";
-    emit(`e:${a}>${b}`, `${q(a)} ${OP_OF(e)} ${q(b)}${lbl}${suffix}`, "");
+    emit(`e:${edgeKey(a, b, nth)}`, `${q(a)} ${OP_OF(e)} ${q(b)}${lbl}${suffix}`, "");
   }
   // comments whose statement is gone: keep them at the end so nothing typed is lost
   for (const [k, ts] of before) if (!used.has(k)) for (const t of ts) out.push(`// ${t}`);
@@ -279,7 +287,7 @@ export function printDsl(c: ArchCanvas, cached?: string): string {
  * keep their id, position, size and the fields the DSL can't express (description, links, owner, ref…). Only new nodes
  * get placed. Edges keep their id, ports and shape when the same pair still connects.
  */
-export function applyDsl(c: ArchCanvas, doc: DslDoc, text: string, prevLines?: Map<string, number>): ArchCanvas {
+export function applyDsl(c: ArchCanvas, doc: DslDoc, text: string, prevLines?: Map<string, number>, renames?: Map<string, string>): ArchCanvas {
   const oldByName = new Map(c.nodes.map((n) => [nameOf(n), n]));
   const docNames = new Set(doc.nodes.map((n) => n.name));
   // renames: an old node no longer named in the DSL whose declaration sat on the same line
@@ -289,7 +297,8 @@ export function applyDsl(c: ArchCanvas, doc: DslDoc, text: string, prevLines?: M
   const fresh = new Set<string>();
   const out: ANode[] = [];
   for (const d of doc.nodes) {
-    const prev = oldByName.get(d.name) ?? orphanByLine.get(d.line);
+    const rn = renames?.get(d.name);
+    const prev = (rn ? oldByName.get(rn) : undefined) ?? oldByName.get(d.name) ?? orphanByLine.get(d.line);
     const id = prev?.id ?? `n-${uid().slice(0, 8)}`;
     idOf.set(d.name, id);
     if (!prev) fresh.add(id);
@@ -330,16 +339,30 @@ export function applyDsl(c: ArchCanvas, doc: DslDoc, text: string, prevLines?: M
     return pid ? { ...n, lumenNode: { ...n.lumenNode, parent: pid } } : n;
   }) as ANode[];
   for (const n of res) if (n.type === "group" && !n.lumenGroup?.parent) delete n.lumenGroup!.parent;
-  // edges: reuse by pair + occurrence
+  // edges: an old edge is reused (id, ports, bend points, label style…) by node pair, preferring the same label, then by
+  // order among parallel edges; a leftover edge with the same label that shares one end is a reconnect and keeps its style.
   const pool = new Map<string, AEdge[]>();
   for (const e of c.edges) { const k = `${e.fromNode}>${e.toNode}`; pool.set(k, [...(pool.get(k) ?? []), e]); }
-  const edges: AEdge[] = doc.edges.map((d) => {
-    const from = idOf.get(d.from)!, to = idOf.get(d.to)!;
-    const prev = pool.get(`${from}>${to}`)?.shift();
-    let e: AEdge = { id: prev?.id ?? `e-${uid().slice(0, 8)}`, fromNode: from, toNode: to, ...(prev?.fromSide ? { fromSide: prev.fromSide } : {}), ...(prev?.toSide ? { toSide: prev.toSide } : {}), ...(prev?.color ? { color: prev.color } : {}) };
+  const ends2 = doc.edges.map((d) => ({ d, from: idOf.get(d.from)!, to: idOf.get(d.to)! }));
+  const picked = new Array<AEdge | undefined>(ends2.length);
+  const take = (list: AEdge[] | undefined, pred: (e: AEdge) => boolean) => { const i = list?.findIndex(pred) ?? -1; return i >= 0 ? list!.splice(i, 1)[0] : undefined; };
+  ends2.forEach((x, i) => { picked[i] = take(pool.get(`${x.from}>${x.to}`), (e) => (e.label ?? "") === (x.d.label ?? "")); });
+  ends2.forEach((x, i) => { if (!picked[i]) picked[i] = take(pool.get(`${x.from}>${x.to}`), () => true); });
+  const left = [...pool.values()].flat();
+  const moved = new Set<AEdge>();
+  ends2.forEach((x, i) => {
+    if (picked[i]) return;
+    const o = left.find((e) => (e.label ?? "") === (x.d.label ?? "") && (e.fromNode === x.from || e.toNode === x.to));
+    if (o) { left.splice(left.indexOf(o), 1); picked[i] = o; moved.add(o); }
+  });
+  const edges: AEdge[] = ends2.map((x, i) => {
+    const { d, from, to } = x, prev = picked[i];
+    const keep = !!prev && !moved.has(prev);
+    let e: AEdge = { id: prev?.id ?? `e-${uid().slice(0, 8)}`, fromNode: from, toNode: to, ...(keep && prev!.fromSide ? { fromSide: prev!.fromSide } : {}), ...(keep && prev!.toSide ? { toSide: prev!.toSide } : {}), ...(prev?.color ? { color: prev.color } : {}) };
     if (d.label) e.label = d.label;
     e = setEnds(e, d.ends);
-    const le = { ...(prev?.lumenEdge ?? {}), style: d.style ?? "sync" };
+    const le = { ...(prev?.lumenEdge ?? {}), style: d.style ?? "sync" } as NonNullable<AEdge["lumenEdge"]>;
+    if (!keep) delete le.points; // the old route no longer fits a reconnected edge
     e.lumenEdge = le;
     return e;
   });

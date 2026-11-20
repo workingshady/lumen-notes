@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 31 Note tabs &amp; Assistant</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 6</span></div><div style="font-size:14px;color:#9A9890">Diagrams, Media and Links tabs appear only when a note has that content, each with a count. The Assistant lives in the right panel; it reads the note and your selection and cites every answer.</div></div>
+  </div>
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="4">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ sec.k }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ sec.t }}</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">{{ sec.d }}</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+        <sc-for list="{{ sec.frames }}" as="f" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)">
+              <dc-import name="NoteTabsDesk" tab="{{ f.tab }}" assistant="{{ f.as }}" expand="{{ f.ex }}" fewTabs="{{ f.few }}" phone="{{ f.ph }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+            </div>
+            <div style="max-width:{{ f.w }};font-size:13px;line-height:20px;color:#CFCBC3;display:{{ f.nS }};gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', inn:'#7AA2F7', le:'#B48EF0' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', inn:'#2F5BD3', le:'#7A4BD1' };
+    const F = (id,l,tab,t,n,o={}) => ({ id, l, tab, t, n, nS:n?'flex':'none', as:o.as||'off', ex:!!o.ex, few:!!o.few, ph:!!o.ph, w:o.ph?'412px':'1440px', h:o.ph?'915px':'900px', r:o.ph?'28px':'12px' });
+    const sections = [
+      { k:'R6 · DIAGRAMS TAB', t:'Diagrams tab, zoom and Expand', d:'Every Mermaid block, graph and diagram image from the note in one grid. Each card has its own zoom bar tucked in the corner — it never sits on top of the drawing\'s centre.', frames:[
+        F('R6-31A','Diagrams · 2-column grid','diagrams',L,'Count badge on the tab. Card header: kind glyph, title, type, view source, expand. Selected card has an amber border. Save all to canvas puts every diagram on one board.'),
+        F('R6-31B','Diagrams · Paper','diagrams',P,''),
+        F('R6-31C','Expand · full screen with source panel and minimap','diagrams',L,'Prev/next walks through the note\'s diagrams. Zoom bar centred at the bottom: − %, +, Fit, 100%. Minimap shows where you are. Source panel validates live.',{ex:1}),
+        F('R6-31D','Diagrams · phone','diagrams',L,'One column. Pinch to zoom inside a card; tap Expand for full screen.',{ph:1}),
+        F('R6-31E','Expand · phone · Paper','diagrams',P,'Source panel hides; swipe left/right for prev/next.',{ph:1,ex:1})
+      ]},
+      { k:'R6 · MEDIA TAB', t:'Media tab', d:'Finds YouTube/Vimeo links, uploaded video and audio, and plain URLs that point to a video. Plays them next to a list of your timestamps.', frames:[
+        F('R6-31F','Media · player + timestamps + found list','media',L,'Timestamp ticks on the scrubber. Add timestamp writes [08:42] into the note at the cursor. Dock above note keeps the player visible while you write. A plain link that looks like a video asks “Show player?” once.'),
+        F('R6-31G','Media · Paper','media',P,''),
+        F('R6-31H','Media · phone','media',L,'',{ph:1})
+      ]},
+      { k:'R6 · LINKS TAB', t:'Links tab with website preview', d:'All links in the note grouped by kind, with counts, how many times each is used, and broken links flagged.', frames:[
+        F('R6-31I','Links · grouped + preview pane','links',L,'Click a row to preview the page on the right (cached snapshot, works offline). Actions: Open, Show as card in note, Save snapshot.'),
+        F('R6-31J','Links · Paper','links',P,''),
+        F('R6-31K','Links · phone · tap opens preview sheet','links',L,'',{ph:1}),
+        F('R6-31L','Note with only links · tabs hidden','note',P,'Notes without diagrams or media only show the tabs they need.',{few:1})
+      ]},
+      { k:'R6 · ASSISTANT', t:'Assistant sidebar', d:'Right panel, 360 px. Context chips say exactly what it can read. Answers are cited and can be inserted, replace the selection or become a flashcard. Usage chip shows today\'s free AI.', frames:[
+        F('R6-31M','Assistant · answer about a selection','note',L,'Selection in the note is highlighted blue. “Only from my notes” is on by default.',{as:'chat'}),
+        F('R6-31N','Assistant · Paper','note',P,'',{as:'chat'}),
+        F('R6-31O','Assistant · empty · quick actions with cost','note',L,'Each quick action shows its typical neuron cost so the daily limit is never a surprise.',{as:'empty'}),
+        F('R6-31P','Assistant · daily limit reached','note',L,'Red chip, dimmed actions, composer says “Back tomorrow”. Links to Settings › AI usage.',{as:'limit'}),
+        F('R6-31Q','Assistant · offline · Paper','diagrams',P,'',{as:'offline'}),
+        F('R6-31R','Assistant collapsed to the rail','media',L,'One click reopens; ⌘J toggles.',{as:'rail'}),
+        F('R6-31S','Assistant · phone sheet','note',L,'Opens at 72% height over the note; drag up for full screen.',{ph:1,as:'chat'}),
+        F('R6-31T','Assistant · phone · limit · Paper','note',P,'',{ph:1,as:'limit'})
+      ]}
+    ];
+    return { sections };
+  }
+}
+</script>
+</body>
+</html>

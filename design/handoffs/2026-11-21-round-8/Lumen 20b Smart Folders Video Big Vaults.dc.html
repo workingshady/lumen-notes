@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 20b Smart folders · Video notes · Big vaults · Mentions</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 4</span></div><div style="font-size:14px;color:#9A9890">D7 saved searches, D8 timestamps while watching, A15 700+ note vaults, D6 unlinked mentions and tag links.</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · D7</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Smart folders</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">A saved search with its own glyph, colour and live count. Stored once in the Inbox space, so every device sees the same list.</p></div>
+    <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+      <div style="width:1440px;height:900px;border-radius:12px;background:var(--bg);display:flex;overflow:hidden;position:relative">
+        <div style="width:250px;background:var(--sf);border-right:1px solid var(--bd);padding:12px 8px;display:flex;flex-direction:column;gap:2px">
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 8px 12px"><dc-import name="LumenGlyph" glyph="path" size="{{ 16 }}" color="#A371F7" tile="#A371F7" hint-size="28px,28px"></dc-import><span style="font-weight:600">AI Engineer</span></div>
+          <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5"><div style="height:30px;padding:0 8px;border-radius:6px;display:flex;align-items:center;gap:10px;color:var(--mu)"><dc-import name="LumenGlyph" glyph="{{ n.g }}" size="{{ 16 }}" hint-size="16px,16px"></dc-import><span style="flex:1">{{ n.l }}</span></div></sc-for>
+          <div style="display:flex;align-items:center;padding:14px 8px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)"><span style="flex:1">Smart folders</span><span style="font-size:14px">+</span></div>
+          <sc-for list="{{ smart }}" as="s" hint-placeholder-count="6"><div style="height:32px;padding:0 8px;border-radius:6px;display:flex;align-items:center;gap:10px;background:{{ s.bg }};box-shadow:{{ s.ring }};transform:{{ s.tf }}"><dc-import name="LumenGlyph" glyph="{{ s.g }}" size="{{ 16 }}" color="{{ s.c }}" hint-size="16px,16px"></dc-import><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.n }}</span><span style="display:{{ s.pinS }};color:var(--mu);font-size:11px">pinned</span><span style="font-size:11.5px;color:var(--mu);font-variant-numeric:tabular-nums">{{ s.k }}</span></div><div style="display:{{ s.lineS }};height:2px;margin:0 8px;background:var(--ac);border-radius:1px"></div></sc-for>
+          <div style="display:flex;align-items:center;padding:14px 8px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Folders</div>
+          <sc-for list="{{ folders }}" as="f" hint-placeholder-count="4"><div style="height:30px;padding:0 8px;display:flex;align-items:center;gap:10px"><span style="width:8px;height:8px;border-radius:3px;background:{{ f.c }}"></span><span style="flex:1">{{ f.n }}</span><span style="font-size:11.5px;color:var(--mu)">{{ f.k }}</span></div></sc-for>
+        </div>
+        <div style="width:360px;border-right:1px solid var(--bd);display:flex;flex-direction:column">
+          <div style="padding:14px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--bd)"><div style="display:flex;align-items:center;gap:8px"><dc-import name="LumenGlyph" glyph="smart-folder" size="{{ 18 }}" color="var(--ac)" hint-size="18px,18px"></dc-import><span style="font-weight:650;font-size:15px;flex:1">Lessons due this week</span><span style="color:var(--mu)">Edit</span></div><div style="height:32px;border-radius:7px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;gap:6px;padding:0 8px;font:12px 'JetBrains Mono',monospace;overflow:hidden;white-space:nowrap"><span style="padding:0 5px;border-radius:4px;background:color-mix(in srgb,var(--ln) 14%,transparent);color:var(--ln)">type:lesson</span><span style="padding:0 5px;border-radius:4px;background:color-mix(in srgb,var(--ln) 14%,transparent);color:var(--ln)">due:this-week</span><span style="padding:0 5px;border-radius:4px;background:color-mix(in srgb,var(--ln) 14%,transparent);color:var(--ln)">-status:done</span></div></div>
+          <sc-for list="{{ list }}" as="r" hint-placeholder-count="7"><div style="padding:10px 14px;border-bottom:1px solid var(--bd);display:flex;flex-direction:column;gap:3px;background:{{ r.bg }}"><span style="display:flex;align-items:center;gap:8px;font-weight:600"><dc-import name="LumenGlyph" glyph="{{ r.g }}" size="{{ 14 }}" color="{{ r.gc }}" hint-size="14px,14px"></dc-import>{{ r.t }}</span><span style="font-size:12px;color:var(--mu)">{{ r.s }}</span></div></sc-for>
+        </div>
+        <div style="flex:1;position:relative;background:color-mix(in srgb,var(--sf) 30%,var(--bg))">
+          <div style="position:absolute;inset:0;background:rgba(5,6,8,.45)"></div>
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column">
+            <div style="padding:18px 20px 6px;font-size:17px;font-weight:650">Edit smart folder</div>
+            <div style="padding:10px 20px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;gap:10px"><span style="width:40px;height:40px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><dc-import name="LumenGlyph" glyph="due" size="{{ 18 }}" color="var(--ac)" hint-size="18px,18px"></dc-import></span><div style="flex:1;height:40px;border-radius:7px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;padding:0 12px">Lessons due this week</div></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--mu)">Search</span><div style="min-height:40px;border-radius:7px;background:var(--bg);border:1px solid var(--ac);display:flex;align-items:center;padding:0 12px;font:13px 'JetBrains Mono',monospace">type:lesson due:this-week -status:done<span style="width:1.5px;height:16px;background:var(--ac)"></span></div><span style="font-size:12px;color:var(--ok)">✓ 7 notes match right now</span></div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ ops }}" as="o" hint-placeholder-count="10"><span style="padding:0 7px;line-height:22px;border-radius:5px;background:var(--sf2);font:12px 'JetBrains Mono',monospace;color:var(--mu)">{{ o }}</span></sc-for></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="flex:1">Colour</span><sc-for list="{{ colors }}" as="c" hint-placeholder-count="6"><span style="width:20px;height:20px;border-radius:50%;background:{{ c.c }};box-shadow:{{ c.ring }}"></span></sc-for></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="flex:1">Pin to top</span><span style="width:30px;height:18px;border-radius:9px;background:var(--ac);position:relative"><span style="position:absolute;right:3px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--af)"></span></span></div>
+            </div>
+            <div style="padding:14px 20px;border-top:1px solid var(--bd);display:flex;align-items:center;gap:8px"><span style="color:var(--mu);flex:1">Save as base…</span><span style="color:var(--da);padding:0 8px">Delete</span><span style="height:34px;padding:0 16px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">Save</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;width:440px">
+        <div style="border-radius:12px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 18px 44px rgba(0,0,0,.4);overflow:hidden"><div style="height:46px;padding:0 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd)"><dc-import name="LumenGlyph" glyph="query" size="{{ 16 }}" color="var(--mu)" hint-size="16px,16px"></dc-import><span style="font-family:'JetBrains Mono',monospace;font-size:13px">tag:#llm status:learning</span></div><div style="padding:4px"><div style="height:36px;padding:0 8px;border-radius:7px;display:flex;align-items:center;gap:10px;background:var(--bg)"><dc-import name="LumenGlyph" glyph="smart-folder" size="{{ 16 }}" color="var(--ac)" hint-size="16px,16px"></dc-import><span style="flex:1">Save search as smart folder</span><span style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu)">⌘S</span></div><div style="height:34px;padding:0 8px;display:flex;align-items:center;gap:10px;color:var(--mu)"><dc-import name="LumenGlyph" glyph="base" size="{{ 16 }}" hint-size="16px,16px"></dc-import>Save as base</div></div><span style="display:block;padding:8px 12px;font-size:11.5px;color:var(--mu);border-top:1px solid var(--bd)">In ⌘K. Scoped to the space? space:AI Engineer is added.</span></div>
+        <div style="width:412px;height:620px;border-radius:28px;background:var(--bg);position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:rgba(5,6,8,.5)"></div><div style="position:absolute;left:0;right:0;bottom:0;background:var(--sf);border-radius:14px 14px 0 0;padding:10px 12px 20px;display:flex;flex-direction:column;gap:2px"><div style="display:flex;justify-content:center;padding-bottom:8px"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div><span style="padding:4px 8px 8px;font-size:17px;font-weight:650">Folders</span><span style="padding:4px 8px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Smart folders</span><sc-for list="{{ smartP }}" as="s" hint-placeholder-count="4"><div style="height:48px;padding:0 8px;display:flex;align-items:center;gap:12px"><dc-import name="LumenGlyph" glyph="{{ s.g }}" size="{{ 18 }}" color="{{ s.c }}" hint-size="18px,18px"></dc-import><span style="flex:1">{{ s.n }}</span><span style="color:var(--mu)">{{ s.k }}</span></div></sc-for><span style="padding:8px 8px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Folders</span><sc-for list="{{ folders }}" as="f" hint-placeholder-count="3"><div style="height:48px;padding:0 8px;display:flex;align-items:center;gap:12px"><span style="width:10px;height:10px;border-radius:3px;background:{{ f.c }}"></span><span style="flex:1">{{ f.n }}</span></div></sc-for></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · D8</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Video notes with timestamps</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Plain <code>[12:34]</code> in Markdown becomes a chip that plays from that moment. Alt+T inserts the time of the video that's playing.</p></div>
+    <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+      <div style="width:1440px;height:900px;border-radius:12px;background:var(--bg);display:flex;overflow:hidden">
+        <dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,900px" style="height:100%"></dc-import>
+        <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;min-width:0">
+          <div style="border-right:1px solid var(--bd);display:flex;flex-direction:column">
+            <div style="height:48px;padding:0 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><span style="font-weight:600;flex:1">Let's build GPT · Karpathy</span><span style="color:var(--mu);font-size:12px">Edit</span></div>
+            <div style="padding:14px 20px;display:flex;flex-direction:column;gap:6px"><div style="aspect-ratio:16/9;border-radius:10px;background:repeating-linear-gradient(135deg,var(--sf) 0 12px,var(--sf2) 12px 24px);position:relative;display:flex;align-items:flex-end"><div style="width:100%;height:42px;background:rgba(5,6,8,.7);display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:0 0 10px 10px"><span>❚❚</span><span style="font:500 12px 'JetBrains Mono',monospace">41:07 / 1:56:20</span><span style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.2)"><span style="display:block;width:35%;height:100%;background:#E8E6E1;border-radius:2px"></span></span><span style="padding:0 6px;border-radius:5px;border:1px solid rgba(255,255,255,.3);font-size:12px">1.25×</span><span style="font-size:12px">Dock</span></div></div></div>
+            <div style="padding:0 20px;font:14px/26px 'JetBrains Mono',monospace;color:var(--tx);white-space:pre-wrap"><span style="color:var(--in)">[12:34]</span> Bigram model is the baseline.
+<span style="color:var(--in)">[27:50]</span> Self-attention as weighted average.
+<span style="color:var(--in)">[41:07]</span> <span style="display:inline-block;width:2px;height:18px;background:var(--ac);vertical-align:-3px"></span></div>
+            <div style="margin:10px 20px;align-self:flex-start;display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:9px;background:var(--sf2);border:1px solid var(--bd);font-size:12.5px"><span style="padding:0 6px;border-radius:5px;background:color-mix(in srgb,var(--in) 16%,transparent);color:var(--in);font-family:'JetBrains Mono',monospace">41:07</span>Inserted from the playing video<span style="color:var(--mu)">· Alt+T</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <div style="height:48px;padding:0 20px;display:flex;align-items:center;border-bottom:1px solid var(--bd);color:var(--mu)">Read</div>
+            <article style="padding:20px 32px;font-family:'Source Serif 4',serif;font-size:17px;line-height:30px;display:flex;flex-direction:column;gap:12px"><sc-for list="{{ stamps }}" as="s" hint-placeholder-count="4"><p style="margin:0"><span style="display:inline-flex;align-items:center;gap:5px;padding:0 8px;margin-right:8px;border-radius:999px;line-height:22px;font:500 12.5px 'JetBrains Mono',monospace;background:{{ s.bg }};color:{{ s.c }};box-shadow:{{ s.ring }}">▶ {{ s.t }}</span>{{ s.txt }}</p></sc-for><span style="font-family:Inter;font-size:12.5px;color:var(--mu)">Grey chip: “No video at this position in the note.”</span></article>
+          </div>
+        </div>
+      </div>
+      <div style="width:412px;height:915px;border-radius:28px;background:var(--bg);display:flex;flex-direction:column;overflow:hidden"><div style="height:32px"></div>
+        <div style="height:30%;max-height:274px;background:repeating-linear-gradient(135deg,var(--sf) 0 12px,var(--sf2) 12px 24px);position:relative;display:flex;align-items:flex-end"><div style="width:100%;height:40px;background:rgba(5,6,8,.7);display:flex;align-items:center;gap:10px;padding:0 12px"><span>❚❚</span><span style="font:500 12px 'JetBrains Mono',monospace">41:07</span><span style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.2)"><span style="display:block;width:35%;height:100%;background:#E8E6E1"></span></span><span style="font-size:12px">Undock</span></div></div>
+        <div style="flex:1;padding:16px 20px;font:15px/28px 'JetBrains Mono',monospace;white-space:pre-wrap"><span style="color:var(--in)">[27:50]</span> Self-attention as a weighted average.
+<span style="color:var(--in)">[41:07]</span> Masking future tokens<span style="display:inline-block;width:2px;height:18px;background:var(--ac);vertical-align:-3px"></span></div>
+        <div style="height:52px;background:var(--sf);border-top:1px solid var(--bd);display:flex;align-items:center;justify-content:space-around"><span style="padding:0 10px;height:36px;border-radius:8px;background:color-mix(in srgb,var(--in) 16%,transparent);color:var(--in);display:flex;align-items:center;gap:6px;font-weight:600"><dc-import name="LumenGlyph" glyph="timestamp" size="{{ 16 }}" hint-size="16px,16px"></dc-import>41:07</span><b>B</b><i>I</i><span>H</span><span>☐</span><span>⋯</span></div><div style="height:24px"></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · A15 · D6</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Big vaults · unlinked mentions · tag links</h2></div>
+    <div style="display:grid;grid-template-columns:repeat(3,480px);gap:24px;align-items:start">
+      <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);overflow:hidden;display:flex;flex-direction:column"><div style="padding:12px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd)"><span style="font-weight:600;flex:1">All notes</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mu)"><span style="width:7px;height:7px;border-radius:50%;background:var(--in)"></span>Indexing 512 / 738</span></div>
+        <sc-for list="{{ bigList }}" as="r" hint-placeholder-count="5"><div style="padding:9px 14px;border-bottom:1px solid var(--bd);display:flex;flex-direction:column;gap:2px"><span style="font-weight:500">{{ r }}</span><span style="height:6px;width:70%;border-radius:3px;background:var(--sf2)"></span></div></sc-for>
+        <div style="padding:14px;display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--mu);font-size:12.5px">Showing 200 of 738<span style="height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;color:var(--tx)">Show 200 more</span></div></div>
+      <div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column"><div style="padding:12px 14px;border-bottom:1px solid var(--bd);font-weight:600">Backlinks · Attention</div>
+        <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Linked mentions · 6</span><span style="font-weight:500">Transformer block</span><span style="font-weight:500">RAG</span></div>
+        <div style="padding:10px 14px;display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--bd)"><div style="display:flex;align-items:center"><span style="flex:1;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Unlinked mentions · 3</span><span style="height:26px;padding:0 10px;border-radius:7px;border:1px solid var(--bd);display:flex;align-items:center;font-size:12px">Link all</span></div>
+          <sc-for list="{{ unlinked }}" as="u" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:4px"><span style="font-weight:500">{{ u.n }}</span><span style="font-family:'Source Serif 4',serif;font-size:14px;line-height:20px;color:var(--mu)">…{{ u.a }}<span style="color:var(--tx);border-bottom:1.5px dashed var(--ln)">attention</span>{{ u.b }}…<span style="font-family:Inter;font-size:12px;color:var(--ln);margin-left:6px">Link</span></span></div></sc-for></div></div>
+      <div style="border-radius:14px;background:var(--bg);border:1px solid var(--bd);height:420px;position:relative;overflow:hidden">
+        <svg width="480" height="420" style="position:absolute;inset:0"><sc-for list="{{ tagEdges }}" as="e" hint-placeholder-count="10"><path d="{{ e.d }}" style="fill:none;stroke:{{ e.c }};stroke-width:{{ e.w }};stroke-dasharray:{{ e.dash }}"></path></sc-for></svg>
+        <sc-for list="{{ tagNodes }}" as="n" hint-placeholder-count="9"><div style="position:absolute;left:{{ n.x }};top:{{ n.y }};width:{{ n.d }};height:{{ n.d }};margin:{{ n.m }};border-radius:50%;background:{{ n.f }};border:{{ n.b }};box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--mu)">{{ n.h }}</div><span style="position:absolute;left:{{ n.x }};top:{{ n.ly }};transform:translateX(-50%);font-size:11.5px;color:{{ n.lc }}">{{ n.n }}</span></sc-for>
+        <div style="position:absolute;left:12px;bottom:12px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--mu);background:var(--bg);padding:6px 8px;border-radius:8px"><span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:1.5px;background:var(--mu)"></span>Link</span><span style="display:flex;align-items:center;gap:6px"><span style="width:16px;border-top:1.5px dashed var(--ln)"></span>Tag</span></div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const nav = [['inbox','Inbox'],['date','Today'],['flashcards','Review'],['graph','Graph'],['base','Bases']].map(([g,l]) => ({ g, l }));
+    const S = [['due','Lessons due this week','7','var(--ac)',1,1],['s-learning','#llm learning','12','var(--in)',1],['pdf','PDFs with no notes','4','var(--da)'],['s-revise','To revise','3','var(--wa)'],['flashcards','Cards from CS231n','64','var(--le)'],['smart-folder','Untagged lessons','9','var(--mu)']];
+    const smart = S.map(([g,n,k,c,pin,sel],i) => ({ g, n, k, c, pinS: pin&&!sel?'inline':'none', bg: sel?'var(--sf2)':'transparent', ring: i===3?'0 8px 20px rgba(0,0,0,.4)':'none', tf: i===3?'translateX(8px) rotate(-1deg)':'none', lineS: i===1?'block':'none' }));
+    const smartP = S.slice(0,4).map(([g,n,k,c]) => ({ g, n, k, c }));
+    const folders = [['01 Math foundations','#39C5CF','18'],['02 ML basics','#E8893A','24'],['03 Deep learning','#A371F7','31'],['04 NLP & transformers','#57AB5A','22']].map(([n,c,k]) => ({ n, c, k }));
+    const list = [['lesson','Backpropagation','CS231n · due Mon','var(--in)',1],['lesson','Tokenization (BPE)','Karpathy · due Fri','var(--mu)'],['lesson','Attention','CS224n · due Sat','var(--mu)'],['lesson','Activation functions','CS231n · due Wed','var(--mu)'],['lesson','Batch normalization','DL Spec. · due Thu','var(--wa)'],['lesson','Data augmentation','fast.ai · due Sun','var(--mu)'],['lesson','Pooling','CS231n · due Sun','var(--mu)']].map(([g,t,s,gc,sel]) => ({ g, t, s, gc, bg: sel?'var(--sf)':'transparent' }));
+    const ops = ['tag:#x','type:lesson','status:learning','in:folder','space:AI Engineer','due:this-week','has:pdf','-has:links','course:CS231n','"exact words"'];
+    const colors = ['#E5534B','#E8893A','#E3B341','#57AB5A','#39C5CF','#A371F7'].map((c,i) => ({ c, ring: i===1?'0 0 0 2px var(--sf), 0 0 0 3.5px var(--tx)':'none' }));
+    const stamps = [['12:34','Bigram model is the baseline.',0],['27:50','Self-attention as weighted average.',0],['41:07','Masking future tokens.',1],['1:58:10','Exercises (no video here).',2]].map(([t,txt,s]) => ({ t, txt, bg: s===2?'var(--sf2)':'color-mix(in srgb,var(--in) 14%,transparent)', c: s===2?'var(--mu)':'var(--in)', ring: s===1?'0 0 0 1.5px var(--in)':'none' }));
+    const bigList = ['Adam vs AdamW','Attention','Backpropagation','Batch normalization','BPE merges'];
+    const unlinked = [['Transformer block','The ',' layer mixes tokens'],['RAG pipeline','cross-',' between query and passages'],['Week 6 log','reread the ',' paper again']].map(([n,a,b]) => ({ n, a, b }));
+    const N = { att:[240,200,'Attention',22], tb:[350,120,'Transformer',14], rag:[370,270,'RAG',12], tok:[120,110,'BPE',12], bp:[110,290,'Backprop',14], llm:[250,70,'#llm',0,1], nlp:[150,200,'#nlp',0,1], nn:[260,340,'#nn',0,1] };
+    const E = [['att','tb'],['att','rag'],['tok','tb'],['bp','att'],['llm','att','t'],['llm','tb','t'],['llm','rag','t'],['nlp','att','t'],['nlp','tok','t'],['nn','bp','t']];
+    const tagEdges = E.map(([a,b,t]) => ({ d:`M${N[a][0]} ${N[a][1]}L${N[b][0]} ${N[b][1]}`, c: t?'var(--ln)':'var(--mu)', w: t?1.2:1.5, dash: t?'4 4':'none' }));
+    const tagNodes = Object.values(N).map(([x,y,n,d,tag]) => { const s = tag ? 22 : d; return { x:x+'px', y:y+'px', d:s+'px', m:`-${s/2}px 0 0 -${s/2}px`, ly:(y+s/2+4)+'px', n: tag?'':n, h: tag?'#':'', f: tag?'var(--bg)':'#A371F7', b: tag?'1.5px solid var(--ln)':'none', lc:'var(--tx)' }; });
+    tagNodes.forEach((t,i) => { if (!t.n) t.n = Object.values(N)[i][2]; });
+    return { nav, smart, smartP, folders, list, ops, colors, stamps, bigList, unlinked, tagEdges, tagNodes };
+  }
+}
+</script>
+</body>
+</html>

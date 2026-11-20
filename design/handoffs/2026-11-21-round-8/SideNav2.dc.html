@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:absolute;inset:0;display:flex;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:13px;overflow:hidden">
+  <nav aria-label="Main" style="width:{{ sbW }};flex-shrink:0;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;position:relative">
+    <div style="padding:{{ topPad }};display:flex;flex-direction:column;gap:6px">
+      <div style="height:44px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);display:flex;align-items:center;gap:10px;padding:0 8px;justify-content:{{ jc }}"><dc-import name="LumenGlyph" glyph="neural" size="{{ 15 }}" color="#A371F7" tile="#A371F7" hint-size="28px,28px"></dc-import><div style="display:{{ fullS }};flex:1;min-width:0;flex-direction:column;line-height:16px"><span style="font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">AI Engineer</span><span style="font-size:11.5px;color:var(--mu)">Learning path</span></div><span style="display:{{ fullS }};color:var(--mu);font-size:11px">⌃⌄</span></div>
+      <div style="display:{{ fullS }};gap:6px">
+        <span style="flex:1;height:34px;border-radius:8px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;gap:6px;font-weight:600"><dc-import name="LumenGlyph" glyph="plus" size="{{ 14 }}" color="var(--af)" hint-size="14px,14px"></dc-import>New note<span style="font:500 10.5px 'JetBrains Mono',monospace;opacity:.7">⌘N</span></span>
+        <span style="width:34px;height:34px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;box-shadow:{{ searchRing }}" aria-label="Search ⌘K"><dc-import name="LumenGlyph" glyph="search" size="{{ 15 }}" hint-size="15px,15px"></dc-import></span>
+      </div>
+      <div style="display:{{ railOnly }};flex-direction:column;align-items:center;gap:6px"><span style="width:36px;height:36px;border-radius:9px;background:var(--ac);display:flex;align-items:center;justify-content:center"><dc-import name="LumenGlyph" glyph="plus" size="{{ 16 }}" color="var(--af)" hint-size="16px,16px"></dc-import></span><span style="width:36px;height:36px;border-radius:9px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><dc-import name="LumenGlyph" glyph="search" size="{{ 16 }}" hint-size="16px,16px"></dc-import></span></div>
+    </div>
+
+    <div style="flex:1;min-height:0;overflow:hidden;padding:{{ listPad }};display:flex;flex-direction:column;gap:1px;position:relative">
+      <sc-for list="{{ rows }}" as="r" hint-placeholder-count="26">
+        <div style="display:{{ r.hS }};height:28px;margin-top:10px;padding:0 6px;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);border-radius:6px;box-shadow:{{ r.ring }}"><span style="font-size:9px;width:10px;letter-spacing:0">{{ r.chev }}</span><span style="flex:1">{{ r.h }}</span><span style="letter-spacing:0;text-transform:none;font-weight:500">{{ r.hk }}</span><span style="display:{{ r.addS }};width:20px;height:20px;align-items:center;justify-content:center">+</span></div>
+        <div style="display:{{ r.sepS }};height:1px;background:var(--bd);margin:8px 6px"></div>
+        <div role="treeitem" style="display:{{ r.rS }};height:{{ rowH }};padding:0 6px;padding-left:{{ r.ind }};border-radius:7px;align-items:center;gap:8px;background:{{ r.bg }};box-shadow:{{ r.ring }};color:{{ r.c }};font-weight:{{ r.w }};justify-content:{{ jc }};position:relative">
+          <span style="display:{{ r.barS }};position:absolute;left:0;top:7px;bottom:7px;width:3px;border-radius:2px;background:var(--ac)"></span>
+          <span style="display:{{ r.carS }};width:10px;font-size:9px;color:var(--mu)">{{ r.car }}</span>
+          <span style="display:{{ r.dotS }};width:8px;height:8px;border-radius:{{ r.dotR }};background:{{ r.dot }};flex-shrink:0"></span>
+          <span style="display:{{ r.gS }}"><dc-import name="LumenGlyph" glyph="{{ r.g }}" size="{{ 16 }}" color="{{ r.ic }}" hint-size="16px,16px"></dc-import></span>
+          <span style="display:{{ fullS }};flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.l }}</span>
+          <span style="display:{{ r.kS }};font-size:11.5px;color:{{ r.kc }};font-weight:{{ r.kw }};font-variant-numeric:tabular-nums">{{ r.k }}</span>
+          <span style="display:{{ r.scS }};font:500 10.5px 'JetBrains Mono',monospace;color:var(--mu)">{{ r.sc }}</span>
+          <span style="display:{{ r.badgeS }};position:absolute;right:3px;top:3px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:{{ r.bc }};color:var(--bg);font-size:9px;font-weight:700;align-items:center;justify-content:center;box-sizing:border-box">{{ r.k }}</span>
+          <span style="display:{{ r.tipS }};position:absolute;left:52px;top:4px;height:28px;padding:0 10px;border-radius:7px;background:var(--tx);color:var(--bg);align-items:center;gap:8px;white-space:nowrap;font-weight:500;z-index:4;box-shadow:0 6px 16px rgba(0,0,0,.3)">{{ r.l }}<span style="font:500 10.5px 'JetBrains Mono',monospace;opacity:.6">{{ r.sc }}</span></span>
+        </div>
+        <div style="display:{{ r.emptyS }};margin:2px 4px 4px;border-radius:9px;border:1px dashed var(--bd);padding:9px 10px;flex-direction:column;gap:6px"><span style="color:var(--mu);font-size:12px;line-height:17px">{{ r.et }}</span><span style="font-size:12px;color:var(--ac);font-weight:600">{{ r.ea }}</span></div>
+      </sc-for>
+      <div style="display:{{ fadeS }};position:absolute;left:0;right:0;bottom:0;height:36px;background:linear-gradient(transparent,var(--sf));pointer-events:none"></div>
+    </div>
+
+    <div style="padding:{{ footPad }};border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:8px">
+      <div style="display:{{ syncWarnS }};border-radius:8px;background:color-mix(in srgb,var(--wa) 12%,transparent);border:1px solid color-mix(in srgb,var(--wa) 35%,transparent);padding:6px 8px;align-items:center;gap:8px;font-size:12px"><dc-import name="LumenGlyph" glyph="c-warning" size="{{ 13 }}" color="var(--wa)" hint-size="13px,13px"></dc-import><span style="flex:1">Offline · 3 changes waiting</span></div>
+      <div style="display:flex;align-items:center;gap:8px;justify-content:{{ jc }};flex-direction:{{ footDir }}"><span style="width:8px;height:8px;border-radius:50%;background:{{ syncC }}" aria-label="{{ syncT }}"></span><span style="display:{{ fullS }};flex:1;font-size:12px;color:var(--mu)">{{ syncT }}</span><span style="width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;box-shadow:{{ setRing }}"><dc-import name="LumenGlyph" glyph="gear" size="{{ 16 }}" color="var(--mu)" hint-size="16px,16px"></dc-import></span><span style="width:28px;height:28px;border-radius:50%;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">AH</span></div>
+      <div style="display:{{ fullS }};align-items:center;gap:6px;font-size:11.5px;color:var(--mu)"><span style="flex:1">Collapse</span><span style="font-family:'JetBrains Mono',monospace">⌘\</span></div>
+    </div>
+    <div style="display:{{ resizeS }};position:absolute;right:-3px;top:0;bottom:0;width:6px;cursor:col-resize"><span style="position:absolute;left:2px;top:0;bottom:0;width:2px;background:{{ resizeC }}"></span><span style="display:{{ resizeTipS }};position:absolute;left:10px;top:48%;height:24px;padding:0 8px;border-radius:6px;background:var(--tx);color:var(--bg);align-items:center;font-size:11.5px;white-space:nowrap">{{ sbW }} · double-click resets</span></div>
+  </nav>
+
+  <div style="flex:1;min-width:0;position:{{ mainPos }};inset:0;pointer-events:{{ mainPe }};display:flex;flex-direction:column">
+    <div style="display:{{ mainShow }};flex:1;padding:28px 40px;flex-direction:column;gap:10px;opacity:.5"><span style="font-size:24px;font-weight:700">Backprop, by hand</span><span style="height:10px;width:60%;border-radius:4px;background:var(--sf)"></span><span style="height:10px;width:72%;border-radius:4px;background:var(--sf)"></span><span style="height:10px;width:50%;border-radius:4px;background:var(--sf)"></span></div>
+    <sc-if value="{{ custom }}">
+      <div style="position:absolute;inset:0;background:rgba(5,6,8,.5)"></div>
+      <div role="dialog" aria-label="Customise sidebar" style="position:absolute;left:{{ cL }};transform:{{ cTf }};top:{{ cT }};width:{{ cW }};bottom:{{ cB }};border-radius:{{ cR }};background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:16px 18px 10px;display:flex;align-items:center;gap:10px"><span style="font-size:16px;font-weight:650;flex:1">Customise sidebar</span><span style="color:var(--ln)">Reset</span><span style="color:var(--mu);font-size:16px">×</span></div>
+        <span style="padding:0 18px 10px;color:var(--mu);line-height:18px">Drag to reorder (or Alt+↑/↓). Hidden items move into More.</span>
+        <div style="flex:1;overflow:hidden;padding:0 12px;display:flex;flex-direction:column;gap:4px">
+          <sc-for list="{{ cust }}" as="c" hint-placeholder-count="14"><div style="display:{{ c.hS }};padding:8px 6px 2px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">{{ c.h }}</div><div style="display:{{ c.rS }};height:40px;border-radius:9px;background:{{ c.bg }};border:1px solid {{ c.bd }};align-items:center;gap:10px;padding:0 10px;opacity:{{ c.op }}"><dc-import name="LumenGlyph" glyph="grip" size="{{ 14 }}" color="var(--mu)" hint-size="14px,14px"></dc-import><dc-import name="LumenGlyph" glyph="{{ c.g }}" size="{{ 16 }}" hint-size="16px,16px"></dc-import><span style="flex:1">{{ c.l }}</span><span style="font-size:12px;color:var(--mu)">{{ c.m }}</span><span style="width:30px;height:18px;border-radius:9px;background:{{ c.tb }};position:relative"><span style="position:absolute;top:3px;left:{{ c.tl }};width:12px;height:12px;border-radius:50%;background:{{ c.tk }}"></span></span></div></sc-for>
+        </div>
+        <div style="padding:12px 18px;border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="flex:1">Show counts</span><span style="display:flex;gap:2px;padding:3px;border-radius:7px;background:var(--bg);border:1px solid var(--bd);font-size:12px"><span style="height:22px;padding:0 8px;display:flex;align-items:center;color:var(--mu)">None</span><span style="height:22px;padding:0 8px;border-radius:5px;background:var(--sf2);display:flex;align-items:center;font-weight:600">Due only</span><span style="height:22px;padding:0 8px;display:flex;align-items:center;color:var(--mu)">All</span></span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="flex:1">Row height</span><span style="display:flex;gap:2px;padding:3px;border-radius:7px;background:var(--bg);border:1px solid var(--bd);font-size:12px"><span style="height:22px;padding:0 8px;border-radius:5px;background:var(--sf2);display:flex;align-items:center;font-weight:600">32</span><span style="height:22px;padding:0 8px;display:flex;align-items:center;color:var(--mu)">28 compact</span><span style="height:22px;padding:0 8px;display:flex;align-items:center;color:var(--mu)">40 touch</span></span></div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ keys }}">
+      <div style="position:absolute;left:24px;top:24px;width:380px;border-radius:14px;background:var(--sf2);border:1px solid var(--bd);padding:16px;display:flex;flex-direction:column;gap:6px;box-shadow:0 14px 34px rgba(0,0,0,.35)">
+        <b style="font-weight:650;font-size:14px;padding-bottom:4px">Sidebar keys</b>
+        <sc-for list="{{ keyList }}" as="k" hint-placeholder-count="10"><div style="display:flex;align-items:center;gap:10px;min-height:26px"><span style="flex:1">{{ k.l }}</span><span style="display:flex;gap:4px"><sc-for list="{{ k.k }}" as="x" hint-placeholder-count="2"><span style="min-width:22px;height:22px;padding:0 6px;border-radius:5px;border:1px solid var(--bd);background:var(--bg);display:flex;align-items:center;justify-content:center;font:500 11px 'JetBrains Mono',monospace;box-sizing:border-box">{{ x }}</span></sc-for></span></div></sc-for>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;default&quot;,&quot;more&quot;,&quot;focus&quot;,&quot;rail&quot;,&quot;railhover&quot;,&quot;resize&quot;,&quot;offline&quot;,&quot;custom&quot;,&quot;keys&quot;],&quot;default&quot;:&quot;default&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;tablet&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.props.state ?? 'default', rail = st==='rail'||st==='railhover', more = st==='more', focus = st==='focus', tablet = !!this.props.tablet, phone = !!this.props.phone, offline = st==='offline';
+    const P = ['#E5534B','#E8893A','#E3B341','#57AB5A','#39C5CF','#A371F7'];
+    const b = { hS:'none', sepS:'none', rS:'none', emptyS:'none', h:'', hk:'', chev:'', addS:'none', ind:'6px', bg:'transparent', ring:'none', c:'var(--tx)', w:450, barS:'none', carS:'none', car:'', dotS:'none', dot:'', dotR:'3px', gS:'none', g:'note', ic:'var(--mu)', l:'', kS:'none', k:'', kc:'var(--mu)', kw:450, scS:'none', sc:'', badgeS:'none', bc:'var(--le)', tipS:'none', et:'', ea:'' };
+    const H = (h,hk,o={}) => rail ? { ...b, sepS:'block' } : { ...b, hS:'flex', h, hk:hk||'', chev:o.closed?'▸':'▾', addS:o.add?'flex':'none', ring:o.focus?'0 0 0 2px var(--ac)':'none' };
+    const N = (l,g,o={}) => ({ ...b, rS:'flex', l, g, gS:o.noG&&!rail?'none':'block', ic:o.on?'var(--ac)':(o.ic||'var(--mu)'), c:o.mu?'var(--mu)':'var(--tx)', w:o.on?600:450, bg:o.on?'var(--sf2)':'transparent', barS:o.on?'block':'none', ring:o.focus?'0 0 0 2px var(--ac)':'none',
+      kS:o.k&&!rail?'inline':'none', k:o.k||'', kc:o.kc||'var(--mu)', kw:o.kc?600:450, scS:o.sc&&!rail&&(focus||st==='keys')?'inline':'none', sc:o.sc||'', badgeS:rail&&o.badge?'flex':'none', bc:o.bc||'var(--le)', tipS:st==='railhover'&&o.tip?'flex':'none',
+      ind: rail?'6px':(6+(o.ind||0)*16)+'px', carS:o.car&&!rail?'inline':'none', car:o.car||'', dotS:o.dot&&!rail?'block':'none', dot:o.dot||'', dotR:o.round?'50%':'3px' });
+    const core = [N('Home','home',{ on:!more&&st!=='focus'&&st!=='rail'&&st!=='railhover' ? false : false, sc:'⌘1' }), N('Today','date',{ k:'4', sc:'⌘2', on:true }), N('Inbox','inbox',{ k:'9', sc:'⌘3' }), N('Review','flashcards',{ k:'38', kc:'var(--le)', badge:1, sc:'⌘4', tip:1 }), N('Tasks','task',{ k:'5', kc:'var(--wa)', badge:1, bc:'var(--wa)', sc:'⌘5' }), N('Ask','assistant',{ sc:'⌘J' })];
+    const moreItems = more ? [N('Daily note','journal',{ ind:1 }), N('Calendar','v-calendar',{ ind:1 }), N('Graph','graph',{ ind:1, sc:'⌘G' }), N('Canvases','canvas',{ ind:1, k:'6' }), N('Blog','post',{ ind:1 }), N('Trash','trash',{ ind:1, k:'14' })] : [];
+    const rows = [
+      ...core,
+      N(more?'Less':'More','more',{ mu:1, k: more?'':'6', focus:focus }),
+      ...moreItems,
+      H('Favourites','3'), N('Backprop, by hand','lesson',{ k:'' }), N('Attention, explained','lesson',{}), N('Study plan — Nov','whiteboard',{}),
+      H('Learning paths','2',{ add:1 }), N('AI Engineer','path',{ ic:'#A371F7', k:'41%' }), N('Arabic B2','path',{ ic:'#39C5CF', k:'34%' }),
+      H('Folders','6',{ add:1 }), N('01 Math foundations','folder',{ car:'▸', dot:P[4], k:'18' }), N('03 Deep learning','folder',{ car:'▾', dot:P[5], k:'31' }), N('Backpropagation','lesson',{ ind:1 }), N('Batch normalization','lesson',{ ind:1 }), N('04 NLP','folder',{ car:'▸', dot:P[3], k:'22' }),
+      H('Smart folders','3',{ add:1, closed: tablet }),
+      ...(tablet ? [] : [N('Due this week','smart-clock',{ k:'7', ic:'var(--wa)' }), N('No tags yet','smart-folder',{ k:'23' })]),
+      H('Tags','211',{ add:1, closed:true })
+    ];
+    const C = [['h','Top'],['home','Home','Always',1],['date','Today','',1],['inbox','Inbox','',1],['flashcards','Review','Badge',1],['task','Tasks','',1],['assistant','Ask','',1],['h','In More'],['journal','Daily note','',0],['v-calendar','Calendar','',0],['graph','Graph','',0],['canvas','Canvases','',0],['post','Blog','',0],['h','Sections'],['pin','Favourites','',1],['path','Learning paths','',1],['folder','Folders','',1],['smart-folder','Smart folders','',1],['tag','Tags','Collapsed',1],['clock','Recent','',0]];
+    const tg = on => ({ tb: on?'var(--ac)':'var(--bd)', tl: on?'15px':'3px', tk: on?'var(--af)':'var(--mu)' });
+    const cust = C.map(r => r[0]==='h' ? { hS:'block', rS:'none', h:r[1], g:'note', l:'', m:'', bg:'', bd:'', op:1, ...tg(false) } : { hS:'none', rS:'flex', h:'', g:r[0], l:r[1], m:r[2], bg: r[1]==='Tasks'?'var(--sf2)':'var(--bg)', bd: r[1]==='Tasks'?'var(--ac)':'var(--bd)', op: r[3]?1:.6, ...tg(!!r[3]) });
+    const keyList = [['Open search','⌘ K'],['New note','⌘ N'],['Go to Home · Today · Inbox · Review · Tasks','⌘ 1–5'],['Collapse / expand sidebar','⌘ \\'],['Move in the tree','↑ ↓'],['Open / close a folder','← →'],['Open the focused item','↵'],['Rename','F2'],['Move item up / down','Alt ↑ ↓'],['Jump to sidebar from note','F6']].map(([l,k]) => ({ l, k:k.split(' ') }));
+    const w = rail ? '56px' : st==='resize' ? '296px' : tablet ? '232px' : phone ? '100%' : '256px';
+    return { rows, cust, keyList,
+      sbW: w, fullS: rail?'none':'flex', railOnly: rail?'flex':'none', jc: rail?'center':'flex-start', topPad: rail?'10px 8px':'10px 10px 6px', listPad: rail?'4px 8px':'2px 8px', footPad: rail?'10px 6px':'10px 12px', footDir: rail?'column':'row', rowH: phone?'44px':(tablet?'36px':'32px'),
+      searchRing: focus?'0 0 0 2px var(--ac)':'none', setRing: 'none', fadeS: rail?'none':'block',
+      syncC: offline?'var(--wa)':'var(--ok)', syncT: offline?'Offline':'Synced 2 min ago', syncWarnS: offline&&!rail?'flex':'none',
+      resizeS: phone?'none':'block', resizeC: st==='resize'?'var(--ac)':'transparent', resizeTipS: st==='resize'?'flex':'none',
+      mainPos: phone?'absolute':'relative', mainPe: phone&&st!=='custom'&&st!=='keys'?'none':'auto', custom: st==='custom', keys: st==='keys', mainShow: phone?'none':'flex',
+      cL: phone?'0':'50%', cTf: phone?'none':'translateX(-50%)', cT: phone?'auto':'40px', cW: phone?'100%':'420px', cB: phone?'0':'40px', cR: phone?'14px 14px 0 0':'14px' };
+  }
+}
+</script>
+</body>
+</html>

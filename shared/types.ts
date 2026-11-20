@@ -123,7 +123,7 @@ export interface AttachmentMeta extends Synced {
 
 // ---------- Ask chat threads + AI tutor sessions (kind "chat"; docs/CHAT_AND_TUTOR.md) ----------
 export type ChatMode = "ask" | "explain" | "socratic" | "feynman";
-export interface ChatScope { kind: "vault" | "space" | "note" | "path"; spaceId?: string; noteId?: string; pathId?: string }
+export interface ChatScope { kind: "vault" | "space" | "note" | "path" | "folder" | "tag" | "file"; spaceId?: string; noteId?: string; pathId?: string; folderId?: string; tag?: string }
 /** A cited passage kept on an answer (text trimmed to keep threads small). */
 export interface ChatSource { n: number; noteId: string; title: string; heading?: string; text: string }
 /** Tutor card on a message: what the tutor UI draws (step, question, feedback, hint, Feynman review, summary). */
@@ -158,6 +158,8 @@ export interface ChatMessage {
   tutor?: TutorCard;
   /** Note Assistant quick action that produced this answer (summarize, flashcards, explain, tags, quiz, diagram). */
   action?: string;
+  /** Milliseconds from sending to the finished answer ("Answered in 3.4 s"). */
+  ms?: number;
 }
 export interface ChatThread extends Synced {
   title: string;

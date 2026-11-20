@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="display:flex;align-items:center;gap:10px;min-height:42px;padding:4px 8px;border-radius:9px;background:{{ bg }};border:1px solid {{ bd }};font-family:Inter,system-ui,sans-serif">
+  <span style="width:18px;height:18px;border-radius:6px;border:1.5px solid {{ cb }};background:{{ cbg }};flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--af);font-size:11px;font-weight:700">{{ ck }}</span>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+    <span style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ tc }};text-decoration:{{ td }};font-weight:{{ fw }}">{{ l }}</span>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mu);white-space:nowrap;overflow:hidden"><span>{{ src }}</span><span style="display:{{ subS }}">· ☐ {{ sub }}</span><span style="display:{{ repS }}">· repeats weekly</span><sc-for list="{{ tags }}" as="t"><span style="color:var(--ln)">{{ t }}</span></sc-for></div>
+  </div>
+  <span style="display:{{ prS }};font-size:10.5px;font-weight:650;color:var(--da);border:1px solid var(--da);padding:0 6px;border-radius:999px">High</span>
+  <span style="font-size:11.5px;color:{{ dc }};white-space:nowrap;font-weight:{{ dfw }}">{{ due }}</span>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:420,&quot;height&quot;:48},&quot;t&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;object&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const t = this.props.t || {};
+    return { l: t.l, src: t.src, due: t.due, dc: t.dc, dfw: t.dc === 'var(--da)' ? 600 : 400, subS: t.sub ? 'inline' : 'none', sub: t.sub, repS: t.rep ? 'inline' : 'none', tags: t.tags || [], prS: t.pr && !t.ph ? 'inline' : 'none',
+      ck: t.done ? '✓' : '', cb: t.done ? 'var(--ok)' : t.dc === 'var(--da)' ? 'var(--da)' : 'var(--bd)', cbg: t.done ? 'var(--ok)' : 'transparent', tc: t.done ? 'var(--mu)' : 'var(--tx)', td: t.done ? 'line-through' : 'none', fw: t.sel ? 600 : 400,
+      bg: t.sel ? 'color-mix(in srgb,var(--ac) 10%,transparent)' : 'transparent', bd: t.sel ? 'color-mix(in srgb,var(--ac) 50%,transparent)' : 'transparent' };
+  }
+}
+</script>
+</body>
+</html>

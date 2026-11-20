@@ -22,6 +22,8 @@ import registerAiUsage from "./ext/ai-usage"; // AI usage meter + daily limit (S
 import registerAccountData from "./ext/account-data"; // Settings › Account › Delete account and all data (round 6)
 import registerLinks from "./ext/links";
 import { isWbType } from "../shared/types";
+import { ensureIndices } from "../shared/board-index";
+import { carryTombstones } from "../src/lib/board-merge";
 import registerRest from "./ext/rest"; // REST API for scripts and agents (docs/API.md) // Note › Links tab: page snapshots + link check (round 6)
 
 export type Env = {
@@ -396,9 +398,13 @@ async function saveBoard(c: Context<Env>, id: string, mutate: (scene: Record<str
   let scene: Record<string, unknown> & { elements: unknown[] } = { type: "excalidraw", version: 2, source: "lumen", elements: [] };
   try { if (old?.body) scene = JSON.parse(old.body); } catch { /* start fresh */ }
   mutate(scene);
+  // Elements without a fractional `index` (scripts, agents, old files) get one that keeps their array place (z-order).
+  if (Array.isArray(scene.elements)) scene.elements = ensureIndices(scene.elements as object[]);
+  // Elements a full replace dropped become deletion tombstones, so a device merging its own edits doesn't revive them.
+  const body = old?.body && isWbType(old.type) ? carryTombstones(old.body, JSON.stringify(scene)) : JSON.stringify(scene);
   const note: Note = {
     title: c.req.query("title") ?? "Whiteboard", spaceId: "inbox", folderId: null, tags: [], status: null, pinned: 0, favorite: 0, published: 0, slug: "",
-    props: {}, createdAt: now, deleted: 0, ...old, type: old ? (old.type === "board" ? "board" : "whiteboard") : c.req.query("type") === "board" ? "board" : "whiteboard", body: JSON.stringify(scene), id, updatedAt: now,
+    props: {}, createdAt: now, deleted: 0, ...old, type: old ? (old.type === "board" ? "board" : "whiteboard") : c.req.query("type") === "board" ? "board" : "whiteboard", body, id, updatedAt: now,
   };
   await putNote(c.env.DB, note);
   return scene;
@@ -413,7 +419,10 @@ api.put("/whiteboard/:id", auth, async (c) => {
 api.post("/whiteboard/:id/elements", auth, async (c) => {
   const body = await c.req.json<{ skeleton?: unknown }>().catch(() => null);
   if (!body || !Array.isArray(body.skeleton) || !body.skeleton.every((x) => x && typeof (x as { type?: unknown }).type === "string")) return c.json({ error: "Body must be { skeleton: [{ type, ... }] }" }, 400);
-  const s = await saveBoard(c, c.req.param("id")!, (sc) => { sc.lumenPending = [...((sc.lumenPending as unknown[]) ?? []), ...(body.skeleton as unknown[])]; });
+  // Each skeleton gets a stable id (kept by the app's convert): a board merge then drops a pending skeleton another
+  // device already turned into elements, instead of applying it twice.
+  const skel = (body.skeleton as Record<string, unknown>[]).map((k) => (typeof k.id === "string" && k.id ? k : { ...k, id: crypto.randomUUID() }));
+  const s = await saveBoard(c, c.req.param("id")!, (sc) => { sc.lumenPending = [...((sc.lumenPending as unknown[]) ?? []), ...skel]; });
   return c.json({ ok: true, pending: (s.lumenPending as unknown[]).length });
 });
 

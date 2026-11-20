@@ -40,24 +40,43 @@ export function freedrawOutline(el: El, last = false): Path2D {
   return p;
 }
 
-/** The overlay for one board. `draw` is rAF-throttled; `clear` hides it (call right after the final element is committed). */
+/**
+ * 2D context with the low-latency hint (`desynchronized: true`, Chrome / Edge: the canvas skips the compositor's frame
+ * queue). Feature-detected with getContextAttributes(); without it the overlay paints on the next animation frame.
+ */
+function inkContext(c: HTMLCanvasElement): { ctx: CanvasRenderingContext2D | null; low: boolean } {
+  const ctx = c.getContext("2d", { desynchronized: true });
+  return { ctx, low: !!(ctx?.getContextAttributes?.() as { desynchronized?: boolean } | undefined)?.desynchronized };
+}
+
+/** The overlay for one board. `draw` is rAF-throttled (immediate on a low-latency canvas when `now` is set); `clear` hides it (call right after the final element is committed). */
 export class LiveInk {
   private top: HTMLCanvasElement;
   private under: HTMLCanvasElement;
   private raf = 0;
-  private job: { el: El; pen: PenSettings; st: { zoom: { value: number }; scrollX: number; scrollY: number }; hl: boolean; dark: boolean } | null = null;
+  private job: { el: El; pen: PenSettings; st: { zoom: { value: number }; scrollX: number; scrollY: number }; hl: boolean; dark: boolean; predicted?: [number, number][] } | null = null;
+  private ctxTop: { ctx: CanvasRenderingContext2D | null; low: boolean };
+  private ctxUnder: { ctx: CanvasRenderingContext2D | null; low: boolean };
   active = false;
+  /** True when the overlay canvases got the low-latency (desynchronized) context. */
+  get lowLatency() { return this.ctxTop.low; }
   constructor(private host: HTMLElement, beneath: HTMLElement) {
     const mk = () => { const c = document.createElement("canvas"); c.setAttribute("aria-hidden", "true"); c.style.cssText = "position:absolute;inset:0;width:100%;height:100%;pointer-events:none"; return c; };
     this.top = mk(); this.top.style.zIndex = "5";
     this.under = mk();
     host.appendChild(this.top);
     beneath.before(this.under);
+    this.ctxTop = inkContext(this.top); this.ctxUnder = inkContext(this.under);
   }
   dispose() { cancelAnimationFrame(this.raf); this.top.remove(); this.under.remove(); this.host.classList.remove("wb-live-ink"); }
-  draw(el: El, pen: PenSettings, st: { zoom: { value: number }; scrollX: number; scrollY: number }, hl: boolean, dark: boolean) {
-    this.job = { el, pen, st, hl, dark };
+  /**
+   * `predicted`: scene points from getPredictedEvents(), drawn ahead of the pen on the overlay only (never saved).
+   * `now`: paint inside the pointer event when the canvas is low-latency.
+   */
+  draw(el: El, pen: PenSettings, st: { zoom: { value: number }; scrollX: number; scrollY: number }, hl: boolean, dark: boolean, o: { predicted?: [number, number][]; now?: boolean } = {}) {
+    this.job = { el, pen, st, hl, dark, predicted: o.predicted };
     if (!this.active) { this.active = true; this.host.classList.add("wb-live-ink"); }
+    if (o.now && this.ctxTop.low) { cancelAnimationFrame(this.raf); this.raf = 0; this.paint(); return; }
     if (!this.raf) this.raf = requestAnimationFrame(() => { this.raf = 0; this.paint(); });
   }
   private paint() {
@@ -66,12 +85,14 @@ export class LiveInk {
     const c = j.hl ? this.under : this.top, other = j.hl ? this.top : this.under;
     const dpr = devicePixelRatio || 1, W = this.host.clientWidth, H = this.host.clientHeight;
     if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
-    if (other.width) other.getContext("2d")?.clearRect(0, 0, other.width, other.height);
-    const ctx = c.getContext("2d");
+    if (other.width) (j.hl ? this.ctxTop : this.ctxUnder).ctx?.clearRect(0, 0, other.width, other.height);
+    const ctx = (j.hl ? this.ctxUnder : this.ctxTop).ctx;
     if (!ctx) return;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, c.width, c.height);
-    const out = finishStroke(j.el, j.pen) as El;
+    // predicted samples ride on the end of the stroke for this paint only (the stabiliser is causal: the real prefix is unchanged)
+    const src = j.predicted?.length ? { ...j.el, points: [...j.el.points, ...j.predicted.map(([x, y]) => [x - j.el.x, y - j.el.y] as [number, number])], pressures: j.el.pressures?.length ? [...j.el.pressures, ...j.predicted.map(() => j.el.pressures![j.el.pressures!.length - 1])] : j.el.pressures } : j.el;
+    const out = finishStroke(src, j.pen) as El;
     const z = j.st.zoom.value;
     ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * z * (out.x + j.st.scrollX), dpr * z * (out.y + j.st.scrollY));
     ctx.globalAlpha = (out.opacity ?? 100) / 100;
@@ -83,7 +104,7 @@ export class LiveInk {
     const go = () => {
       this.active = false; this.job = null;
       cancelAnimationFrame(this.raf); this.raf = 0;
-      for (const c of [this.top, this.under]) c.getContext("2d")?.clearRect(0, 0, c.width, c.height);
+      this.ctxTop.ctx?.clearRect(0, 0, this.top.width, this.top.height); this.ctxUnder.ctx?.clearRect(0, 0, this.under.width, this.under.height);
       this.host.classList.remove("wb-live-ink");
     };
     if (now) go(); else requestAnimationFrame(go);

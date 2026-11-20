@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:120px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227">
+  <div style="display:flex;align-items:center;gap:16px">
+    <div style="width:40px;height:40px;border-radius:11px;background:#161A21;border:1px solid #2A303B;position:relative"><div style="position:absolute;left:14px;top:9px;width:11px;height:11px;border-radius:50%;background:#F2A93B;box-shadow:0 0 14px rgba(242,169,59,.7)"></div><div style="position:absolute;left:9px;right:9px;bottom:11px;height:2px;background:#E8E6E1;border-radius:1px"></div></div>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 06b Public blog &amp; states</span></div><div style="font-size:14px;color:#9A9890">Screens 21 (public blog) and 22 (empty, loading, offline, conflict, delete, publish).</div></div>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 21</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Public blog</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Paper by default for readers; same renderer as Read mode. No app chrome, no login.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">21A</span><span>Blog index · Desktop · Paper</span></div>
+        <div style="--bg:#FAF8F3;--sf:#FFFFFF;--sf2:#F2EFE7;--bd:#E4DFD3;--tx:#1F1D1A;--mu:#6A655C;--ac:#B45F0E;--af:#FFFFFF;--ln:#0F7C78;width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);font-size:14px;display:flex;flex-direction:column;align-items:center">
+          <div style="width:100%;height:64px;padding:0 56px;box-sizing:border-box;display:flex;align-items:center;gap:24px;border-bottom:1px solid var(--bd)"><span style="font-family:'Source Serif 4',serif;font-weight:700;font-size:18px;flex:1"><dc-import name="LumenGlyph" glyph="owl" size="{{ 15 }}" color="#F2A93B" hint-size="15px,15px"></dc-import> Night Shift Notes</span><span style="font-weight:600">Posts</span><span style="color:var(--mu)">Tags</span><span style="color:var(--mu);display:flex;align-items:center;gap:6px"><i class="icon-rss" style="font-size:14px"></i>RSS</span><span style="width:32px;height:32px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><i class="icon-moon" style="font-size:15px"></i></span></div>
+          <div style="width:720px;padding:56px 0 0;display:flex;flex-direction:column;gap:28px">
+            <div style="display:flex;flex-direction:column;gap:10px"><span style="font-family:'Source Serif 4',serif;font-size:44px;line-height:50px;font-weight:700;letter-spacing:-.02em">Night Shift Notes</span><span style="font-size:17px;color:var(--mu)">Learning in public, one lamp-lit page at a time. Notes on machine learning, Arabic and networks by Amir Hakim.</span></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="height:30px;padding:0 12px;border-radius:999px;background:var(--tx);color:var(--bg);display:flex;align-items:center;font-weight:600;font-size:13px">All · 12</span><span style="height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;font-size:13px;color:var(--mu)">#ml 6</span><span style="height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;font-size:13px;color:var(--mu)">#arabic 3</span><span style="height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;font-size:13px;color:var(--mu)">#networking 2</span><span style="height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;font-size:13px;color:var(--mu)">#math 4</span></div>
+            <div style="display:flex;flex-direction:column">
+              <sc-for list="{{ posts }}" as="p" hint-placeholder-count="4">
+                <div style="padding:22px 0;border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;gap:10px;font-size:13px;color:var(--mu)"><span>{{ p.d }}</span><span>·</span><span>{{ p.r }}</span><span style="flex:1"></span><sc-for list="{{ p.tags }}" as="g" hint-placeholder-count="2"><span style="color:var(--ln)">{{ g }}</span></sc-for></div>
+                  <span style="font-family:'Source Serif 4',serif;font-size:24px;line-height:30px;font-weight:650;letter-spacing:-.01em">{{ p.t }}</span>
+                  <span style="font-family:'Source Serif 4',serif;font-size:16.5px;line-height:27px;color:var(--mu)">{{ p.e }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">21B</span><span>Post page · Desktop · Paper · full scroll</span></div>
+        <div style="--bg:#FAF8F3;--sf:#FFFFFF;--sf2:#F2EFE7;--bd:#E4DFD3;--tx:#1F1D1A;--mu:#6A655C;--ac:#B45F0E;--af:#FFFFFF;--ln:#0F7C78;--ok:#1F8A4C;--in:#2F5BD3;width:1440px;height:1560px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg);color:var(--tx);font-size:14px;display:flex;flex-direction:column">
+          <div style="height:64px;padding:0 56px;display:flex;align-items:center;gap:24px;border-bottom:1px solid var(--bd)"><span style="font-family:'Source Serif 4',serif;font-weight:700;font-size:18px;flex:1"><dc-import name="LumenGlyph" glyph="owl" size="{{ 15 }}" color="#F2A93B" hint-size="15px,15px"></dc-import> Night Shift Notes</span><span style="color:var(--mu)">Posts</span><span style="color:var(--mu)">Tags</span><span style="color:var(--mu);display:flex;align-items:center;gap:6px"><i class="icon-rss" style="font-size:14px"></i>RSS</span><span style="width:32px;height:32px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center"><i class="icon-moon" style="font-size:15px"></i></span></div>
+          <div style="display:flex;justify-content:center;gap:64px;padding-top:64px">
+            <div style="width:220px;display:flex;flex-direction:column;gap:10px;padding-top:150px;font-size:13px">
+              <span style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">On this page</span>
+              <span style="color:var(--mu)">Intuition</span><span style="font-weight:600;display:flex;align-items:center;gap:8px"><span style="width:2px;height:16px;background:var(--ac);margin-left:-10px"></span>Finding them</span><span style="color:var(--mu)">In code</span><span style="color:var(--mu)">Worked examples</span><span style="color:var(--mu)">Practice</span>
+            </div>
+            <article style="width:680px;font-family:'Source Serif 4',Georgia,serif;font-size:17px;line-height:30px;display:flex;flex-direction:column;gap:20px">
+              <div style="font-family:Inter,system-ui,sans-serif;font-size:13px;color:var(--mu);display:flex;gap:10px"><span>12 Nov 2026</span><span>·</span><span>9 min read</span><span>·</span><span style="color:var(--ln)">#math</span><span style="color:var(--ln)">#ml</span></div>
+              <h1 style="margin:0;font-size:44px;line-height:50px;font-weight:700;letter-spacing:-.02em">Eigenvectors, the directions a matrix leaves alone</h1>
+              <div style="display:flex;align-items:center;gap:10px;font-family:Inter,system-ui,sans-serif;font-size:13.5px"><span style="width:32px;height:32px;border-radius:50%;background:var(--sf2);display:flex;align-items:center;justify-content:center"><dc-import name="LumenGlyph" glyph="owl" size="{{ 15 }}" color="#F2A93B" hint-size="15px,15px"></dc-import></span><span>Amir Hakim</span></div>
+              <p style="margin:0">An <b>eigenvector</b> of a square matrix <i>A</i> is a non-zero vector <b><i>v</i></b> that <i>A</i> only stretches: <i>A</i><b><i>v</i></b> = <i>λ</i><b><i>v</i></b>. The scalar <i>λ</i> is its eigenvalue.</p>
+              <h2 style="margin:12px 0 0;font-size:26px;line-height:34px;font-weight:650">Finding them</h2>
+              <p style="margin:0">A non-zero solution of (<i>A</i> − <i>λI</i>)<b><i>v</i></b> = 0 exists only when <i>A</i> − <i>λI</i> is singular, so</p>
+              <div style="text-align:center;font-size:22px;padding:6px 0">det(<i>A</i> − <i>λI</i>) = 0</div>
+              <div style="font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:24px;border-radius:10px;background:color-mix(in srgb,var(--ok) 9%,transparent);border:1px solid color-mix(in srgb,var(--ok) 28%,transparent);padding:14px 16px"><b style="color:var(--ok)">Tip</b> — for 2×2 matrices, λ₁ + λ₂ = tr(A) and λ₁λ₂ = det(A).</div>
+              <h2 style="margin:12px 0 0;font-size:26px;line-height:34px;font-weight:650">In code</h2>
+              <div style="border-radius:10px;border:1px solid var(--bd);background:var(--sf);overflow:hidden;font-family:'JetBrains Mono',monospace"><div style="height:34px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bd);font-size:12px;color:var(--mu)"><span>python</span><span style="font-family:Inter,system-ui,sans-serif;display:flex;align-items:center;gap:6px"><i class="icon-copy" style="font-size:13px"></i>Copy</span></div><div style="padding:14px 16px;font-size:14px;line-height:23px;white-space:pre"><span style="color:var(--in)">vals</span>, vecs = np.linalg.eigh(A)
+print(vals)   <span style="color:var(--mu)"># [1. 3.]</span></div></div>
+              <p style="margin:0">That's the whole trick: find where the determinant vanishes, then solve for the null space.</p>
+              <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--bd);display:grid;grid-template-columns:1fr 1fr;gap:16px;font-family:Inter,system-ui,sans-serif">
+                <div style="border-radius:10px;border:1px solid var(--bd);padding:16px;display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;color:var(--mu)">← Previous</span><span style="font-family:'Source Serif 4',serif;font-weight:650;font-size:17px">Gradient descent, gently</span></div>
+                <div style="border-radius:10px;border:1px solid var(--bd);padding:16px;display:flex;flex-direction:column;gap:4px;text-align:right"><span style="font-size:12px;color:var(--mu)">Next →</span><span style="font-family:'Source Serif 4',serif;font-weight:650;font-size:17px">Idafa in five examples</span></div>
+              </div>
+              <div style="font-family:Inter,system-ui,sans-serif;font-size:12.5px;color:var(--mu);display:flex;justify-content:space-between;padding:24px 0"><span>Written in Lumen · CC BY 4.0</span><span style="color:var(--ln)">Subscribe via RSS</span></div>
+            </article>
+            <div style="width:220px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">21C</span><span>Blog index · Phone · Paper</span></div>
+        <div style="--bg:#FAF8F3;--sf:#FFFFFF;--sf2:#F2EFE7;--bd:#E4DFD3;--tx:#1F1D1A;--mu:#6A655C;--ln:#0F7C78;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 8px 0 20px;display:flex;align-items:center;border-bottom:1px solid var(--bd)"><span style="font-family:'Source Serif 4',serif;font-weight:700;font-size:17px;flex:1"><dc-import name="LumenGlyph" glyph="owl" size="{{ 14 }}" color="#F2A93B" hint-size="14px,14px"></dc-import> Night Shift Notes</span><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><i class="icon-moon" style="font-size:18px"></i></span><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><i class="icon-menu" style="font-size:20px"></i></span></div>
+          <div style="padding:24px 20px 0;display:flex;flex-direction:column;gap:14px">
+            <span style="font-family:'Source Serif 4',serif;font-size:30px;line-height:36px;font-weight:700">Night Shift Notes</span>
+            <span style="color:var(--mu);line-height:22px">Learning in public, one lamp-lit page at a time.</span>
+            <div style="display:flex;gap:8px;overflow:hidden"><span style="height:36px;padding:0 14px;border-radius:999px;background:var(--tx);color:var(--bg);display:flex;align-items:center;font-weight:600;font-size:13px;flex-shrink:0">All</span><span style="height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;font-size:13px;color:var(--mu);flex-shrink:0">#ml</span><span style="height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;font-size:13px;color:var(--mu);flex-shrink:0">#arabic</span><span style="height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center;font-size:13px;color:var(--mu);flex-shrink:0">#networking</span></div>
+          </div>
+          <div style="padding:8px 20px;display:flex;flex-direction:column">
+            <sc-for list="{{ posts }}" as="p" hint-placeholder-count="4">
+              <div style="padding:16px 0;border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--mu)">{{ p.d }} · {{ p.r }}</span><span style="font-family:'Source Serif 4',serif;font-size:19px;line-height:25px;font-weight:650">{{ p.t }}</span><span style="font-family:'Source Serif 4',serif;font-size:15px;line-height:23px;color:var(--mu);height:46px;overflow:hidden">{{ p.e }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;display:flex;gap:10px"><span style="color:#F25C9A">21D</span><span>Post · Phone · reader toggled dark</span></div>
+        <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ln:#5CC8C2;--ok:#6BCB8B;width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+          <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+          <div style="height:56px;padding:0 8px 0 20px;display:flex;align-items:center;border-bottom:1px solid var(--bd)"><span style="font-family:'Source Serif 4',serif;font-weight:700;font-size:17px;flex:1"><dc-import name="LumenGlyph" glyph="owl" size="{{ 14 }}" color="#F2A93B" hint-size="14px,14px"></dc-import> Night Shift Notes</span><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><i class="icon-sun" style="font-size:18px"></i></span><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><i class="icon-list" style="font-size:20px"></i></span></div>
+          <article style="padding:24px 20px;display:flex;flex-direction:column;gap:16px;font-family:'Source Serif 4',serif;font-size:16px;line-height:28px">
+            <span style="font-family:Inter,system-ui,sans-serif;font-size:12.5px;color:var(--mu)">12 Nov 2026 · 9 min read</span>
+            <span style="font-size:30px;line-height:36px;font-weight:700;letter-spacing:-.01em">Eigenvectors, the directions a matrix leaves alone</span>
+            <p style="margin:0">An <b>eigenvector</b> of a square matrix <i>A</i> is a non-zero vector <b><i>v</i></b> that <i>A</i> only stretches: <i>A</i><b><i>v</i></b> = <i>λ</i><b><i>v</i></b>.</p>
+            <span style="font-size:21px;font-weight:650">Finding them</span>
+            <div style="text-align:center;font-size:20px">det(<i>A</i> − <i>λI</i>) = 0</div>
+            <div style="font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:22px;border-radius:10px;background:color-mix(in srgb,var(--ok) 9%,transparent);border:1px solid color-mix(in srgb,var(--ok) 28%,transparent);padding:12px 14px"><b style="color:var(--ok)">Tip</b> — λ₁ + λ₂ = tr(A).</div>
+          </article>
+          <div style="flex:1"></div>
+          <div style="height:3px;background:var(--sf2)"><div style="width:22%;height:100%;background:var(--mu)"></div></div>
+          <div style="height:24px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+        </div>
+        <div style="max-width:412px;font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>List icon opens the table of contents as a bottom sheet. Reading-progress hairline is neutral, not amber — readers don't need the “current” signal.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">SCREEN 22</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">States</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Illustration-free empty states with exactly one action. Errors are quiet, specific and reversible.</p></div>
+    <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ln:#5CC8C2;--ok:#6BCB8B;--wa:#E8B34A;--da:#EF6B6B;--in:#7AA2F7;--le:#B48EF0;display:grid;grid-template-columns:repeat(4,440px);gap:32px;color:var(--tx);font-size:13px">
+
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">22A</span> Empty · no notes</div>
+        <div style="height:320px;border-radius:12px;background:var(--bg);border:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:0 40px">
+          <span style="font-size:16px;font-weight:600">“04 Probability” is empty</span><span style="color:var(--mu);line-height:20px">Start with a lesson — it comes with objectives, a summary and a questions section.</span>
+          <span style="margin-top:8px;height:36px;padding:0 14px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;gap:6px;font-weight:600"><i class="icon-plus" style="font-size:14px"></i>New lesson</span>
+          <span style="color:var(--mu);font-size:12px">or drop .md files here</span>
+        </div></div>
+
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">22B</span> Empty · no results</div>
+        <div style="height:320px;border-radius:12px;background:var(--bg);border:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:0 40px">
+          <span style="font-size:16px;font-weight:600">No notes match “hessain”</span><span style="color:var(--mu);line-height:20px">Did you mean <span style="color:var(--ln)">hessian</span>? Searching only <dc-import name="LumenGlyph" glyph="neural" size="{{ 15 }}" color="#A371F7" hint-size="15px,15px"></dc-import> ML Foundations.</span>
+          <span style="margin-top:8px;height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-weight:500"><i class="icon-globe" style="font-size:14px"></i>Search all spaces</span>
+        </div></div>
+
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">22C</span> Empty · no due cards</div>
+        <div style="height:320px;border-radius:12px;background:var(--bg);border:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:0 40px">
+          <span style="font-size:16px;font-weight:600">All caught up</span><span style="color:var(--mu);line-height:20px">Next cards are due tomorrow (14). Add cards to a note with <code style="font:12px 'JetBrains Mono',monospace;background:var(--sf2);padding:1px 5px;border-radius:4px">Q :: A</code>.</span>
+          <span style="margin-top:8px;height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-weight:500"><i class="icon-sparkles" style="font-size:14px"></i>Generate from a note</span>
+        </div></div>
+
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">22D</span> Loading skeleton</div>
+        <div style="height:320px;border-radius:12px;background:var(--bg);border:1px solid var(--bd);display:flex;overflow:hidden">
+          <div style="width:170px;border-right:1px solid var(--bd);padding:12px;display:flex;flex-direction:column;gap:14px">
+            <sc-for list="{{ sk }}" as="s" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;gap:6px"><span style="height:10px;width:{{ s.a }};border-radius:4px;background:var(--sf2)"></span><span style="height:7px;width:{{ s.b }};border-radius:4px;background:var(--sf)"></span><span style="height:7px;width:60%;border-radius:4px;background:var(--sf)"></span></div></sc-for>
+          </div>
+          <div style="flex:1;padding:22px;display:flex;flex-direction:column;gap:12px"><span style="height:18px;width:70%;border-radius:5px;background:var(--sf2)"></span><span style="height:9px;width:100%;border-radius:4px;background:var(--sf)"></span><span style="height:9px;width:92%;border-radius:4px;background:var(--sf)"></span><span style="height:9px;width:96%;border-radius:4px;background:var(--sf)"></span><span style="height:60px;width:100%;border-radius:10px;background:var(--sf);margin-top:6px"></span><span style="height:9px;width:80%;border-radius:4px;background:var(--sf)"></span></div>
+        </div>
+        <span style="font-size:12.5px;color:#CFCBC3;line-height:19px">Shown only if loading exceeds 300 ms; shimmer is a 1.2 s opacity pulse, off with reduced motion.</span></div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;grid-column:span 2"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">22E</span> Offline banner</div>
+        <div style="height:200px;border-radius:12px;background:var(--bg);border:1px solid var(--bd);overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:36px;padding:0 16px;display:flex;align-items:center;gap:10px;background:color-mix(in srgb,var(--wa) 12%,var(--bg));border-bottom:1px solid color-mix(in srgb,var(--wa) 30%,transparent);font-size:12.5px"><i class="icon-cloud-off" style="font-size:14px;color:var(--wa)"></i><span><b style="font-weight:600">Offline</b> · 3 changes queued. Everything is saved on this device and will sync when you're back.</span><span style="flex:1"></span><i class="icon-x" style="font-size:14px;color:var(--mu)"></i></div>
+          <div style="height:44px;padding:0 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><span style="color:var(--mu)">02 Optimization</span><i class="icon-chevron-right" style="font-size:12px;color:var(--mu)"></i><span style="font-weight:500">Gradient descent</span><span style="flex:1"></span><span style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px"><span style="width:7px;height:7px;border-radius:50%;background:var(--wa)"></span>Saved locally · 3 queued</span></div>
+          <div style="flex:1;padding:20px;display:flex;flex-direction:column;gap:10px"><span style="height:9px;width:60%;border-radius:4px;background:var(--sf)"></span><span style="height:9px;width:80%;border-radius:4px;background:var(--sf)"></span></div>
+        </div>
+        <span style="font-size:12.5px;color:#CFCBC3;line-height:19px">Banner appears once per offline session and can be dismissed; the header dot keeps the state. Back online → dot turns green, “Synced just now”.</span></div>
+
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">22F</span> Sync conflict toast</div>
+        <div style="height:200px;border-radius:12px;background:var(--bg);border:1px solid var(--bd);position:relative">
+          <div style="position:absolute;left:20px;right:20px;bottom:20px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd);padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 12px 32px rgba(0,0,0,.4)"><i class="icon-git-merge" style="font-size:16px;color:var(--wa)"></i><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">Kept newer version</span><span style="font-size:12px;color:var(--mu)">From Pixel 8 at 21:39 · the other is in history</span></div><span style="color:var(--ln);font-weight:500">View other</span></div>
+        </div></div>
+
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">22G</span> Delete + undo toast</div>
+        <div style="height:200px;border-radius:12px;background:var(--bg);border:1px solid var(--bd);position:relative">
+          <div style="position:absolute;left:20px;right:20px;bottom:20px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd);padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 12px 32px rgba(0,0,0,.4);overflow:hidden"><i class="icon-trash-2" style="font-size:16px;color:var(--mu)"></i><span style="flex:1">“Newton's method” moved to Trash</span><span style="height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;font-weight:600">Undo <span style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu);margin-left:6px">⌘Z</span></span><span style="position:absolute;left:0;bottom:0;height:2px;width:64%;background:var(--mu);opacity:.6"></span></div>
+        </div>
+        <span style="font-size:12.5px;color:#CFCBC3;line-height:19px">Single notes delete instantly with Undo (8 s). Folders/spaces get a confirm dialog naming the count: “Delete 12 notes in 02 Optimization?”</span></div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;grid-column:span 2"><div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC"><span style="color:#F25C9A">22H</span> Publish dialog</div>
+        <div style="height:440px;border-radius:12px;background:rgba(5,6,8,.6);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center">
+          <div style="width:520px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column">
+            <div style="padding:18px 22px 4px;display:flex;align-items:center"><span style="flex:1;font-size:17px;font-weight:650">Publish to Night Shift Notes</span><i class="icon-x" style="font-size:17px;color:var(--mu)"></i></div>
+            <div style="padding:12px 22px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:500;color:var(--mu)">Slug</span><div style="height:38px;border-radius:6px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:12.5px"><span style="color:var(--mu)">nightshift.pages.dev/blog/</span>eigenvectors</div></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:500;color:var(--mu)">Tags</span><div style="min-height:38px;border-radius:6px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;gap:6px;padding:0 8px"><span style="padding:2px 8px;border-radius:6px;background:var(--sf2)">#math ×</span><span style="padding:2px 8px;border-radius:6px;background:var(--sf2)">#ml ×</span></div></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:500;color:var(--mu)">Excerpt</span><div style="border-radius:6px;background:var(--bg);border:1px solid var(--bd);padding:10px 12px;line-height:19px">The directions a matrix only stretches — how to find them and why ML keeps using them.</div></div>
+              <span style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12.5px"><i class="icon-eye" style="font-size:13px"></i>Private notes linked from this post stay private; links render as plain text. <span style="color:var(--ln)">Preview</span></span>
+            </div>
+            <div style="padding:14px 22px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px"><span style="height:36px;padding:0 14px;border-radius:10px;display:flex;align-items:center;color:var(--mu)">Cancel</span><span style="height:36px;padding:0 16px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;gap:6px;font-weight:600"><i class="icon-globe" style="font-size:14px"></i>Publish</span></div>
+          </div>
+        </div></div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const posts = [
+      ['12 Nov 2026','9 min read',['#math','#ml'],'Eigenvectors, the directions a matrix leaves alone','How to find them, why PCA and gradient descent both depend on them, and three matrices that break the rules.'],
+      ['5 Nov 2026','6 min read',['#arabic'],'Idafa in five examples','Two nouns side by side, no word for “of”: a gentle tour of the Arabic possessive, from كتاب الطالب to longer chains.'],
+      ['29 Oct 2026','7 min read',['#ml'],'Gradient descent, gently','A walk downhill with a blindfold: learning rates, momentum, and why my first model diverged.'],
+      ['18 Oct 2026','5 min read',['#networking'],'The TCP handshake, slowly','SYN, SYN-ACK, ACK — and the one random number that keeps old packets out of new connections.']
+    ].map(([d,r,tags,t,e]) => ({ d, r, tags, t, e }));
+    const sk = [['80%','95%'],['65%','90%'],['75%','85%'],['55%','92%'],['70%','80%']].map(([a,b]) => ({ a, b }));
+    return { posts, sk };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./lumen-glyphs.js"></script></helmet>
+<div style="display:flex;flex-direction:column;gap:7px">
+  <div style="display:{{ hS }};align-items:center;justify-content:space-between;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)"><span>{{ h }}</span><span style="text-transform:none;letter-spacing:0;font-weight:500;color:{{ hrC }}">{{ hr }}</span></div>
+  <div style="display:{{ segS }};padding:2px;border-radius:8px;background:var(--sf2);gap:2px"><sc-for list="{{ seg }}" as="s"><span style="flex:1;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;background:{{ s.bg }};color:{{ s.c }};font-weight:{{ s.fw }};white-space:nowrap;box-shadow:{{ s.sh }};padding:0 6px">{{ s.l }}</span></sc-for></div>
+  <div style="display:{{ gridS }};grid-template-columns:{{ cols }};gap:{{ gap }}"><sc-for list="{{ items }}" as="it">
+    <div title="{{ it.tip }}" style="position:relative;display:flex;flex-direction:{{ it.dir }};align-items:center;justify-content:{{ it.jc }};gap:{{ it.gap }};min-height:{{ it.mh }};padding:{{ it.pad }};border-radius:8px;background:{{ it.bg }};border:1px solid {{ it.bd }};color:{{ it.c }};opacity:{{ it.op }};font-size:{{ it.fs }};box-sizing:border-box;min-width:0;box-shadow:{{ it.ring }}">
+      <span style="display:{{ it.gripS }};color:var(--mu);font-size:11px;letter-spacing:-2px">⋮⋮</span>
+      <span style="display:{{ it.thS }};width:{{ it.thW }};height:{{ it.thH }};flex-shrink:0;border-radius:{{ it.thR }};background:{{ it.th }};border:1px solid var(--bd);box-sizing:border-box"></span>
+      <svg width="{{ it.gs }}" height="{{ it.gs }}" viewBox="0 0 24 24" style="display:{{ it.gS }};flex-shrink:0;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;color:{{ it.gc }}"><sc-for list="{{ it.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>
+      <span style="display:{{ it.lS }};flex:{{ it.lFlex }};min-width:0;white-space:{{ it.ws }};overflow:hidden;text-overflow:ellipsis;font-weight:{{ it.fw }};text-align:{{ it.ta }};font-family:{{ it.ff }};line-height:1.35">{{ it.l }}</span>
+      <span style="display:{{ it.subS }};font-size:11px;color:{{ it.subC }};white-space:nowrap">{{ it.sub }}</span>
+      <span style="display:{{ it.togS }};width:30px;height:18px;border-radius:999px;background:{{ it.togBg }};position:relative;flex-shrink:0"><span style="position:absolute;top:2px;left:{{ it.togX }};width:14px;height:14px;border-radius:50%;background:{{ it.togK }}"></span></span>
+      <span style="display:{{ it.slS }};flex:1;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--ac) {{ it.slV }},var(--bd) {{ it.slV }});position:relative;min-width:60px"><span style="position:absolute;left:{{ it.slV }};top:-6px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--tx)"></span></span>
+      <span style="display:{{ it.tagS }};font-size:10px;font-weight:600;color:{{ it.tagC }};border:1px solid {{ it.tagC }};padding:0 5px;border-radius:999px;white-space:nowrap">{{ it.tag }}</span>
+      <span style="display:{{ it.icS }};gap:3px"><sc-for list="{{ it.ic }}" as="ic"><svg width="15" height="15" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;color:{{ ic.c }}"><sc-for list="{{ ic.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg></sc-for></span>
+    </div>
+  </sc-for></div>
+  <div style="display:{{ noteS }};font-size:11.5px;line-height:17px;color:{{ noteC }};background:{{ noteBg }};padding:{{ notePad }};border-radius:8px">{{ note }}</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:320,&quot;height&quot;:120},&quot;bk&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;object&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { if (!window.LUMEN_GLYPHS) { const t = setInterval(() => { if (window.LUMEN_GLYPHS) { clearInterval(t); this.forceUpdate(); } }, 50); setTimeout(() => clearInterval(t), 5000); } }
+  renderVals() {
+    const GL = window.LUMEN_GLYPHS || {};
+    const g = n => (GL[n] || []).map(p => typeof p === 'string' ? { d: p, f: 'none', s: 'currentColor' } : { d: p.d, f: p.fill ? 'currentColor' : 'none', s: p.stroke || (p.fill ? 'none' : 'currentColor') });
+    const o = this.props.bk || {};
+    const AC = 'color-mix(in srgb,var(--ac) 18%,transparent)';
+    const it = (o) => ({ tip: o.tip || o.l || '', dir: o.col ? 'column' : 'row', jc: o.col ? 'center' : 'flex-start', gap: o.col ? '3px' : '8px', mh: o.mh || (o.col ? '54px' : '32px'), pad: o.pad || (o.col ? '5px 3px' : '0 8px'), bg: o.on ? AC : (o.bg || 'transparent'), bd: o.on ? 'var(--ac)' : (o.bd || 'transparent'), c: o.c || 'var(--tx)', op: o.op ?? 1, fs: o.col ? '10.5px' : '12.5px', ring: o.ring || 'none',
+      gripS: o.grip ? 'block' : 'none', thS: o.th ? 'block' : 'none', th: o.th || '', thW: o.thW || '18px', thH: o.thH || '18px', thR: o.thR || '4px', gS: o.g ? 'block' : 'none', g: o.g ? g(o.g) : [], gs: o.gs || 17, gc: o.gc || 'currentColor',
+      lS: o.l ? 'block' : 'none', l: o.l || '', lFlex: o.col ? '0 0 auto' : '1', fw: o.fw || (o.on ? 600 : 400), ta: o.col ? 'center' : 'start', ff: o.ff || 'inherit', ws: o.wrap ? 'normal' : 'nowrap', subS: o.sub ? 'block' : 'none', sub: o.sub || '', subC: o.subC || 'var(--mu)',
+      togS: o.tog !== undefined ? 'block' : 'none', togBg: o.tog ? 'var(--ac)' : 'var(--bd)', togX: o.tog ? '14px' : '2px', togK: o.tog ? 'var(--af)' : 'var(--mu)', slS: o.sl ? 'block' : 'none', slV: o.sl || '0%',
+      tagS: o.tag ? 'block' : 'none', tag: o.tag || '', tagC: o.tagC || 'var(--le)', icS: o.ic ? 'flex' : 'none', ic: (o.ic || []).map(x => typeof x === 'string' ? { g: g(x), c: 'var(--mu)' } : { g: g(x[0]), c: x[1] }) });
+    return { h: o.h || '', hS: o.h ? 'flex' : 'none', hr: o.hr || '', hrC: o.hrC || 'var(--mu)', segS: o.seg ? 'flex' : 'none', seg: (o.seg || []).map((l, i) => ({ l, bg: i === (o.segOn || 0) ? 'var(--sf)' : 'transparent', c: i === (o.segOn || 0) ? 'var(--tx)' : 'var(--mu)', fw: i === (o.segOn || 0) ? 600 : 400, sh: i === (o.segOn || 0) ? '0 1px 2px rgba(0,0,0,.2)' : 'none' })),
+      gridS: o.items ? 'grid' : 'none', cols: o.cols || '1fr', gap: o.gap || '4px', items: (o.items || []).map(it), noteS: o.note ? 'block' : 'none', note: o.note || '', noteC: o.noteC || 'var(--mu)', noteBg: o.noteBg || 'transparent', notePad: o.noteBg ? '8px 10px' : '0' };
+  }
+}
+</script>
+</body>
+</html>

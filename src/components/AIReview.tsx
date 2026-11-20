@@ -74,7 +74,7 @@ export function AIReview({ image, text, kind, initialResult, onReplace, onAdd, o
     } catch (e) {
       if (e instanceof AiConvertError && e.code === "aborted") return;
       const ae = e instanceof AiConvertError ? e : null;
-      setRes((x) => ({ ...x, [tb]: { phase: ae?.code === "offline" ? "offline" : "error", text: "", spans: [], error: ae?.code === "unreadable" ? t("Couldn’t read this ink. Try a smaller selection or write more clearly.") : ae?.code === "limit" ? t("Daily free AI limit reached. Try tomorrow.") : ae?.code === "timeout" ? t("The AI took too long. Try a smaller selection.") : ae?.code === "too-large" ? t("That selection is too large. Try a smaller one.") : t("Couldn’t read this ink. Try a smaller selection or write more clearly.") } }));
+      setRes((x) => ({ ...x, [tb]: { phase: ae?.code === "offline" ? "offline" : "error", text: "", spans: [], error: ae?.code === "unreadable" ? t("Couldn’t read this ink. Try a smaller selection or write more clearly.") : ae?.code === "limit" ? t("Daily free AI limit reached. Try tomorrow.") : ae?.code === "timeout" ? t("The AI took too long. Try a smaller selection.") : ae?.code === "too-large" ? t("That selection is too large. Try a smaller one.") : ae?.code === "licence" || (ae?.code === "failed" && ae.message.length > 22) ? ae.message : t("Couldn’t read this ink. Try a smaller selection or write more clearly.") } }));
     }
   }, [image, kind]);
 

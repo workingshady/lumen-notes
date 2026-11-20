@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ {{ pageTitle }}</span></div><div style="font-size:14px;color:#9A9890;max-width:1100px">{{ pageDesc }}</div></div>
+  </div>
+  <section style="display:{{ fixS }};flex-direction:column;gap:14px;max-width:1100px">
+    <div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ fixH }}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 28px;font-size:14px;line-height:21px;color:#CFCBC3"><sc-for list="{{ fixes }}" as="f"><div style="display:flex;gap:10px"><b style="color:#F25C9A">·</b><span><b style="color:#ECE9E2">{{ f.a }}</b> {{ f.b }}</span></div></sc-for></div>
+  </section>
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="2">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ sec.k }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ sec.t }}</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">{{ sec.d }}</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+        <sc-for list="{{ sec.frames }}" as="f" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--le:{{ f.t.le }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)">
+              <dc-import name="ReviewStudio" screen="{{ f.o.s }}" group="{{ f.o.gp }}" phone="{{ f.ph }}" light="{{ f.light }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+            </div>
+            <div style="max-width:{{ f.w }};font-size:13px;line-height:20px;color:#CFCBC3;display:{{ f.nS }};gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', le:'#B48EF0' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', le:'#7A4BD1' };
+    const F = (id, l, t, n, o = {}) => ({ id, l, t, n, nS: n ? 'flex' : 'none', o, ph: !!o.ph, light: t === P, w: o.ph ? '412px' : '1440px', h: o.ph ? '915px' : (o.h || '900px'), r: o.ph ? '28px' : '12px' });
+
+    const fixes = [
+      ['Is review for everything, or by category?', 'Both. Review all mixes every due card. Group by Space, Plan, Tag or Card type to study one category. Smart decks: Leeches and Due soon.'],
+      ['A card can belong to several categories.', 'Cards live in notes; decks are views. A card is reviewed once a day, whichever deck you open.'],
+      ['Rating buttons gave no hint of what happens next.', 'Again, Hard, Good and Easy show the next interval and the key (1–4).'],
+      ['Cards were cut off from their notes.', 'Every answer links to its source note at the paragraph.'],
+      ['Cramming moved the real schedule.', 'Custom study runs without changing the schedule.'],
+      ['The session just ended.', 'A summary shows accuracy, time and the most-missed cards, with one tap to review those again.']
+    ].map(([a, b]) => ({ a, b }));
+    const sections = [
+      { k:'HUB', t:'All or by category', d:'', frames:[
+        F('57A','By space', L, '', { s:'hub' }), F('57B','By plan', L, 'Plan decks follow the course or project; the current module comes first.', { s:'hub', gp:'Plan' }), F('57C','By tag · Paper', P, '', { s:'hub', gp:'Tag' }), F('57D','By card type', L, '', { s:'hub', gp:'Type' }), F('57E','Custom study', L, '', { s:'custom' }) ]},
+      { k:'SESSION', t:'Cards', d:'', frames:[
+        F('57F','Question', L, 'One action: Show answer (Space).', { s:'q' }), F('57G','Answer + ratings', L, '', { s:'a' }), F('57H','Cloze · Paper', P, '', { s:'cloze' }), F('57I','Done', L, '', { s:'done' }) ]},
+      { k:'PHONE', t:'Phone', d:'Big rating buttons at thumb height.', frames:[ F('57J','Hub', L, '', { s:'hub', ph:1 }), F('57K','Answer', L, '', { s:'a', ph:1 }), F('57L','Cloze', L, '', { s:'cloze', ph:1 }), F('57M','Custom study', L, '', { s:'custom', ph:1 }) ]}
+    ];
+    return { sections, fixes, fixS: 'flex', fixH: 'QUESTIONS → ANSWERS', pageTitle: '57 Review & flashcards', pageDesc: 'A review hub with categorised decks, a cleaner card session, custom study and an end-of-session summary.' };
+  }
+}
+</script>
+</body>
+</html>

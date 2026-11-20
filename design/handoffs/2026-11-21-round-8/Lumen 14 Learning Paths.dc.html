@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:96px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 14 Learning paths</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 4</span></div><div style="font-size:14px;color:#9A9890">One path, many courses. Concepts are the unit; courses are where they're taught. Sample: AI Engineer — 28 courses, 101 concepts, 7 stages.</div></div>
+  </div>
+
+  <sc-for list="{{ desk }}" as="d" hint-placeholder-count="2">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ d.kicker }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ d.title }}</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">{{ d.sub }}</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+        <sc-for list="{{ d.frames }}" as="f" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:14px;width:1440px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.in }};--le:{{ f.t.le }};--sh:{{ f.t.sh }};width:1440px;height:900px;position:relative;overflow:hidden;border-radius:12px;background:var(--bg)">
+              <dc-import name="PathDesk" view="{{ f.v }}" expanded="{{ f.e }}" overlaps="{{ f.o }}" sheet="{{ f.s }}" hint-size="1440px,900px" style="position:absolute;inset:0"></dc-import>
+            </div>
+            <div style="font-size:13px;line-height:20px;color:#CFCBC3;display:flex;gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.note }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · A1 · PHONE</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Paths on phone</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">Stages become an accordion; views scroll as tabs; filters live in one sheet. The concept sheet is a full-height bottom sheet.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+      <sc-for list="{{ phones }}" as="p" hint-placeholder-count="6">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ p.id }}</span> {{ p.l }}</div>
+          <div style="--bg:{{ p.t.bg }};--sf:{{ p.t.sf }};--sf2:{{ p.t.sf2 }};--bd:{{ p.t.bd }};--tx:{{ p.t.tx }};--mu:{{ p.t.mu }};--ac:{{ p.t.ac }};--af:{{ p.t.af }};--ln:{{ p.t.ln }};--ok:{{ p.t.ok }};--wa:{{ p.t.wa }};--da:{{ p.t.da }};--in:{{ p.t.in }};--le:{{ p.t.le }};width:412px;height:915px;position:relative;overflow:hidden;border-radius:28px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:14px">
+            <div style="height:32px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500;flex-shrink:0"><span>21:41</span><span style="display:flex;gap:6px;font-size:14px"><i class="icon-signal"></i><i class="icon-wifi"></i><i class="icon-battery-medium"></i></span></div>
+            <div style="height:56px;padding:0 4px;display:flex;align-items:center;gap:4px;flex-shrink:0"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-arrow-left" style="font-size:20px"></i></span><dc-import name="LumenGlyph" glyph="path" size="{{ 16 }}" tile="#F2A93B" color="var(--ac)" hint-size="28px,28px"></dc-import><div style="flex:1;display:flex;flex-direction:column;margin-left:6px"><span style="font-weight:650;font-size:16px">AI Engineer</span><span style="font-size:11.5px;color:var(--mu)">41 / 101 learned · 3 to revise</span></div><div style="width:34px;height:34px;border-radius:50%;background:conic-gradient(var(--ok) 0 41%, var(--sf2) 41% 100%);display:flex;align-items:center;justify-content:center"><div style="width:27px;height:27px;border-radius:50%;background:var(--bg)"></div></div><span style="width:44px;height:48px;display:flex;align-items:center;justify-content:center"><i class="icon-ellipsis-vertical" style="font-size:20px"></i></span></div>
+            <div style="display:flex;gap:6px;padding:0 16px 10px;overflow:hidden;flex-shrink:0">
+              <sc-for list="{{ p.tabs }}" as="t" hint-placeholder-count="5"><span style="height:36px;padding:0 12px;border-radius:999px;background:{{ t.bg }};border:1px solid {{ t.bd }};display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:13px;font-weight:{{ t.fw }};flex-shrink:0">{{ t.l }}<span style="display:{{ t.ks }};padding:0 6px;border-radius:999px;line-height:17px;font-size:11px;font-weight:600;background:color-mix(in srgb,var(--le) 16%,transparent);color:var(--le)">3</span></span></sc-for>
+            </div>
+            <div style="display:flex;gap:8px;padding:0 16px 12px;flex-shrink:0"><span style="height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-size:13px"><dc-import name="LumenGlyph" glyph="filter" size="{{ 15 }}" hint-size="15px,15px"></dc-import>Filter<span style="padding:0 6px;border-radius:999px;background:var(--sf2);font-size:11px;line-height:17px">1</span></span><span style="height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-size:13px"><dc-import name="LumenGlyph" glyph="overlap" size="{{ 15 }}" hint-size="15px,15px"></dc-import>4 overlaps</span><span style="flex:1"></span><span style="height:36px;display:flex;align-items:center;color:var(--mu);font-size:13px">Expand all</span></div>
+            <div style="flex:1;overflow:hidden;padding:0 16px;display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ acc }}" as="a" hint-placeholder-count="7">
+                <div style="border-radius:12px;background:var(--sf);border:1px solid var(--bd);overflow:hidden;flex-shrink:0">
+                  <div style="height:52px;padding:0 12px;display:flex;align-items:center;gap:10px"><span style="width:22px;height:22px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:650">{{ a.i }}</span><span style="font-weight:600;flex:1">{{ a.n }}</span><span style="font-size:12px;color:var(--mu)">{{ a.d }}</span><span style="width:40px;height:4px;border-radius:2px;background:var(--sf2);overflow:hidden"><span style="display:block;height:100%;width:{{ a.p }};background:var(--ok)"></span></span><i class="{{ a.chev }}" style="font-size:15px;color:var(--mu)"></i></div>
+                  <sc-if value="{{ a.open }}"><div style="padding:0 8px 8px;display:flex;flex-direction:column;gap:4px"><sc-for list="{{ a.items }}" as="c" hint-placeholder-count="4"><div style="min-height:48px;padding:0 10px;border-radius:8px;background:var(--bg);display:flex;align-items:center;gap:10px;opacity:{{ c.op }}"><i class="{{ c.si }}" style="font-size:16px;color:{{ c.c }}"></i><span style="flex:1;font-weight:500">{{ c.n }}</span><span style="display:flex;gap:3px"><sc-for list="{{ c.dots }}" as="dd" hint-placeholder-count="2"><span style="width:6px;height:6px;border-radius:50%;background:{{ dd }}"></span></sc-for></span><span style="display:{{ c.rv }};padding:0 6px;border-radius:999px;line-height:17px;font-size:11px;font-weight:600;background:color-mix(in srgb,var(--le) 16%,transparent);color:var(--le)">revise</span></div></sc-for></div></sc-if>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ p.sheet }}">
+              <div style="position:absolute;inset:0;background:rgba(5,6,8,.55)"></div>
+              <div style="position:absolute;left:0;right:0;bottom:0;top:{{ p.sheetTop }};background:var(--sf);border-radius:14px 14px 0 0;display:flex;flex-direction:column;padding:10px 16px 0">
+                <div style="display:flex;justify-content:center;padding-bottom:10px"><span style="width:36px;height:4px;border-radius:2px;background:var(--bd)"></span></div>
+                <sc-if value="{{ p.isConcept }}"><div style="flex:1;display:flex;flex-direction:column;gap:12px">
+                  <span style="font-size:12px;color:var(--mu)">Step 3 · Deep learning basics</span>
+                  <div style="display:flex;align-items:center;gap:10px"><dc-import name="LumenGlyph" glyph="s-learning" size="{{ 20 }}" color="var(--in)" hint-size="20px,20px"></dc-import><span style="font-size:22px;font-weight:650">Batch normalization</span></div>
+                  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:3px;border-radius:10px;background:var(--bg);border:1px solid var(--bd);font-size:12.5px"><span style="height:38px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Todo</span><span style="height:38px;border-radius:7px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--in)">Learning</span><span style="height:38px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Learned</span><span style="height:38px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Mastered</span></div>
+                  <div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--mu)">To mastered</span><span>4 of 14 days</span></div><span style="height:6px;border-radius:3px;background:var(--sf2);overflow:hidden"><span style="display:block;width:28%;height:100%;background:var(--ok)"></span></span></div>
+                  <sc-for list="{{ phoneSecs }}" as="s" hint-placeholder-count="5"><div style="height:52px;border-top:1px solid var(--bd);display:flex;align-items:center;gap:10px"><span style="font-weight:600;flex:1">{{ s.n }}</span><span style="font-size:12.5px;color:var(--mu)">{{ s.m }}</span><i class="icon-chevron-right" style="font-size:15px;color:var(--mu)"></i></div></sc-for>
+                  <div style="display:flex;gap:10px;margin-top:auto;padding-bottom:12px"><span style="flex:1;height:52px;border-radius:12px;background:color-mix(in srgb,var(--le) 14%,transparent);color:var(--le);display:flex;align-items:center;justify-content:center;font-weight:600">Practice · 5</span><span style="flex:1;height:52px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600">Mark learned</span></div>
+                </div></sc-if>
+                <sc-if value="{{ p.isQuiz }}"><div style="flex:1;display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--le);font-weight:600">Practice</span><span style="color:var(--mu);font-size:13px">3 of 5</span><span style="flex:1"></span><i class="icon-x" style="font-size:20px;color:var(--mu)"></i></div>
+                  <span style="font-family:'Source Serif 4',serif;font-size:19px;line-height:28px">In one sentence: why does batch norm help deeper networks train?</span>
+                  <div style="min-height:120px;border-radius:12px;background:var(--bg);border:1.5px solid var(--ac);padding:12px;line-height:22px">It keeps each layer's inputs at a stable scale, so gradients don't explode or vanish as much<span style="display:inline-block;width:2px;height:18px;background:var(--ac);vertical-align:-3px"></span></div>
+                  <div style="border-radius:10px;background:color-mix(in srgb,var(--wa) 10%,transparent);border:1px solid color-mix(in srgb,var(--wa) 30%,transparent);padding:10px 12px;font-size:13px;line-height:20px"><b style="color:var(--wa);font-weight:600">Close.</b> Also lets you use higher learning rates. Counts as half.</div>
+                  <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;padding-bottom:12px"><span style="height:52px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600">Next question</span><span style="height:44px;display:flex;align-items:center;justify-content:center;color:var(--mu)">Save as flashcards</span></div>
+                </div></sc-if>
+                <sc-if value="{{ p.isFilter }}"><div style="flex:1;display:flex;flex-direction:column;gap:14px">
+                  <span style="font-size:18px;font-weight:650">Filter</span>
+                  <sc-for list="{{ filterGroups }}" as="g" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12.5px;color:var(--mu);font-weight:500">{{ g.n }}</span><div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ g.o }}" as="o" hint-placeholder-count="4"><span style="height:38px;padding:0 12px;border-radius:999px;border:1px solid {{ o.bd }};background:{{ o.bg }};display:flex;align-items:center;font-size:13px;font-weight:{{ o.fw }}">{{ o.l }}</span></sc-for></div></div></sc-for>
+                  <div style="margin-top:auto;display:flex;gap:10px;padding-bottom:12px"><span style="height:52px;padding:0 16px;display:flex;align-items:center;color:var(--mu)">Clear</span><span style="flex:1;height:52px;border-radius:12px;background:var(--ac);color:var(--af);display:flex;align-items:center;justify-content:center;font-weight:600">Show 23 concepts</span></div>
+                </div></sc-if>
+                <div style="height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><div style="width:108px;height:4px;border-radius:2px;background:var(--mu);opacity:.45"></div></div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">R4 · A1</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">Paths list · new path</h2></div>
+    <div style="--bg:#0F1115;--sf:#161A21;--sf2:#1D222B;--bd:#2A303B;--tx:#E8E6E1;--mu:#9AA0AA;--ac:#F2A93B;--af:#1A1206;--ok:#6BCB8B;--le:#B48EF0;--in:#7AA2F7;display:flex;gap:40px;align-items:flex-start;color:var(--tx)">
+      <div style="width:900px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+        <sc-for list="{{ pathCards }}" as="c" hint-placeholder-count="3"><div style="border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px"><dc-import name="LumenGlyph" glyph="path" size="{{ 16 }}" tile="{{ c.c }}" color="{{ c.c }}" hint-size="28px,28px"></dc-import><span style="font-weight:650;font-size:15px;flex:1">{{ c.n }}</span></div>
+          <span style="font-size:12.5px;color:var(--mu)">{{ c.m }}</span>
+          <span style="height:5px;border-radius:3px;background:var(--sf2);overflow:hidden"><span style="display:block;height:100%;width:{{ c.p }};background:var(--ok)"></span></span>
+          <div style="display:flex;gap:10px;font-size:12px"><span>{{ c.l }} learned</span><span style="color:var(--le);display:{{ c.rs }}">{{ c.r }} to revise</span></div>
+        </div></sc-for>
+        <div style="border-radius:14px;border:1.5px dashed var(--bd);padding:16px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--mu);min-height:120px"><i class="icon-plus" style="font-size:16px"></i>New path</div>
+      </div>
+      <div style="width:520px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column">
+        <div style="padding:18px 22px 6px;display:flex;align-items:center"><span style="font-size:17px;font-weight:650;flex:1">New learning path</span><i class="icon-x" style="font-size:17px;color:var(--mu)"></i></div>
+        <div style="padding:10px 22px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--mu);font-weight:500">Name</span><div style="height:38px;border-radius:6px;background:var(--bg);border:1px solid var(--ac);display:flex;align-items:center;padding:0 12px">AI Engineer<span style="width:1.5px;height:16px;background:var(--ac);margin-left:1px"></span></div></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:var(--mu);font-weight:500">Courses · 3 picked</span><div style="display:flex;flex-wrap:wrap;gap:6px"><span style="height:28px;padding:0 8px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;gap:6px;font-size:12.5px"><span style="width:3px;height:14px;border-radius:2px;background:#A371F7"></span>Coursera DL<i class="icon-x" style="font-size:11px;color:var(--mu)"></i></span><span style="height:28px;padding:0 8px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;gap:6px;font-size:12.5px"><span style="width:3px;height:14px;border-radius:2px;background:#39C5CF"></span>CS231n<i class="icon-x" style="font-size:11px;color:var(--mu)"></i></span><span style="height:28px;padding:0 8px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;gap:6px;font-size:12.5px"><span style="width:3px;height:14px;border-radius:2px;background:#57AB5A"></span>CS224n<i class="icon-x" style="font-size:11px;color:var(--mu)"></i></span><span style="height:28px;padding:0 10px;border-radius:6px;border:1px dashed var(--bd);color:var(--mu);display:flex;align-items:center;font-size:12.5px">+ Add</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;color:var(--mu);font-weight:500">Start with</span>
+            <div style="border-radius:10px;border:1.5px solid var(--ac);background:color-mix(in srgb,var(--ac) 6%,var(--bg));padding:10px 12px;display:flex;gap:10px"><dc-import name="LumenGlyph" glyph="organize" size="{{ 16 }}" color="var(--ac)" hint-size="16px,16px"></dc-import><div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">Organize from course outlines</span><span style="font-size:12px;color:var(--mu)">Matches topics across courses, proposes stages. You review before anything is saved.</span></div></div>
+            <div style="border-radius:10px;border:1px solid var(--bd);padding:10px 12px;display:flex;gap:10px"><dc-import name="LumenGlyph" glyph="v-board" size="{{ 16 }}" color="var(--mu)" hint-size="16px,16px"></dc-import><span style="font-weight:600">Empty stages, I'll arrange</span></div>
+          </div>
+        </div>
+        <div style="padding:14px 22px;display:flex;justify-content:flex-end;gap:8px"><span style="height:36px;padding:0 14px;border-radius:10px;display:flex;align-items:center;color:var(--mu)">Cancel</span><span style="height:36px;padding:0 16px;border-radius:10px;background:var(--ac);color:var(--af);display:flex;align-items:center;font-weight:600">Create path</span></div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', in:'#7AA2F7', le:'#B48EF0', sh:'none' };
+    const Pp = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', in:'#2F5BD3', le:'#7A4BD1', sh:'0 1px 2px rgb(0 0 0 / .06), 0 8px 24px rgb(0 0 0 / .08)' };
+    const F = (id,l,v,e,o,s,t,note) => ({ id, l, v, e, o, s, t, note });
+    const desk = [
+      { kicker:'R4 · A1 · HEADER + STAGES', title:'Header, overlaps, stages', sub:'Header collapses by default above six courses — one line keeps progress, revise count and overlaps visible. Expanding reveals course chips and actions.',
+        frames:[
+          F('R4-14A','Stages · header collapsed · Lamplight','stages',false,false,'',L,'Columns can collapse to a 44 px strip (Step 7 here). Concept cards show status glyph, course dots (up to 3), course count, resources and a violet revise pill. Unplaced concepts wait in the dashed column.'),
+          F('R4-14B','Stages · header expanded + overlaps open · Paper','stages',true,true,'',Pp,'Expanded: course chips with colour bar, kind glyph and done/total; “+20 more” opens a searchable list. Overlaps panel offers Merge or They\u2019re different per pair — nothing merges without a click.'),
+          F('R4-14C','Concept sheet · mastery · Lamplight','stages',false,false,'mastery',L,'Sheet sections collapse. Mastery = status + progress to 14 days of correct recall + what it blocks. Path-added prerequisites are dashed amber and removable; course-given ones are not.'),
+          F('R4-14D','Concept sheet · practice quiz · Paper','stages',false,false,'quiz',Pp,'Practice builds 5 questions from the 4 notes linked to the concept (multiple choice + short answer). 80%+ marks it learned. Wrong answers can be saved as flashcards.')
+        ] },
+      { kicker:'R4 · A1 · VIEWS', title:'Graph, matrix, timeline, revise', sub:'Same data, four lenses. Filters and group-by persist across tabs.',
+        frames:[
+          F('R4-14E','Graph · focus chain + drag to add prerequisite','graph',false,false,'',L,'Left→right by depth, step headers on top. Each node carries course colour bars and its stage. Selecting Batch normalization lights its chain in amber; locked nodes dim. Dragging a node\u2019s dot onto another adds a path-only prerequisite (dashed).'),
+          F('R4-14F','Matrix · only overlapping','matrix',false,false,'',L,'Rows grouped by stage, sticky concept column, rotated course headers. Filled dot = taught and learned; ring = taught, not learned yet. Overlap count shows how many courses teach it.'),
+          F('R4-14G','Timeline · lanes per course + revision lane','timeline',false,false,'',Pp,'Bars are the lessons that teach each concept, placed by planned date. The violet lane is spaced revision. Amber line is today.'),
+          F('R4-14H','Revise · one at a time','revise',false,false,'',L,'One concept, where it\u2019s taught, a recall prompt and resources. Again resets to 1 day; Got it moves along 1 → 3 → 7 → 14 → 30 → 60 → 120.')
+        ] }
+    ];
+    const tabsFor = a => ['Stages','Graph','Matrix','Timeline','Revise'].map(l => ({ l, bg:l===a?'var(--sf2)':'transparent', bd:l===a?'var(--ac)':'var(--bd)', fw:l===a?600:450, ks:l==='Revise'?'inline-block':'none' }));
+    const P = ['#A371F7','#39C5CF','#57AB5A','#E8893A','#E3B341','#E5534B'];
+    const it = (n,s,d,o={}) => ({ n, si:{todo:'icon-circle',learning:'icon-circle-dot',done:'icon-circle-check',mastered:'icon-star',locked:'icon-lock'}[s], g:{todo:'s-todo',learning:'s-learning',done:'s-done',mastered:'s-mastered',locked:'s-locked'}[s], c:{todo:'var(--mu)',learning:'var(--in)',done:'var(--ok)',mastered:'var(--ok)',locked:'var(--mu)'}[s], dots:P.slice(0,d), rv:o.rv?'inline':'none', op:s==='locked'?.5:1 });
+    const acc = [['Foundations','4/4','100%',0],['Classic ML','2/3','67%',0],['Deep learning basics','3/6','50%',1,[it('Backpropagation','done',3,{rv:1}),it('Activation functions','done',2),it('AdamW','learning',2),it('Batch normalization','learning',3),it('Dropout','todo',2)]],['Vision','1/3','33%',0],['Sequence & attention','1/4','25%',0],['LLMs','0/4','0%',0],['Systems & eval','0/2','0%',0]]
+      .map(([n,d,p,open,items],i) => ({ n, d, p, i:i+1, open:!!open, items:items||[], chev:open?'icon-chevron-up':'icon-chevron-down' }));
+    const Ph = (id,l,t,sheet,tab) => ({ id, l, t, tabs:tabsFor(tab||'Stages'), sheet:!!sheet, isConcept:sheet==='concept', isQuiz:sheet==='quiz', isFilter:sheet==='filter', sheetTop: sheet==='filter' ? '300px' : '120px' });
+    const phones = [Ph('R4-14I','Stages accordion · Lamplight',L,''),Ph('R4-14J','Stages accordion · Paper',Pp,''),Ph('R4-14K','Concept sheet',L,'concept'),Ph('R4-14L','Practice · short answer',Pp,'quiz'),Ph('R4-14M','Filter sheet',L,'filter')];
+    const phoneSecs = [['Practice','5 questions'],['Taught in','3 courses'],['Prerequisites','2'],['Unlocks','2'],['Resources','4']].map(([n,m]) => ({ n, m }));
+    const O = (l,on) => ({ l, bd:on?'var(--ac)':'var(--bd)', bg:on?'color-mix(in srgb,var(--ac) 14%,transparent)':'transparent', fw:on?600:450 });
+    const filterGroups = [{ n:'Status', o:[O('Todo'),O('Learning',1),O('Learned'),O('Mastered'),O('Locked')] },{ n:'Course', o:[O('All 28',1),O('Coursera DL'),O('CS231n'),O('CS224n'),O('More…')] },{ n:'Show', o:[O('Only overlapping'),O('To revise'),O('Not placed')] }];
+    const pathCards = [['AI Engineer','#F2A93B','28 courses · 101 concepts','41%','41','3'],['Arabic reading','#39C5CF','6 courses · 48 concepts','34%','16','1'],['Systems & networks','#57AB5A','5 courses · 37 concepts','12%','4','0']].map(([n,c,m,p,l,r]) => ({ n, c, m, p, l, r, rs:r!=='0'?'inline':'none' }));
+    return { desk, phones, acc, phoneSecs, filterGroups, pathCards };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:absolute;inset:0;display:flex;background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:13px;overflow:hidden">
+  <dc-import name="LumenSidebar" active="none" collapsed="{{ true }}" hint-size="56px,100%" style="height:100%"></dc-import>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+    <div style="height:48px;padding:0 16px 0 24px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd)"><span style="color:var(--mu)">CS231n</span><span style="color:var(--mu)">›</span><span style="font-weight:500">Backprop, by hand</span><span style="flex:1"></span>
+      <div style="display:flex;gap:2px;padding:3px;border-radius:9px;background:var(--sf);border:1px solid var(--bd);font-size:12px"><span style="height:24px;padding:0 10px;border-radius:6px;background:var(--sf2);display:flex;align-items:center;font-weight:600">Edit</span><span style="height:24px;padding:0 10px;display:flex;align-items:center;color:var(--mu)">Split</span><span style="height:24px;padding:0 10px;display:flex;align-items:center;color:var(--mu)">Read</span></div>
+      <span style="flex:1"></span><span style="display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span>Saved</span><span style="color:var(--mu);font-size:16px;padding:0 6px">⋯</span></div>
+    <div style="flex:1;position:relative;overflow:hidden">
+      <div style="position:absolute;left:50%;top:40px;width:700px;margin-left:-350px;display:flex;flex-direction:column;gap:4px;font-size:16px;line-height:28px">
+        <sc-for list="{{ blocks }}" as="b" hint-placeholder-count="10">
+          <div style="display:{{ b.lineShow }};height:2px;margin:-1px 0;background:var(--ac);border-radius:1px"></div>
+          <div style="position:relative;padding:3px 10px;border-radius:8px;background:{{ b.bg }};box-shadow:{{ b.ring }};opacity:{{ b.op }};font-family:{{ b.ff }};font-size:{{ b.fs }};font-weight:{{ b.fw }};line-height:{{ b.lh }};color:{{ b.c }}">
+            <span style="display:{{ b.hShow }};position:absolute;left:-30px;top:6px;width:22px;height:24px;border-radius:6px;background:{{ b.hBg }};color:{{ b.hC }};align-items:center;justify-content:center;font-size:12px;letter-spacing:-1px;font-family:Inter">⋮⋮</span>
+            <span style="display:{{ b.checkShow }};position:absolute;left:-54px;top:9px;width:14px;height:14px;border-radius:4px;background:var(--ac)"></span>
+            {{ b.t }}<span style="display:{{ b.anchorShow }};margin-left:8px;font:500 12px 'JetBrains Mono',monospace;color:var(--mu);opacity:.7">^{{ b.anchor }}</span><span style="display:{{ b.caretShow }};width:1.5px;height:20px;background:var(--ac);vertical-align:-4px;margin-left:1px"></span>
+          </div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ isSlash }}">
+        <div style="position:absolute;left:calc(50% - 340px);top:{{ popY }};width:380px;border-radius:12px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 18px 44px rgba(0,0,0,.45);display:flex;flex-direction:column;overflow:hidden">
+          <div style="padding:8px 12px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;color:var(--mu);font-size:12px"><span style="font-family:'JetBrains Mono',monospace;color:var(--tx)">/{{ query }}</span><span style="flex:1"></span>{{ resCount }}</div>
+          <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:4px;display:flex;flex-direction:column;max-height:430px;overflow:hidden">
+              <sc-for list="{{ slash }}" as="s" hint-placeholder-count="10">
+                <div style="display:{{ s.hdr }};padding:8px 8px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">{{ s.g }}</div>
+                <div style="display:{{ s.row }};height:40px;padding:0 8px;border-radius:8px;align-items:center;gap:10px;background:{{ s.bg }}">
+                  <span style="width:28px;height:28px;border-radius:7px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0"><dc-import name="LumenGlyph" glyph="{{ s.gl }}" size="{{ 16 }}" hint-size="16px,16px"></dc-import></span>
+                  <span style="display:flex;flex-direction:column;flex:1;min-width:0"><span style="font-weight:500;line-height:16px">{{ s.l }}</span><span style="font-size:11.5px;color:var(--mu);line-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.h }}</span></span>
+                  <span style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu)">{{ s.k }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ noResults }}">
+            <div style="padding:22px 16px;display:flex;flex-direction:column;gap:10px;align-items:flex-start"><span style="font-weight:600">No block called “kanban”</span><span style="color:var(--mu);line-height:18px">Try “board”, or make a Base with a Board view.</span><span style="height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--bd);display:flex;align-items:center;gap:6px"><dc-import name="LumenGlyph" glyph="query" size="{{ 14 }}" hint-size="14px,14px"></dc-import>Search all commands</span></div>
+          </sc-if>
+          <div style="padding:7px 12px;border-top:1px solid var(--bd);display:flex;gap:12px;font-size:11.5px;color:var(--mu)"><span>↑↓ move</span><span>↵ insert</span><span>// today's date</span><span style="flex:1"></span><span>Insert gallery…</span></div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isMenu }}">
+        <div style="position:absolute;left:calc(50% - 380px);top:178px;width:250px;border-radius:12px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 18px 44px rgba(0,0,0,.45);padding:4px;display:flex;flex-direction:column">
+          <span style="padding:6px 8px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Turn into</span>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:2px;padding:0 4px 4px"><sc-for list="{{ turn }}" as="t" hint-placeholder-count="12"><span style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;background:{{ t.bg }};color:{{ t.c }}"><dc-import name="LumenGlyph" glyph="{{ t.g }}" size="{{ 16 }}" hint-size="16px,16px"></dc-import></span></sc-for></div>
+          <div style="height:1px;background:var(--bd);margin:2px 4px"></div>
+          <sc-for list="{{ bmenu }}" as="m" hint-placeholder-count="6"><div style="height:32px;padding:0 8px;border-radius:7px;display:flex;align-items:center;gap:10px;color:{{ m.c }};background:{{ m.bg }}"><dc-import name="LumenGlyph" glyph="{{ m.g }}" size="{{ 15 }}" hint-size="15px,15px"></dc-import><span style="flex:1">{{ m.l }}</span><span style="font:500 11px 'JetBrains Mono',monospace;color:var(--mu)">{{ m.k }}</span></div></sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isRef }}">
+        <div style="position:absolute;left:calc(50% - 300px);top:330px;width:440px;border-radius:12px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 18px 44px rgba(0,0,0,.45);padding:4px;display:flex;flex-direction:column">
+          <span style="padding:6px 8px;font-size:11.5px;color:var(--mu)">Blocks in <b style="color:var(--tx);font-weight:600">Chain rule, one neuron</b></span>
+          <sc-for list="{{ refs }}" as="r" hint-placeholder-count="4"><div style="padding:7px 8px;border-radius:7px;display:flex;align-items:flex-start;gap:10px;background:{{ r.bg }}"><dc-import name="LumenGlyph" glyph="{{ r.g }}" size="{{ 15 }}" color="var(--mu)" hint-size="15px,15px"></dc-import><span style="flex:1;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.t }}</span><span style="font:500 11px 'JetBrains Mono',monospace;color:{{ r.ic }}">{{ r.id }}</span></div></sc-for>
+          <span style="padding:6px 8px;font-size:11.5px;color:var(--mu)">Picking a block without an id adds one (^k3x9).</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isPaste }}">
+        <div style="position:absolute;left:calc(50% - 340px);top:{{ pasteY }};display:flex;align-items:center;gap:2px;padding:4px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 14px 34px rgba(0,0,0,.45)">
+          <sc-for list="{{ paste }}" as="p" hint-placeholder-count="6"><span style="height:30px;padding:0 10px;border-radius:7px;display:flex;align-items:center;gap:6px;background:{{ p.bg }};box-shadow:{{ p.ring }};font-weight:{{ p.w }};white-space:nowrap"><dc-import name="LumenGlyph" glyph="{{ p.g }}" size="{{ 14 }}" color="var(--mu)" hint-size="14px,14px"></dc-import>{{ p.l }}</span></sc-for>
+          <span style="width:1px;height:18px;background:var(--bd);margin:0 4px"></span><span style="font-size:11.5px;color:var(--mu);padding-right:6px;white-space:nowrap">Esc · fades in 12 s</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isGallery }}">
+        <div style="position:absolute;inset:0;background:rgba(5,6,8,.55)"></div>
+        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:860px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden">
+          <div style="padding:16px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--bd)"><span style="font-size:17px;font-weight:650;flex:1">Insert</span><div style="width:240px;height:32px;border-radius:6px;background:var(--bg);border:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--mu)"><dc-import name="LumenGlyph" glyph="query" size="{{ 14 }}" hint-size="14px,14px"></dc-import>Search blocks</div></div>
+          <div style="display:flex;min-height:0">
+            <div style="flex:1;padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+              <sc-for list="{{ gal }}" as="g" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">{{ g.n }}</span>
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px"><sc-for list="{{ g.items }}" as="i" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;gap:6px;padding:6px;border-radius:10px;background:{{ i.bg }};box-shadow:{{ i.ring }}"><dc-import name="LayoutThumb" kind="{{ i.k }}" hint-size="96px,64px"></dc-import><span style="font-size:12px;font-weight:500;padding:0 2px">{{ i.l }}</span></div></sc-for></div></div></sc-for>
+            </div>
+            <div style="width:240px;border-left:1px solid var(--bd);padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--bg)"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)">Preview</span><dc-import name="LayoutThumb" kind="cols-side" scale="{{ 2.15 }}" hint-size="206px,138px"></dc-import><span style="font-weight:600">Sidebar + main</span><span style="color:var(--mu);font-size:12px;line-height:17px">Two columns, 30% / 70%. Stacks on phones.</span><code style="font:11.5px/18px 'JetBrains Mono',monospace;color:var(--mu);white-space:pre">::: columns
+::: column 30%
+:::
+::: column
+:::
+:::</code></div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;slash&quot;,&quot;empty&quot;,&quot;handle&quot;,&quot;menu&quot;,&quot;multi&quot;,&quot;ref&quot;,&quot;paste&quot;,&quot;link&quot;,&quot;gallery&quot;],&quot;default&quot;:&quot;slash&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.props.state ?? 'slash';
+    const B = (t, o = {}) => ({ t, ff: o.h ? 'Inter,system-ui,sans-serif' : "'Source Serif 4',Georgia,serif", fs: o.h ? '24px' : (o.code ? '13px' : '16px'), fw: o.h ? 700 : 400, lh: o.h ? '32px' : '28px', c: o.mu ? 'var(--mu)' : 'var(--tx)',
+      bg: o.sel ? 'color-mix(in srgb,var(--ac) 12%,transparent)' : o.arrive ? 'color-mix(in srgb,var(--ac) 18%,transparent)' : o.hover ? 'var(--sf)' : o.drag ? 'var(--sf2)' : 'transparent',
+      ring: o.sel ? 'inset 0 0 0 1px color-mix(in srgb,var(--ac) 50%,transparent)' : o.drag ? '0 14px 30px rgba(0,0,0,.4)' : 'none', op: o.ghost ? .35 : 1,
+      hShow: o.handle ? 'flex' : 'none', hBg: o.handle === 'active' ? 'var(--sf2)' : 'transparent', hC: o.handle === 'active' ? 'var(--tx)' : 'var(--mu)', checkShow: o.sel ? 'block' : 'none',
+      anchorShow: o.anchor ? 'inline' : 'none', anchor: o.anchor || '', caretShow: o.caret ? 'inline-block' : 'none', lineShow: o.line ? 'block' : 'none' });
+    const blocks = {
+      slash: [B('Backprop, by hand',{h:1}), B('Backpropagation is the chain rule applied from the loss back to every weight.'), B('For one neuron, z = wx + b and a = σ(z).'), B('/',{caret:1})],
+      empty: [B('Backprop, by hand',{h:1}), B('Backpropagation is the chain rule applied from the loss back to every weight.'), B('/kanban',{caret:1})],
+      handle: [B('Backprop, by hand',{h:1}), B('Backpropagation is the chain rule applied from the loss back to every weight.',{hover:1,handle:'rest'}), B('For one neuron, z = wx + b and a = σ(z).',{ghost:1}), B('Cache activations on the forward pass — you need them going back.'), B('∂L/∂w = ∂L/∂a · ∂a/∂z · ∂z/∂w',{line:1}), B('For one neuron, z = wx + b and a = σ(z).',{drag:1,handle:'active'})],
+      menu: [B('Backprop, by hand',{h:1}), B('Backpropagation is the chain rule applied from the loss back to every weight.',{hover:1,handle:'active'}), B('For one neuron, z = wx + b and a = σ(z).'), B('Cache activations on the forward pass — you need them going back.')],
+      multi: [B('Backprop, by hand',{h:1}), B('Backpropagation is the chain rule applied from the loss back to every weight.',{sel:1,handle:'rest'}), B('For one neuron, z = wx + b and a = σ(z).',{sel:1}), B('Cache activations on the forward pass — you need them going back.',{sel:1}), B('3 blocks selected · Delete · Move · Turn into',{mu:1})],
+      ref: [B('Backprop, by hand',{h:1}), B('The key step is local gradients multiplied together.',{arrive:1,anchor:'local-grad'}), B('Cache activations on the forward pass — you need them going back.'), B('See [[Chain rule, one neuron#^',{caret:1})],
+      paste: [B('Backprop, by hand',{h:1}), B('Backpropagation is the chain rule applied from the loss back to every weight.'), B('In the backward pass, gradients flow from the output toward the input. At each node we multiply the upstream gradient by the local gradient. This is efficient because every intermediate value was cached on the forward pass, so nothing has to be recomputed…',{sel:1})],
+      link: [B('Backprop, by hand',{h:1}), B('Karpathy\'s walkthrough is still the clearest:'), B('https://www.youtube.com/watch?v=VMj-3S1tku0',{caret:1})],
+      gallery: [B('Backprop, by hand',{h:1}), B('Backpropagation is the chain rule applied from the loss back to every weight.')]
+    }[st] || [];
+    const S = [
+      ['Recent'],['text','Text','Plain paragraph',''],['c-tip','Tip','Panel · green',''],
+      ['Basic'],['h2','Heading 2','Section title','##'],['task','Task list','Checkboxes','[]'],['code','Code','With language and copy','```'],['math-block','Math','KaTeX block','$$'],
+      ['Layout'],['columns-2','2 columns','Side by side, stacks on phone',''],['sidebar-main','Sidebar + main','30% / 70%',''],['tabs','Tabs','Each heading becomes a tab',''],['expand','Toggle','Folded until opened','']
+    ].map(([a,l,h,k],i) => l === undefined ? { hdr:'block', row:'none', g:a, gl:'note', l:'', h:'', k:'', bg:'' } : { hdr:'none', row:'flex', g:'', gl:a, l, h, k, bg: i===1 ? 'var(--bg)' : 'transparent' });
+    const turn = ['text','h1','h2','h3','list','numbered','task','quote','code','expand','c-info','c-tip'].map((g,i) => ({ g, bg: i===0?'var(--bg)':'transparent', c: i===0?'var(--ac)':'var(--tx)' }));
+    const bmenu = [['columns-2','Duplicate','⌘⇧D'],['wikilink','Copy link to block',''],['expand','Move up','⌥↑'],['expand','Move down','⌥↓'],['c-danger','Delete','⌫',1]].map(([g,l,k,d]) => ({ g, l, k, c: d?'var(--da)':'var(--tx)', bg:'transparent' }));
+    const refs = [['h2','Local gradients','^local-grad','var(--ok)',1],['text','z = wx + b, a = σ(z) for one neuron','add id','var(--mu)'],['math-block','∂L/∂w = ∂L/∂a · ∂a/∂z · ∂z/∂w','^chain','var(--ok)'],['list','Cache activations on the forward pass','add id','var(--mu)']].map(([g,t,id,ic,sel]) => ({ g, t, id, ic, bg: sel?'var(--bg)':'transparent' }));
+    const P = st === 'link' ? [['link-card','Preview card',1],['embed','Embed'],['wikilink','Plain link']] : [['text','Keep',1],['c-abstract','Clean up formatting'],['quote','As quote'],['link-card','As link card'],['c-abstract','Summarize'],['flashcards','Make flashcards']];
+    const paste = P.map(([g,l,on]) => ({ g, l, bg: on?'color-mix(in srgb,var(--ac) 14%,transparent)':'transparent', ring: on?'inset 0 0 0 1px var(--ac)':'none', w: on?600:450 }));
+    const T = k => ({ k, bg:'transparent', ring:'none' });
+    const gal = [['Layout',[['cols-2','2 columns'],['cols-3','3 columns'],['cols-side','Sidebar + main'],['tabs','Tabs'],['expand','Toggle']]],['Panels & callouts',[['panel-info','Info'],['panel-tip','Tip'],['panel-warn','Warning'],['aside','Aside'],['center','Center']]],['Advanced',[['wide','Wide'],['full','Full width'],['toc','Contents'],['include','Include'],['cards','Cards']]]]
+      .map(([n,items]) => ({ n, items: items.map(([k,l]) => ({ k, l, bg: k==='cols-side'?'color-mix(in srgb,var(--ac) 10%,transparent)':'transparent', ring: k==='cols-side'?'inset 0 0 0 1.5px var(--ac)':'none' })) }));
+    return { blocks, slash:S, turn, bmenu, refs, paste, gal,
+      isSlash: st==='slash'||st==='empty', hasResults: st==='slash', noResults: st==='empty', query: st==='empty'?'kanban':'', resCount: st==='empty'?'0 results':'55 blocks',
+      popY: st==='empty' ? '186px' : '214px', isMenu: st==='menu', isRef: st==='ref', isPaste: st==='paste'||st==='link', pasteY: st==='link' ? '176px' : '316px', isGallery: st==='gallery' };
+  }
+}
+</script>
+</body>
+</html>

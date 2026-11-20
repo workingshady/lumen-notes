@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ {{ pageTitle }}</span></div><div style="font-size:14px;color:#9A9890;max-width:1100px">{{ pageDesc }}</div></div>
+  </div>
+  <section style="display:{{ fixS }};flex-direction:column;gap:14px;max-width:1100px">
+    <div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ fixH }}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 28px;font-size:14px;line-height:21px;color:#CFCBC3"><sc-for list="{{ fixes }}" as="f"><div style="display:flex;gap:10px"><b style="color:#F25C9A">·</b><span><b style="color:#ECE9E2">{{ f.a }}</b> {{ f.b }}</span></div></sc-for></div>
+  </section>
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="2">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ sec.k }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ sec.t }}</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">{{ sec.d }}</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+        <sc-for list="{{ sec.frames }}" as="f" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--le:{{ f.t.le }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)">
+              <dc-import name="PlanViews" scenario="{{ f.o.sc }}" view="{{ f.o.v }}" organize="{{ f.o.org }}" phone="{{ f.ph }}" light="{{ f.light }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+            </div>
+            <div style="max-width:{{ f.w }};font-size:13px;line-height:20px;color:#CFCBC3;display:{{ f.nS }};gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', le:'#B48EF0' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', le:'#7A4BD1' };
+    const F = (id, l, t, n, o = {}) => ({ id, l, t, n, nS: n ? 'flex' : 'none', o, ph: !!o.ph, light: t === P, w: o.ph ? '412px' : '1440px', h: o.ph ? '915px' : (o.h || '900px'), r: o.ph ? '28px' : '12px' });
+
+    const sections = [
+      { k:'ONE PLAN · FOUR VIEWS', t:'Timeline, Lanes, Board, Agenda', d:'Every plan (course, project, exam, thesis) has the same four views over the same items. The view switch sits top-left and is remembered per plan.', frames:[
+        F('54A','Timeline · Gantt', L, 'Groups (here, modules) fold; one bar per item; dependencies dashed; milestones as diamonds; overdue in red with how late.', { sc:'ai', v:'gantt' }),
+        F('54B','Lanes · by track', L, 'One lane per track (Lectures, Labs, Papers, Project). Phase bands across the top. Best for “what am I doing in parallel?”', { sc:'ai', v:'lanes' }),
+        F('54C','Board · Now / Next / Later', L, 'Status columns with Overdue first. Drag between columns to reschedule. Best for weekly planning.', { sc:'ai', v:'board' }),
+        F('54D','Agenda · by week', L, 'This week first, then what starts each week. The right column shows load against your pace and upcoming milestones.', { sc:'ai', v:'agenda' })
+      ]},
+      { k:'ANY KIND OF PLAN', t:'Scenarios', d:'The same model fits a language course, an AI course with labs, a team project with owners, an exam planned backwards from its date, and a thesis.', frames:[
+        F('54E','Language course · CEFR', L, 'Levels as groups; later levels fold to one bar.', { sc:'english', v:'gantt' }),
+        F('54F','Team project · lanes by owner · Paper', P, 'Avatars on lanes and bars; at-risk count in the header.', { sc:'project', v:'lanes' }),
+        F('54G','Team project · board', L, '', { sc:'project', v:'board' }),
+        F('54H','Exam prep · agenda', L, 'Scheduled backwards from Sat 13 Feb; Continue shows today’s session.', { sc:'exam', v:'agenda' }),
+        F('54I','Thesis · timeline · Paper', P, '', { sc:'thesis', v:'gantt' }),
+        F('54J','Exam prep · timeline', L, '', { sc:'exam', v:'gantt' })
+      ]},
+      { k:'ORGANIZE', t:'Group, schedule, colour, show, sort', d:'One popover. Schedule decides how dates are made: fixed, by pace (h / week), or backwards from a deadline.', frames:[
+        F('54K','Organize · course', L, '', { sc:'ai', v:'gantt', org:1 }),
+        F('54L','Organize · exam, back from deadline · Paper', P, '', { sc:'exam', v:'agenda', org:1 })
+      ]},
+      { k:'PHONE', t:'Phone', d:'The view switch fills the width; labels show only on the active view. Timeline keeps a narrow name column; Board shows Overdue and Now; Organize is a sheet.', frames:[
+        F('54M','Timeline', L, '', { ph:1, sc:'ai', v:'gantt' }),
+        F('54N','Board', L, '', { ph:1, sc:'project', v:'board' }),
+        F('54O','Agenda', L, '', { ph:1, sc:'exam', v:'agenda' }),
+        F('54P','Lanes', L, '', { ph:1, sc:'project', v:'lanes' }),
+        F('54Q','Organize sheet · Paper', P, '', { ph:1, sc:'english', v:'gantt', org:1 })
+      ]}
+    ];
+    return { sections, fixes: [], fixS: 'none', fixH: '', pageTitle: '54 Plans: views, scenarios, organize', pageDesc: 'Courses, projects, exam prep and research share one plan model with four views (Timeline, Lanes, Board, Agenda) and one Organize popover.' };
+  }
+}
+</script>
+</body>
+</html>

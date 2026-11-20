@@ -260,14 +260,17 @@ export function diffArch(older: ArchCanvas, now: ArchCanvas): ArchDiff {
   }
   const ghostNodes = older.nodes.filter((o) => !matched.has(o.id) && !newN.has(o.id));
   ghostNodes.forEach((g) => nodes.set(g.id, "del"));
-  const ek = (e: AEdge, c: ArchCanvas) => { const m = new Map(c.nodes.map((n) => [n.id, nameOf(n)])); return `${m.get(e.fromNode)}>${m.get(e.toNode)}`; };
-  const oldE = new Map(older.edges.map((e) => [ek(e, older), e]));
+  // edges: same id first (an AI edit or a rename keeps ids), then by name pair + occurrence so parallel edges stay distinct
+  const nameOfId = (c: ArchCanvas) => new Map(c.nodes.map((n) => [n.id, nameOf(n)]));
+  const keyed = (c: ArchCanvas) => { const m = nameOfId(c), seenK = new Map<string, number>(); return new Map(c.edges.map((e) => { const k = `${m.get(e.fromNode)}>${m.get(e.toNode)}`, n = seenK.get(k) ?? 0; seenK.set(k, n + 1); return [e.id, `${k}#${n}`] as const; })); };
+  const oldKey = keyed(older), newKey = keyed(now);
+  const oldById = new Map(older.edges.map((e) => [e.id, e])), oldByKey = new Map(older.edges.map((e) => [oldKey.get(e.id)!, e]));
   const seen = new Set<string>();
   for (const e of now.edges) {
-    const k = ek(e, now), o = oldE.get(k);
-    if (!o) edges.set(e.id, "add"); else { seen.add(k); if (esig(o) !== esig(e)) edges.set(e.id, "chg"); }
+    const o = oldById.get(e.id) ?? oldByKey.get(newKey.get(e.id)!);
+    if (!o || seen.has(o.id)) edges.set(e.id, "add"); else { seen.add(o.id); if (esig(o) !== esig(e) || o.fromNode !== e.fromNode || o.toNode !== e.toNode) edges.set(e.id, "chg"); }
   }
-  const ghostEdges = older.edges.filter((e) => !seen.has(ek(e, older)));
+  const ghostEdges = older.edges.filter((e) => !seen.has(e.id));
   ghostEdges.forEach((e) => edges.set(e.id, "del"));
   const counts = { add: 0, del: 0, chg: 0 };
   for (const v of nodes.values()) counts[v]++;

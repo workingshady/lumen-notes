@@ -153,7 +153,11 @@ export function PenPanel({ api, dark, phone, onClose, docked }: { api: WbAPI | n
           <div className="flex min-h-[34px] min-w-0 items-center gap-2 px-2 text-[12.5px]">
             <Glyph name="pen-mode" size={18} /><span className="min-w-0 flex-1 truncate" title={t("Stylus draws, finger pans")}>{t("Stylus draws, finger pans")}</span>
             <span className="whitespace-nowrap text-[11px] text-muted">{t("auto-detected")}</span>
-            <Tog on={lv.penMode} onChange={(v) => { live.setPenMode(v); setLive({ penMode: v }); }} label={t("Stylus draws, finger pans")} />
+            <Tog on={lv.penMode} onChange={(v) => { live.setPenMode(v); setLive({ penMode: v }); if (v) setInk({ fingerDraws: false }); }} label={t("Stylus draws, finger pans")} />
+          </div>
+          <div className="flex min-h-[34px] min-w-0 items-center gap-2 px-2 text-[12.5px]">
+            <Glyph name="hand" size={18} /><span className="min-w-0 flex-1 truncate" title={t("Finger draws (palm rejection off)")}>{t("Finger draws")}</span>
+            <Tog on={ink.fingerDraws} onChange={(v) => { setInk({ fingerDraws: v }); if (v) { live.setPenMode(false); setLive({ penMode: false }); } }} label={t("Finger draws")} />
           </div>
         </div>
         <div className="text-[11.5px] leading-[17px] text-muted">{t("Palm rejection is on while pen mode is on. Your hand can rest on the screen.")}</div>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./lumen-glyphs.js"></script><link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" rel="stylesheet"></helmet>
+<div style="position:absolute;inset:0;overflow:hidden;background:var(--bg);background-image:radial-gradient(color-mix(in srgb,var(--mu) 18%,transparent) 1.2px,transparent 1.4px);background-size:22px 22px;font-family:Inter,system-ui,sans-serif;font-size:13px;color:var(--tx)">
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,.5)"></div>
+  <div style="position:absolute;left:{{ mL }};right:{{ mR }};top:{{ mT }};bottom:{{ mB }};background:var(--sf);border:1px solid var(--bd);border-radius:{{ mRad }};box-shadow:0 30px 80px rgba(0,0,0,.45);display:flex;flex-direction:column;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--bd)"><svg width="18" height="18" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ wsG }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg><span style="font-weight:600;font-size:15px">Export</span><span style="color:var(--mu);font-size:13px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ wsName }}</span><span style="font-size:16px;color:var(--mu)">×</span></div>
+    <div style="display:flex;flex-direction:{{ dir }};flex:1;min-height:0">
+      <div style="flex:{{ pvFlex }};display:flex;flex-direction:column;gap:10px;padding:16px;min-width:0;border-inline-end:{{ pvSep }};border-bottom:{{ pvSepB }}">
+        <div style="flex:1;min-height:{{ pvMin }};border-radius:10px;border:1px solid var(--bd);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:{{ pvBg }}">
+          <div style="position:relative;width:{{ artW }};aspect-ratio:{{ artAR }};background:{{ artBg }};background-image:{{ artPat }};background-size:18px 18px;box-shadow:0 0 0 1px color-mix(in srgb,var(--mu) 30%,transparent);padding:{{ artPad }};box-sizing:border-box">
+            <svg viewBox="0 0 400 250" preserveAspectRatio="none" style="position:absolute;left:{{ artPad }};top:{{ artPad }};width:calc(100% - 36px);height:calc(100% - 36px);overflow:visible">
+              <sc-for list="{{ art }}" as="a"><path d="{{ a.d }}" style="fill:{{ a.f }};stroke:{{ a.s }};stroke-width:{{ a.w }};stroke-dasharray:{{ a.da }};stroke-linecap:round;stroke-linejoin:round"></path></sc-for>
+              </svg>
+            <sc-for list="{{ artTxt }}" as="t"><span style="position:absolute;left:{{ t.x }};top:{{ t.y }};transform:translate(-50%,-75%);font:{{ t.f }};color:{{ t.c }};white-space:nowrap">{{ t.t }}</span></sc-for>
+            <span style="display:{{ frameLblS }};position:absolute;left:{{ artPad }};top:6px;font-size:10px;color:#9AA0AA">Frame 2 · Lenses</span>
+          </div>
+          <div style="display:{{ busyS }};position:absolute;inset:0;background:color-mix(in srgb,var(--sf) 70%,transparent);flex-direction:column;align-items:center;justify-content:center;gap:10px;font-size:12.5px;color:var(--mu)"><span style="width:26px;height:26px;border-radius:50%;border:3px solid var(--bd);border-top-color:var(--ac)"></span>Rendering 3 frames… 2 of 3</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--mu);flex-wrap:wrap"><span>{{ dims }}</span><span>·</span><span>{{ est }}</span><span style="flex:1"></span><span>Preview at fit</span></div>
+      </div>
+      <div style="flex:{{ opFlex }};display:flex;flex-direction:column;gap:14px;padding:16px 18px;min-width:0;overflow:auto;scrollbar-width:none">
+        <sc-for list="{{ blocks }}" as="bk" hint-placeholder-count="6">
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div style="display:{{ bk.hS }};align-items:center;justify-content:space-between;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)"><span>{{ bk.h }}</span><span style="text-transform:none;letter-spacing:0;font-weight:500;color:{{ bk.hrC }}">{{ bk.hr }}</span></div>
+            <div style="display:{{ bk.segS }};padding:2px;border-radius:8px;background:var(--sf2);gap:2px"><sc-for list="{{ bk.seg }}" as="s"><span style="flex:1;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;background:{{ s.bg }};color:{{ s.c }};font-weight:{{ s.fw }};white-space:nowrap;box-shadow:{{ s.sh }};padding:0 6px">{{ s.l }}</span></sc-for></div>
+            <div style="display:{{ bk.gridS }};grid-template-columns:{{ bk.cols }};gap:{{ bk.gap }}"><sc-for list="{{ bk.items }}" as="it">
+              <div title="{{ it.tip }}" style="display:flex;flex-direction:{{ it.dir }};align-items:center;justify-content:{{ it.jc }};gap:{{ it.gap }};min-height:{{ it.mh }};padding:{{ it.pad }};border-radius:8px;background:{{ it.bg }};border:1px solid {{ it.bd }};color:{{ it.c }};opacity:{{ it.op }};font-size:{{ it.fs }};box-sizing:border-box;min-width:0">
+                <span style="display:{{ it.thS }};width:{{ it.thW }};height:{{ it.thH }};flex-shrink:0;border-radius:4px;background:{{ it.th }};border:1px solid var(--bd);box-sizing:border-box"></span>
+                <svg width="{{ it.gs }}" height="{{ it.gs }}" viewBox="0 0 24 24" style="display:{{ it.gS }};flex-shrink:0;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ it.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>
+                <span style="display:{{ it.lS }};flex:{{ it.lFlex }};min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:{{ it.fw }};text-align:{{ it.ta }}">{{ it.l }}</span>
+                <span style="display:{{ it.subS }};font-size:10.5px;color:var(--mu);white-space:nowrap">{{ it.sub }}</span>
+                <span style="display:{{ it.togS }};width:30px;height:18px;border-radius:999px;background:{{ it.togBg }};position:relative;flex-shrink:0"><span style="position:absolute;top:2px;left:{{ it.togX }};width:14px;height:14px;border-radius:50%;background:{{ it.togK }}"></span></span>
+                <span style="display:{{ it.slS }};flex:1;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--ac) {{ it.slV }},var(--bd) {{ it.slV }});position:relative;min-width:60px"><span style="position:absolute;left:{{ it.slV }};top:-6px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--tx)"></span></span>
+                <span style="display:{{ it.tagS }};font-size:10px;font-weight:600;color:var(--le);border:1px solid var(--le);padding:0 5px;border-radius:999px;white-space:nowrap">{{ it.tag }}</span>
+              </div>
+            </sc-for></div>
+            <div style="display:{{ bk.noteS }};font-size:11.5px;line-height:17px;color:{{ bk.noteC }};background:{{ bk.noteBg }};padding:{{ bk.notePad }};border-radius:8px">{{ bk.note }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="position:relative;display:flex;align-items:center;gap:8px;padding:12px 18px;border-top:1px solid var(--bd);flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--mu);flex:1;min-width:160px">{{ footNote }}</span>
+      <span style="height:36px;padding:0 14px;border-radius:9px;display:flex;align-items:center;gap:6px;border:1px solid var(--bd);font-size:13px;background:{{ copyBg }}">Copy ▾</span>
+      <span style="height:36px;padding:0 16px;border-radius:9px;display:flex;align-items:center;gap:8px;background:var(--ac);color:var(--af);font-weight:600;font-size:13px;opacity:{{ dlOp }}"><svg width="16" height="16" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><sc-for list="{{ dlG }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg>{{ dlL }}</span>
+      <div style="display:{{ copyS }};position:absolute;right:{{ copyR }};bottom:56px;width:230px;padding:6px;border-radius:12px;background:var(--sf2);border:1px solid var(--bd);box-shadow:0 14px 36px rgba(0,0,0,.35);flex-direction:column">
+        <sc-for list="{{ copyItems }}" as="c"><div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:7px;font-size:12.5px;opacity:{{ c.op }};background:{{ c.bg }}"><svg width="16" height="16" viewBox="0 0 24 24" style="stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;color:var(--mu)"><sc-for list="{{ c.g }}" as="p"><path d="{{ p.d }}" style="fill:{{ p.f }};stroke:{{ p.s }}"></path></sc-for></svg><span style="flex:1">{{ c.l }}</span><span style="font-size:11px;color:var(--mu)">{{ c.k }}</span></div></sc-for>
+      </div>
+    </div>
+  </div>
+  <div style="display:{{ toastS }};position:absolute;left:50%;bottom:24px;transform:translateX(-50%);align-items:center;gap:10px;height:40px;padding:0 8px 0 14px;border-radius:999px;background:var(--sf2);border:1px solid var(--bd);font-size:13px;box-shadow:0 10px 26px rgba(0,0,0,.35);white-space:nowrap"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></span>Saved week-3-optics.pdf · 3 pages · 1.8 MB<span style="height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--bd);display:flex;align-items:center">Show in Files</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;ws&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;whiteboard&quot;,&quot;board&quot;,&quot;canvas&quot;,&quot;mermaid&quot;,&quot;architecture&quot;],&quot;default&quot;:&quot;whiteboard&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;rendering&quot;,&quot;toolarge&quot;,&quot;media&quot;,&quot;done&quot;,&quot;copy&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;phone&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { window.__ex = this; if (!window.LUMEN_GLYPHS) { const t = setInterval(() => { if (window.LUMEN_GLYPHS) { clearInterval(t); this.forceUpdate(); } }, 50); setTimeout(() => clearInterval(t), 5000); } }
+  renderVals() {
+    const GL = window.LUMEN_GLYPHS || {};
+    const g = n => (GL[n] || []).map(p => typeof p === 'string' ? { d: p, f: 'none', s: 'currentColor' } : { d: p.d, f: p.fill ? 'currentColor' : 'none', s: p.stroke || (p.fill ? 'none' : 'currentColor') });
+    const P = Object.assign({}, this.props, window.__exOv || {}), ws = P.ws || 'whiteboard', st = P.state || 'normal', ph = !!P.phone;
+    const AC = 'color-mix(in srgb,var(--ac) 18%,transparent)';
+    const it = (o) => ({ tip: o.tip || o.l || '', dir: o.col ? 'column' : 'row', jc: o.col ? 'center' : 'flex-start', gap: o.col ? '3px' : '8px', mh: o.mh || (o.col ? '50px' : '32px'), pad: o.pad || (o.col ? '5px 3px' : '0 8px'), bg: o.on ? AC : 'transparent', bd: o.on ? 'var(--ac)' : (o.bd || 'var(--bd)'), c: o.on ? 'var(--tx)' : (o.c || 'var(--tx)'), op: o.op ?? 1, fs: o.col ? '10.5px' : '12.5px',
+      thS: o.th ? 'block' : 'none', th: o.th || '', thW: o.thW || '18px', thH: o.thH || '18px', gS: o.g ? 'block' : 'none', g: o.g ? g(o.g) : [], gs: o.gs || 17, lS: o.l ? 'block' : 'none', l: o.l || '', lFlex: o.col ? '0 0 auto' : '1', fw: o.on ? 600 : 400, ta: o.col ? 'center' : 'start', subS: o.sub ? 'block' : 'none', sub: o.sub || '',
+      togS: o.tog !== undefined ? 'block' : 'none', togBg: o.tog ? 'var(--ac)' : 'var(--bd)', togX: o.tog ? '14px' : '2px', togK: o.tog ? 'var(--af)' : 'var(--mu)', slS: o.sl ? 'block' : 'none', slV: o.sl || '0%', tagS: o.tag ? 'block' : 'none', tag: o.tag || '' });
+    const B = (o) => ({ h: o.h || '', hS: o.h ? 'flex' : 'none', hr: o.hr || '', hrC: o.hrC || 'var(--mu)', segS: o.seg ? 'flex' : 'none', seg: (o.seg || []).map((l, i) => ({ l, bg: i === (o.segOn || 0) ? 'var(--sf)' : 'transparent', c: i === (o.segOn || 0) ? 'var(--tx)' : 'var(--mu)', fw: i === (o.segOn || 0) ? 600 : 400, sh: i === (o.segOn || 0) ? '0 1px 2px rgba(0,0,0,.2)' : 'none' })),
+      gridS: o.items ? 'grid' : 'none', cols: o.cols || '1fr', gap: o.gap || '4px', items: (o.items || []).map(it), noteS: o.note ? 'block' : 'none', note: o.note || '', noteC: o.noteC || 'var(--mu)', noteBg: o.noteBg || 'transparent', notePad: o.noteBg ? '8px 10px' : '0' });
+    const WS = { whiteboard: ['whiteboard', 'Week 3 · Optics.excalidraw', '.excalidraw'], board: ['board', 'Optics board.excalidraw', '.excalidraw'], canvas: ['canvas', 'Thermo map.canvas', '.canvas'], mermaid: ['mermaid', 'refraction-flow.mermaid', '.mermaid'], architecture: ['diagram', 'Payments platform.canvas', '.lumendiagram'] }[ws];
+    const fmt = P.fmt || (ws === 'architecture' ? 'Mermaid' : ws === 'mermaid' ? 'SVG' : 'PDF');
+    const fmts = [['image', 'PNG'], ['image', 'JPEG'], ['image', 'WebP'], ['vector', 'SVG'], ['pdf', 'PDF'], ['code', 'Source', WS[2]], ['markdown', 'Markdown'], ['mermaid', 'Mermaid', ws === 'whiteboard' || ws === 'board' ? 'best effort' : '']];
+    if (ws === 'architecture') fmts.push(['code', 'Lumen code', '.lumendiagram'], ['diagram', 'draw.io', 'XML'], ['database', 'SQL DDL', 'from ERD'], ['table', 'MD + table', 'components'], ['globe', 'HTML', '', 'Later']);
+    else fmts.push(['globe', 'HTML', '', 'Later']);
+    const frames = ws === 'whiteboard' || ws === 'board';
+    const scopeOn = P.scope ?? (frames ? 3 : 0);
+    const blocks = [
+      B({ h: 'Preset', items: [['present', 'Slides 16:9'], ['pdf', 'A4 print'], ['shape-square', 'Social square'], ['transparent', 'Sticker']].map(([a, l], i) => ({ g: a, l, on: P.preset === i })), cols: ph ? 'repeat(2,1fr)' : 'repeat(4,1fr)' }),
+      B({ h: 'Scope', items: [['board', 'Whole ' + (ws === 'canvas' ? 'canvas' : ws === 'architecture' ? 'diagram' : ws === 'mermaid' ? 'diagram' : 'board')], ['scope-selection', 'Selection', 0, ws === 'mermaid'], ['scope-visible', 'Visible area'], frames ? ['scope-frame', 'Frames · 3'] : ws === 'architecture' ? ['layers', 'Layer / C4 level'] : ['group', 'Groups']].map(([a, l, x, dis], i) => ({ g: a, l, on: i === scopeOn, op: dis ? .4 : 1 })), cols: ph ? 'repeat(2,1fr)' : 'repeat(4,1fr)' }),
+      ...(frames && scopeOn === 3 ? [B({ items: ['Refraction', 'Lenses', 'Mirrors', 'Answers', 'Summary'].map((n, i) => ({ th: 'repeating-linear-gradient(135deg,var(--sf2) 0 4px,var(--bg) 4px 8px)', thW: '100%', thH: '34px', l: (i + 1) + ' ' + n, col: 1, on: [0, 1, 4].includes(i), mh: '56px' })), cols: 'repeat(5,1fr)' })] : []),
+      B({ h: 'Format', items: fmts.map(([a, l, sub, tag]) => ({ g: a, l, sub: ph ? '' : sub, on: l === fmt, tag, op: tag ? .55 : 1, col: 1, mh: '50px' })), cols: ph ? 'repeat(4,1fr)' : 'repeat(6,1fr)' }),
+      ...(fmt === 'PDF' ? [B({ seg: ['One page per frame', 'Single page'], segOn: 0 }), B({ items: [{ l: 'Page', sub: '16:9 ▾' }, { l: 'Orientation', sub: 'Landscape ▾' }, { l: 'Margins', sub: '12 mm ▾' }], cols: '1fr 1fr 1fr' })] : []),
+      ...(fmt === 'Mermaid' ? [B({ h: 'Mermaid kind', seg: ws === 'architecture' ? ['architecture-beta', 'flowchart', 'erDiagram', 'C4', 'block-beta'] : ['flowchart'], segOn: 0, note: ws === 'architecture' ? 'Groups become groups, junctions stay. Positions are not kept; Mermaid lays out by itself.' : 'Best effort: only boxes, diamonds and arrows convert. Ink and images are skipped.', noteBg: 'var(--sf2)' })] : []),
+      ...(['PNG', 'JPEG', 'WebP', 'SVG', 'PDF'].includes(fmt) ? [
+        B({ h: 'Look · scale', seg: ['1×', '2×', '3×', '4×', 'Max px'], segOn: st === 'toolarge' ? 2 : 1 }),
+        B({ seg: ['Transparent', 'Theme', 'Custom', 'Board bg'], segOn: P.bgOn ?? 3 }),
+        B({ items: [{ l: 'Include pattern (dots/grid)', tog: true }, { l: 'Theme', sub: 'Match app ▾' }, { l: 'Padding', sl: '30%', sub: '24 px' }, { l: 'Quality', sl: '85%', sub: fmt === 'JPEG' || fmt === 'WebP' ? '85%' : 'lossless', op: fmt === 'JPEG' || fmt === 'WebP' ? 1 : .45 }], cols: ph ? '1fr' : '1fr 1fr', gap: '4px 12px' }),
+        B({ h: 'Content', items: (ws === 'canvas' ? [{ l: 'Card style', sub: 'As on screen ▾' }, { l: 'Group labels', tog: true }, { l: 'Edge labels', tog: true }, { l: 'Embed scene data', tog: true }] : [{ l: 'Frame names', tog: frames }, { l: 'Hidden layers', tog: false }, { l: 'Media', sub: 'Still frame ▾' }, { l: 'Embed scene data', tog: true }]).concat([{ l: 'File name', sub: 'week-3-optics' }]), cols: ph ? '1fr' : '1fr 1fr', gap: '4px 12px' })] : []),
+      ...(fmt === 'Markdown' || fmt === 'MD + table' ? [B({ h: 'Markdown', items: [{ l: 'Outline of text and links', tog: true }, { l: 'Images as attachments', tog: true }, { l: 'Component table', tog: ws === 'architecture' }, { l: 'Include Mermaid block', tog: true }], cols: '1fr 1fr' })] : [])
+    ];
+    const warn = { toolarge: ['Limited to 3× by the browser for a board this size (10,240 px wide).', 'var(--wa)'], media: ['2 videos and 1 GIF can’t animate in images. They’ll export as a still frame.', 'var(--wa)'] }[st];
+    if (warn) blocks.splice(3, 0, B({ note: warn[0], noteC: warn[1], noteBg: `color-mix(in srgb,${warn[1]} 12%,transparent)` }));
+    // preview art per workspace
+    const T = 'var(--tx)', M = '#9AA0AA';
+    const ART = {
+      whiteboard: [[{ d: 'M30 140 H370', s: M, w: 1.5, da: '6 6' }, { d: 'M200 40 C 225 90, 225 190, 200 230 C 175 190, 175 90, 200 40z', s: '#5CC8C2', w: 2.2 }, { d: 'M40 70 L200 95 L360 200', s: T, w: 2.2 }, { d: 'M40 210 L200 185 L360 80', s: '#E8893A', w: 2.2 }], [[100, 40, '700 26px Caveat', 'Thin lens']]],
+      board: [[{ d: 'M20 30 h170 v90 h-170z', s: M, w: 1.2, f: 'rgba(120,120,120,.08)' }, { d: 'M220 30 h160 v90 h-160z', s: M, w: 1.2 }, { d: 'M30 160 h110 v70 h-110z', s: 'none', f: '#fff3bf' }, { d: 'M190 75 C 205 75, 205 75, 220 75', s: T, w: 2 }, { d: 'M250 150 C 300 140, 330 170, 360 200', s: '#5CC8C2', w: 2.2 }], [[105, 60, '600 15px Inter', 'Snell’s law'], [300, 60, '600 13px Inter', 'flowchart'], [85, 195, '600 18px Caveat', 'Ask Dr. Lim']]],
+      canvas: [[{ d: 'M30 40 h130 v60 h-130z', s: '#E5534B', w: 1.6, f: 'rgba(229,83,75,.14)' }, { d: 'M240 40 h130 v60 h-130z', s: '#39C5CF', w: 1.6, f: 'rgba(57,197,207,.14)' }, { d: 'M135 160 h130 v60 h-130z', s: '#57AB5A', w: 1.6, f: 'rgba(87,171,90,.14)' }, { d: 'M160 70 H240', s: T, w: 1.6 }, { d: 'M95 100 C 95 140, 135 150, 150 160', s: T, w: 1.6 }], [[95, 75, '600 13px Inter', 'Entropy'], [305, 75, '600 13px Inter', '2nd law'], [200, 195, '600 13px Inter', 'Heat engines']]],
+      mermaid: [[{ d: 'M20 105 h100 v40 h-100z', s: T, w: 1.5 }, { d: 'M200 85 l40 40 -40 40 -40 -40z', s: T, w: 1.5 }, { d: 'M300 60 h80 v36 h-80z', s: T, w: 1.5 }, { d: 'M300 155 h80 v36 h-80z', s: T, w: 1.5, da: '5 4' }, { d: 'M120 125 H160 M240 125 C 270 125, 270 78, 300 78 M240 125 C 270 125, 270 173, 300 173', s: T, w: 1.5 }], [[70, 130, '500 12px Inter', 'Incident'], [200, 129, '500 11px Inter', 'Boundary'], [340, 83, '500 11px Inter', 'Refracted'], [340, 178, '500 11px Inter', 'Reflected']]],
+      architecture: [[{ d: 'M20 20 h360 v210 h-360z', s: '#E8893A', w: 1.3, da: '6 4' }, { d: 'M40 50 h200 v160 h-200z', s: '#7AA2F7', w: 1.3, da: '6 4' }, { d: 'M60 90 h70 v44 h-70z M150 90 h70 v44 h-70z M280 70 h80 v44 h-80z M280 150 h80 v44 h-80z', s: T, w: 1.5, f: 'rgba(130,130,130,.1)' }, { d: 'M130 112 H150 M220 112 C 250 112, 250 92, 280 92 M220 112 C 250 112, 250 172, 280 172', s: T, w: 1.4 }], [[95, 117, '500 11px Inter', 'API'], [185, 117, '500 11px Inter', 'Worker'], [320, 97, '500 11px Inter', 'Postgres'], [320, 177, '500 11px Inter', 'Queue'], [80, 42, '600 10px Inter', 'VPC'], [44, 14, '600 10px Inter', 'AWS']]]
+    }[ws];
+    const art = ART[0].map(a => ({ d: a.d, s: a.s, w: a.w || 1.5, f: a.f || 'none', da: a.da || 'none' }));
+    const darkArt = (P.bgOn ?? 3) !== 0;
+    const pc = (x, y) => ({ x: 'calc(18px + (100% - 36px) * ' + (x / 400) + ')', y: 'calc(18px + (100% - 36px) * ' + (y / 250) + ')' });
+    const artTxt = ART[1].map(([x, y, f, t]) => ({ ...pc(x, y), f, t, c: T }));
+    const fmtSrc = ['Source', 'Markdown', 'Mermaid', 'Lumen code', 'draw.io', 'SQL DDL', 'MD + table'].includes(fmt);
+    const copyItems = [['copy-image', 'Copy PNG', '⇧⌘C'], ['vector', 'Copy SVG', ''], ['code', 'Copy source', ''], ['markdown', 'Copy as Markdown', ''], ['link', 'Copy link', 'shared', ws === 'mermaid']].map(([a, l, k, dis]) => ({ g: g(a), l, k, op: dis ? .4 : 1, bg: 'transparent' }));
+    const est = { PNG: '≈ 2.4 MB', JPEG: '≈ 640 KB', WebP: '≈ 410 KB', SVG: '≈ 180 KB', PDF: frames ? '3 pages · ≈ 1.8 MB' : '1 page · ≈ 600 KB' }[fmt] || '≈ 6 KB text';
+    return {
+      wsG: g(WS[0]), wsName: WS[1], dir: ph ? 'column' : 'row', pvFlex: ph ? '0 0 auto' : '1.1', opFlex: ph ? '1' : '1', pvSep: ph ? 'none' : '1px solid var(--bd)', pvSepB: ph ? '1px solid var(--bd)' : 'none', pvMin: ph ? '200px' : '0',
+      mL: ph ? '0' : '150px', mR: ph ? '0' : '150px', mT: ph ? '40px' : '36px', mB: ph ? '0' : '36px', mRad: ph ? '20px 20px 0 0' : '14px',
+      pvBg: (P.bgOn === 0) ? 'conic-gradient(var(--sf2) 25%,var(--bg) 0 50%,var(--sf2) 0 75%,var(--bg) 0) 0 0/16px 16px' : 'var(--sf2)',
+      artW: fmtSrc ? '70%' : '86%', artAR: fmt === 'PDF' || P.preset === 0 ? '16/9' : P.preset === 2 ? '1/1' : '16/10', artBg: (P.bgOn === 0) ? 'transparent' : (P.bgOn === 1 ? 'var(--bg)' : '#0F1115'), artPat: (P.bgOn ?? 3) === 3 ? 'radial-gradient(rgba(154,160,170,.25) 1.1px,transparent 1.3px)' : 'none', artPad: '18px',
+      art: fmtSrc ? [] : art, artTxt: fmtSrc ? [{ ...pc(200, 40), f: "500 13px 'JetBrains Mono'", t: fmt === 'Mermaid' ? 'architecture-beta' : fmt === 'SQL DDL' ? 'CREATE TABLE payments (' : '# ' + WS[1], c: 'var(--tx)' }, { ...pc(200, 70), f: "400 12px 'JetBrains Mono'", t: fmt === 'Mermaid' ? 'group aws(cloud)[AWS]' : '…', c: 'var(--mu)' }, { ...pc(200, 95), f: "400 12px 'JetBrains Mono'", t: fmt === 'Mermaid' ? 'service api(server)[API] in vpc' : '', c: 'var(--mu)' }, { ...pc(200, 120), f: "400 12px 'JetBrains Mono'", t: fmt === 'Mermaid' ? 'api:R --> L:db' : '', c: 'var(--mu)' }] : artTxt.map(t => ({ ...t, c: darkArt ? '#E8E6E1' : 'var(--tx)' })),
+      frameLblS: frames && !fmtSrc ? 'block' : 'none', busyS: st === 'rendering' ? 'flex' : 'none',
+      dims: fmtSrc ? 'Text file' : (st === 'toolarge' ? '10,240 × 6,400 px (3×)' : '3,840 × 2,160 px'), est,
+      blocks, footNote: st === 'rendering' ? 'Rendering off the main thread; you can keep working.' : 'Remembers these settings for ' + ws + 's.',
+      copyS: st === 'copy' ? 'flex' : 'none', copyR: '150px', copyItems, copyBg: st === 'copy' ? 'var(--sf2)' : 'transparent', dlG: g('export'), dlL: st === 'rendering' ? 'Rendering…' : 'Download', dlOp: st === 'rendering' ? .6 : 1, toastS: st === 'done' ? 'flex' : 'none'
+    };
+  }
+}
+</script>
+</body>
+</html>

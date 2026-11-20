@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#202227;-webkit-font-smoothing:antialiased}a{color:#5CC8C2}a:hover{color:#8EDDD8}</style>
+</helmet>
+<div style="padding:80px;display:flex;flex-direction:column;gap:110px;font-family:Inter,system-ui,sans-serif;color:#E8E6E1;width:max-content;min-height:100vh;background:#202227;font-size:13px">
+  <div style="display:flex;align-items:center;gap:16px">
+    <dc-import name="LumenMark" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+    <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:26px;font-weight:600;letter-spacing:-.04em">lumen <span style="color:#7D7A73;font-weight:450;letter-spacing:-.01em">/ 30 Sidebars, tags &amp; spaces</span> <span style="font:600 11px Inter;letter-spacing:.08em;color:#1A1206;background:#F2A93B;padding:3px 8px;border-radius:6px;vertical-align:middle">ROUND 6</span></div><div style="font-size:14px;color:#9A9890">The app sidebar, the note list, the space switcher, tags and note history — redone with drawn glyphs only. Every section header collapses, shows a count, and has + on hover.</div></div>
+  </div>
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="4">
+    <section style="display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><div style="font:500 12px 'JetBrains Mono',monospace;color:#F25C9A;letter-spacing:.08em">{{ sec.k }}</div><h2 style="margin:0;font-size:32px;font-weight:650;letter-spacing:-.02em;color:#ECE9E2">{{ sec.t }}</h2><p style="margin:0;color:#9A9890;font-size:15px;line-height:24px">{{ sec.d }}</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+        <sc-for list="{{ sec.frames }}" as="f" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font:500 13px 'JetBrains Mono',monospace;color:#B9B5AC;white-space:nowrap"><span style="color:#F25C9A">{{ f.id }}</span> {{ f.l }}</div>
+            <div style="--bg:{{ f.t.bg }};--sf:{{ f.t.sf }};--sf2:{{ f.t.sf2 }};--bd:{{ f.t.bd }};--tx:{{ f.t.tx }};--mu:{{ f.t.mu }};--ac:{{ f.t.ac }};--af:{{ f.t.af }};--ln:{{ f.t.ln }};--ok:{{ f.t.ok }};--wa:{{ f.t.wa }};--da:{{ f.t.da }};--in:{{ f.t.inn }};--le:{{ f.t.le }};width:{{ f.w }};height:{{ f.h }};position:relative;overflow:hidden;border-radius:{{ f.r }};background:var(--bg)">
+              <dc-import name="SideNav" view="{{ f.v }}" rail="{{ f.rail }}" noPaths="{{ f.np }}" phone="{{ f.ph }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+              <div style="display:{{ f.scrimS }};position:absolute;left:248px;right:0;top:0;bottom:0;background:rgba(5,6,8,.5)"></div>
+            </div>
+            <div style="max-width:{{ f.w }};font-size:13px;line-height:20px;color:#CFCBC3;display:{{ f.nS }};gap:10px"><b style="color:#F25C9A">·</b><span>{{ f.n }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const L = { bg:'#0F1115', sf:'#161A21', sf2:'#1D222B', bd:'#2A303B', tx:'#E8E6E1', mu:'#9AA0AA', ac:'#F2A93B', af:'#1A1206', ln:'#5CC8C2', ok:'#6BCB8B', wa:'#E8B34A', da:'#EF6B6B', inn:'#7AA2F7', le:'#B48EF0' };
+    const P = { bg:'#FAF8F3', sf:'#FFFFFF', sf2:'#F2EFE7', bd:'#E4DFD3', tx:'#1F1D1A', mu:'#6A655C', ac:'#B45F0E', af:'#FFFFFF', ln:'#0F7C78', ok:'#1F8A4C', wa:'#A86A00', da:'#C42B2B', inn:'#2F5BD3', le:'#7A4BD1' };
+    const F = (id,l,v,t,n,o={}) => ({ id, l, v, t, n, nS:n?'flex':'none', rail:!!o.rail, np:!!o.np, ph:!!o.ph, scrimS:o.ph?'block':'none', w:o.ph?'412px':o.w||'1440px', h:o.ph?'915px':'900px', r:o.ph?'28px':'12px' });
+    const sections = [
+      { k:'R6 · SPACE SWITCHER', t:'Space switcher, redone from your screenshot', d:'Drawn glyph tiles instead of emoji, grouped by kind with counts, pinned spaces with ⌘1–9, long groups fold to “Show all”, and Accounts at the bottom with initials avatars, a check on the current one and Switch on the others.', frames:[
+        F('R6-30A','Switcher open · Lamplight','switcher',L,'Search covers spaces and accounts. Archived stays reachable but quiet. New space ⌘N.'),
+        F('R6-30B','Switcher open · Paper','switcher',P,''),
+        F('R6-30C','Switcher from the collapsed rail','switcher',L,'Rail shows only the current space tile; the switcher opens to its right.',{rail:1})
+      ]},
+      { k:'R6 · APP SIDEBAR', t:'App sidebar', d:'Nav with live counts (Review count in violet), Learning paths, Folders tree with colour dots, Smart folders with their own glyphs, nested Tags, Recent, Trash. Sync and settings stay in the footer.', frames:[
+        F('R6-30D','Expanded · note list with one filter chip','notes',L,'Selected note has an amber edge. Pinned notes group on top. Tags in each row: max 3 chips, then +N.'),
+        F('R6-30E','Expanded · Paper','notes',P,''),
+        F('R6-30F','No learning paths yet','notes',L,'The section stays visible with a one-line explanation and New path.',{np:1}),
+        F('R6-30G','Dragging a note into a folder','drag',L,'Target folder gets an amber outline; an amber line marks the exact slot.'),
+        F('R6-30H','Folder ⋯ menu with colour row · Paper','menu',P,''),
+        F('R6-30I','Collapsed rail','notes',L,'Icons only. Review keeps a small violet count badge; everything else is quiet.',{rail:1})
+      ]},
+      { k:'R6 · NOTE LIST', t:'Note list: filter, empty, multi-select', d:'', frames:[
+        F('R6-30J','Filter matches nothing','empty',L,'Exactly what you saw, redesigned: the filter is shown as chips, the empty state names the filter and the space, with Clear filter as the one action and Search all spaces as the second.'),
+        F('R6-30K','Filter matches nothing · Paper','empty',P,''),
+        F('R6-30L','Multi-select + bulk bar','select',L,'Checkboxes appear only in select mode. Bottom bar: Tag, Move, Delete.')
+      ]},
+      { k:'R6 · TAGS', t:'Tags everywhere', d:'Nested tags (#ml/llm), colour from the 6 presets, counts, pin, rename, merge, move under, save as smart folder.', frames:[
+        F('R6-30M','Tag page · #ml/llm','tag',L,'Child tags as pills, notes with status, “Often used together” bars, colour picker.'),
+        F('R6-30N','Tag page · Paper','tag',P,''),
+        F('R6-30O','Tag ⋯ menu','tagmenu',L,''),
+        F('R6-30P','Tag picker in a note · create','picker',P,'Fuzzy match on the whole path; ⇧↵ creates the typed tag.')
+      ]},
+      { k:'R6 · HISTORY', t:'Note history panel', d:'', frames:[
+        F('R6-30Q','Versions','history',L,'Grouped by day; device and +/− characters per version; Restore as new version never overwrites.'),
+        F('R6-30R','Versions · Paper','history',P,'')
+      ]},
+      { k:'R6 · PHONE', t:'Phone · sidebar as a drawer', d:'Swipe from the left edge or tap the space name. Same sections; rows 44 px.', frames:[
+        F('R6-30S','Drawer','notes',L,'',{ph:1}), F('R6-30T','Drawer · Paper','notes',P,'',{ph:1}), F('R6-30U','Drawer · no paths','notes',L,'',{ph:1,np:1})
+      ]}
+    ];
+    return { sections };
+  }
+}
+</script>
+</body>
+</html>

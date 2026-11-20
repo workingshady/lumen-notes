@@ -15,12 +15,12 @@ import { getFaults } from "./sim/faults";
 export type ConvertKind = "text" | "math" | "mermaid" | "shapes-hint";
 export type ArchSource = "describe" | "code" | "openapi" | "compose" | "k8s" | "terraform" | "sql" | "rfc";
 export type ArchType = "architecture" | "flowchart" | "sequence" | "erd" | "c4";
-export type AiErrorCode = "offline" | "aborted" | "timeout" | "limit" | "unreadable" | "too-large" | "disabled" | "failed";
+export type AiErrorCode = "offline" | "aborted" | "timeout" | "limit" | "unreadable" | "too-large" | "disabled" | "licence" | "failed";
 
 export class AiConvertError extends Error { constructor(msg: string, public code: AiErrorCode, public status = 0) { super(msg); } }
 
 export interface Span { start: number; end: number; alts: string[] }
-export interface ConvertResult { text: string; spans: Span[]; kind: ConvertKind; model: string; neurons: number }
+export interface ConvertResult { text: string; spans: Span[]; kind: ConvertKind; model: string; neurons: number; cached?: boolean }
 export interface ReviewResult {
   summary: string;
   spof: string[];
@@ -46,7 +46,7 @@ async function call<T>(path: string, json: unknown, signal?: AbortSignal): Promi
     if (timedOut) throw new AiConvertError("The AI took too long. Try a smaller selection.", "timeout");
     if (ctl.signal.aborted || (e as Error)?.name === "AbortError") throw new AiConvertError("Cancelled", "aborted");
     if (e instanceof ApiError) {
-      const code: AiErrorCode = e.status === 429 || /limit reached|quota/i.test(e.message) ? "limit" : e.status === 422 ? "unreadable" : e.status === 413 ? "too-large" : e.status === 501 || e.status === 403 ? "disabled" : e.status === 504 ? "timeout" : "failed";
+      const code: AiErrorCode = e.status === 429 || /limit reached|quota/i.test(e.message) ? "limit" : e.status === 422 ? "unreadable" : e.status === 413 ? "too-large" : e.status === 424 ? "licence" : e.status === 501 || e.status === 403 ? "disabled" : e.status === 504 ? "timeout" : "failed";
       throw new AiConvertError(e.message, code, e.status);
     }
     if (!isOnline() || e instanceof TypeError) throw new AiConvertError("You’re offline. Converting needs your Cloudflare account; your ink is safe.", "offline");
@@ -57,22 +57,40 @@ async function call<T>(path: string, json: unknown, signal?: AbortSignal): Promi
   }
 }
 
-/** Blob → PNG data URI, shrunk to ≤1600 px on the long side when large (uses createImageBitmap: decoding is off the main thread). */
-export async function blobToDataUri(blob: Blob, maxSide = 1600): Promise<string> {
-  let src = blob;
+/** Sent to the model: long side ≤1280 px (Workers AI documents no image limit; the server caps the body at ~1.5 MB). */
+export const MAX_SIDE = 1280;
+const TARGET_BYTES = 600_000;
+
+/**
+ * Blob → data URI right-sized for the vision model: flattened on white, long side ≤1280 px, JPEG stepped down in quality
+ * (then size) until it is under ~600 KB. Small PNGs already within the limits go through untouched. Decoding uses
+ * createImageBitmap (off the main thread). Throws AiConvertError "too-large" when nothing fits.
+ */
+export async function blobToDataUri(blob: Blob, maxSide = MAX_SIDE): Promise<string> {
+  const read = (b: Blob) => new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(r.error); r.readAsDataURL(b); });
+  let bmp: ImageBitmap | null = null;
+  try { bmp = await createImageBitmap(blob); } catch { /* not decodable here: send as is, the server validates */ }
+  if (!bmp) {
+    if (blob.size > 1_400_000) throw new AiConvertError("That selection is too large. Try a smaller one.", "too-large");
+    return read(blob);
+  }
   try {
-    if (blob.size > 600_000 || blob.type !== "image/png") {
-      const bmp = await createImageBitmap(blob);
-      const k = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+    if (blob.type === "image/png" && blob.size <= TARGET_BYTES && Math.max(bmp.width, bmp.height) <= maxSide) return await read(blob);
+    let side = maxSide;
+    for (let step = 0; step < 4; step++, side = Math.round(side * 0.75)) {
+      const k = Math.min(1, side / Math.max(bmp.width, bmp.height));
       const w = Math.max(1, Math.round(bmp.width * k)), h = Math.max(1, Math.round(bmp.height * k));
       const cv = typeof OffscreenCanvas !== "undefined" ? new OffscreenCanvas(w, h) : Object.assign(document.createElement("canvas"), { width: w, height: h });
       const cx = cv.getContext("2d") as CanvasRenderingContext2D;
+      cx.fillStyle = "#fff"; cx.fillRect(0, 0, w, h);
       cx.drawImage(bmp, 0, 0, w, h);
-      bmp.close?.();
-      src = "convertToBlob" in cv ? await (cv as OffscreenCanvas).convertToBlob({ type: "image/png" }) : await new Promise<Blob>((res, rej) => (cv as HTMLCanvasElement).toBlob((b) => (b ? res(b) : rej(new Error("toBlob"))), "image/png"));
+      for (const q of [0.88, 0.75, 0.6]) {
+        const out = "convertToBlob" in cv ? await (cv as OffscreenCanvas).convertToBlob({ type: "image/jpeg", quality: q }) : await new Promise<Blob>((res, rej) => (cv as HTMLCanvasElement).toBlob((x) => (x ? res(x) : rej(new Error("toBlob"))), "image/jpeg", q));
+        if (out.size <= TARGET_BYTES) return await read(out);
+      }
     }
-  } catch { src = blob; }
-  return await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(r.error); r.readAsDataURL(src); });
+    throw new AiConvertError("That selection is too large. Try a smaller one.", "too-large");
+  } finally { bmp.close?.(); }
 }
 
 export async function convertImage(image: Blob, kind: ConvertKind, opts: { signal?: AbortSignal } = {}): Promise<ConvertResult> {
