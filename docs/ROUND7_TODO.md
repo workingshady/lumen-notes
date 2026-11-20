@@ -36,7 +36,7 @@ Tick the boxes as work lands. The newest status sits at the top of `docs/CHECKPO
   - [ ] **Export and canvas:** 42 export, 43 canvas.
   - [ ] **Architecture:** 46, 47, 48.
 
-## Stage 2: per-feature web research and enhancement: running (docs/research/r7-whiteboard-features.md, r7-arch-canvas-export-ai.md)
+## Stage 2: per-feature web research: DONE (docs/research/r7-whiteboard-features.md, r7-arch-canvas-export-ai.md); enhancements go to stage 5
 For each feature: search for current best practice and benchmark apps (Excalidraw, tldraw, Miro, FigJam, Eraser, Obsidian, Goodnotes, Notion), then list fixes, improvements and additions in logic, UX, performance and edge cases.
 - [ ] Whiteboard: pens / ink, palettes, layers, presentation, lasso + handwriting
 - [ ] Board cards + conversions
@@ -48,7 +48,7 @@ For each feature: search for current best practice and benchmark apps (Excalidra
 - [ ] AI convert backend: vision model formats, limits, retries
 - [ ] Sidebar modes + note list (shortcuts, multi-select)
 
-## Stage 3: backend, logic and database review: running (docs/research/r7-backend-review.md)
+## Stage 3: backend review: DONE (docs/research/r7-backend-review.md). Critical fixes running: poison-pill sync, dirty-flag data loss, pull paging, storage quota + versions retention, attachment XSS headers, unfurl auth, per-account AI meter, R2 prefixes
 - [ ] **Data size:** D1 row and string size limits vs big whiteboards and boards; chunking or R2 for large scenes if needed (+ a migration).
 - [ ] **Sync:** conflicts on boards and diagrams (merge per element vs last-write-wins); offline queue; backoff.
 - [ ] **Attachments:** R2 / D1 files, Range, cache headers, cleanup of unused attachments.
