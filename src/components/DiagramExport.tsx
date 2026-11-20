@@ -69,9 +69,9 @@ function BlockView({ b }: { b: Block }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
       {b.h && <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--muted)" }}><span>{b.h}</span></div>}
       {b.seg && (
-        <div role="tablist" style={{ display: "flex", padding: 2, borderRadius: 8, background: "var(--surface-2)", gap: 2 }}>
+        <div role="tablist" style={{ display: "flex", flexWrap: "wrap", padding: 2, borderRadius: 8, background: "var(--surface-2)", gap: 2 }}>
           {b.seg.map((l, i) => { const on = i === (b.segOn ?? 0); return (
-            <button key={l} role="tab" aria-selected={on} onClick={() => b.segPick?.(i)} style={{ flex: 1, height: 28, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, background: on ? "var(--surface)" : "transparent", color: on ? "var(--text)" : "var(--muted)", fontWeight: on ? 600 : 400, whiteSpace: "nowrap", boxShadow: on ? "0 1px 2px rgba(0,0,0,.2)" : "none", padding: "0 6px", border: 0, transition: "background .14s var(--ease),color .14s var(--ease)" }}>{l}</button>
+            <button key={l} role="tab" aria-selected={on} onClick={() => b.segPick?.(i)} style={{ flex: b.seg!.length > 5 ? "1 0 auto" : 1, height: 28, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, background: on ? "var(--surface)" : "transparent", color: on ? "var(--text)" : "var(--muted)", fontWeight: on ? 600 : 400, whiteSpace: "nowrap", boxShadow: on ? "0 1px 2px rgba(0,0,0,.2)" : "none", padding: "0 6px", border: 0, transition: "background .14s var(--ease),color .14s var(--ease)" }}>{l}</button>
           ); })}
         </div>
       )}
@@ -82,6 +82,11 @@ function BlockView({ b }: { b: Block }) {
 }
 
 const SCALES: ExportOptions["scale"][] = [1, 2, 3, 4, "max"];
+/** Mermaid kind ids → the label the design shows. */
+const MK_LABEL: Record<string, string> = { c4: "C4", sequence: "sequence", state: "state", class: "class" };
+/** Shortcut label for the platform (⇧⌘C on Apple, Ctrl+Shift+C elsewhere). */
+export const MAC = /Mac|iPhone|iPad/.test(navigator.platform);
+export const shortcut = (k: string) => (MAC ? `⇧⌘${k}` : `Ctrl+Shift+${k}`);
 const PRESETS: { g: string; l: () => string; set: Partial<ExportOptions> }[] = [
   { g: "present", l: () => t("Slides 16:9"), set: { format: "png", scale: 2, aspect: 16 / 9, padding: 32, background: "board", pdfPage: "16:9", pdfOrient: "landscape" } },
   { g: "pdf", l: () => t("A4 print"), set: { format: "pdf", scale: 2, aspect: 0, pdfPage: "a4", pdfOrient: "portrait", pdfMargin: 12, background: "theme", theme: "default", pattern: false } },
@@ -147,7 +152,9 @@ export function DiagramExport() {
       await downloadBlob(r.blob, r.file);
       const url = URL.createObjectURL(r.blob);
       setTimeout(() => URL.revokeObjectURL(url), 120000);
-      toast(`${t("Saved")} ${r.file}${r.pages ? ` · ${t("{n} pages", { n: r.pages })}` : ""} · ${fmtBytes(r.blob.size).replace("≈ ", "")}`, { label: t("Open"), run: () => { window.open(url, "_blank"); } });
+      const count = r.pages ? ` · ${r.file.endsWith(".zip") ? t("{n} files", { n: r.pages }) : r.pages === 1 ? t("1 page") : t("{n} pages", { n: r.pages })}` : "";
+      // browsers can't open the Downloads folder: "Show in Files" opens the saved file itself
+      toast(`${t("Saved")} ${r.file}${count} · ${fmtBytes(r.blob.size).replace("≈ ", "")}`, { label: t("Show in Files"), run: () => { window.open(url, "_blank"); } }, { icon: "check" });
     } catch (e) { setErr((e as Error).message); toast((e as Error).message); }
     finally { setProg(null); }
   };
@@ -193,7 +200,7 @@ export function DiagramExport() {
       { g: "pdf", l: "PDF", on: f === "pdf", col: true, mh: "50px", op: imgOk("pdf") ? 1 : 0.4, onClick: () => set({ format: "pdf" }) },
       { g: "code", l: t("Source"), sub: phone ? "" : job.sourceExt ?? "", on: f === "source", col: true, mh: "50px", op: job.source ? 1 : 0.4, onClick: () => set({ format: "source" }) },
       { g: "markdown", l: "Markdown", on: f === "markdown", col: true, mh: "50px", op: job.markdown ? 1 : 0.4, onClick: () => set({ format: "markdown" }) },
-      { g: "mermaid", l: "Mermaid", sub: phone || !(kind === "whiteboard" || kind === "board" || kind === "canvas") ? "" : t("best effort"), on: f === "mermaid", col: true, mh: "50px", op: job.mermaid ? 1 : 0.4, onClick: () => set({ format: "mermaid" }) },
+      { g: "mermaid", l: "Mermaid", sub: phone || !(kind === "whiteboard" || kind === "board") ? "" : t("best effort"), on: f === "mermaid", col: true, mh: "50px", op: job.mermaid ? 1 : 0.4, onClick: () => set({ format: "mermaid" }) },
       ...(job.formats ?? []).map((p): Cell => ({ g: p.glyph, l: p.label, sub: phone ? "" : p.sub, on: f === p.id, col: true, mh: "50px", onClick: () => set({ format: p.id }) })),
       { g: "globe", l: "HTML", tag: t("Later"), col: true, mh: "50px", op: 0.55, tip: t("Interactive read-only HTML export is planned") },
     ];
@@ -220,7 +227,7 @@ export function DiagramExport() {
         { l: t("Margins"), sub: `${o.pdfMargin} mm ▾`, pick: { value: String(o.pdfMargin), options: [0, 6, 12, 20].map((n) => [String(n), `${n} mm`] as [string, string]), onChange: (v) => set({ pdfMargin: +v }) } },
       ] });
     const nameCell: Cell = { l: t("File name"), input: <input value={o.fileName} onChange={(e) => set({ fileName: e.target.value })} onClick={(e) => e.stopPropagation()} aria-label={t("File name")} dir="ltr" style={{ flex: 1, minWidth: 0, textAlign: "end", background: "transparent", border: 0, outline: 0, color: "var(--muted)", fontSize: 10.5, fontFamily: "inherit" }} /> };
-    if (f === "mermaid") blocks.push({ h: t("Mermaid kind"), seg: job.mermaidKinds ?? ["flowchart"], segOn: Math.max(0, (job.mermaidKinds ?? ["flowchart"]).indexOf(o.mermaidKind)), segPick: (i) => set({ mermaidKind: (job.mermaidKinds ?? ["flowchart"])[i] }), note: job.mermaidNote ?? (kind === "architecture" ? t("Groups become groups, junctions stay. Positions are not kept; Mermaid lays out by itself.") : t("Best effort: only boxes, diamonds and arrows convert. Ink and images are skipped.")), noteBg: "var(--surface-2)" });
+    if (f === "mermaid") blocks.push({ h: t("Mermaid kind"), seg: (job.mermaidKinds ?? ["flowchart"]).map((k) => MK_LABEL[k] ?? k), segOn: Math.max(0, (job.mermaidKinds ?? ["flowchart"]).indexOf(o.mermaidKind)), segPick: (i) => set({ mermaidKind: (job.mermaidKinds ?? ["flowchart"])[i] }), note: job.mermaidNote ?? (kind === "architecture" ? t("Groups become groups, junctions stay. Positions are not kept; Mermaid lays out by itself.") : t("Best effort: only boxes, diamonds and arrows convert. Ink and images are skipped.")), noteBg: "var(--surface-2)" });
     if (isImg) {
       const themes: [string, string][] = [["app", t("Match app")], ["default", t("Paper")], ["dark", t("Lamplight")], ...(kind === "mermaid" ? [["neutral", t("Neutral")], ["forest", t("Forest")]] as [string, string][] : [])];
       const themeL = themes.find((x) => x[0] === o.theme)?.[1] ?? "";
@@ -264,11 +271,11 @@ export function DiagramExport() {
   const f = o.format;
   const textFmt = !view.isImg;
   const transparent = view.isImg && !resolveBg(job, o);
-  const dims = textFmt ? t("Text file") : pv && pv.width ? `${fmtNum(pv.width)} × ${fmtNum(pv.height)} px${f !== "svg" && o.scale !== 1 ? ` (${fmtNum(Math.round(pv.scale * 10) / 10)}×)` : ""}${f === "svg" ? ` · ${t("vector")}` : ""}` : t("Rendering…");
+  const dims = textFmt ? t("Text file") : pv && pv.width ? `${fmtNum(Math.round(pv.width))} × ${fmtNum(Math.round(pv.height))} px${f !== "svg" && o.scale !== 1 ? ` (${fmtNum(Math.round(pv.scale * 10) / 10)}×)` : ""}${f === "svg" ? ` · ${t("vector")}` : ""}` : t("Rendering…");
   const est = !pv ? "" : textFmt ? `${fmtBytes(pv.bytes)} ${t("text")}` : f === "pdf" ? `${t("{n} pages", { n: pv.count })} · ${fmtBytes(pv.bytes)}` : pv.count > 1 ? `${t("{n} files", { n: pv.count })} · ${fmtBytes(pv.bytes)}` : fmtBytes(pv.bytes);
   const lines = (pv?.text ?? "").split("\n").slice(0, 8);
   const copyItems: [string, string, string, () => void, boolean][] = [
-    ["copy-image", t("Copy PNG"), "⇧⌘C", () => void copy("png"), !job.imageFormats || job.imageFormats.includes("png")],
+    ["copy-image", t("Copy PNG"), shortcut("C"), () => void copy("png"), !job.imageFormats || job.imageFormats.includes("png")],
     ["vector", t("Copy SVG"), "", () => void copy("svg"), !job.imageFormats || job.imageFormats.includes("svg")],
     ["code", t("Copy source"), "", () => void copy("source"), !!job.source],
     ["markdown", t("Copy as Markdown"), "", () => void copy("markdown"), !!job.markdown],

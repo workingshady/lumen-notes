@@ -113,7 +113,7 @@ export function PenPanel({ api, dark, phone, onClose, docked }: { api: WbAPI | n
         <div className="grid items-center gap-1" style={{ gridTemplateColumns: "2.4fr repeat(5,1fr)" }}>
           <span className="flex min-h-[24px] items-center px-2"><Slider value={toK(p.width)} min={0} max={1} step={0.005} onChange={(k) => set({ width: fromK(k) })} label={t("Thickness")} /></span>
           {THICK_PRESETS.map((w) => (
-            <button key={w} type="button" title={`${w} px`} aria-label={`${w} px`} onClick={() => set({ width: w })} className="flex min-h-[26px] items-center justify-center rounded-full border border-transparent hover:bg-surface-2" style={p.width === w ? ON_STYLE : undefined}>
+            <button key={w} type="button" title={`${w} px`} aria-label={`${w} px`} onClick={() => set({ width: w })} className="flex min-h-[26px] items-center justify-center rounded-full border border-transparent hover:bg-surface-2" style={THICK_PRESETS.reduce((b, x) => (Math.abs(x - p.width) < Math.abs(b - p.width) ? x : b)) === w ? ON_STYLE : undefined}>
               <span className="box-border shrink-0 rounded-[4px] border border-line bg-ink" style={{ width: Math.max(4, w), height: Math.max(4, w) }} />
             </button>
           ))}

@@ -18,6 +18,7 @@ import { ar as r6b } from "./ar/r6b"; // round 6 part B: settings, sidebar, big 
 import { ar as organize } from "./ar/organize";
 import { ar as activity } from "./ar/activity"; // note activity log (History › Activity); first, so existing keys win
 import { ar as exportAr } from "./ar/export";
+import { ar as r7ArchFix } from "./ar/r7-arch-fix";
 import { ar as canvas } from "./ar/canvas"; // canvas undo/redo, editing, shortcuts
 import { ar as canvasOptions } from "./ar/canvas-options"; // canvas options (round 7)
 import { ar as visualChooser } from "./ar/visual-chooser"; // round 7: New visual chooser + templates gallery
@@ -25,6 +26,7 @@ import { ar as aiVisual } from "./ar/ai-visual"; // round 7: AI review sheet + a
 import { ar as archAiShare } from "./ar/arch-ai-share"; // round 7 W3-C
 import { ar as whiteboard } from "./ar/whiteboard"; // round 7 whiteboard shell (W1-A)
 import { ar as wbPens } from "./ar/wb-pens"; // round 7 pens, palettes, lasso (W2-A)
+import { ar as wbFix } from "./ar/wb-fix"; // round 7 whiteboard fix wave
 import { ar as wbW3a } from "./ar/wb-w3a"; // round 7 layers, frames, board settings, presentation (W3-A)
 import { ar as convert } from "./ar/convert"; // mixed Board cards, Convert menu and matrix (round 7, W3-B)
 import { ar as dnd } from "./ar/dnd"; // drag and drop (round 7, W2-C)
@@ -38,4 +40,4 @@ import { ar as api } from "./ar/api"; // Settings › Developer endpoints // rou
  * Split by area so several people can add strings without conflicts; later areas override earlier ones on a clash.
  * Product names (Lumen) and technical terms Arabic users expect in English (Markdown, PDF, FSRS, JSON, URL) stay as is.
  */
-export const AR: Catalog = { ...convert, ...archAiShare, ...dnd, ...library, ...arch, ...archEdges, ...aiVisual, ...activity, ...scale, ...shell, ...home, ...workspace, ...editor, ...paths, ...review, ...settings, ...data, ...dialogs, ...imports, ...accounts, ...sweep, ...r6b, ...r6a, ...organize, ...api, ...canvas, ...wbW3a, ...wbPens, ...whiteboard, ...canvasOptions, ...exportAr, ...common, ...visualChooser };
+export const AR: Catalog = { ...convert, ...archAiShare, ...dnd, ...library, ...arch, ...archEdges, ...aiVisual, ...activity, ...scale, ...shell, ...home, ...workspace, ...editor, ...paths, ...review, ...settings, ...data, ...dialogs, ...imports, ...accounts, ...sweep, ...r6b, ...r6a, ...organize, ...api, ...canvas, ...wbFix, ...wbW3a, ...wbPens, ...whiteboard, ...canvasOptions, ...exportAr, ...r7ArchFix, ...common, ...visualChooser };

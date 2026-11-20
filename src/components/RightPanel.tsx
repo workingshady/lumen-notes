@@ -232,7 +232,7 @@ const PROP_ICON: Record<string, ReactNode> = { course: <BookOpen size={13} />, b
 const iconFor = (k: string, kind: PropKind) => PROP_ICON[k.toLowerCase()] ?? (kind === "url" ? <Link size={13} /> : kind === "date" ? <Calendar size={13} /> : kind === "dots" ? <Gauge size={13} /> : <Text size={13} />);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 /** Display labels for status / type values (the stored values stay English). */
-const VAL_L: Record<string, string> = { todo: tk("To do"), learning: tk("Learning"), review: tk("Review"), mastered: tk("Mastered"), none: tk("None"), note: tk("Note"), lesson: tk("Lesson"), journal: tk("Journal"), flashcards: tk("Flashcards"), slides: tk("Slides"), post: tk("Post"), canvas: tk("Canvas"), whiteboard: tk("Whiteboard"), roadmap: tk("Roadmap"), moc: tk("Map of content"), path: tk("Path"), diagram: tk("Diagram"), base: tk("Base"), pdf: tk("PDF"), dashboard: tk("Dashboard") };
+const VAL_L: Record<string, string> = { todo: tk("To do"), learning: tk("Learning"), review: tk("Review"), mastered: tk("Mastered"), none: tk("None"), note: tk("Note"), lesson: tk("Lesson"), journal: tk("Journal"), flashcards: tk("Flashcards"), slides: tk("Slides"), post: tk("Post"), canvas: tk("Canvas"), whiteboard: tk("Whiteboard"), board: tk("Board"), roadmap: tk("Roadmap"), moc: tk("Map of content"), path: tk("Path"), diagram: tk("Diagram"), base: tk("Base"), pdf: tk("PDF"), dashboard: tk("Dashboard") };
 const valLabel = (s: string) => (VAL_L[s] ? t(VAL_L[s]) : cap(s));
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 function parseDate(v: string): Date | null {

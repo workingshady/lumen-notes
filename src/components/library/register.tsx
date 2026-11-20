@@ -4,8 +4,8 @@
 // The connector / shape-style / text / sticky / stamp popovers are exported from ./Popovers and mounted by the property bar:
 // see `libraryPopover()` below for the key → component map.
 import { selectedIsVendor } from "../../lib/library-items";
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useLayoutEffect, useState, type ReactNode } from "react";
+import { openWbPanel } from "../wb/pens/live";
 import { placeOnBoard } from "../../lib/library-items";
 import { registerPanel, registerWb, type WbCtx } from "../wb/hooks";
 import { LibraryPanel } from "./LibraryPanel";
@@ -25,7 +25,7 @@ function usePhone() {
 
 function FloatingLibrary({ ctx }: { ctx: WbCtx }) {
   const phone = usePhone();
-  useLayoutEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape" && !(e.target as HTMLElement)?.closest?.("input,textarea")) ctx.close(); }; addEventListener("keydown", k); return () => removeEventListener("keydown", k); }, [ctx]);
+  useLayoutEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape" && !(e.target as HTMLElement)?.closest?.("input,textarea")) ctx.close(); }; addEventListener("keydown", k, true); return () => removeEventListener("keydown", k, true); }, [ctx]);
   if (phone) {
     return (
       <>
@@ -46,18 +46,9 @@ function FloatingLibrary({ ctx }: { ctx: WbCtx }) {
 
 /** Shapes caret: opens the library panel where the design draws it (left of the board); the toolbar's own 200 px popover frame stays an empty sliver behind it. */
 function ShapesSlot({ ctx }: { ctx: WbCtx }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const [r, setR] = useState<DOMRect | null>(null);
-  useLayoutEffect(() => { const c = (ref.current?.closest(".excalidraw") ?? document.querySelector(".excalidraw"))?.getBoundingClientRect(); setR(c ?? null); const pop = ref.current?.closest("[role=menu]") as HTMLElement | null; if (pop) { pop.style.opacity = "0"; pop.style.pointerEvents = "none"; } }, []);
-  return (
-    <>
-      <span ref={ref} style={{ display: "block", height: 1 }} />
-      {r && createPortal(
-        <div data-pop-anchor data-wb-chrome style={{ position: "fixed", left: r.left + 14, top: r.top + 60, bottom: Math.max(8, innerHeight - r.bottom + 60), zIndex: 60, display: "flex" }}>
-          <LibraryPanel workspace={ctx.kind} onClose={ctx.close} onPlace={place(ctx)} selectedVendor={ctx.api ? selectedIsVendor(ctx.api as never) : false} />
-        </div>, document.body)}
-    </>
-  );
+  // One panel at a time (36A/36B): the caret opens the board's Library panel (Esc and other panels close it) and shuts its own popover.
+  useLayoutEffect(() => { ctx.close(); openWbPanel("library"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
 }
 
 registerPanel("library", (ctx) => <FloatingLibrary ctx={ctx} />);

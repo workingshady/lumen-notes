@@ -12,7 +12,11 @@ import { t } from "./i18n";
 
 export interface Pal { surface: string; surface2: string; border: string; text: string; muted: string; accent: string }
 /** Canvas-only export toggles (frame 43C): draw the card styles, the group labels, the edge labels. All on by default. */
-export interface CanvasSvgOpts { cardStyle?: boolean; groupLabels?: boolean; edgeLabels?: boolean }
+export interface CanvasSvgOpts {
+  cardStyle?: boolean; groupLabels?: boolean; edgeLabels?: boolean;
+  /** Where a note lives (folder, else space name): the note card's header, like on the board. */
+  folderOf?: (n: import("../../shared/types").Note) => string | undefined;
+}
 export const GROUP_HEAD = 44; // height a collapsed group keeps (title + chip)
 
 const esc = (s: string) => s.replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]!);

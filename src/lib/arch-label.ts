@@ -40,7 +40,9 @@ export function labelSpot(e: AEdge, r: Route, part: LabelPart, text = partText(e
   const ls = lblStyle(e), a = anchor(e, r, part);
   let { x, y } = a;
   const rad = (a.angle * Math.PI) / 180;
-  const place = ls.place ?? "on";
+  // a label wider than its line (a short hop between neighbours) would hide the line and its arrow: it sits above instead
+  const tw = (text.length + (part === "mid" ? chipOf(e).length : 0)) * LBL_PX[ls.size ?? "M"] * 0.62 + 14;
+  const place = ls.place ?? (part === "mid" && polyLength(r.pts) < tw + 28 ? "above" : "on");
   if (place !== "on") {
     // the normal pointing up (or right on a vertical run) is "above"
     let nx = Math.sin(rad), ny = -Math.cos(rad);

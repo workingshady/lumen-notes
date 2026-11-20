@@ -40,8 +40,7 @@ export default function register(api: Hono<Env>, h: Helpers) {
   api.delete("/notes/:id", h.auth, async (c) => {
     const n = await h.getNote(c.env.DB, c.req.param("id")!);
     if (!n) return c.json({ error: "Not found" }, 404);
-    const now = Date.now();
-    await h.putNote(c.env.DB, { ...n, deleted: 1, updatedAt: now }); // moves it to Trash on every device (restorable)
+    await h.putNote(c.env.DB, { ...n, deleted: 1, updatedAt: h.restNow(n) }); // moves it to Trash on every device (restorable)
     return c.json({ ok: true, id: n.id });
   });
   /** Append Markdown to the end of a note, or under a heading (`{ text, heading? }`). */
@@ -64,7 +63,7 @@ export default function register(api: Hono<Env>, h: Helpers) {
         body = lines.join("\n");
       }
     } else body += `\n${text}\n`;
-    const note = { ...n, body, updatedAt: Date.now() };
+    const note = { ...n, body, updatedAt: h.restNow(n) };
     await h.putNote(c.env.DB, note);
     return c.json(note);
   });

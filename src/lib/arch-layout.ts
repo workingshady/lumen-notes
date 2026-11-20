@@ -22,6 +22,9 @@ export const routeKey = (c: ArchCanvas, from: string, to: string) => {
 };
 
 export async function elkLayout(c: ArchCanvas, o: LayoutOpts): Promise<ArchCanvas> {
+  // "Keep my positions" means keep the order along the flow: when the flow turns (Right → Down) the old positions say nothing
+  // about the new axis (they put the first node under everything), so the turn lays out fresh
+  if (o.keep && o.direction !== c.lumenArch.direction) o = { ...o, keep: false };
   const scopeIds = o.scope === "all" || !o.ids?.size ? null : o.ids;
   const inScope = (id: string) => !scopeIds || scopeIds.has(id);
   const by = new Map(c.nodes.map((n) => [n.id, n]));

@@ -11,11 +11,17 @@ import { Glyph } from "../Glyph";
 import { cx } from "../ui";
 import { Pop } from "./ui";
 
-import { cardSkeleton } from "../../lib/convert/cards";
+import { cardSkeleton, type LumenCard } from "../../lib/convert/cards";
 
-/** A live note card at x, y (260 × 140). */
+/** The card a note becomes on a Board: a PDF note → PDF page card, a Mermaid diagram note → live Mermaid card, else a note card. */
+export function cardForNote(n: Note): LumenCard {
+  if (n.type === "pdf") return { kind: "pdf", noteId: n.id, title: n.title, page: 1 };
+  if (n.type === "diagram" && (/mermaid/i.test(String(n.props?.diagramKind ?? "")) || /\.mermaid$/i.test(n.title) || /^\s*(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|mindmap|timeline|journey)\b/.test(n.body))) return { kind: "mermaid", noteId: n.id, title: n.title };
+  return { kind: "note", noteId: n.id, title: n.title, state: "card" };
+}
+/** A live card for a note at x, y (note 260 × 140, Mermaid 330 × 180, PDF 240 × 230). */
 export function noteCardSkeleton(n: Note, x: number, y: number) {
-  return cardSkeleton({ kind: "note", noteId: n.id, title: n.title, state: "card" }, x, y);
+  return cardSkeleton(cardForNote(n), x, y);
 }
 
 /** The plain box-with-a-title note card (no live content). */
@@ -49,6 +55,24 @@ export function NoteCardPicker({ phone, exclude, onPick, onClose }: { phone: boo
         ))}
         {!list.length && <div className="px-2 py-3 text-[12px] text-muted">{t("No notes match.")}</div>}
       </div>
+    </Pop>
+  );
+}
+
+/** Link card (Board · globe tool): paste a URL, the board gets a live link card with its preview (40D). */
+export function LinkCardPrompt({ phone, onAdd, onClose }: { phone: boolean; onAdd: (url: string) => void; onClose: () => void }) {
+  const [v, setV] = useState("");
+  const url = /^[a-z]+:\/\//i.test(v.trim()) ? v.trim() : v.trim() ? `https://${v.trim()}` : "";
+  const ok = (() => { try { return !!url && /^https?:/.test(new URL(url).protocol); } catch { return false; } })();
+  return (
+    <Pop onClose={onClose} label={t("Add a link card")} className={cx(phone ? "inset-x-[10px] bottom-[calc(96px+env(safe-area-inset-bottom))]" : "left-1/2 top-[64px] w-[340px] -translate-x-1/2")}>
+      <form onSubmit={(e) => { e.preventDefault(); if (ok) onAdd(url); }} className="flex items-center gap-1.5">
+        <label className="flex h-[34px] min-w-0 flex-1 items-center gap-2 rounded-[8px] border border-line px-2 text-muted focus-within:border-accent">
+          <Glyph name="link" size={15} />
+          <input autoFocus value={v} onChange={(e) => setV(e.target.value)} placeholder={t("Paste a link…")} dir="ltr" inputMode="url" className="min-w-0 flex-1 bg-transparent text-[12.5px] text-ink outline-none" />
+        </label>
+        <button type="submit" disabled={!ok} className="h-[34px] rounded-[8px] bg-accent px-3 text-[12.5px] font-semibold text-accent-fg disabled:opacity-40">{t("Add")}</button>
+      </form>
     </Pop>
   );
 }

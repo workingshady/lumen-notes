@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Glyph } from "./Glyph";
 import { t } from "../lib/i18n";
 import { toast } from "../lib/store";
+import { activeTheme } from "../lib/settings";
 import { AiConvertError, convertImage, isOnline, type ConvertKind, type ConvertResult, type Span } from "../lib/ai-convert";
 
 type Tab = "Text" | "LaTeX" | "Mermaid";
@@ -105,7 +106,9 @@ export function AIReview({ image, text, kind, initialResult, onReplace, onAdd, o
 
   // ---- ink side: image, or text
   const ink = image
-    ? <img src={url} alt={t("Your ink")} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }} />
+    // the snapshot is dark ink on white (best for the vision model); shown theme-aware with no white box: dark themes flip it
+    // to light ink and screen away the black, light themes multiply the white away
+    ? <img src={url} alt={t("Your ink")} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", ...(activeTheme().dark ? { filter: "invert(93%) hue-rotate(180deg)", mixBlendMode: "screen" } : { mixBlendMode: "multiply" }) }} />
     : <div style={{ padding: 14, fontFamily: mono, fontSize: 13, whiteSpace: "pre-wrap", color: "var(--text)" }}>{text}</div>;
 
   // ---- result box

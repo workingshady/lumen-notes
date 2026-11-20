@@ -3,8 +3,8 @@ import type { DiagramExportPrefs } from "./settings";
 import type { BuiltSvg } from "./diagram-export";
 import { GLYPHS } from "./glyphs";
 import { vendorIconUrl } from "./vendor-icons";
-import { displayOf, edgeSides, endsOf, groupColor, hiddenBy, isGroup, nodeColor, STATUS, EDGE_STYLE, type AEdge, type ANode, type ArchCanvas } from "./arch-model";
-import { portAt, route, snapRoute, type Pt, type Route } from "./arch-route";
+import { displayOf, edgeSides, endsOf, groupColor, hiddenBy, isGroup, nodeColor, SEQ_ROW, SEQ_TOP, seqLife, STATUS, EDGE_STYLE, type AEdge, type ANode, type ArchCanvas } from "./arch-model";
+import { avoidPath, crossings, portAt, route, snapRoute, type Pt, type Route } from "./arch-route";
 import type { Side } from "../../shared/types";
 import { routeKey } from "./arch-layout";
 import { chipOf, labelLook, labelSpots, lblStyle } from "./arch-label";
@@ -16,8 +16,16 @@ export function edgeRoute(c: ArchCanvas, e: AEdge, by: Map<string, ANode>): (Rou
   if (fromId === toId) return null;
   const a = by.get(fromId), b = by.get(toId);
   if (!a || !b) return null;
-  const auto = edgeSides(a, b);
   const le = e.lumenEdge;
+  if (c.lumenArch.kind === "sequence" && !isGroup(a) && !isGroup(b)) {
+    // a message: a horizontal arrow between the two lifelines, one row per message in code order
+    const k = c.edges.findIndex((x) => x.id === e.id), top = Math.max(...c.nodes.filter((n) => !isGroup(n)).map((n) => n.y + n.height));
+    const y = top + SEQ_TOP + Math.max(0, k) * SEQ_ROW, ax = a.x + a.width / 2, bx = b.x + b.width / 2;
+    const fs: Side = ax <= bx ? "right" : "left", ts: Side = ax <= bx ? "left" : "right", ends = endsOf(e);
+    const src: RouteSrc = { p: { x: ax, y }, ps: fs, q: { x: bx, y }, qs: ts, shape: "straight", ends: { start: ends === "both", end: ends !== "none" } };
+    return { ...route(src.p, fs, src.q, ts, "straight", src.ends, [src.p, src.q]), from: fromId, to: toId, fs, ts, src };
+  }
+  const auto = edgeSides(a, b);
   const manual = !!le?.manual && !!le.points && fromId === e.fromNode && toId === e.toNode;
   const stored = !manual && le?.points && le.points.length >= 2 && le.pointsKey && fromId === e.fromNode && toId === e.toNode && le.pointsKey === routeKey(c, e.fromNode, e.toNode) ? snapRoute(le.points, a, b) : null;
   const pts = manual ? le!.points : stored?.pts;
@@ -26,7 +34,26 @@ export function edgeRoute(c: ArchCanvas, e: AEdge, by: Map<string, ANode>): (Rou
   const ts = stored ? stored.ts : toId === e.toNode && e.toSide ? e.toSide : auto[1];
   const ends = endsOf(e);
   const src: RouteSrc = { p: portAt(a, fs), ps: fs, q: portAt(b, ts), qs: ts, shape: le?.shape ?? "orthogonal", ends: { start: ends === "both", end: ends !== "none" } };
-  return { ...route(src.p, fs, src.q, ts, src.shape, src.ends, pts, manual), from: fromId, to: toId, fs, ts, src };
+  const r = route(src.p, fs, src.q, ts, src.shape, src.ends, pts, manual);
+  // an automatic elbow route never runs through another node: route around the boxes (and pick better ports unless pinned)
+  if (!pts && src.shape === "orthogonal") {
+    const obs = c.nodes.filter((n) => n.id !== fromId && n.id !== toId && (!isGroup(n) || n.lumenGroup?.collapsed) && !hiddenBy(c, n.id));
+    if (crossings(r.pts, obs)) {
+      const pinA = fromId === e.fromNode && !!e.fromSide, pinB = toId === e.toNode && !!e.toSide;
+      const SIDES: Side[] = ["right", "left", "bottom", "top"];
+      let best: { pts: Pt[]; cost: number; fs: Side; ts: Side } | null = null;
+      for (const s1 of pinA ? [fs] : SIDES) for (const s2 of pinB ? [ts] : SIDES) {
+        const hit = avoidPath(portAt(a, s1), s1, portAt(b, s2), s2, obs);
+        // the auto sides win ties (keeps the look stable while dragging)
+        if (hit && (!best || hit.cost + (s1 === fs && s2 === ts ? -1 : 0) < best.cost)) best = { ...hit, fs: s1, ts: s2 };
+      }
+      if (best) {
+        const s2: RouteSrc = { ...src, p: portAt(a, best.fs), ps: best.fs, q: portAt(b, best.ts), qs: best.ts };
+        return { ...route(s2.p, best.fs, s2.q, best.ts, "orthogonal", src.ends, best.pts), from: fromId, to: toId, fs: best.fs, ts: best.ts, src: s2 };
+      }
+    }
+  }
+  return { ...r, from: fromId, to: toId, fs, ts, src };
 }
 
 const PAL = {
@@ -41,7 +68,7 @@ const glyph = (name: string, x: number, y: number, size: number, color: string) 
   return `<g transform="translate(${x} ${y}) scale(${k})" fill="none" stroke="${color}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${parts.map((p) => typeof p === "string" ? `<path d="${p}"/>` : `<path d="${p.d}"${p.fill ? ` fill="${color}" stroke="none"` : ""}/>`).join("")}</g>`;
 };
 
-export async function archSvg(c: ArchCanvas, p: DiagramExportPrefs): Promise<BuiltSvg> {
+export async function archSvg(c: ArchCanvas, p: DiagramExportPrefs, look: { groupLabels?: boolean; edgeLabels?: boolean } = {}): Promise<BuiltSvg> {
   const dark = p.theme === "dark" || (p.theme === "app" && matchMedia?.("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "paper");
   const P = dark ? PAL.dark : PAL.light;
   const vars = (s: string) => s.replace(/var\(--text\)/g, P.tx).replace(/var\(--learn\)/g, P.le).replace(/var\(--link\)/g, P.ln).replace(/var\(--warning\)/g, P.wa).replace(/var\(--muted\)/g, P.mu).replace(/var\(--success\)/g, P.ok).replace(/var\(--danger\)/g, P.da);
@@ -50,7 +77,8 @@ export async function archSvg(c: ArchCanvas, p: DiagramExportPrefs): Promise<Bui
   const by = new Map(c.nodes.map((n) => [n.id, n]));
   const pad = p.padding ?? 32;
   const x0 = Math.min(...shown.map((n) => n.x)) - pad, y0 = Math.min(...shown.map((n) => n.y)) - pad - 12;
-  const x1 = Math.max(...shown.map((n) => n.x + n.width)) + pad, y1 = Math.max(...shown.map((n) => n.y + n.height)) + pad + 12;
+  const seq = c.lumenArch.kind === "sequence", life = seq ? seqLife(c) : 0;
+  const x1 = Math.max(...shown.map((n) => n.x + n.width)) + pad, y1 = Math.max(...shown.map((n) => n.y + n.height)) + life + pad + 12;
   const W = x1 - x0, H = y1 - y0;
   const out: string[] = [];
   const { backgroundOf } = await import("./diagram-export");
@@ -61,16 +89,18 @@ export async function archSvg(c: ArchCanvas, p: DiagramExportPrefs): Promise<Bui
     out.push(`<rect x="${g.x}" y="${g.y}" width="${g.width}" height="${g.height}" rx="14" fill="${col}" fill-opacity=".05" stroke="${col}" stroke-width="1.5" stroke-dasharray="6 4"/>`);
     const label = displayOf(g), sub = g.lumenGroup?.sub ? `${g.lumenGroup?.kind ?? ""} · ${g.lumenGroup.sub}` : g.lumenGroup?.kind ?? "";
     const w = 30 + (label.length + sub.length) * 6.6;
-    out.push(`<rect x="${g.x + 12}" y="${g.y - 10}" width="${w}" height="20" rx="10" fill="${P.bg}"/>`, glyph(g.lumenGroup?.icon ?? g.lumenGroup?.kind ?? "region", g.x + 19, g.y - 7, 14, col),
+    if (look.groupLabels !== false) out.push(`<rect x="${g.x + 12}" y="${g.y - 10}" width="${w}" height="20" rx="10" fill="${P.bg}"/>`, glyph(g.lumenGroup?.icon ?? g.lumenGroup?.kind ?? "region", g.x + 19, g.y - 7, 14, col),
       `<text x="${g.x + 37}" y="${g.y + 4}" font-family="Inter, sans-serif" font-size="11.5" font-weight="600" fill="${col}">${xml(label)} <tspan font-weight="400" fill="${P.mu}">${xml(sub)}</tspan></text>`);
   }
+  // sequence diagrams: a dashed lifeline under every participant
+  if (seq) for (const n of shown.filter((x) => !isGroup(x))) out.push(`<line x1="${n.x + n.width / 2}" y1="${n.y + n.height}" x2="${n.x + n.width / 2}" y2="${n.y + n.height + life}" stroke="${P.mu}" stroke-opacity=".55" stroke-width="1.5" stroke-dasharray="5 4"/>`);
   for (const e of c.edges) {
     const r = edgeRoute(c, e, by);
     if (!r) continue;
     const [col, dash] = EDGE_STYLE[e.lumenEdge?.style ?? "sync"];
     const cc = vars(col);
     out.push(`<path d="${r.d}" fill="none" stroke="${cc}" stroke-width="1.6" stroke-linejoin="round"${dash !== "none" ? ` stroke-dasharray="${dash}"` : ""}/>`, ...r.heads.map((h) => `<path d="${h}" fill="${cc}"/>`));
-    for (const sp of labelSpots(e, r)) {
+    for (const sp of look.edgeLabels === false ? [] : labelSpots(e, r)) {
       const ls = lblStyle(e), look = labelLook(ls), chip = sp.part === "mid" ? chipOf(e) : "";
       const cw = chip ? chip.length * 5.6 + 14 : 0, tw = sp.text.length * look.fs * 0.61, w = tw + (sp.text ? 12 : 0) + (chip && sp.text ? 6 : 0) + cw, h = look.fs + 6;
       const bgc = vars(look.bg), bd = look.border.includes("transparent") ? "none" : P.bd;

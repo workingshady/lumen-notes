@@ -1,5 +1,9 @@
 import type { Context, Hono, Next } from "hono";
 import type { Env, Helpers } from "../index";
+import { r2Key, r2Prefix } from "../accounts";
+
+/** D1 size cap per database: D1_LIMIT_BYTES (bytes) or the Workers Free cap, 500 MB. */
+export const d1Limit = (v?: string) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : 500_000_000; };
 
 /**
  * API routes for the "settings" area. Mounted under /api.
@@ -112,7 +116,7 @@ export default function register(api: Hono<Env>, h: Helpers) {
     if (c.env.FILES) {
       let cursor: string | undefined;
       for (let i = 0; i < 20; i++) {
-        const l = await c.env.FILES.list({ prefix: "att/", cursor, limit: 1000 });
+        const l = await c.env.FILES.list({ prefix: r2Prefix(c.env.ACCOUNT), cursor, limit: 1000 });
         for (const o of l.objects) { r2.n++; r2.bytes += o.size; }
         if (!l.truncated) break;
         cursor = l.cursor;
@@ -125,7 +129,8 @@ export default function register(api: Hono<Env>, h: Helpers) {
     return c.json({
       at: Date.now(),
       dbBytes: (sizeProbe.meta as { size_after?: number }).size_after ?? null,
-      limitBytes: 5 * 1024 ** 3, // D1 free plan: 5 GB per account
+      // D1 caps each database (Workers Free: 500 MB; paid: 10 GB). Override with the D1_LIMIT_BYTES var.
+      limitBytes: d1Limit(c.env.D1_LIMIT_BYTES),
       notes: { count: byKind.note?.count ?? 0, bytes: notesBytes },
       records: { bytes: recordsBytes, byKind },
       files: { count: (files?.n ?? 0) + (legacy?.n ?? 0), parts: parts?.n ?? 0, bytes: filesBytes },
@@ -142,7 +147,7 @@ export default function register(api: Hono<Env>, h: Helpers) {
       c.env.DB.prepare("DELETE FROM file_meta WHERE id = ?").bind(id),
       c.env.DB.prepare("DELETE FROM files WHERE id = ?").bind(id),
     ]);
-    if (c.env.FILES) await c.env.FILES.delete(`att/${id}`);
+    if (c.env.FILES) await c.env.FILES.delete([r2Key(c.env.ACCOUNT, id), ...(c.env.ACCOUNT ? [] : [`att/${id}`])]);
     return c.json({ ok: true });
   });
 

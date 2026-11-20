@@ -185,3 +185,74 @@ export function snapRoute(pts: Pt[], a: Box, b: Box): { pts: Pt[]; fs: Side; ts:
   if (full.length < 2 || !along(full[0], full[1], fs) || !along(full[full.length - 2], full[full.length - 1], ts)) return null;
   return { pts: full, fs, ts };
 }
+
+// ------------------------------------------------------------------ obstacle avoidance (orthogonal auto routes)
+const STEP = 18; // clearance around node boxes
+const inside = (b: Box, x: number, y: number, m: number) => x > b.x - m + 0.5 && x < b.x + b.width + m - 0.5 && y > b.y - m + 0.5 && y < b.y + b.height + m - 0.5;
+/** Does the segment u→v (horizontal or vertical) pass through the interior of `b` grown by `m`? */
+function segHits(u: Pt, v: Pt, b: Box, m: number): boolean {
+  const x0 = b.x - m + 0.5, x1 = b.x + b.width + m - 0.5, y0 = b.y - m + 0.5, y1 = b.y + b.height + m - 0.5;
+  if (near(u.y, v.y)) { const a = Math.min(u.x, v.x), c = Math.max(u.x, v.x); return u.y > y0 && u.y < y1 && c > x0 && a < x1; }
+  if (near(u.x, v.x)) { const a = Math.min(u.y, v.y), c = Math.max(u.y, v.y); return u.x > x0 && u.x < x1 && c > y0 && a < y1; }
+  // diagonal (straight / curve samples): sample it
+  for (let i = 1; i < 8; i++) { const t = i / 8; if (inside(b, u.x + (v.x - u.x) * t, u.y + (v.y - u.y) * t, m)) return true; }
+  return false;
+}
+/** Number of obstacle boxes a polyline passes through. */
+export function crossings(pts: Pt[], obs: Box[]): number {
+  let n = 0;
+  for (const b of obs) for (let i = 1; i < pts.length; i++) if (segHits(pts[i - 1], pts[i], b, 0)) { n++; break; }
+  return n;
+}
+const out1 = (p: Pt, s: Side, k: number): Pt => (s === "left" ? { x: p.x - k, y: p.y } : s === "right" ? { x: p.x + k, y: p.y } : s === "top" ? { x: p.x, y: p.y - k } : { x: p.x, y: p.y + k });
+/**
+ * Shortest orthogonal path from port `p` (leaving through side `ps`) to port `q` (entering through `qs`) that keeps clear of
+ * every box in `obs`: Dijkstra on the sparse grid made by the boxes' clearance lines, with a penalty per bend.
+ * Returns the full polyline (ports included) and its cost, or null when there is no way through.
+ */
+export function avoidPath(p: Pt, ps: Side, q: Pt, qs: Side, obs: Box[]): { pts: Pt[]; cost: number } | null {
+  const a = out1(p, ps, STEP), z = out1(q, qs, STEP);
+  if (obs.some((b) => inside(b, a.x, a.y, STEP - 2) || inside(b, z.x, z.y, STEP - 2))) return null;
+  const xs = [...new Set([a.x, z.x, (a.x + z.x) / 2, ...obs.flatMap((b) => [b.x - STEP, b.x + b.width + STEP])].map((v) => Math.round(v)))].sort((u, v) => u - v);
+  const ys = [...new Set([a.y, z.y, (a.y + z.y) / 2, ...obs.flatMap((b) => [b.y - STEP, b.y + b.height + STEP])].map((v) => Math.round(v)))].sort((u, v) => u - v);
+  const W = xs.length, H = ys.length;
+  const free = (i: number, j: number) => !obs.some((b) => inside(b, xs[i], ys[j], STEP - 1));
+  const ok = new Uint8Array(W * H);
+  for (let i = 0; i < W; i++) for (let j = 0; j < H; j++) ok[j * W + i] = free(i, j) ? 1 : 0;
+  const si = xs.indexOf(Math.round(a.x)), sj = ys.indexOf(Math.round(a.y)), ti = xs.indexOf(Math.round(z.x)), tj = ys.indexOf(Math.round(z.y));
+  if (si < 0 || sj < 0 || ti < 0 || tj < 0) return null;
+  ok[sj * W + si] = 1; ok[tj * W + ti] = 1;
+  const BEND = 30, N = W * H * 4;
+  const dist = new Float64Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1);
+  // direction 0 → 1 ← 2 ↓ 3 ↑ ; leaving the start along its side
+  const d0 = ps === "right" ? 0 : ps === "left" ? 1 : ps === "bottom" ? 2 : 3;
+  const dEnd = qs === "left" ? 0 : qs === "right" ? 1 : qs === "top" ? 2 : 3; // arriving direction into q
+  const DI = [1, -1, 0, 0], DJ = [0, 0, 1, -1];
+  const s0 = (sj * W + si) * 4 + d0;
+  dist[s0] = 0;
+  const heap: [number, number][] = [[0, s0]];
+  const push = (c: number, k: number) => { heap.push([c, k]); let i = heap.length - 1; while (i > 0) { const pi = (i - 1) >> 1; if (heap[pi][0] <= heap[i][0]) break; [heap[pi], heap[i]] = [heap[i], heap[pi]]; i = pi; } };
+  const pop = () => { const top = heap[0], last = heap.pop()!; if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+  let best = -1;
+  while (heap.length) {
+    const [c, k] = pop();
+    if (c > dist[k]) continue;
+    const cell = k >> 2, dir = k & 3, i = cell % W, j = (cell / W) | 0;
+    if (i === ti && j === tj) { if (dir === dEnd) { best = k; break; } }
+    for (let nd = 0; nd < 4; nd++) {
+      if ((dir ^ 1) === nd && (dir >> 1) === (nd >> 1)) continue; // no U-turns
+      const ni = i + DI[nd], nj = j + DJ[nd];
+      if (ni < 0 || nj < 0 || ni >= W || nj >= H || !ok[nj * W + ni]) continue;
+      const u = { x: xs[i], y: ys[j] }, v = { x: xs[ni], y: ys[nj] };
+      if (obs.some((b) => segHits(u, v, b, STEP - 1))) continue;
+      const nk = (nj * W + ni) * 4 + nd, nc = c + Math.abs(v.x - u.x) + Math.abs(v.y - u.y) + (nd === dir ? 0 : BEND);
+      if (nc < dist[nk]) { dist[nk] = nc; prev[nk] = k; push(nc, nk); }
+    }
+  }
+  if (best < 0) return null;
+  const path: Pt[] = [];
+  for (let k = best; k >= 0; k = prev[k]) { const cell = k >> 2; path.push({ x: xs[cell % W], y: ys[(cell / W) | 0] }); if (k === s0) break; }
+  path.reverse();
+  const full = orthogonalize([p, ...path, q], horizSide(ps));
+  return { pts: full, cost: dist[best] + 2 * STEP };
+}

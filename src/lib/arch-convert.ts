@@ -3,8 +3,11 @@
 import { GLYPHS } from "./glyphs";
 import { displayOf, edgeSides, endsOf, isGroup, nameOf, parentOf, type AEdge, type ANode, type ArchCanvas, type ArchKind } from "./arch-model";
 
-export type MermaidFlavor = "architecture-beta" | "flowchart" | "erDiagram" | "c4" | "sequence";
+export type MermaidFlavor = "architecture-beta" | "flowchart" | "erDiagram" | "c4" | "sequence" | "block-beta" | "state" | "class";
+/** Flavors the Mermaid tab can edit (they parse back). */
 export const MERMAID_FLAVORS: MermaidFlavor[] = ["architecture-beta", "flowchart", "erDiagram", "c4", "sequence"];
+/** Every flavor the Export dialog can write (block-beta, state and class are export-only). */
+export const MERMAID_EXPORT_FLAVORS: MermaidFlavor[] = ["architecture-beta", "flowchart", "erDiagram", "c4", "block-beta", "sequence", "state", "class"];
 export function defaultFlavor(k: ArchKind): MermaidFlavor {
   return k === "erd" || k === "class" ? "erDiagram" : k === "c4" ? "c4" : k === "sequence" ? "sequence" : k === "flowchart" || k === "state" || k === "bpmn" ? "flowchart" : "architecture-beta";
 }
@@ -95,6 +98,62 @@ export function toMermaid(c: ArchCanvas, flavor: MermaidFlavor = defaultFlavor(c
     };
     walk(undefined, "  ");
     for (const e of c.edges) L.push(`  Rel(${id.get(e.fromNode)}, ${id.get(e.toNode)}, "${label(e)}"${e.lumenEdge?.protocol ? `, "${esc(e.lumenEdge.protocol)}"` : ""})`);
+  } else if (flavor === "block-beta") {
+    L.push("block-beta");
+    const kids = new Map<string | undefined, ANode[]>();
+    for (const n of c.nodes) { const p = parentOf(n); const k = p && by.has(p) ? p : undefined; kids.set(k, [...(kids.get(k) ?? []), n]); }
+    const shape = (n: ANode) => { const t = `"${esc(displayOf(n)) || id.get(n.id)}"`, i = n.lumenNode?.icon ?? ""; return /database|vector-db|warehouse/.test(i) ? `[(${t})]` : i === "decision" ? `{${t}}` : /user|owner|actor/.test(i) ? `((${t}))` : `[${t}]`; };
+    const walk = (p: string | undefined, ind: string) => {
+      const list = kids.get(p) ?? [];
+      if (list.length > 1) L.push(`${ind}columns ${Math.min(4, list.length)}`);
+      for (const n of list) {
+        if (isGroup(n)) { L.push(`${ind}block:${id.get(n.id)}["${esc(displayOf(n))}"]`); walk(n.id, ind + "  "); L.push(`${ind}end`); }
+        else L.push(`${ind}${id.get(n.id)}${shape(n)}`);
+      }
+    };
+    walk(undefined, "  ");
+    for (const e of c.edges) { const a = by.get(e.fromNode), b = by.get(e.toNode); if (!a || !b || isGroup(a) || isGroup(b)) continue; L.push(`  ${id.get(a.id)} ${label(e) ? `-- "${label(e)}" ` : ""}--> ${id.get(b.id)}`); }
+  } else if (flavor === "state") {
+    L.push("stateDiagram-v2");
+    if (c.lumenArch.direction === "right") L.push("  direction LR");
+    const kids = new Map<string | undefined, ANode[]>();
+    for (const n of c.nodes) { const p = parentOf(n); const k = p && by.has(p) ? p : undefined; kids.set(k, [...(kids.get(k) ?? []), n]); }
+    const walk = (p: string | undefined, ind: string) => {
+      for (const n of kids.get(p) ?? []) {
+        if (isGroup(n)) { L.push(`${ind}state "${esc(displayOf(n))}" as ${id.get(n.id)} {`); walk(n.id, ind + "  "); L.push(`${ind}}`); }
+        else if (n.lumenNode?.icon === "terminator") continue;
+        else L.push(`${ind}state "${esc(displayOf(n)) || id.get(n.id)}" as ${id.get(n.id)}`);
+      }
+    };
+    walk(undefined, "  ");
+    // terminators (start / end pills) become [*]
+    const st = (n: ANode) => (n.lumenNode?.icon === "terminator" ? "[*]" : id.get(n.id)!);
+    for (const e of c.edges) { const a = by.get(e.fromNode), b = by.get(e.toNode); if (!a || !b) continue; L.push(`  ${st(a)} --> ${st(b)}${label(e) ? ` : ${label(e)}` : ""}`); }
+  } else if (flavor === "class") {
+    L.push("classDiagram");
+    if (c.lumenArch.direction === "down") L.push("  direction TB"); else L.push("  direction LR");
+    const cls = (n: ANode, ind: string) => {
+      const f = n.lumenNode?.fields ?? [];
+      const head = `${ind}class ${id.get(n.id)}["${esc(displayOf(n)) || id.get(n.id)}"]`;
+      if (!f.length) { L.push(head); return; }
+      L.push(`${head} {`);
+      for (const x of f) L.push(`${ind}  ${x.name.includes("(") ? `+${x.name.replace(/[{}]/g, "")}${x.type ? ` ${slug(x.type)}` : ""}` : `+${x.type ? `${slug(x.type)} ` : ""}${x.name.replace(/[{}]/g, "")}`}`);
+      L.push(`${ind}}`);
+    };
+    // top-level groups become namespaces (Mermaid has no nested namespaces: inner groups flatten into theirs)
+    const top = (n: ANode): ANode | undefined => { let p = parentOf(n), last: ANode | undefined; while (p && by.has(p)) { last = by.get(p); p = parentOf(last!); } return last; };
+    const loose = c.nodes.filter((n) => !isGroup(n) && !top(n));
+    for (const n of loose) cls(n, "  ");
+    for (const g of c.nodes.filter((n) => isGroup(n) && !(parentOf(n) && by.has(parentOf(n)!)))) {
+      const inside = c.nodes.filter((n) => !isGroup(n) && top(n)?.id === g.id);
+      if (!inside.length) continue;
+      L.push(`  namespace ${id.get(g.id)} {`); for (const n of inside) cls(n, "    "); L.push("  }");
+    }
+    for (const e of c.edges) {
+      const a = by.get(e.fromNode), b = by.get(e.toNode); if (!a || !b || isGroup(a) || isGroup(b)) continue;
+      const op = e.lumenEdge?.style === "async" ? "..>" : endsOf(e) === "none" ? "--" : "-->";
+      L.push(`  ${id.get(a.id)} ${op} ${id.get(b.id)}${label(e) ? ` : ${label(e)}` : ""}`);
+    }
   } else {
     L.push("sequenceDiagram");
     for (const n of c.nodes.filter((x) => !isGroup(x))) L.push(`  ${/user|owner|actor/.test(n.lumenNode?.icon ?? "") ? "actor" : "participant"} ${id.get(n.id)} as ${esc(displayOf(n))}`);
@@ -182,14 +241,15 @@ function fromFlowchart(text: string, known: Map<string, string>): string {
     if (l === "end") { stack.pop(); continue; }
     if (/^(classDef|class|style|linkStyle|click|direction)\b/.test(l)) continue;
     // split on links: -->, ---, -.->, ==>, with |label| or -- text -->
-    const parts = l.split(/\s*(<?-\.+->?|<?==+>?|<?--+>?|-- .+? -->|-- .+? ---)\s*/);
+    // text links first ("A -- yes --> B", "A -. maybe .-> B", "A == data ==> B"): the plain "--" would otherwise eat them and the text became a node
+    const parts = l.split(/\s*(<?--\s+[^-|>\s].*?\s+--+[->]|<?-\.\s+.+?\s+\.->?|<?==\s+.+?\s+==+>?|<?-\.+->?|<?==+>?|<?--+>?)\s*/);
     if (parts.length === 1) { node(l); continue; }
     let prevId: string | null = null, pending: { op: string; label?: string } | null = null;
     for (let i = 0; i < parts.length; i++) {
       let p = parts[i];
       if (i % 2 === 1) {
-        const mid = /^-- (.+?) --[->]$/.exec(p);
-        pending = { op: mid ? (p.endsWith(">") ? "-->" : "---") : p, label: mid?.[1] };
+        const mid = /^(<?)(--|-\.|==)\s+(.+?)\s+(--+|\.-|==+)([->]?)$/.exec(p);
+        pending = mid ? { op: `${mid[1]}${mid[2] === "-." ? "-.-" : mid[2] === "==" ? "==" : "--"}${mid[5] === ">" ? ">" : ""}`, label: mid[3] } : { op: p };
         continue;
       }
       let label: string | undefined;

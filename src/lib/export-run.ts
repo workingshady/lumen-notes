@@ -97,10 +97,10 @@ export async function renderUnit(job: VisualExportJob, o: ExportOptions, ids: st
     return { blob, width: e.width, height: e.height, scale, limited: want > cap + 0.01 ? cap : undefined };
   }
   if (fmt === "svg") throw new Error(t("This workspace can't export SVG"));
-  if (fmt === "png" && !(o.aspect > 0)) return { blob: r.blob, width: r.width, height: r.height, scale: 1, limited: r.limited };
+  if (fmt === "png" && !(o.aspect > 0)) return { blob: r.blob, width: r.width, height: r.height, scale: r.limited ?? req.scale ?? 1, limited: r.limited };
   const bitmap = await createImageBitmap(r.blob);
   const e = await call<{ blob: Blob; width: number; height: number }>({ op: "raster", bitmap, bg, aspect: o.aspect, type: MIME[fmt], quality: o.quality }, [bitmap]);
-  return { blob: e.blob, width: e.width, height: e.height, scale: 1, limited: r.limited };
+  return { blob: e.blob, width: e.width, height: e.height, scale: r.limited ?? req.scale ?? 1, limited: r.limited };
 }
 
 export interface TextOut { blob: Blob; text?: string; ext: string; name: string }

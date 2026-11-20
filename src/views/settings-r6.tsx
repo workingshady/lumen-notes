@@ -570,7 +570,7 @@ function StorageR6() {
   useEffect(() => { if (tok) api<typeof server>("/usage").then(setServer).catch(() => {}); }, [tok]);
   const atts = useLiveQuery(() => db.attachments.filter((a) => !a.deleted).toArray(), []) ?? [];
   const cloudUsed = server ? server.records.bytes + server.files.bytes + (server.r2?.bytes ?? 0) : atts.reduce((s, a) => s + (a.size || 0), 0);
-  const limit = server?.limitBytes ?? 5 * GB;
+  const limit = server?.limitBytes ?? 500_000_000;
   const largest = [...atts].sort((a, b) => (b.size || 0) - (a.size || 0)).slice(0, 5);
   const pct = cloudUsed / limit;
   return (

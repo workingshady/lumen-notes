@@ -68,7 +68,7 @@ export function ConnectorPopover({ ctx }: { ctx: WbCtx }) {
   ];
   const headList = (k: "startArrowhead" | "endArrowhead", cur: string | null): Blk[] => [{ key: k, items: HEADS.map(([v, g, name]) => tile(g, t(name), { gs: 22, on: cur === v, onClick: () => set({ [k]: v ?? "none" }) })), cols: "repeat(4,1fr)", note: k === "endArrowhead" ? t("Crow’s-foot heads are for ERDs (one, many, one-or-many).") : undefined }];
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-start", maxWidth: "min(1320px, calc(100vw - 48px))" }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-start", width: "min(1284px, calc(100vw - 48px))" /* 36D: Line · Start head · End head side by side */ }}>
       <PanelShell title={t("Line")} g="connector" w={420} style={{ boxShadow: "none" }}><Blocks list={list} /></PanelShell>
       <PanelShell title={t("Start head")} g="arrowhead-none" w={420} style={{ boxShadow: "none" }}><Blocks list={headList("startArrowhead", sh)} /></PanelShell>
       <PanelShell title={t("End head")} g="arrowhead-arrow" w={420} style={{ boxShadow: "none" }}><Blocks list={headList("endArrowhead", eh)} /></PanelShell>

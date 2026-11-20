@@ -104,7 +104,9 @@ export function unfurl(url: string): Promise<Unfurl | null> {
       try { const c = localStorage.getItem(key); if (c) return JSON.parse(c) as Unfurl; } catch { /* ignore */ }
       try {
         if (await simApi("/unfurl")) return null; // Dev simulator: offline / signed out
-        const r = await fetch(`${API_BASE}/api/unfurl?url=${encodeURIComponent(url)}`);
+        const tok = getToken();
+        if (!tok) return null; // /api/unfurl needs a signed-in device (it fetches arbitrary URLs)
+        const r = await fetch(`${API_BASE}/api/unfurl?url=${encodeURIComponent(url)}`, { headers: { Authorization: `Bearer ${tok}` } });
         if (!r.ok) return null;
         const d = (await r.json()) as Unfurl;
         try { localStorage.setItem(key, JSON.stringify(d)); } catch { /* storage full */ }

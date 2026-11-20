@@ -45,7 +45,7 @@ function hl(text: string, terms: string[], cls = "font-bold text-accent"): React
 /** Plain-text snippet around the first hit: no front-matter, no title line, no Markdown marks. */
 function snippet(n: Note, terms: string[], fallback: string) {
   // boards: the hit text when searching; "Recent" (no terms) would show raw scene JSON, so name the kind instead
-  if (n.type === "canvas" || isWbType(n.type)) return terms.length ? fallback : n.type === "canvas" ? t("Canvas board") : t("Whiteboard");
+  if (n.type === "canvas" || isWbType(n.type)) return terms.length ? fallback : n.type === "canvas" ? t("Canvas board") : n.type === "board" ? t("Board") : t("Whiteboard");
   const plain = plainText(around(n.body, terms));
   if (!plain) return fallback;
   const low = normalize(plain);

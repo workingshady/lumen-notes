@@ -1,7 +1,7 @@
 import { Excalidraw, convertToExcalidrawElements, exportToBlob, exportToSvg, restore, restoreElements, serializeAsJSON } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import { Check, Shapes, StickyNote, GitFork, Workflow, X } from "lucide-react";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { Component, memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Note } from "../../shared/types";
 import { duplicateNote, restoreNote, trashNote, updateNote } from "../lib/actions";
 import { download } from "../lib/io";
@@ -30,14 +30,15 @@ import { PhoneDock } from "./wb/PhoneDock";
 import { BoardHeader, useSavedLine } from "./wb/BoardHeader";
 import { BottomStart, FrameChip, Minimap, ZoomCluster } from "./wb/BottomBar";
 import { Banner, EmptyBoard } from "./wb/States";
-import { NoteCardPicker, noteCardSkeleton } from "./wb/NoteCard";
+import { cardForNote, LinkCardPrompt, NoteCardPicker } from "./wb/NoteCard";
+import { CARD_SIZE, cardSkeleton, noteSize, type LumenCard } from "../lib/convert/cards";
 import { Glyph } from "./Glyph";
 import "./library/register"; // W2-B: shared library panel + Shapes popover registration
 import { KEY_TOOL, loadRecent, lumenTool, PAPER, pushRecent, shown, type LineKind, type ShapeKind, type ToolId, type WheelSlot } from "./wb/tools";
 import "./wb/pens/register";
 import "./wb/register-w3a"; // W3-A: layers, frames, board settings, presentation
 import { Backdrop, type BackdropHandle } from "./wb/settings/Backdrop";
-import { BoardStore, boardDark, useBoard, type LumenBoard } from "./wb/settings/model";
+import { BoardStore, boardDark, PAGE_SIZE, useBoard, type LumenBoard } from "./wb/settings/model";
 import { backgroundSvg, resolvedBoardColor, withRasterBackground, withSvgBackground } from "./wb/settings/exportBg";
 import { LayerStore, type LayersMeta } from "./wb/layers/model";
 import type { ArrangeId } from "./wb/layers/Arrange";
@@ -48,7 +49,7 @@ import { live as wbLive, setLive } from "./wb/pens/live";
 import { alongRuler, bump, commit, deleteIds, lassoed, partialErase, scratchOut, sendBehindInk, snapStroke, toScene, toScreen, touches as touchesEl, unsnap } from "./wb/pens/engine";
 import { recognise, snappedElement, absPoints, SNAP_NAME } from "./wb/pens/shapes";
 import { EraserBar } from "./wb/pens/InkBars";
-import { INK_TABLE, LiveInk } from "./wb/pens/LiveInk";
+import { INK_TABLE, inkFlip, LiveInk } from "./wb/pens/LiveInk";
 import { LassoPath, Ruler, rulerEdge, SnapChip } from "./wb/pens/Overlays";
 import { LassoBar, type LassoAction } from "./wb/pens/LassoBar";
 import { PenPanel, shownType } from "./wb/pens/PenPanel";
@@ -143,9 +144,13 @@ const WB_CSS = `
 /* Pen speed: the SVG ink filter is costly per repaint. Only the static layer (finished drawing, repainted per stroke) keeps it;
    the stroke-in-progress and pointer/selection layers repaint on every move, so they use the GPU CSS filter instead. */
 .lumen-wb .excalidraw.theme--dark canvas:not(.static) { filter: invert(93%) hue-rotate(180deg); }
-/* Performance mode (over ~3,000 elements): the static layer switches to the GPU filter too, and floating chrome drops its shadows. */
-.lumen-wb.wb-perf .excalidraw.theme--dark { --theme-filter: invert(93%) hue-rotate(180deg); }
+/* Performance mode (over ~3,000 elements): floating chrome drops its shadows (and new shapes draw without roughness). The static
+   layer keeps the ink filter, so stickies and fills keep their paper colours (design 33J): it only repaints when the scene changes. */
 .wb-perf-root [data-wb-chrome] { box-shadow: none !important; }
+/* Selection (design 33A/33B): amber accent outline and handles instead of Excalidraw's violet. The interactive layer runs under the
+   GPU invert filter on dark boards, so the dark value is the accent pre-inverted (invert 93% + hue-rotate 180° gives #f2a93b back). */
+.lumen-wb .excalidraw { --color-selection: var(--accent); }
+.lumen-wb .excalidraw.theme--dark { --color-selection: #923e00; }
 /* Live ink: while the Lumen overlay draws the stroke in progress, Excalidraw's own new-element layer is hidden. */
 .lumen-wb.wb-live-ink canvas.excalidraw__canvas:not(.static):not(.interactive) { opacity: 0; }
 `;
@@ -237,6 +242,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   const [wheel, setWheel] = useState<{ x: number; y: number; slots: WheelSlot[] } | null>(null);
   const [dockMore, setDockMore] = useState(false);
   const [picker, setPicker] = useState(false);
+  const [linkPrompt, setLinkPrompt] = useState(false);
   const [share, setShare] = useState(false);
   const [open, setOpen] = useState<WbPanel | null>(null);
   const minimap = boardSet.minimap;
@@ -257,12 +263,28 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   const saved = useSavedLine();
 
   useEffect(() => onRegistry(() => setReg((n) => n + 1)), []);
+  // Design 33A–K: the board opens full width (breadcrumb header only); the note list comes back when the board closes.
+  useEffect(() => {
+    if (!matchMedia("(min-width: 768px)").matches || !ui.list) return;
+    setUI({ list: false });
+    return () => setUI({ list: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // board settings → Excalidraw (snap to objects, zen, view only); a settings change saves the board
   useEffect(() => {
     api.current?.updateScene({ appState: { objectsSnapModeEnabled: boardSet.snapObjects, zenModeEnabled: boardSet.zen, viewModeEnabled: boardSet.viewOnly } as never });
     const st = api.current?.getAppState();
     if (st) backdrop.current?.update(st as never);
   }, [boardSet, apiReady]);
+  // Phone (44A): the board opens fitted to its content, not small in the middle
+  useEffect(() => { if (apiReady && phone && apiReady.getSceneElements().length) { const fit = () => apiReady.scrollToContent(undefined, { fitToContent: true, animate: false }); setTimeout(fit, 120); setTimeout(fit, 600); } }, [apiReady]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Pages mode (39D): the first page comes into view, centred under the toolbar, when the board switches to pages
+  useEffect(() => {
+    const a = api.current, W = host.current?.clientWidth;
+    if (!a || !W || boardSet.mode === "infinite") return;
+    const [pw] = PAGE_SIZE[boardSet.mode];
+    const z = Math.min(1, (W - 48) / pw);
+    a.updateScene({ appState: { scrollX: (W / z - pw) / 2, scrollY: 112 / z, zoom: { value: z } } as never });
+  }, [boardSet.mode, apiReady]); // eslint-disable-line react-hooks/exhaustive-deps
   // Pens: a pen change re-applies the ink while the pen / highlighter is active.
   useEffect(() => onInk(() => { const tl = toolRef.current; if (tl === "pen") applyInkRef.current(currentPen()); else if (tl === "hl") applyInkRef.current(hlPen()); }), []);
   const applyInkRef = useRef((p: PenSettings) => { api.current?.updateScene({ appState: appStyle(p) }); });
@@ -509,18 +531,29 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     const els = convertToExcalidrawElements(skel as never, { regenerateIds: false });
     a.updateScene({ elements: [...a.getSceneElementsIncludingDeleted(), ...els], appState: { selectedElementIds: { [id]: true } } });
     a.setActiveTool({ type: "selection" });
+    // ready to type (36E): Enter on the selected sticky opens its text editor, so the first keystrokes land on it
+    setTimeout(() => key("Enter", { ctrl: false, code: "Enter" }), 80);
   };
   /** Note card: the note's title in a card linked to it (opens in Lumen); goes to the centre of the view. */
-  const addNoteCard = (n: Note) => {
+  const addNoteCard = (n: Note) => { placeCard(cardForNote(n)); setPicker(false); };
+  /** Any live card (note, Mermaid, link, PDF) at the centre of the view, selected, one undo step. */
+  const placeCard = (c: LumenCard) => {
     const a = api.current;
     if (!a) return;
     const st = a.getAppState() as Record<string, number> & { zoom: { value: number } };
     const z = st.zoom.value, w = host.current?.clientWidth ?? 400, h = host.current?.clientHeight ?? 600;
     const id = rid();
-    const els = convertToExcalidrawElements([{ ...noteCardSkeleton(n, w / 2 / z - st.scrollX - 130, h / 2.4 / z - st.scrollY - 50), id }] as never, { regenerateIds: false });
-    a.updateScene({ elements: [...a.getSceneElementsIncludingDeleted(), ...els], appState: { selectedElementIds: { [id]: true } } });
+    const [cw, ch] = c.kind === "note" ? noteSize(c.state) : CARD_SIZE[c.kind];
+    // next free spot from the centre of the view: step right (then down) past cards and shapes already there
+    let px = w / 2 / z - st.scrollX - cw / 2, py = h / 2.4 / z - st.scrollY - ch / 2;
+    const live = (a.getSceneElements() as El[]).filter((e) => !e.isDeleted && e.type !== "frame" && e.type !== "arrow" && !e.containerId);
+    const hit = (x: number, y: number) => live.some((e) => x < e.x + e.width + 16 && x + cw + 16 > e.x && y < e.y + e.height + 16 && y + ch + 16 > e.y);
+    for (let i = 0; i < 12 && hit(px, py); i++) { if (i % 4 === 3) { px -= (cw + 24) * 3; py += ch + 24; } else px += cw + 24; }
+    // the skeleton converter passes an embeddable through half-made (no groupIds / boundElements…): restoreElements fills it
+    const els = restoreElements(convertToExcalidrawElements([{ ...cardSkeleton(c, px, py), id }] as never, { regenerateIds: false }) as never, null);
+    a.updateScene({ elements: [...a.getSceneElementsIncludingDeleted(), ...els], appState: { selectedElementIds: { [id]: true } }, captureUpdate: "IMMEDIATELY" });
     a.setActiveTool({ type: "selection" });
-    setPicker(false);
+    scheduleSave(200);
   };
 
   // ------------------------------------------------------------------ tools
@@ -544,7 +577,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
       case "sticky": addSticky(); break;
       case "image": pickImage(); break;
       case "media": pickMedia(); break;
-      case "web": set("embeddable"); break;
+      case "web": if (kind === "board") { setLinkPrompt(true); set("selection"); } else set("embeddable"); break;
       case "note": setPicker(true); break;
       default: set(id);
     }
@@ -789,7 +822,15 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     const need = api.current?.getAppState().penMode ? 2 : 1;
     if (touches.current.size !== need) return;
     const pts = [...touches.current.values()], cx = pts.reduce((s, p) => s + p.x, 0) / pts.length, cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
-    press.current = { x: cx, y: cy, t: setTimeout(() => { press.current = null; openWheel(cx, cy); }, 550) };
+    // Excalidraw runs its own touch long-press timer (its canvas context menu): on empty board only the wheel shows (33F / 44H),
+    // so its menu is closed as the wheel opens; on an element Excalidraw's element menu stays and the wheel doesn't open.
+    press.current = { x: cx, y: cy, t: setTimeout(() => {
+      press.current = null;
+      if (need === 1 && hitTest(cx, cy)) return;
+      openWheel(cx, cy);
+      const shut = () => api.current?.updateScene({ appState: { contextMenu: null } as never });
+      shut(); requestAnimationFrame(shut); setTimeout(shut, 120);
+    }, 550) };
   };
   const onPointerMoveCapture = (e: React.PointerEvent) => {
     if (inkMove(e)) return;
@@ -927,7 +968,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     commit(a, all.map((x) => (x.id === id ? bump(out) : x)) as never, "NEVER");
     if (isHl) sendBehindInk(a, id);
   };
-  const pickSlot = (s: WheelSlot) => { setWheel(null); activate(s.tool, { shape: s.shape }); };
+  const pickSlot = (s: WheelSlot) => { setWheel(null); if (s.pen) setInk((x) => ({ ...x, current: s.pen as PenType })); activate(s.tool, { shape: s.shape }); };
 
   async function runScript() {
     try { localStorage.setItem("lumen.wbScript", src); } catch { /* ignore */ }
@@ -1007,21 +1048,33 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
         const one = scope === "frames" && ids.length === 1 ? all.find((e) => e.id === ids[0]) : null;
         let sc = scale ?? 1;
         if (scale == null) { const xs = els.map((e) => e.x), ys = els.map((e) => e.y); const w = Math.max(1, Math.max(...els.map((e) => e.x + e.width)) - Math.min(...xs)), h = Math.max(1, Math.max(...els.map((e) => e.y + e.height)) - Math.min(...ys)); sc = Math.max(0.1, maxPx / Math.max(w, h)); }
+        // Dark exports follow the board's ink rule, not Excalidraw's dark mode (which inverts everything: the background turns
+        // light grey, stickies invert and light ink vanishes): only dark inks flip light (same table as the on-screen filter),
+        // paper colours, fills and images stay as they are, exact colours (customData.lumenExact) never change.
+        const darkOut = opts.theme === "dark" || (opts.theme === "app" && dark);
+        if (darkOut) {
+          const flip = (c: unknown) => (typeof c === "string" && c !== "transparent" ? inkFlip(c) : c);
+          els = els.map((e) => ((e.customData as Record<string, unknown> | undefined)?.lumenExact ? e : { ...e, strokeColor: flip(e.strokeColor), backgroundColor: flip(e.backgroundColor) }));
+        }
+        // board background + pattern drawn under the drawing (Excalidraw only knows a flat colour); then Excalidraw's own
+        // background stays off, or it would paint over the pattern
+        const patterned = opts.pattern && opts.bgColor !== null && bset.pattern !== "none" && bset.bg !== "transparent";
         const common = {
           elements: els as never, files: a.getFiles() as never, exportPadding: opts.padding, exportingFrame: (one ?? null) as never,
-          appState: { ...a.getAppState(), exportBackground: opts.bgColor !== null, viewBackgroundColor: opts.bgColor ?? "#ffffff", exportWithDarkMode: opts.theme === "dark" || (opts.theme === "app" && dark), exportScale: sc, exportEmbedScene: opts.embedScene, frameRendering: { enabled: true, name: opts.frameNames, outline: opts.frameNames, clip: true } } as never,
+          appState: { ...a.getAppState(), exportBackground: opts.bgColor !== null && !patterned, viewBackgroundColor: opts.bgColor ?? "#ffffff", exportWithDarkMode: false, exportScale: sc, exportEmbedScene: opts.embedScene, frameRendering: { enabled: true, name: opts.frameNames, outline: opts.frameNames, clip: true } } as never,
         };
-        // board background + pattern drawn under the drawing (Excalidraw only knows a flat colour)
-        const patterned = opts.pattern && opts.bgColor !== null && bset.pattern !== "none" && bset.bg !== "transparent";
         const [bx0, by0] = els.length ? getCommonBounds(els as never) : [0, 0];
-        const back = (W: number, H: number, k: number) => backgroundSvg(bset, opts.bgColor, true, opts.theme === "dark" || (opts.theme === "app" && dark), W, H, (one ? (one.x as number) : bx0) - opts.padding, (one ? (one.y as number) : by0) - opts.padding, k);
+        const back = (W: number, H: number, k: number) => backgroundSvg(bset, opts.bgColor, true, darkOut, W, H, (one ? (one.x as number) : bx0) - opts.padding, (one ? (one.y as number) : by0) - opts.padding, k);
         if (format === "svg") {
           const svg = await exportToSvg(common);
-          const W = Number(svg.getAttribute("width")) || 800, H = Number(svg.getAttribute("height")) || 600;
-          const vbW = Number(svg.getAttribute("viewBox")?.split(" ")[2]) || W;
-          return { svg: patterned ? withSvgBackground(svg.outerHTML, back(W, H, W / Math.max(1, vbW))) : svg.outerHTML, width: W, height: H };
+          const vb = (svg.getAttribute("viewBox") ?? "").split(" ").map(Number);
+          // the chosen scale sizes the SVG (Excalidraw writes 1× width / height)
+          const W = Math.round((vb[2] || Number(svg.getAttribute("width")) || 800) * sc), H = Math.round((vb[3] || Number(svg.getAttribute("height")) || 600) * sc);
+          svg.setAttribute("width", String(W)); svg.setAttribute("height", String(H));
+          return { svg: patterned ? withSvgBackground(svg.outerHTML, back(vb[2] || W, vb[3] || H, 1)) /* drawn in viewBox units */ : svg.outerHTML, width: W, height: H };
         }
-        let blob = await exportToBlob({ ...common, mimeType: "image/png" });
+        // the chosen scale (2×, 3×…) decides the pixel size: Excalidraw's helper otherwise renders at 1×
+        let blob = await exportToBlob({ ...common, mimeType: "image/png", getDimensions: (w: number, h: number) => ({ width: Math.round(w * sc), height: Math.round(h * sc), scale: sc }) } as never);
         if (patterned) { const bm0 = await createImageBitmap(blob); const W = bm0.width, H = bm0.height; bm0.close(); blob = await withRasterBackground(blob, back(W, H, sc)); }
         const bm = await createImageBitmap(blob);
         const out = { blob, width: bm.width, height: bm.height };
@@ -1029,6 +1082,27 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
         return out;
       },
       source: () => serializeFull(),
+      // Markdown: the board's outline (text, stickies, cards, frames) + the board as a PNG attachment
+      markdown: async (opts) => {
+        const { sceneToOutline } = await import("../lib/convert/outline");
+        const body = serialize();
+        let text = opts.mdOutline ? sceneToOutline(note.title, body, kind === "board") : `# ${note.title}\n`;
+        const files: { name: string; blob: Blob }[] = [];
+        if (opts.mdAttachments && a.getSceneElements().length) {
+          const name = `${(note.title || "board").replace(/[^\w؀-ۿ -]+/g, "").trim().replace(/\s+/g, "-") || "board"}.png`;
+          const blob = await exportToBlob({ elements: a.getSceneElements() as never, files: a.getFiles() as never, mimeType: "image/png", exportPadding: 24, appState: { exportBackground: true, viewBackgroundColor: "#ffffff", exportWithDarkMode: false, exportScale: 2 } as never, getDimensions: (w: number, h: number) => ({ width: w * 2, height: h * 2, scale: 2 }) } as never);
+          files.push({ name, blob });
+          text = `${text.trimEnd()}\n\n![${note.title}](${name})\n`;
+        }
+        return files.length ? { text, files } : text;
+      },
+      // Mermaid: shapes, cards and their arrows as a flowchart (best effort; ink is left out)
+      mermaid: async () => {
+        const [{ sceneToCanvas }, { canvasToMermaid }] = await Promise.all([import("../lib/convert/scene"), import("../lib/convert/mermaid")]);
+        return canvasToMermaid(sceneToCanvas(serialize()));
+      },
+      mermaidKinds: ["flowchart"],
+      mermaidNote: t("Best effort: shapes, stickies, cards and their arrows become a flowchart; ink is left out."),
     });
   }
 
@@ -1248,11 +1322,13 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   const inkSelMeta = inkSel ? { glyph: ({ ballpoint: "pen-ballpoint", fountain: "pen-fountain", brush: "pen-brush", marker: "pen-marker", highlighter: "pen-highlighter", pencil: "pen-pencil", calligraphy: "pen-calligraphy", laser: "laser" } as Record<PenType, string>)[inkSel], label: t(inkSel.charAt(0).toUpperCase() + inkSel.slice(1)) } : null;
   const lassoBar = tool === "lasso" && !!bar?.ids.length;
   const perf = count > PERF_LIMIT && !perfOff;
+  useEffect(() => { if (perf) api.current?.updateScene({ appState: { currentItemRoughness: 0 } as never }); }, [perf]);
   const toggleZen = () => { boardStore.set({ zen: !zen }); scheduleSave(100); };
   const togglePenMode = () => api.current?.updateScene({ appState: { penMode: !penMode, penDetected: true } });
   const toggleMinimap = () => { boardStore.set({ minimap: !minimap }); scheduleSave(100); };
   const openHistory = () => setUI({ panel: ui.panel === "versions" ? null : "versions" });
   const moreItems: MoreItem[] = [
+    ...(kind === "board" ? [{ glyph: "mermaid", label: t("Mermaid card"), run: () => placeCard({ kind: "mermaid", title: "diagram.mermaid", src: MMD_DEFAULT, mode: "edit" }) }] : []),
     { glyph: "mermaid", label: t("Mermaid → shapes"), run: () => setMermaidOpen(true), on: mermaidOpen },
     { glyph: "code", label: t("Code: .excalidraw JSON"), run: () => (panel === "json" ? setPanel(null) : openTab("json")), on: panel === "json" },
     { glyph: "script", label: t("Script console"), run: () => (panel === "script" ? setPanel(null) : openTab("script")), on: panel === "script" },
@@ -1271,7 +1347,6 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     { id: "handwriting", glyph: "searchable", label: t("Handwriting search"), hint: hw ? t("On") : t("Off"), run: () => openPanel("handwriting") },
     { id: "zen", glyph: "zen", label: t("Zen mode"), hint: "⌥Z", on: zen, run: toggleZen },
     { id: "note", glyph: "note", label: t("Note"), hint: "›", run: () => {} },
-    { id: "delete", glyph: "trash", label: kind === "board" ? t("Delete board") : t("Delete whiteboard"), hint: "Shift+Del", run: () => void trashBoard() },
   ];
   const noteItems: MenuItem[] = [
     { id: "pin", glyph: "pin", label: note.pinned ? t("Unpin") : t("Pin"), run: () => void updateNote(note.id, { pinned: note.pinned ? 0 : 1 }) },
@@ -1292,16 +1367,18 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     { glyph: "web-embed", label: t("Web page"), run: () => activate("web"), on: tool === "web" },
     { glyph: "note-card", label: t("Note card"), run: () => activate("note") },
     { glyph: "frame", label: t("Frame"), run: () => activate("frame"), on: tool === "frame" },
-    { glyph: "mermaid", label: "Mermaid", run: () => setMermaidOpen(true) },
+    { glyph: "mermaid", label: "Mermaid", run: () => (kind === "board" ? placeCard({ kind: "mermaid", title: "diagram.mermaid", src: MMD_DEFAULT, mode: "edit" }) : setMermaidOpen(true)) },
     { glyph: "code", label: t("Code"), run: () => openTab("json") },
     { glyph: "script", label: t("Script"), run: () => openTab("script") },
     { glyph: "export", label: t("Export"), run: doExport },
   ];
-  const showBar = !!bar && !zen && !(phone && dockMore) && !wheel && !lassoBar && !penSheet;
+  const showBar = !!bar && !zen && !menu && !boardSet.viewOnly && !(phone && dockMore) && !wheel && !lassoBar && !penSheet;
   const empty = count === 0 && tool === "select" && !panel;
   const panelRender = open ? wbRegistry.panels[open] : undefined;
-  const drawingPhone = phone && (tool !== "select" && tool !== "hand" || !!bar?.ids.length);
-  const banner = saved.offline ? { dot: "var(--warning)", text: t("Offline · changes save on this device and sync later") } : perf ? { dot: "var(--muted)", text: t("Large board · {n} elements · Performance mode: shadows off", { n: count.toLocaleString() }), action: t("Turn off"), onAction: () => setPerfOff(true) } : null;
+  // phone undo / redo pills sit top-start whenever the board is in use (44A, 44L RTL: on the right); hidden under sheets and the empty state
+  const drawingPhone = phone && !penSheet && !dockMore && !empty;
+  // 33H: View only (Board settings) hides the toolbar, property bar and dock; the banner says so and turns editing back on
+  const banner = boardSet.viewOnly ? { dot: "var(--info)", text: t("View only · the board can't be changed"), action: t("Edit"), onAction: () => { boardStore.set({ viewOnly: false }); scheduleSave(100); } } : saved.offline ? { dot: "var(--warning)", text: t("Offline · changes save on this device and sync later") } : perf ? { dot: "var(--muted)", text: t("Large board · {n} elements · Performance mode: shadows off", { n: count.toLocaleString() }), action: t("Turn off"), onAction: () => setPerfOff(true) } : null;
 
   return (
     <div dir={rtl ? "rtl" : "ltr"} className={cx("relative flex h-full min-h-0 flex-col", perf && "wb-perf-root")}>
@@ -1352,7 +1429,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
           <Backdrop ref={backdrop} board={boardSet} dark={dark} />
           <div ref={boardDiv} dir="ltr" className="absolute inset-0">{board}</div>
 
-          {!zen && !phone && (
+          {!zen && !phone && !boardSet.viewOnly && (
             <Toolbar tool={tool} shape={shape} line={line} arrowType={arrowType} locked={locked} pen={penLook}
               onTool={(id) => activate(id)} onLock={toggleLock} onShape={(s) => activate("shape", { shape: s })} onLine={(l, at) => activate("arrow", { line: l, arrow: at })}
               more={moreItems} penPopover={wbRegistry.pens ? (close) => wbRegistry.pens!({ ...ctx, close, anchor: null, target: "tool" }) : undefined}
@@ -1377,10 +1454,11 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
           {penSheet && phone && <PenPanel api={apiReady} dark={dark} phone onClose={() => setPenSheet(false)} />}
           {banner && !zen && <Banner {...banner} phone={phone} />}
           {empty && <EmptyBoard kind={kind} phone={phone} onDraw={() => activate("pen")} onCard={() => setPicker(true)} onPaste={() => void pasteImage()} />}
+          {linkPrompt && <LinkCardPrompt phone={phone} onAdd={(url) => { placeCard({ kind: "link", url }); setLinkPrompt(false); }} onClose={() => setLinkPrompt(false)} />}
           {picker && <NoteCardPicker phone={phone} exclude={note.id} onPick={addNoteCard} onClose={() => setPicker(false)} />}
           {!zen && <BottomStart>{minimap && <Minimap api={apiReady} tick={tick} />}<ZoomCluster api={apiReady} zoom={zoom} canRedo={canRedo} onUndo={undo} onRedo={redo} /></BottomStart>}
           {!zen && !empty && <FrameChip api={apiReady} count={frameCount} tick={tick} minimap={minimap} onMinimap={toggleMinimap} onFrames={() => openPanel("frames")} />}
-          {wheel && <ToolWheel x={wheel.x} y={wheel.y} slots={wheel.slots} current={tool} penColor={shown(currentPen().color, dark)} hlColor={hlPen().color} onPick={pickSlot} onUndo={undo} onRedo={redo} onClose={() => setWheel(null)} />}
+          {wheel && <ToolWheel x={wheel.x} y={wheel.y} slots={wheel.slots} current={tool} penType={getInk().current} penColor={shown(currentPen().color, dark)} hlColor={hlPen().color} onPick={pickSlot} onUndo={undo} onRedo={redo} onClose={() => setWheel(null)} />}
 
           {/* Phone: undo/redo top-start while drawing, pen-mode rule chip top-end, dock at the bottom */}
           {phone && !panel && (
@@ -1392,8 +1470,8 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
                 </div>
               )}
               {penMode && <button type="button" data-wb-chrome title={t("Turn pen mode off")} onClick={togglePenMode} className="absolute end-3 top-3 z-20 flex h-8 items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 text-[11.5px] text-muted">{t("Stylus draws · finger pans")}</button>}
-              <PhoneDock tool={tool} penGlyph={penLook.glyph} penColor={penLook.color} more={dockMoreItems} moreOpen={dockMore} onMore={setDockMore} onPenSheet={() => { if (tool !== "pen") activate("pen"); setPenSheet(true); }}
-                onTool={(id) => (id === "shape" ? openPanel("library") : id === tool && id !== "hand" && id !== "select" ? activate("select") : activate(id))} />
+              {!boardSet.viewOnly && <PhoneDock tool={tool} penGlyph={penLook.glyph} penColor={penLook.color} more={dockMoreItems} moreOpen={dockMore} onMore={setDockMore} onPenSheet={() => { if (tool !== "pen") activate("pen"); setPenSheet(true); }}
+                onTool={(id) => (id === "shape" ? openPanel("library") : id === tool && id !== "hand" && id !== "select" ? activate("select") : activate(id))} />}
             </>
           )}
           {panelRender && <div data-wb-chrome className="contents">{panelRender(ctx)}</div>}
@@ -1445,8 +1523,46 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   );
 }
 
+/** A bad element must never blank the whole app: the board fails alone and offers to reload or repair it. */
+class BoardBoundary extends Component<{ note: Note; children: (k: number) => ReactNode }, { err: Error | null; k: number; busy: boolean }> {
+  state = { err: null as Error | null, k: 0, busy: false };
+  static getDerivedStateFromError(err: Error) { return { err }; }
+  componentDidCatch(err: Error) { console.error("[whiteboard]", err); }
+  componentDidUpdate(p: { note: Note }) { if (p.note.id !== this.props.note.id && this.state.err) this.setState({ err: null }); }
+  retry = () => this.setState((s) => ({ err: null, k: s.k + 1 }));
+  /** Repair: run every saved element through Excalidraw's restore (fills missing fields, drops broken ones), save, reload. */
+  repair = async () => {
+    this.setState({ busy: true });
+    try {
+      const { scene } = parseScene(this.props.note.body);
+      const ok = (scene.elements as unknown[]).filter((e) => e && typeof e === "object" && typeof (e as El).type === "string");
+      const els = restoreElements(ok as never, null, { repairBindings: true });
+      await updateNote(this.props.note.id, { body: JSON.stringify({ ...scene, elements: els }) });
+      toast(t("Board repaired"));
+    } catch { toast(t("Couldn't repair this board")); }
+    this.setState((s) => ({ err: null, k: s.k + 1, busy: false }));
+  };
+  render() {
+    if (!this.state.err) return this.props.children(this.state.k);
+    return (
+      <div role="alert" className="flex h-full min-h-0 flex-1 items-center justify-center bg-[var(--bg)] p-4">
+        <div className="flex w-[380px] max-w-full flex-col gap-3 rounded-[14px] border border-line bg-surface p-5 shadow-[0_12px_32px_rgba(0,0,0,.35)]">
+          <div className="flex items-center gap-2.5 text-[15px] font-semibold text-ink"><Glyph name="triangle" size={18} color="var(--danger)" />{t("This board hit a problem")}</div>
+          <p className="text-[12.5px] leading-[18px] text-muted">{t("Something on the board couldn't be drawn. Your saved work is safe. Reload the board, or repair it to fix the broken elements.")}</p>
+          <code dir="ltr" className="block truncate rounded-[8px] bg-surface-2 px-2 py-1.5 text-[11px] text-muted">{this.state.err.message}</code>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={this.retry} className="h-8 rounded-[8px] border border-line px-3 text-[12.5px] text-ink hover:bg-surface-2">{t("Reload board")}</button>
+            <button type="button" disabled={this.state.busy} onClick={() => void this.repair()} className="h-8 rounded-[8px] bg-accent px-3 text-[12.5px] font-medium text-accent-fg disabled:opacity-60">{t("Repair board")}</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+const WhiteboardSafe = (p: { note: Note; kind?: "whiteboard" | "board" }) => <BoardBoundary note={p.note}>{(k) => <Whiteboard key={k} {...p} />}</BoardBoundary>;
+
 /** Re-render only when this note's content changes, not on every vault update (saves elsewhere, sync, list changes). */
-export default memo(Whiteboard, (a, b) => a.note.id === b.note.id && a.note.body === b.note.body && a.note.title === b.note.title && a.note.pinned === b.note.pinned && a.note.favorite === b.note.favorite && a.note.shareId === b.note.shareId);
+export default memo(WhiteboardSafe, (a, b) => a.note.id === b.note.id && a.note.body === b.note.body && a.note.title === b.note.title && a.note.pinned === b.note.pinned && a.note.favorite === b.note.favorite && a.note.shareId === b.note.shareId);
 
 /** Small switch (30×18), amber when on. */
 function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {

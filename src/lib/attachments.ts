@@ -68,8 +68,10 @@ export function filesMayUpload(opening = false): boolean {
   return true;
 }
 /**
- * Storage almost full (Lumen 22 §5): uploads pause at 98 % of the Cloudflare limit (4.9 of 5 GB); files stay queued on
- * this device and go up once there is room again. Notes keep syncing (they are small). Usage is re-read every 10 min.
+ * Storage almost full (Lumen 22 §5): uploads pause at 98 % of the D1 database cap (`limitBytes` from /api/usage:
+ * 500 MB per database on Workers Free unless D1_LIMIT_BYTES says otherwise); files stay queued on this device and go
+ * up once there is room again, so notes keep room to sync. Usage is the real database size when the Worker reports it
+ * (`dbBytes`), else records + D1 file bytes; R2 bytes don't count against D1. Re-read every 10 min.
  */
 let usage: { at: number; room: number } | null = null;
 let paused = false;
@@ -77,8 +79,9 @@ export const uploadsPaused = () => paused;
 async function storageRoom(): Promise<number> {
   if (usage && Date.now() - usage.at < 600_000) return usage.room;
   try {
-    const u = await api<{ limitBytes: number; records: { bytes: number }; files: { bytes: number }; r2: { bytes: number } | null }>("/usage");
-    usage = { at: Date.now(), room: u.limitBytes * 0.98 - (u.records.bytes + u.files.bytes + (u.r2?.bytes ?? 0)) };
+    const u = await api<{ dbBytes?: number | null; limitBytes: number; records: { bytes: number }; files: { bytes: number } }>("/usage");
+    const used = Math.max(u.dbBytes ?? 0, u.records.bytes + u.files.bytes);
+    usage = { at: Date.now(), room: u.limitBytes * 0.98 - used };
   } catch { usage = { at: Date.now(), room: Infinity }; }
   return usage.room;
 }

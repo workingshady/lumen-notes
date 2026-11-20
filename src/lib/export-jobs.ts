@@ -11,7 +11,7 @@ export function toPrefs(o: ExportOptions, format: DiagramExportPrefs["format"]):
   return { format, scale: typeof o.scale === "number" ? o.scale : 2, quality: o.quality, background: o.bgColor ? "custom" : "transparent", color: o.bgColor ?? "#ffffff", theme: o.cardStyle === "print" ? "default" : o.theme, padding: o.padding, svgText: o.svgText, embedFont: o.embedFont };
 }
 /** Draw a dot pattern over the background of a built SVG. */
-function addPattern(svg: string, theme: DiagramExportPrefs["theme"]) {
+export function addPattern(svg: string, theme: DiagramExportPrefs["theme"]) {
   const vb = /viewBox="([-\d.\s]+)"/.exec(svg)?.[1]?.trim().split(/\s+/).map(Number);
   if (!vb || vb.length !== 4) return svg;
   const dots = `<defs><pattern id="lm-dots" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.1" fill="${paletteFor(theme).muted}" fill-opacity=".3"/></pattern></defs><rect x="${vb[0]}" y="${vb[1]}" width="${vb[2]}" height="${vb[3]}" fill="url(#lm-dots)"/>`;
@@ -21,12 +21,25 @@ function addPattern(svg: string, theme: DiagramExportPrefs["theme"]) {
 }
 
 const cardLabel = (n: CanvasNode): string => (n.type === "text" ? n.text.replace(/^#+\s*/gm, "").split("\n").find((l) => l.trim()) ?? "" : n.type === "file" ? n.file.replace(/\.md$/i, "").split("/").pop()! : n.type === "link" ? n.url.replace(/^https?:\/\/(www\.)?/, "") : n.type === "group" ? n.label ?? "" : "").trim().slice(0, 60);
-/** Best-effort Mermaid flowchart of a canvas (cards become boxes, edges arrows; positions are not kept). */
+/** Best-effort Mermaid flowchart of a canvas: cards become boxes, groups subgraphs (nested by containment), edges arrows
+ * (group-to-group edges too); positions are not kept. */
 export function canvasMermaid(c: JsonCanvas): string {
   const q = (s: string) => s.replace(/"/g, "'").replace(/[[\]]/g, "");
-  const nodes = (c.nodes ?? []).filter((n) => n.type !== "group");
-  const ids = new Map(nodes.map((n, i) => [n.id, `n${i + 1}`]));
-  const lines = ["flowchart LR", ...nodes.map((n) => `  ${ids.get(n.id)}["${q(cardLabel(n)) || "card"}"]`)];
+  const all = c.nodes ?? [];
+  const ids = new Map(all.map((n, i) => [n.id, n.type === "group" ? `g${i + 1}` : `n${i + 1}`]));
+  const area = (n: CanvasNode) => n.width * n.height;
+  const inside = (n: CanvasNode, g: CanvasNode) => n.id !== g.id && n.x >= g.x && n.y >= g.y && n.x + n.width <= g.x + g.width + 1 && n.y + n.height <= g.y + g.height + 1 && area(n) < area(g);
+  const groups = all.filter((n) => n.type === "group");
+  // each item belongs to the smallest group around it
+  const parent = new Map(all.map((n) => [n.id, groups.filter((g) => inside(n, g)).sort((a, b) => area(a) - area(b))[0]?.id]));
+  const lines = ["flowchart LR"];
+  const walk = (p: string | undefined, ind: string) => {
+    for (const n of all.filter((x) => parent.get(x.id) === p)) {
+      if (n.type === "group") { lines.push(`${ind}subgraph ${ids.get(n.id)}["${q(cardLabel(n)) || "Group"}"]`); walk(n.id, ind + "  "); lines.push(`${ind}end`); }
+      else lines.push(`${ind}${ids.get(n.id)}["${q(cardLabel(n)) || "card"}"]`);
+    }
+  };
+  walk(undefined, "  ");
   for (const e of c.edges ?? []) { const a = ids.get(e.fromNode), b = ids.get(e.toNode); if (a && b) lines.push(`  ${a} -->${e.label ? `|${q(e.label)}|` : ""} ${b}`); }
   return lines.join("\n");
 }
@@ -62,6 +75,8 @@ export interface CanvasJobIn {
   /** Visible area in canvas coordinates. */
   view?: { x: number; y: number; w: number; h: number };
   link?: string;
+  /** Folder (else space) name of a note: the note card header, like on the board. */
+  folderOf?: (n: Note) => string | undefined;
 }
 /** The Export dialog job for a JSON Canvas. */
 export function canvasJob(i: CanvasJobIn): VisualExportJob {
@@ -82,7 +97,7 @@ export function canvasJob(i: CanvasJobIn): VisualExportJob {
     content: ["cardStyle", "groupLabels", "edgeLabels", "embedScene"],
     build: async (r) => {
       const p = toPrefs(r.opts, r.format === "svg" ? "svg" : "png");
-      const b = await canvasSvg(scoped(r.scope, r.ids), i.notes, p, { cardStyle: r.opts.cardStyle === "screen", groupLabels: r.opts.groupLabels, edgeLabels: r.opts.edgeLabels });
+      const b = await canvasSvg(scoped(r.scope, r.ids), i.notes, p, { cardStyle: r.opts.cardStyle === "screen", groupLabels: r.opts.groupLabels, edgeLabels: r.opts.edgeLabels, folderOf: i.folderOf });
       return r.opts.pattern ? { ...b, svg: addPattern(b.svg, p.theme) } : b;
     },
     source: async () => JSON.stringify(i.canvas(), null, 2),
@@ -94,7 +109,7 @@ export function canvasJob(i: CanvasJobIn): VisualExportJob {
 export function mermaidJob(src: string, name: string): VisualExportJob {
   const title = safeName(name);
   return {
-    kind: "mermaid", title: `${title}.mermaid`, name: title, sourceExt: ".mermaid", scopes: ["whole"], themable: true, content: ["embedScene"], defaults: { format: "svg", background: "theme" },
+    kind: "mermaid", title: `${title}.mermaid`, name: title, sourceExt: ".mermaid", scopes: ["whole"], themable: true, content: ["embedScene"], defaults: { format: "svg", background: "board" },
     build: async (r) => buildSvg(src, toPrefs(r.opts, r.format === "svg" ? "svg" : "png")),
     source: async () => src,
     markdown: async () => `# ${title}\n\n\`\`\`mermaid\n${src}\n\`\`\`\n`,

@@ -8,14 +8,47 @@ export const PRESETS: Record<string, string> = { "1": "#E5534B", "2": "#E8893A",
 export const colorOf = (c?: string) => (c ? PRESETS[c] ?? c : undefined);
 const shortId = () => uid().replace(/-/g, "").slice(0, 16);
 
-export function parseCanvas(text: string): { canvas: JsonCanvas; error: string | null } {
-  try {
-    const c = JSON.parse(text || "{}") as JsonCanvas;
-    const err = validate(c);
-    return { canvas: err ? { nodes: [], edges: [] } : { nodes: c.nodes ?? [], edges: c.edges ?? [], ...pickMeta(c) }, error: err };
-  } catch (e) {
-    return { canvas: { nodes: [], edges: [] }, error: `JSON: ${(e as Error).message}` };
-  }
+/** Items a lenient load couldn't read. They ride along under `lumenUnread` (never shown) and `stringify` writes them back
+ * into nodes / edges unchanged, so saving a canvas with one broken item never loses it. */
+export interface Unread { nodes: unknown[]; edges: unknown[] }
+export const unreadOf = (c: JsonCanvas): Unread | undefined => (c as { lumenUnread?: Unread }).lumenUnread;
+/** Why one node can't be read (null = fine). */
+function nodeProblem(n: CanvasNode, ids: Set<string>): string | null {
+  if (!n || typeof n !== "object" || typeof n.id !== "string" || !n.id) return "missing id";
+  if (ids.has(n.id)) return `duplicate id "${n.id}"`;
+  if (!["text", "file", "link", "group"].includes(n.type)) return "type must be text | file | link | group";
+  for (const k of ["x", "y", "width", "height"] as const) if (typeof n[k] !== "number" || !Number.isFinite(n[k])) return `${k} must be a number`;
+  if (n.type === "text" && typeof n.text !== "string") return 'text node needs "text"';
+  if (n.type === "file" && typeof n.file !== "string") return 'file node needs "file"';
+  if (n.type === "link" && typeof n.url !== "string") return 'link node needs "url"';
+  return null;
+}
+/**
+ * Lenient load: a broken node or edge is skipped (kept aside in `lumenUnread`), the rest loads with every key it has.
+ * `error` is set only when nothing could be read at all (not JSON, or not a canvas object); `skipped` counts unread items
+ * and `problem` describes the first one.
+ */
+export function parseCanvas(text: string): { canvas: JsonCanvas; error: string | null; skipped: number; problem: string | null } {
+  let c: unknown;
+  try { c = JSON.parse(text || "{}"); } catch (e) { return { canvas: { nodes: [], edges: [] }, error: `JSON: ${(e as Error).message}`, skipped: 0, problem: null }; }
+  if (!c || typeof c !== "object" || Array.isArray(c)) return { canvas: { nodes: [], edges: [] }, error: "Top level must be an object { nodes, edges }", skipped: 0, problem: null };
+  const { nodes: rn, edges: re, lumenUnread: prevUnread, ...rest } = c as JsonCanvas & { lumenUnread?: Unread };
+  const rawNodes: unknown[] = Array.isArray(rn) ? rn : [], rawEdges: unknown[] = Array.isArray(re) ? re : [];
+  const unread: Unread = { nodes: [...(prevUnread?.nodes ?? [])], edges: [...(prevUnread?.edges ?? [])] };
+  if (rn !== undefined && !Array.isArray(rn)) unread.nodes.push(rn);
+  if (re !== undefined && !Array.isArray(re)) unread.edges.push(re);
+  const ids = new Set<string>(), nodes: CanvasNode[] = [], edges: CanvasEdge[] = [];
+  let problem: string | null = null;
+  rawNodes.forEach((n, i) => { const p = nodeProblem(n as CanvasNode, ids); if (p) { unread.nodes.push(n); problem ??= `nodes[${i}]: ${p}`; } else { ids.add((n as CanvasNode).id); nodes.push(n as CanvasNode); } });
+  const eids = new Set<string>();
+  rawEdges.forEach((e, i) => {
+    const x = e as CanvasEdge;
+    const p = !x || typeof x !== "object" || typeof x.id !== "string" ? "missing id" : eids.has(x.id) ? `duplicate id "${x.id}"` : !ids.has(x.fromNode) ? `fromNode "${x.fromNode}" doesn't exist` : !ids.has(x.toNode) ? `toNode "${x.toNode}" doesn't exist` : null;
+    if (p) { unread.edges.push(e); problem ??= `edges[${i}]: ${p}`; } else { eids.add(x.id); edges.push(x); }
+  });
+  const skipped = unread.nodes.length + unread.edges.length;
+  const canvas = { ...rest, nodes, edges, ...(skipped ? { lumenUnread: unread } : {}) } as JsonCanvas;
+  return { canvas, error: null, skipped, problem };
 }
 
 /** JSON Canvas 1.0 validation (https://jsoncanvas.org/spec/1.0/). Returns an error message or null. */
@@ -44,7 +77,11 @@ export function validate(c: unknown): string | null {
 }
 
 /** Canvas-level `lumen*` keys (background, default edge path, group options) ride along after nodes / edges. */
-export const stringify = (c: JsonCanvas) => JSON.stringify({ nodes: c.nodes ?? [], edges: c.edges ?? [], ...pickMeta(c) }, null, 2);
+/** Unread items (see `parseCanvas`) go back into nodes / edges as they were; other top-level keys are kept. */
+export const stringify = (c: JsonCanvas) => {
+  const { nodes, edges, lumenUnread, ...rest } = c as JsonCanvas & { lumenUnread?: Unread };
+  return JSON.stringify({ nodes: [...(nodes ?? []), ...(lumenUnread?.nodes ?? [])], edges: [...(edges ?? []), ...(lumenUnread?.edges ?? [])], ...rest, ...pickMeta(c) }, null, 2);
+};
 
 // ------------------------------------------------------------------ layouts
 type LayoutKind = "grid" | "tree" | "force" | "tidy";

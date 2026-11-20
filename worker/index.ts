@@ -15,7 +15,7 @@ import registerTutor from "./ext/tutor";
 import registerHub from "./ext/hub";
 import registerAccess from "./ext/access";
 import extOg, { ogPages } from "./ext/og"; // OG images + share/blog page meta (round 4 assets)
-import { accountRouter } from "./accounts";
+import { accountRouter, r2Key, r2Keys } from "./accounts";
 import registerAuth, { authGate } from "./ext/auth"; // user accounts, behind ACCOUNTS_ENABLED (off) — docs/ACCOUNTS.md
 import registerAiVisual from "./ext/ai-visual"; // vision convert + architecture AI (round 7)
 import registerAiUsage from "./ext/ai-usage"; // AI usage meter + daily limit (Settings › AI, round 6)
@@ -41,6 +41,10 @@ export type Env = {
     LANGUAGES_PASSCODE?: string;
     /** Set by accountRouter when the request belongs to an extra account. */
     ACCOUNT?: string;
+    /** The main account's database, kept by accountRouter when it swaps DB (account-wide state: AI allowance). */
+    MAIN_DB?: D1Database;
+    /** D1 size cap per database in bytes (usage meter + upload pause). Default 500 MB (Workers Free); paid: 10 GB. */
+    D1_LIMIT_BYTES?: string;
   };
 };
 
@@ -74,7 +78,13 @@ const ownerToken = (env: Env["Bindings"]) => {
 // Pick the account (main or an extra one) before any route runs.
 api.use("*", authGate()); // no-op unless accounts are on and the request carries a user session (lms_…)
 api.use("*", accountRouter({ hmac, safeEqual }));
-registerAiUsage(api, auth); // must run before the /ai routes: meters every Workers AI call, enforces the daily limit
+registerAiUsage(api, auth); // must run before the /ai routes: auth first, then meters every Workers AI call + daily limit
+// REST writes of an oversized / invalid record (upserts → ItemError) answer 413 / 400 instead of a D1 failure.
+api.onError((e, c) => {
+  if (e instanceof ItemError) return c.json({ error: e.message, reason: e.r.reason, size: e.r.size, max: MAX_ITEM_BYTES }, e.r.reason === "too_large" ? 413 : 400);
+  console.error(e);
+  return c.json({ error: "Internal error" }, 500);
+});
 
 const failures = new Map<string, { n: number; until: number }>(); // per-isolate brute-force brake
 api.post("/login", async (c) => {
@@ -93,7 +103,9 @@ api.post("/login", async (c) => {
 });
 
 /** Owner token (from /login) or a named API token (`lmn_…`, Settings › Developer; only its SHA-256 is stored). */
+const authed = new WeakSet<Request>(); // requests that already passed `auth` (the AI meter runs it first)
 async function auth(c: Context<Env>, next: Next) {
+  if (authed.has(c.req.raw)) return next();
   const h = c.req.header("authorization") ?? "";
   const tok = h.startsWith("Bearer ") ? h.slice(7) : "";
   let ok = !!tok && safeEqual(tok, await ownerToken(c.env));
@@ -122,11 +134,25 @@ async function auth(c: Context<Env>, next: Next) {
     const action = c.req.path === "/api/transcribe" ? "voice" : ((await c.req.json<{ action?: string }>().catch(() => ({}))) as { action?: string }).action ?? "";
     if (off.includes("all") || off.includes(action)) return c.json({ error: "This AI action is turned off in Settings › AI." }, 403);
   }
+  authed.add(c.req.raw);
   await next();
 }
 
 // ------------------------------------------------------------------ sync
+/** Rows per pull page (upper bound) and the byte budget per page (D1 result cap 50 MB, isolate memory 128 MB). */
 const PAGE = 1500;
+const PAGE_BYTES = 8_000_000;
+/** D1 caps a row / string at 2,000,000 bytes; stored `data` is the record's JSON (body escaped once more), so items
+ *  above this are refused one by one (`rejected`, reason "too_large") instead of failing their whole batch. */
+const MAX_ITEM_BYTES = 1_800_000;
+/** Items per /sync request. Clients push in chunks below this; more is answered 413 (never a silent cut). */
+const MAX_PUSH_ITEMS = 2000;
+/** Items per atomic D1 batch (2 statements each); a failing batch is bisected so one bad row never blocks others. */
+const WRITE_GROUP = 50;
+/** D1 queries one /sync may spend on writes (Workers Free: 50 per invocation; a batch counts as one). */
+const WRITE_BUDGET = 40;
+/** Future-clock guard: a client `updatedAt` is clamped to server time + this skew before the LWW compare. */
+const CLOCK_SKEW_MS = 5 * 60_000;
 const UPSERT = `INSERT INTO items (kind, id, data, updated_at, deleted, rev)
   VALUES (?1, ?2, ?3, ?4, ?5, (SELECT CAST(v AS INTEGER) FROM meta WHERE k = 'rev'))
   ON CONFLICT(kind, id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at, deleted = excluded.deleted, rev = excluded.rev
@@ -136,37 +162,123 @@ const UPSERT = `INSERT INTO items (kind, id, data, updated_at, deleted, rev)
 //   not sent again to every other device.
 const BUMP = `UPDATE meta SET v = CAST(v AS INTEGER) + 1 WHERE k = 'rev'`;
 
+/** UTF-8 byte length of `s`, encoded only when the UTF-16 length can't decide against `limit` (bytes are 1-3 x length). */
+function utf8Bytes(s: string, limit = MAX_ITEM_BYTES): number {
+  if (s.length > limit) return s.length; // already over (a lower bound is enough)
+  if (s.length * 3 <= limit) return s.length; // can't be over
+  return new TextEncoder().encode(s).length;
+}
+
+type Rejected = { kind: string; id: string; reason: "too_large" | "invalid" | "error"; size?: number; detail?: string };
+type Prepared = { kind: Kind; id: string; data: string; updatedAt: number; deleted: number; clamped: boolean };
+/** Validate + serialise one item: kind/id, size cap, clamped `updatedAt` (also written into the record's JSON). */
+function prepareItem(it: SyncItem, now = Date.now()): Prepared | Rejected {
+  const kind = it?.kind as Kind, id = it?.id as string;
+  if (!KINDS.includes(kind) || typeof id !== "string" || !id || id.length > 200) return { kind: String(kind), id: String(id), reason: "invalid" };
+  let updatedAt = Math.floor(Number(it.updatedAt) || 0);
+  const clamped = updatedAt > now + CLOCK_SKEW_MS;
+  if (clamped) updatedAt = now + CLOCK_SKEW_MS;
+  const rec = clamped && it.data && typeof it.data === "object" ? { ...(it.data as object), updatedAt } : it.data;
+  const data = JSON.stringify(rec ?? null);
+  const size = utf8Bytes(data);
+  if (size > MAX_ITEM_BYTES) return { kind, id, reason: "too_large", size };
+  return { kind, id, data, updatedAt, deleted: it.deleted ? 1 : 0, clamped };
+}
+const isRejected = (p: Prepared | Rejected): p is Rejected => "reason" in p;
+
 type Sent = Map<string, { data: string; updatedAt: number; deleted: number }>;
-/** `sent` (optional) collects what was written, keyed `kind\0id`, so /sync can skip echoing it back. */
+const stmtsOf = (db: D1Database, p: Prepared) => [db.prepare(BUMP), db.prepare(UPSERT).bind(p.kind, p.id, p.data, p.updatedAt, p.deleted)];
+/** A REST write the server refuses (too large / invalid): routes answer 413 / 400 instead of a D1 error. */
+class ItemError extends Error {
+  constructor(public r: Rejected) { super(r.reason === "too_large" ? `Too large to sync (${Math.round((r.size ?? 0) / 1e5) / 10} MB, max ${MAX_ITEM_BYTES / 1e6} MB). Remove large images or embeds, or split it.` : "Invalid item."); }
+}
+/** Statements for REST writes (a few items, one atomic batch). Oversized or invalid items throw `ItemError`. */
 function upserts(db: D1Database, items: SyncItem[], sent?: Sent) {
   const stmts: D1PreparedStatement[] = [];
   for (const it of items) {
-    if (!KINDS.includes(it.kind) || typeof it.id !== "string" || !it.id) continue;
-    const data = JSON.stringify(it.data), updatedAt = Math.floor(it.updatedAt), deleted = it.deleted ? 1 : 0;
-    sent?.set(`${it.kind}\0${it.id}`, { data, updatedAt, deleted });
-    stmts.push(db.prepare(BUMP), db.prepare(UPSERT).bind(it.kind, it.id, data, updatedAt, deleted));
+    const p = prepareItem(it);
+    if (isRejected(p)) throw new ItemError(p);
+    if (!p.clamped) sent?.set(`${p.kind}\0${p.id}`, p);
+    stmts.push(...stmtsOf(db, p));
   }
   return stmts;
 }
 
+/**
+ * Write pushed items without all-or-nothing coupling: groups of WRITE_GROUP in one atomic batch each; a failing group
+ * is bisected down to the single bad item, which is reported in `rejected`. Items the query budget didn't reach are
+ * neither accepted nor rejected (the client keeps them dirty and sends them again).
+ */
+async function writeItems(db: D1Database, items: SyncItem[], sent: Sent = new Map()) {
+  const accepted: string[] = [], rejected: Rejected[] = [], ok: Prepared[] = [];
+  const now = Date.now();
+  for (const it of items) { const p = prepareItem(it, now); if (isRejected(p)) rejected.push(p); else ok.push(p); }
+  let budget = WRITE_BUDGET;
+  const write = async (group: Prepared[]): Promise<void> => {
+    if (!group.length || budget <= 0) return;
+    budget--;
+    try {
+      await db.batch(group.flatMap((p) => stmtsOf(db, p)));
+      for (const p of group) { accepted.push(`${p.kind}/${p.id}`); if (!p.clamped) sent.set(`${p.kind}\0${p.id}`, p); }
+    } catch (e) {
+      const msg = String((e as Error)?.message ?? e);
+      if (group.length === 1) { rejected.push({ kind: group[0].kind, id: group[0].id, reason: /TOOBIG|too big|too large/i.test(msg) ? "too_large" : "error", size: group[0].data.length, detail: msg.slice(0, 200) }); return; }
+      const mid = group.length >> 1;
+      await write(group.slice(0, mid));
+      await write(group.slice(mid));
+    }
+  };
+  for (let i = 0; i < ok.length; i += WRITE_GROUP) await write(ok.slice(i, i + WRITE_GROUP));
+  return { accepted, rejected };
+}
+
 type Row = { kind: Kind; id: string; data: string; updated_at: number; deleted: number; rev: number };
 
+/**
+ * POST /sync {v?, since, sinceKey?, items, kinds?} → {cursor, cursorKey?, items, more, accepted, rejected, serverNow}.
+ * Push: per-item size check, clamped clocks, independent write groups; `accepted` lists "kind/id" written (or kept
+ * by LWW), `rejected` [{kind, id, reason, size}]; anything in neither was not reached and must be sent again.
+ * Pull: pages ordered by (rev, kind, id), cut by row count and a byte budget. v2 clients get a composite cursor
+ * (`cursorKey` = "kind/id" of the last row), so a page boundary inside a run of equal revs (the vault wipe gives every
+ * row the same rev) never skips rows. Older clients get pages trimmed to whole revs instead.
+ */
 api.post("/sync", auth, async (c) => {
   const db = c.env.DB;
-  const body = await c.req.json<SyncRequest>();
+  const body = await c.req.json<SyncRequest & { v?: number; sinceKey?: string }>();
+  const pushed = Array.isArray(body.items) ? body.items : [];
+  if (pushed.length > MAX_PUSH_ITEMS) return c.json({ error: `Too many items in one request (${pushed.length}, max ${MAX_PUSH_ITEMS}). Update the app.`, max: MAX_PUSH_ITEMS }, 413);
   const sent: Sent = new Map();
-  const stmts = upserts(db, (body.items ?? []).slice(0, 2000), sent);
-  for (let i = 0; i < stmts.length; i += 100) await db.batch(stmts.slice(i, i + 100));
+  const { accepted, rejected } = await writeItems(db, pushed, sent);
+  const v2 = body.v === 2;
   // First sync on a new device asks for some kinds at a time (notes first, then flashcards…: lib/sync.ts firstSync).
   const kinds = Array.isArray(body.kinds) ? body.kinds.filter((k) => /^[a-z]+$/.test(k)).slice(0, 12) : [];
-  const page = kinds.length
-    ? db.prepare(`SELECT * FROM items WHERE rev > ? AND kind IN (${kinds.map(() => "?").join(",")}) ORDER BY rev LIMIT ?`).bind(Number(body.since) || 0, ...kinds, PAGE)
-    : db.prepare("SELECT * FROM items WHERE rev > ? ORDER BY rev LIMIT ?").bind(Number(body.since) || 0, PAGE);
-  // Page + head cursor in one round trip (and one consistent snapshot).
-  const [pageRes, headRes] = (await db.batch([page, db.prepare("SELECT v FROM meta WHERE k = 'rev'")])) as [D1Result<Row>, D1Result<{ v: string }>];
-  const results = pageRes.results ?? [];
+  const since = Number(body.since) || 0;
+  const sk = v2 && typeof body.sinceKey === "string" ? body.sinceKey : "";
+  const slash = sk.indexOf("/");
+  const after = slash > 0 ? { kind: sk.slice(0, slash), id: sk.slice(slash + 1) } : null;
+  const where = (after ? "rev >= ? AND (rev > ? OR kind > ? OR (kind = ? AND id > ?))" : "rev > ?") + (kinds.length ? ` AND kind IN (${kinds.map(() => "?").join(",")})` : "");
+  const args: unknown[] = [...(after ? [since, since, after.kind, after.kind, after.id] : [since]), ...kinds];
+  // 1) sizes only (small result), one row past the page to know `more`; 2) the rows that fit the byte budget.
+  const [sizesRes, headRes] = (await db.batch([
+    db.prepare(`SELECT rev, kind, id, LENGTH(data) AS n FROM items WHERE ${where} ORDER BY rev, kind, id LIMIT ${PAGE + 1}`).bind(...args),
+    db.prepare("SELECT v FROM meta WHERE k = 'rev'"),
+  ])) as [D1Result<{ rev: number; kind: string; id: string; n: number }>, D1Result<{ v: string }>];
+  const sizes = sizesRes.results ?? [];
   const head = Number(headRes.results?.[0]?.v ?? 0);
-  const cursor = results.length ? results[results.length - 1].rev : head;
+  const take = pageCut(sizes, v2);
+  const more = take < sizes.length;
+  let results: Row[] = [];
+  if (take) {
+    const last = sizes[take - 1];
+    const { results: rows } = await db.prepare(`SELECT * FROM items WHERE ${where} AND (rev < ? OR (rev = ? AND (kind < ? OR (kind = ? AND id <= ?)))) ORDER BY rev, kind, id LIMIT ${take}`)
+      .bind(...args, last.rev, last.rev, last.kind, last.kind, last.id).all<Row>();
+    results = rows ?? [];
+  }
+  // The cursor is the last row the size pass chose (a row edited between the two reads moved to a newer rev and
+  // comes with a later page, so nothing is skipped).
+  const last = take ? sizes[take - 1] : null;
+  const cursor = last ? last.rev : head;
+  const cursorKey = last ? `${last.kind}/${last.id}` : "";
   // Don't echo back records this request just wrote, byte-identical (the client already has them); cursor/more
   // still come from the full page. Rows are emitted with their stored JSON as-is instead of parse + re-stringify
   // (same shape as SyncItem: kind, id, data, updatedAt, deleted).
@@ -176,10 +288,29 @@ api.post("/sync", auth, async (c) => {
     if (s && s.updatedAt === r.updated_at && s.deleted === (r.deleted ? 1 : 0) && s.data === r.data) continue;
     out.push(`{"kind":${JSON.stringify(r.kind)},"id":${JSON.stringify(r.id)},"data":${r.data},"updatedAt":${Number(r.updated_at)},"deleted":${r.deleted ? 1 : 0}}`);
   }
-  return c.body(`{"cursor":${Number(cursor)},"items":[${out.join(",")}],"more":${results.length === PAGE}}`, 200, { "content-type": "application/json" });
+  const extra = `,"accepted":${JSON.stringify(accepted)},"rejected":${JSON.stringify(rejected)},"serverNow":${Date.now()}` + (v2 && cursorKey ? `,"cursorKey":${JSON.stringify(cursorKey)}` : "");
+  return c.body(`{"cursor":${Number(cursor)},"items":[${out.join(",")}],"more":${more}${extra}}`, 200, { "content-type": "application/json" });
 });
 
+/**
+ * How many of the size rows (ordered by rev, kind, id; PAGE + 1 at most) go in this page: at most PAGE rows and
+ * PAGE_BYTES of data, always at least one. Legacy clients (bare-rev cursor) get the page ended on a whole rev, so
+ * `rev > cursor` can't skip the rest of a run of equal revs (unless the whole page is one rev: nothing better exists).
+ */
+function pageCut(sizes: { rev: number; n: number }[], v2: boolean, page = PAGE, budget = PAGE_BYTES): number {
+  let take = 0, bytes = 0;
+  while (take < sizes.length && take < page && (take === 0 || bytes + sizes[take].n <= budget)) bytes += sizes[take++].n;
+  if (!v2 && take < sizes.length && take > 0 && sizes[take].rev === sizes[take - 1].rev) {
+    let k = take;
+    while (k > 0 && sizes[k - 1].rev === sizes[take].rev) k--;
+    if (k > 0) take = k;
+  }
+  return take;
+}
+
 // ------------------------------------------------------------------ REST: notes & canvases (for scripts / agents)
+/** Timestamp for a server-side write: now, but never behind the stored row (LWW would silently keep the old one). */
+const restNow = (old?: { updatedAt?: number } | null) => Math.max(Date.now(), (old?.updatedAt ?? 0) + 1);
 async function getNote(db: D1Database, id: string) {
   const r = await db.prepare("SELECT * FROM items WHERE kind = 'note' AND id = ? AND deleted = 0").bind(id).first<Row>();
   return r ? (JSON.parse(r.data) as Note) : null;
@@ -209,8 +340,8 @@ api.get("/notes/:id", auth, async (c) => {
 api.put("/notes/:id", auth, async (c) => {
   const patch = await c.req.json<Partial<Note>>();
   const id = c.req.param("id")!;
-  const now = Date.now();
   const old = await getNote(c.env.DB, id);
+  const now = restNow(old);
   const note: Note = {
     title: "Untitled", body: "", spaceId: "", folderId: null, tags: [], type: "note", status: null, pinned: 0, favorite: 0,
     published: 0, slug: "", props: {}, createdAt: now, deleted: 0, ...old, ...patch, id, updatedAt: now,
@@ -243,8 +374,8 @@ api.put("/canvas/:id", auth, async (c) => {
   const cv = await c.req.json().catch(() => null);
   if (!validCanvas(cv)) return c.json({ error: "Body is not valid JSON Canvas 1.0 (unique node ids, x/y/width/height numbers, edges reference nodes)." }, 400);
   const id = c.req.param("id")!;
-  const now = Date.now();
   const old = await getNote(c.env.DB, id);
+  const now = restNow(old);
   const note: Note = {
     title: c.req.query("title") ?? "Canvas", spaceId: "", folderId: null, tags: [], status: null, pinned: 0, favorite: 0, published: 0, slug: "",
     props: {}, createdAt: now, deleted: 0, ...old, type: "canvas", body: JSON.stringify(cv, null, 2), id, updatedAt: now,
@@ -260,8 +391,8 @@ api.get("/whiteboard/:id", auth, async (c) => {
   return c.body(n.body || '{"type":"excalidraw","version":2,"elements":[]}', 200, { "content-type": "application/json" });
 });
 async function saveBoard(c: Context<Env>, id: string, mutate: (scene: Record<string, unknown> & { elements: unknown[] }) => void) {
-  const now = Date.now();
   const old = await getNote(c.env.DB, id);
+  const now = restNow(old);
   let scene: Record<string, unknown> & { elements: unknown[] } = { type: "excalidraw", version: 2, source: "lumen", elements: [] };
   try { if (old?.body) scene = JSON.parse(old.body); } catch { /* start fresh */ }
   mutate(scene);
@@ -289,7 +420,7 @@ api.post("/whiteboard/:id/elements", auth, async (c) => {
 // ------------------------------------------------------------------ attachments
 // Free tier, no R2 needed: each file is split by the app into 1.5 MB parts stored as D1 rows (`file_parts`),
 // served back as one stream with HTTP Range support (video seeking). R2 is used instead if a FILES binding exists.
-export const CHUNK = 1_500_000;
+const CHUNK = 1_500_000;
 const MAX_FILE = 100 * 1024 * 1024;
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
@@ -304,7 +435,7 @@ api.put("/att/:id", auth, async (c) => {
   if (!/^[\w-]{8,64}$/.test(id) || !Number.isInteger(part) || !Number.isInteger(parts) || part < 0 || part >= parts) return c.json({ error: "Bad part" }, 400);
   if (size > MAX_FILE) return c.json({ error: "File too large (max 100 MB)." }, 413);
   if (c.env.FILES && parts === 1) {
-    await c.env.FILES.put(`att/${id}`, buf, { httpMetadata: { contentType: mime, cacheControl: IMMUTABLE } });
+    await c.env.FILES.put(r2Key(c.env.ACCOUNT, id), buf, { httpMetadata: { contentType: mime, cacheControl: IMMUTABLE } });
     return c.json({ ok: true, store: "r2" });
   }
   if (buf.byteLength > CHUNK || (part < parts - 1 && buf.byteLength !== CHUNK)) return c.json({ error: `Parts must be exactly ${CHUNK} bytes (last part ≤).` }, 400);
@@ -317,17 +448,39 @@ api.put("/att/:id", auth, async (c) => {
 
 const toBytes = (d: ArrayBuffer | number[]) => (d instanceof ArrayBuffer ? new Uint8Array(d) : new Uint8Array(d));
 
+/** MIME types safe to render inline from the app origin (no script can run in them). */
+const INLINE_SAFE = /^(image\/(png|jpe?g|webp|gif|avif|bmp|x-icon|vnd\.microsoft\.icon)|video\/[\w.+-]+|audio\/[\w.+-]+|application\/pdf)$/i;
+/**
+ * Stored-XSS guard for /api/att (files are served from the app origin, where the sign-in token lives): never sniff;
+ * SVG renders (it still works in <img>) but sandboxed with no script; anything else that isn't a safe image, video,
+ * audio or PDF is a download under a sandbox CSP, never an inline page.
+ */
+function attHeaders(mime: string): Record<string, string> {
+  const m = (mime || "application/octet-stream").split(";")[0].trim().toLowerCase();
+  const h: Record<string, string> = { "x-content-type-options": "nosniff" };
+  if (INLINE_SAFE.test(m)) return h;
+  h["content-security-policy"] = "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'";
+  if (m !== "image/svg+xml") h["content-disposition"] = "attachment";
+  return h;
+}
+
 /** Public on purpose: ids are random UUIDs, and published posts embed their images/videos. */
 api.get("/att/:id", async (c) => {
   const id = c.req.param("id")!;
   const rangeHdr = c.req.header("range");
   if (c.env.FILES) {
     // Range (video seeking) + If-None-Match (304) handled by R2 itself; a malformed/multi range falls back to the whole file.
-    const key = `att/${id}`;
-    const obj = await c.env.FILES.get(key, { range: c.req.raw.headers, onlyIf: c.req.raw.headers }).catch(() => c.env.FILES!.get(key));
+    // Keys are per account (att/<account>/<id>); an unauthenticated GET may land on the main account, so try the
+    // other accounts' prefixes (and the pre-prefix key) before the D1 fallback.
+    let obj: R2ObjectBody | R2Object | null = null;
+    for (const key of r2Keys(c.env as unknown as Record<string, unknown>, id)) {
+      obj = await c.env.FILES.get(key, { range: c.req.raw.headers, onlyIf: c.req.raw.headers }).catch(() => c.env.FILES!.get(key));
+      if (obj) break;
+    }
     if (obj) {
       const h = new Headers();
       obj.writeHttpMetadata(h);
+      for (const [k, v] of Object.entries(attHeaders(h.get("content-type") ?? ""))) h.set(k, v);
       h.set("etag", obj.httpEtag);
       h.set("cache-control", IMMUTABLE);
       h.set("accept-ranges", "bytes");
@@ -354,7 +507,7 @@ api.get("/att/:id", async (c) => {
     // Legacy single-row files (before chunking).
     const row = await c.env.DB.prepare("SELECT mime, data FROM files WHERE id = ?").bind(id).first<{ mime: string; data: number[] | ArrayBuffer }>();
     if (!row) return c.json({ error: "Not found" }, 404);
-    return new Response(toBytes(row.data), { headers: { "content-type": row.mime, "cache-control": IMMUTABLE, etag } });
+    return new Response(toBytes(row.data), { headers: { "content-type": row.mime, "cache-control": IMMUTABLE, etag, ...attHeaders(row.mime) } });
   }
   // Range support (video/audio seeking).
   let start = 0, end = meta.size - 1, status = 200;
@@ -388,7 +541,7 @@ api.get("/att/:id", async (c) => {
       i++;
     },
   });
-  const h: Record<string, string> = { "content-type": meta.mime, "cache-control": IMMUTABLE, "accept-ranges": "bytes", "content-length": String(end - start + 1), etag };
+  const h: Record<string, string> = { "content-type": meta.mime, "cache-control": IMMUTABLE, "accept-ranges": "bytes", "content-length": String(end - start + 1), etag, ...attHeaders(meta.mime) };
   if (status === 206) h["content-range"] = `bytes ${start}-${end}/${meta.size}`;
   return new Response(stream, { status, headers: h });
 });
@@ -490,7 +643,7 @@ app.get("/rss.xml", async (c) => {
 // ------------------------------------------------------------------ link previews (Open Graph)
 const ent = (s: string) =>
   s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;|&#x27;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)));
-api.get("/unfurl", async (c) => {
+api.get("/unfurl", auth, async (c) => { // signed-in devices only: otherwise an open fetch proxy
   let u: URL;
   try { u = new URL(c.req.query("url") ?? ""); } catch { return c.json({ error: "bad url" }, 400); }
   if (!/^https?:$/.test(u.protocol)) return c.json({ error: "bad url" }, 400);
@@ -571,7 +724,7 @@ api.get("/share/:token/note/:id", async (c) => {
 api.get("/health", (c) => c.json({ ok: true, r2: !!c.env.FILES, ai: !!c.env.AI }));
 
 // Area extensions (one file per area so parallel work never collides). Each gets the API router + shared helpers.
-const helpers = { auth, getNote, putNote, upserts, hmac, safeEqual };
+const helpers = { auth, getNote, putNote, upserts, hmac, safeEqual, restNow };
 export type Helpers = typeof helpers;
 for (const ext of [extHome, extSpaces, extNavigate, extStudy, extSettings, extWorkspace, extPractice]) ext(api, helpers);
 registerAsk(api, helpers); // "Ask your vault" (worker/ext/ask.ts)

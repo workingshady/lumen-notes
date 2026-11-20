@@ -412,7 +412,7 @@ export function SharingSection() {
 }
 
 // ------------------------------------------------------------------ storage
-const CLOUD_LIMIT = 5 * GB;
+const CLOUD_LIMIT = 500_000_000; // fallback only: the Worker reports the real cap (D1 Free: 500 MB per database)
 function fileIcon(mime: string): LucideIcon {
   return mime.startsWith("video/") ? FileVideo : mime.startsWith("audio/") ? FileAudio : mime.startsWith("image/") ? Image : mime === "application/pdf" ? FileText : File;
 }
@@ -462,8 +462,8 @@ export function StorageSection({ usage }: { usage: { usage: number; quota: numbe
       <Head title={t("Storage")} hint={<span className="max-md:hidden">{t("Free Cloudflare D1 · files split into 1.5 MB parts · 100 MB per file.")}</span>} />
       <div className={card} title={server ? `${t("Measured on your Cloudflare at {time}", { time: fmtTime(server.at) })}${server.dbBytes ? ` · ${t("D1 database file {size}", { size: mb(server.dbBytes) })}` : ""}` : t("Estimated from this device")}>
         <div className="flex items-baseline gap-2"><span className="font-semibold">Cloudflare</span><span className="flex-1" />
-          <span className="max-md:hidden">{tx("{used} of {total}", { used: <b className="text-[15px] font-[650]">{mb(used)}</b>, total: <span className="text-muted">{t("{n} GB", { n: 5 })}</span> })}</span>
-          <span className="md:hidden"><b className="font-[650]">{used >= 100 * MB ? gb(used) : mb(used)}</b><span className="text-muted">&nbsp;/ {t("{n} GB", { n: 5 })}</span></span>
+          <span className="max-md:hidden">{tx("{used} of {total}", { used: <b className="text-[15px] font-[650]">{mb(used)}</b>, total: <span className="text-muted">{mb(limit)}</span> })}</span>
+          <span className="md:hidden"><b className="font-[650]">{used >= 100 * MB ? gb(used) : mb(used)}</b><span className="text-muted">&nbsp;/ {mb(limit)}</span></span>
         </div>
         <Bar><span className="bg-ink opacity-75" style={{ width: pct(notesBytes, limit), minWidth: notesBytes ? 2 : 0 }} /><span className="bg-info" style={{ width: pct(filesBytes, limit), minWidth: filesBytes ? 2 : 0 }} /></Bar>
         <div className="flex flex-wrap gap-x-[18px] gap-y-1 text-[12.5px] text-muted max-md:hidden">

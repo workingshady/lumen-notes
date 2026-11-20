@@ -29,6 +29,8 @@ import {
 import { CanvasOptions } from "./CanvasOptions";
 import { checkNewEdge } from "../lib/graph-checks";
 import { EdgeSeg, isTidyKey, TidyBanner, type EdgeShape, type TidyStats } from "./graph-display";
+import { LibraryPanel } from "./library/LibraryPanel";
+import { canvasNodeFor, type LibItem } from "../lib/library-items";
 import { Glyph } from "./Glyph";
 import { useVendorIconUrl } from "../lib/vendor-icons";
 import { CanvasKeys } from "./CanvasKeys";
@@ -123,6 +125,11 @@ const edgeOf = (e: Edge): CanvasEdge => {
   return out;
 };
 
+/** Top-level keys the board doesn't own: everything but nodes, edges and the options `pickMeta` manages. */
+function extraOf(c: JsonCanvas): Record<string, unknown> {
+  const { nodes: _n, edges: _e, lumenBackground: _b, lumenEdgePath: _p, lumenGroups: _g, ...rest } = c as JsonCanvas & Record<string, unknown>;
+  return rest;
+}
 function fromFlow(nodes: FlowNode[], edges: Edge[]): JsonCanvas {
   return {
     nodes: [...nodes].sort((a, b) => (a.data.node.type === "group" ? 0 : 1) - (b.data.node.type === "group" ? 0 : 1)).map((n) => ({
@@ -552,14 +559,32 @@ function Inner({ note }: { note: Note }) {
   /** The "Edges" segment in the menu = every edge: set the board default and clear per-edge overrides. */
   const setEdgeShape = (e: EdgeShape) => { setMeta({ lumenEdgePath: e }); setEdges((es) => es.map((x) => (x.data?.edge && edgePathOf(x.data.edge as CanvasEdge) ? { ...x, data: { edge: setEdgePath(x.data.edge as CanvasEdge, undefined) } } : x))); };
   const [optsOpen, setOptsOpen] = useState(false);
+  const [libOpen, setLibOpen] = useState(false);
+  /** A library item as a canvas card at the view centre (the same node the drop target makes). */
+  const placeLib = (item: LibItem) => {
+    const c = center(), id = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+    const n = canvasNodeFor(item, { x: c.x + 130, y: c.y + 60 }, id) as unknown as CanvasNode;
+    setNodes((ns) => [...ns.map((x) => ({ ...x, selected: false })), { ...toFlow({ nodes: [n] }).nodes[0], selected: true }]);
+  };
   const [defNode, setDefNode] = useState<{ shape: NodeShape; border: BorderStyle; fill: FillStyle }>({ shape: "rounded", border: "solid", fill: "tint" });
   const [defEdge, setDefEdge] = useState<CanvasEdge>({ id: "", fromNode: "", toNode: "" });
-  const snap = (n: FlowNode[] = nodes, e: Edge[] = edges): JsonCanvas => ({ ...fromFlow(n, e), ...pickMeta(meta) });
+  // Keys the board doesn't edit (unknown top-level keys, items a lenient load couldn't read) ride along unchanged on every save.
+  const extraRef = useRef<Record<string, unknown>>(extraOf(initial.canvas));
+  const snap = (n: FlowNode[] = nodes, e: Edge[] = edges): JsonCanvas => ({ ...extraRef.current, ...fromFlow(n, e), ...pickMeta(meta) });
+  // Data-loss guard: a body that didn't load fully (unreadable JSON, or some items skipped) is never autosaved until you edit.
+  const guard = useRef(initial.error ? !!note.body.trim() && note.body.trim() !== "{}" : initial.skipped > 0);
+  const userEdited = useRef(false);
+  useEffect(() => {
+    if (!guard.current) return;
+    const n = initial.skipped;
+    toast(initial.error ? t("This canvas couldn't be read, so nothing is saved until you edit it.") : n === 1 ? t("1 item couldn't be read") : t("{n} items couldn't be read", { n }),
+      { label: t("Restore from History"), run: () => setUI({ panel: "versions" }) }, { icon: "error", sub: initial.error ?? initial.problem ?? undefined, ms: 12000 });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   /** Shared Export dialog (lib/export-job.ts): scopes whole / selection / visible area / groups. */
   const openCanvasExport = () => {
     const pane = document.querySelector(".lumen-canvas .react-flow__pane")?.getBoundingClientRect();
     const a = pane ? rf.screenToFlowPosition({ x: pane.left, y: pane.top }) : null, b = pane ? rf.screenToFlowPosition({ x: pane.right, y: pane.bottom }) : null;
-    openExportJob(canvasJob({ title: note.title, canvas: () => snap(), notes: v.notes, selectedIds: nodes.filter((n) => n.selected).map((n) => n.id), view: a && b ? { x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y } : undefined }));
+    openExportJob(canvasJob({ title: note.title, canvas: () => snap(), notes: v.notes, selectedIds: nodes.filter((n) => n.selected).map((n) => n.id), view: a && b ? { x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y } : undefined, folderOf: (x) => (x.folderId ? v.folderMap.get(x.folderId)?.name : v.spaceMap.get(x.spaceId)?.name) }));
   };
   const lastSaved = useRef(stringify({ ...initial.canvas, ...pickMeta(meta) }));
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -597,7 +622,7 @@ function Inner({ note }: { note: Note }) {
     const body = stringify({ ...fromFlow(nodesRef.current, edgesRef.current), ...pickMeta(metaRef.current) });
     const sel = [...nodesRef.current.filter((n) => n.selected).map((n) => n.id), ...edgesRef.current.filter((e) => e.selected).map((e) => e.id)];
     if (silent.current) { silent.current = false; h.absorb(body, sel); }
-    else if (h.record(body, sel, nextKey.current)) setHistV((x) => x + 1);
+    else if (h.record(body, sel, nextKey.current)) { userEdited.current = true; setHistV((x) => x + 1); }
     nextKey.current = undefined;
   }, []);
   const scheduleCommit = useCallback(() => { clearTimeout(histT.current); histT.current = setTimeout(commit, 80); }, [commit]);
@@ -609,7 +634,7 @@ function Inner({ note }: { note: Note }) {
     setNodes((old) => { const sel = new Set(only ?? old.filter((n) => n.selected).map((n) => n.id)); return toFlow(c).nodes.map((n) => (sel.has(n.id) ? { ...n, selected: true } : n)); });
     setEdges((old) => { const sel = new Set(only ?? old.filter((e) => e.selected).map((e) => e.id)); return toFlow(c).edges.map((e) => (sel.has(e.id) ? { ...e, selected: true } : e)); });
   }, [setNodes, setEdges]);
-  const restore = (body: string, sel: string[]) => { silent.current = true; const c = parseCanvas(body).canvas; load(c, sel); setMetaRaw(pickMeta(c)); setHistV((x) => x + 1); };
+  const restore = (body: string, sel: string[]) => { silent.current = true; const c = parseCanvas(body).canvas; extraRef.current = extraOf(c); load(c, sel); setMetaRaw(pickMeta(c)); setHistV((x) => x + 1); };
   const undo = () => {
     if (busy.current || tidyOn.current) return;
     commit(); // a change still settling becomes its own step first
@@ -630,6 +655,7 @@ function Inner({ note }: { note: Note }) {
       const s = stringify(snap());
       if (!jsonFocus.current && !codeErr) setCodeText(s);
       if (s === lastSaved.current) return;
+      if (guard.current && !userEdited.current) return; // never write a partial / failed load over the stored body
       lastSaved.current = s;
       void updateNote(note.id, { body: s });
     }, code ? 150 : 500);
@@ -644,6 +670,7 @@ function Inner({ note }: { note: Note }) {
     const s = stringify(canvas);
     if (s === lastSaved.current) return;
     lastSaved.current = s;
+    extraRef.current = extraOf(canvas);
     if (!jsonFocus.current) setCodeText(s);
     silent.current = true; // not the owner's step: it becomes the new base
     load(canvas);
@@ -1068,6 +1095,8 @@ function Inner({ note }: { note: Note }) {
     [tk("Note"), <FilePlus size={15} />, t("Add note card"), () => { const nt = prompt(t("Note title")); if (nt) addNode({ type: "file", file: nt, width: 300, height: 200 }); }],
     [tk("Link"), <Link2 size={15} />, t("Add link card"), () => { const u = prompt("URL", "https://"); if (u) addNode({ type: "link", url: u, width: 300, height: 84 }); }],
     [tk("Group"), <Group size={15} />, t("Add group"), () => addNode({ type: "group", label: "Group", width: 600, height: 400 })],
+    // the shared library (49F): every category, in the Canvas workspace order; click places at the centre, drag drops anywhere
+    [tk("Library"), <Glyph name="library" size={15} />, t("Library: shapes, node kinds, stamps, icons"), () => { setOptsOpen(false); setLibOpen((o) => !o); }, libOpen],
   ];
   const arrangeTools: Tool[] = [
     [tk("Tidy up"), <Glyph name="wide" size={15} color="var(--accent)" />, t("Tidy up: lay out by links, keep groups and pinned cards (Shift T)"), startTidy],
@@ -1210,7 +1239,7 @@ function Inner({ note }: { note: Note }) {
           nodes={shownNodes} edges={shownEdges} onNodesChange={onNodesChangeH} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={nodeTypes} edgeTypes={canvasEdgeTypes}
           onNodeDragStart={dragStart} onNodeDragStop={dragStop} onSelectionDragStart={dragStart} onSelectionDragStop={dragStop}
           onConnectStart={() => setConnecting(true)} onConnectEnd={() => setConnecting(false)}
-          connectionMode={ConnectionMode.Loose} fitView fitViewOptions={{ padding: 0.15, maxZoom: 1, ...(typeof innerWidth === "number" && innerWidth < 768 ? { minZoom: 0.62 } : {}) }} minZoom={0.05} maxZoom={3} snapToGrid={view.snap} snapGrid={[20, 20]} zoomOnDoubleClick={false}
+          connectionMode={ConnectionMode.Loose} fitView fitViewOptions={{ padding: innerWidth < 768 ? 0.06 : 0.15, maxZoom: 1 }} minZoom={0.05} maxZoom={3} snapToGrid={view.snap} snapGrid={[20, 20]} zoomOnDoubleClick={false}
           deleteKeyCode={["Delete", "Backspace"]} multiSelectionKeyCode={["Shift", "Meta", "Control"]} proOptions={{ hideAttribution: true }}
           connectionLineStyle={{ stroke: "var(--accent)", strokeWidth: 2 }} style={bgCol ? { background: `color-mix(in srgb, ${colorOf(bgCol)} 10%, var(--bg))` } : undefined}
           onEdgeDoubleClick={(_, e) => setEdgeEdit(e.id)} disableKeyboardA11y
@@ -1239,6 +1268,11 @@ function Inner({ note }: { note: Note }) {
           <button title={lvl >= 4 ? t("More: tools, edit, view, convert, export") : t("More: edit, view, convert, export")} aria-label={t("Canvas menu")} onClick={() => setMenu((m) => (m === "main" ? null : "main"))} className={cx(TOOL, "w-8 shrink-0", menu === "main" && "bg-surface-2")}><Ellipsis size={16} /></button>
         </div>
         {menuEl}
+        {libOpen && !optsOpen && (
+          <div className="fade-in absolute bottom-3 end-3 top-[64px] z-30 hidden md:flex">
+            <LibraryPanel workspace="canvas" onPlace={(it) => placeLib(it)} onClose={() => setLibOpen(false)} />
+          </div>
+        )}
         {optsOpen && (
           <div className="fade-in absolute inset-0 z-30 overflow-y-auto bg-bg p-4 md:inset-auto md:bottom-3 md:end-3 md:top-[64px] md:w-[372px] md:bg-transparent md:p-0 md:pe-0.5">
             <CanvasOptions selNodes={selNodes.length} selEdges={selEdges.length} node={nodeStyle} onNode={onNodeStyle} edge={edgeStyle} onEdge={onEdgeStyle}

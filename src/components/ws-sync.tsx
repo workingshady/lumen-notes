@@ -1,7 +1,7 @@
 import { ChevronRight, CircleAlert, CloudOff, RefreshCw, X } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { DEMO } from "../lib/db";
-import { go } from "../lib/store";
+import { go, openNote } from "../lib/store";
 import { syncNow, useSync, type SyncState } from "../lib/sync";
 import { syncedAgo, useRtl } from "./ws-dir";
 import { fmtDate, t } from "../lib/i18n";
@@ -53,6 +53,8 @@ export function syncLook(s: SyncState, rtl = false): SyncLook {
   if (s.status === "syncing") return { kind: s.status, error: false, color: "var(--muted)", text: t("Syncing…"), dot: { ...base, background: "var(--info)", boxShadow: "0 0 0 3px color-mix(in srgb,var(--info) 25%,transparent)" } };
   if (s.status === "offline") return { kind: s.status, error: false, color: "var(--muted)", text: s.pending ? t("Offline · {n} queued", { n: s.pending }) : t("Offline"), dot: { ...base, background: "var(--warning)" } };
   if (s.status === "error") return { kind: s.status, error: true, color: "var(--danger)", text: t("Sync error · tap for details"), dot: { ...base, background: "var(--danger)" } };
+  // Records the server refused (too large…) stay on this device; tappable like an error, in the warning colour.
+  if (s.stuck?.length && s.status === "idle") return { kind: s.status, error: true, color: "var(--warning)", text: t("{n} item too large to sync|{n} items too large to sync", { n: s.stuck.length }), dot: { ...base, background: "var(--warning)" } };
   return { kind: s.status, error: false, color: "var(--muted)", text: syncedAgo(s.last, rtl), dot: { ...base, background: "var(--success)" } };
 }
 
@@ -65,6 +67,7 @@ export function useSyncLook() {
 /** Error → details popover (design: Lumen 12 "Error → details popover"). */
 export function SyncErrorPopover({ onClose, className, style }: { onClose: () => void; className?: string; style?: React.CSSProperties }) {
   const s = useSync();
+  if (s.status !== "error" && s.stuck?.length) return <StuckPopover onClose={onClose} className={className} style={style} />;
   const code = lastSyncHttp.status || (/401|unauthor|token/i.test(s.error ?? "") ? 401 : 0);
   const msg = code === 401 ? t("Cloudflare rejected the passcode token (expired).") : s.error ? `${s.error.replace(/\.?$/, ".")}` : t("The server didn't answer.");
   const at = fmtDate(lastSyncHttp.at || Date.now(), { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
@@ -78,6 +81,33 @@ export function SyncErrorPopover({ onClose, className, style }: { onClose: () =>
         <div className="mt-3 flex gap-2">
           {code === 401 && <button className="h-[30px] rounded-[8px] bg-accent px-2.5 text-[13px] font-semibold text-accent-fg" onClick={() => { onClose(); go("settings"); }}>{t("Unlock again")}</button>}
           <button className="h-[30px] rounded-[8px] border border-line px-2.5 text-[13px] font-medium" onClick={() => { onClose(); void syncNow(); }}>{t("Retry")}</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+const mb = (n?: number) => (n ? `${(n / 1e6).toFixed(1)} MB` : "");
+/** "Too large to sync" details: which records, their size, and what to do (they stay dirty on this device). */
+function StuckPopover({ onClose, className, style }: { onClose: () => void; className?: string; style?: React.CSSProperties }) {
+  const s = useSync();
+  const list = s.stuck ?? [];
+  return (
+    <>
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className={cx("z-50 w-[296px] rounded-[12px] border border-line bg-surface p-[14px] shadow-xl fade-in", className)} style={style} role="dialog" aria-label={t("Too large to sync")}>
+        <div className="flex items-center gap-2 font-semibold text-warn"><CircleAlert size={15} />{t("Too large to sync")}</div>
+        <ul className="mt-2 flex max-h-[140px] flex-col gap-1 overflow-auto text-[13px] leading-[18px]">
+          {list.slice(0, 8).map((x) => (
+            <li key={`${x.kind}/${x.id}`} className="flex gap-2">
+              <button className="min-w-0 flex-1 truncate text-start hover:underline" dir="auto" disabled={x.kind !== "note"} onClick={() => { onClose(); openNote(x.id); }}>{x.title || x.kind}</button>
+              <span className="shrink-0 font-mono text-[11.5px] text-muted" dir="ltr">{x.reason === "too_large" ? mb(x.size) : x.reason}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-2 text-[13px] leading-[19px] text-muted">{t("Saved on this device but not synced. Remove large images or embeds (or split it); it syncs again on the next edit.")}</div>
+        <div className="mt-3 flex gap-2">
+          <button className="h-[30px] rounded-[8px] border border-line px-2.5 text-[13px] font-medium" onClick={onClose}>{t("Close")}</button>
         </div>
       </div>
     </>

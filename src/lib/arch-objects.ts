@@ -68,6 +68,16 @@ export async function propagate(node: ANode, notes: Note[], exceptNoteId: string
 
 // ------------------------------------------------------------------ C4 levels
 const NEXT: Record<string, "container" | "component"> = { context: "container", container: "component" };
+/** The C4 level a diagram stands for: its own `c4` block, else Context for a C4 diagram and Container for an architecture one. */
+export const c4LevelOf = (c: ArchCanvas): "context" | "container" | "component" => c.lumenArch.c4?.level ?? (c.lumenArch.kind === "c4" ? "context" : "container");
+const hasZoom = (c: ArchCanvas) => c.nodes.some((n) => !!n.lumenNode?.zoom);
+/** Nodes you can open one level deeper: systems and containers (not people, stores, queues or notes). */
+export function canZoom(c: ArchCanvas, n: ANode): boolean {
+  if (isGroup(n) || !NEXT[c4LevelOf(c)]) return false;
+  if (n.lumenNode?.zoom) return true;
+  const i = n.lumenNode?.icon ?? "service";
+  return /^(service|server|api|container|pod|function|worker|gateway|external-system|cluster|llm|model)$/.test(i);
+}
 export const C4_LABEL = { context: "Context", container: "Container", component: "Component" } as const;
 /** Chain of diagrams from the top level down to this one (for the breadcrumb). */
 export function c4Chain(notes: Note[], note: Note): { note: Note; level: "context" | "container" | "component" }[] {
@@ -75,8 +85,11 @@ export function c4Chain(notes: Note[], note: Note): { note: Note; level: "contex
   let cur: Note | undefined = note, guard = 0;
   while (cur && guard++ < 6) {
     const c = parseArch(cur.body);
-    if (!c?.lumenArch.c4) break;
-    out.unshift({ note: cur, level: c.lumenArch.c4.level });
+    // a plain architecture diagram with drill-downs is the Container level of its chain
+    const level = c?.lumenArch.c4?.level ?? (c && (out.length || hasZoom(c)) ? c4LevelOf(c) : null);
+    if (!c || !level) break;
+    out.unshift({ note: cur, level });
+    if (!c.lumenArch.c4) break;
     const pid: string | undefined = c.lumenArch.c4.parent;
     cur = pid ? notes.find((n) => n.id === pid && !n.deleted) : undefined;
   }
@@ -84,7 +97,7 @@ export function c4Chain(notes: Note[], note: Note): { note: Note; level: "contex
 }
 /** Double-click a container: open its diagram one level deeper, creating it (linked both ways) the first time. */
 export async function zoomInto(note: Note, c: ArchCanvas, node: ANode): Promise<string | null> {
-  const level = c.lumenArch.c4?.level ?? "context";
+  const level = c4LevelOf(c);
   const next = NEXT[level];
   if (!next || isGroup(node)) return null;
   const existing = node.lumenNode?.zoom && (await db.notes.get(node.lumenNode.zoom));

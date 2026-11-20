@@ -7,21 +7,22 @@ import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Note, Version } from "../../../shared/types";
 import { Glyph } from "../Glyph";
-import { ShareSheet } from "../ShareSheet";
+import { ShareSheet, shareUrl } from "../ShareSheet";
 import { useSaving, useSyncLook } from "../ws-sync";
 import { createNote, restoreNote, restoreVersion, snapshot, trashNote, updateNote } from "../../lib/actions";
 import { fmtDate, fmtTime, t, useLang } from "../../lib/i18n";
 import { back, openNote, setUI, toast, useVault } from "../../lib/store";
-import { openExport } from "../../lib/diagram-export";
+import { openExportJob } from "../../lib/export-job";
+import { archJob } from "../../lib/export-arch";
 import { uid } from "../../lib/db";
 import { applyDsl, dslFor, parseDsl, printDsl, type DslError } from "../../lib/arch-dsl";
 import {
-  childrenMap, depthOf, descendants, diffArch, displayOf, EDGE_STYLE, fitGroups, hiddenBy, isGroup, kindOfIcon, nameOf, parentOf, parseArch, setParent, stringifyArch,
+  childrenMap, depthOf, descendants, unreadCount, seqLayout, seqLife, laneLayout, diffArch, displayOf, EDGE_STYLE, fitGroups, hiddenBy, isGroup, kindOfIcon, nameOf, parentOf, parseArch, setParent, stringifyArch,
   type AEdge, type ANode, type ArchCanvas, type ArchDiff, type Split,
 } from "../../lib/arch-model";
 import { defaultFlavor, detectPaste, MERMAID_FLAVORS, PASTE_LABEL, slug, toDsl, toMermaid, type MermaidFlavor, type PasteKind } from "../../lib/arch-convert";
-import { edgeRoute, archSvg } from "../../lib/arch-render";
-import { archVersions, c4Chain, C4_LABEL, ensureRef, listObjects, propagate, usedIn, zoomInto, type ModelObject } from "../../lib/arch-objects";
+import { edgeRoute } from "../../lib/arch-render";
+import { archVersions, c4Chain, C4_LABEL, c4LevelOf, canZoom, ensureRef, listObjects, propagate, usedIn, zoomInto, type ModelObject } from "../../lib/arch-objects";
 import type { LayoutOpts } from "../../lib/arch-layout";
 import { ArchCode } from "./ArchCode";
 import { Ctx, edgeTypes, FLOW_CSS, nodeTypes, type FlowCtx, type FlowEdge, type FlowNode } from "./ArchFlow";
@@ -53,6 +54,15 @@ const typing = (e: Event) => !!(e.target as HTMLElement | null)?.closest?.("inpu
 let archClip: { nodes: ANode[]; edges: AEdge[] } | null = null;
 
 export default function ArchStudio({ note }: { note: Note }) {
+  // a body that isn't readable JSON never reaches the studio (it would autosave an empty diagram over it)
+  if (!parseArch(note.body)) return (
+    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "var(--muted)", fontSize: 13, padding: 24, textAlign: "center" }}>
+      <Glyph name="alert" size={28} color="var(--danger)" />
+      <span style={{ color: "var(--text)", fontWeight: 600 }}>{t("This diagram couldn't be read.")}</span>
+      <span>{t("Nothing is saved over it. Restore an earlier version from History.")}</span>
+      <button onClick={() => setUI({ panel: "versions" })} style={{ height: 32, padding: "0 14px", borderRadius: 8, background: "var(--accent)", color: "var(--accent-fg)", fontWeight: 600 }}>{t("Restore from History")}</button>
+    </div>
+  );
   return <ReactFlowProvider><Studio note={note} /></ReactFlowProvider>;
 }
 
@@ -97,6 +107,8 @@ function Studio({ note }: { note: Note }) {
   const [phoneCode, setPhoneCode] = useState(false);
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  /** When the last long-press fired: the touch-up that follows must not count as a tap. */
+  const longAt = useRef(0);
   const split: Split = c.lumenArch.split ?? "50";
   const rootEl = useRef<HTMLDivElement>(null);
   const [studioW, setStudioW] = useState(1440);
@@ -110,14 +122,24 @@ function Studio({ note }: { note: Note }) {
   const lastSaved = useRef(note.body);
   const saveT = useRef<ReturnType<typeof setTimeout>>(undefined);
   const undoS = useRef<string[]>([]), redoS = useRef<string[]>([]);
+  // data-loss guard: when some items couldn't be read, nothing is written until you edit (they are kept and written back then)
+  const guard = useRef(unreadCount(c) > 0), edited = useRef(false);
+  useEffect(() => {
+    if (!guard.current) return;
+    const n = unreadCount(cRef.current);
+    toast(n === 1 ? t("1 item couldn't be read") : t("{n} items couldn't be read", { n }), { label: t("Restore from History"), run: () => setUI({ panel: "versions" }) }, { icon: "error", ms: 12000 });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const save = useCallback((next: ArchCanvas) => {
     clearTimeout(saveT.current);
+    if (guard.current && !edited.current) return;
     saveT.current = setTimeout(() => { const body = stringifyArch(next); if (body === lastSaved.current) return; lastSaved.current = body; void updateNote(note.id, { body }); }, 300);
   }, [note.id]);
-  useEffect(() => () => { clearTimeout(saveT.current); const body = stringifyArch(cRef.current); if (body !== lastSaved.current) void updateNote(note.id, { body }); }, [note.id]);
+  useEffect(() => () => { clearTimeout(saveT.current); if (guard.current && !edited.current) return; const body = stringifyArch(cRef.current); if (body !== lastSaved.current) void updateNote(note.id, { body }); }, [note.id]);
   const setFromCanvas = (next: ArchCanvas) => { const dsl = printDsl(next, next.lumenArch.dsl); next = { ...next, lumenArch: { ...next.lumenArch, dsl } }; setCode(dsl); setErrors([]); prevLines.current = parseDsl(dsl, next.lumenArch.kind).doc.lineOf; return next; };
   /** One step: canvas edits rewrite the code; code edits keep the typed text. */
   const commit = useCallback((next: ArchCanvas, src: "code" | "canvas" = "canvas", hist = true) => {
+    edited.current = true;
+    if (next.lumenArch.kind === "sequence") next = seqLayout(next); // participants stay in one row, in the order they stand
     if (src !== "code") next = setFromCanvas(next);
     if (hist) { undoS.current.push(stringifyArch(cRef.current)); if (undoS.current.length > 100) undoS.current.shift(); redoS.current = []; }
     cRef.current = next; setC(next); setMmEdit(null); setJsEdit(null); save(next);
@@ -136,23 +158,27 @@ function Studio({ note }: { note: Note }) {
 
   // ------------------------------------------------------------ code → canvas (debounced, last valid wins)
   const codeT = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const errT = useRef<ReturnType<typeof setTimeout>>(undefined);
   const onCode = (text: string) => {
     setCode(text);
-    if (paste) return;
-    clearTimeout(codeT.current);
+    if (paste || pasteRef.current) return; // a paste waiting for Keep / Convert is not parsed as Lumen code
+    clearTimeout(codeT.current); clearTimeout(errT.current);
     codeT.current = setTimeout(() => {
       const { doc, errors: errs } = parseDsl(text, cRef.current.lumenArch.kind);
-      setErrors(errs);
-      if (errs.length) return;
+      // an error shows once you pause, not while you're still typing the line (46H/46I keep "Synced with canvas" meanwhile)
+      if (errs.length) { errT.current = setTimeout(() => setErrors(errs), 1200); return; }
+      setErrors([]);
       const next = applyDsl(cRef.current, doc, text, prevLines.current);
       prevLines.current = doc.lineOf;
       commit(next, "code");
     }, 250);
   };
+  /** Set in the paste handler itself: the editor change that follows runs before the paste state re-renders. */
+  const pasteRef = useRef(false);
   const onPaste = (text: string) => {
     const k = detectPaste(text);
     if (!k || tab !== "Code") return false;
-    setPaste({ kind: k, text, before: code });
+    setPaste({ kind: k, text, before: code }); pasteRef.current = true;
     clearTimeout(codeT.current);
     return false; // the text goes in; the bar asks before converting
   };
@@ -161,7 +187,7 @@ function Studio({ note }: { note: Note }) {
     const r = toDsl(paste.text, paste.kind);
     const base = r.archKind && r.archKind !== kind ? { ...cRef.current, lumenArch: { ...cRef.current.lumenArch, kind: r.archKind } } : cRef.current;
     const { doc, errors: errs } = parseDsl(r.dsl, base.lumenArch.kind);
-    setPaste(null);
+    setPaste(null); pasteRef.current = false;
     if (errs.length) { setCode(r.dsl); setErrors(errs); return; }
     // a fresh diagram from the paste: drop the old nodes, place everything, then lay out
     const next = applyDsl({ ...base, nodes: [], edges: [] }, doc, r.dsl);
@@ -171,7 +197,7 @@ function Studio({ note }: { note: Note }) {
     void runLayout({ ...lopts, keep: false, scope: "all" }, next, true);
     toast(t("Converted to a Lumen diagram"), { label: t("Undo"), run: undo }, { icon: "check" });
   };
-  const keepPaste = () => { setPaste(null); onCode(code); };
+  const keepPaste = () => { setPaste(null); pasteRef.current = false; onCode(code); };
 
   // ------------------------------------------------------------ Mermaid / JSON tabs write back too
   const mmText = mmEdit ?? toMermaid(c, flavor);
@@ -206,7 +232,8 @@ function Studio({ note }: { note: Note }) {
       setMmEdit(text); void n2;
     }, 400);
   };
-  const jsText = jsEdit ?? stringifyArch(c);
+  // the JSON tab leads with the "lumenArch" header (46K); the stored body keeps JSON Canvas order (nodes, edges, then lumenArch)
+  const jsText = jsEdit ?? (() => { const { lumenArch, nodes, edges, ...rest } = c; return JSON.stringify({ lumenArch, nodes, edges, ...rest }, null, 2); })();
   const jsT = useRef<ReturnType<typeof setTimeout>>(undefined);
   const onJson = (text: string) => {
     setJsEdit(text);
@@ -248,7 +275,7 @@ function Studio({ note }: { note: Note }) {
       const mark = vd?.nodes.get(n.id);
       return {
         id: n.id, type: isGroup(n) ? "archGroup" : "arch", position: { x: n.x, y: n.y }, width: n.width, height: n.height, style: { width: n.width, height: n.height },
-        data: { n, mark, chip }, selected: multi ? multi.nodes.includes(n.id) : sel?.kind === "node" && sel.id === n.id, draggable: !frozen && present === null, selectable: mark !== "del", zIndex: isGroup(n) && !n.lumenGroup?.collapsed ? depthOf(view, n.id) : 1000,
+        data: { n, mark, chip, life: kind === "sequence" && !isGroup(n) ? seqLife(view) : undefined }, selected: multi ? multi.nodes.includes(n.id) : sel?.kind === "node" && sel.id === n.id, draggable: !frozen && present === null, selectable: mark !== "del", zIndex: isGroup(n) && !n.lumenGroup?.collapsed ? depthOf(view, n.id) : 1000,
       };
     });
     if (preview) for (const n of preview.nodes) if (!isGroup(n) && !hiddenBy(preview, n.id)) out.push({ id: `lp-${n.id}`, type: "archGhost", position: { x: n.x, y: n.y }, width: n.width, height: n.height, style: { width: n.width, height: n.height }, data: { n, ghost: true }, draggable: false, selectable: false, zIndex: 2000 });
@@ -525,7 +552,7 @@ function Studio({ note }: { note: Note }) {
     try {
       const { elkLayout } = await import("../../lib/arch-layout");
       const ids = o.scope === "selection" ? new Set(sel?.kind === "node" ? [sel.id, ...descendants(base, sel.id)] : []) : o.scope === "group" ? (() => { const g = scopeGroup(); return g ? new Set([...descendants(base, g.id)]) : new Set<string>(); })() : undefined;
-      const next = await elkLayout(base, { ...o, ids });
+      const next = base.lumenArch.kind === "sequence" ? seqLayout({ ...base, nodes: base.nodes.map((n) => ({ ...n, x: n.x + 0.001 })) }) : await elkLayout(base, { ...o, ids }).then((x) => (x.lumenArch.kind === "bpmn" && o.scope === "all" ? laneLayout(x) : x));
       if (apply) { commit(next, "canvas", false); setTimeout(() => rf.fitView({ ...FIT, duration: 300 }), 60); return; }
       layoutBefore.current = base; setPreview(next);
     } catch (e) { toast(t("Auto layout failed: {msg}", { msg: (e as Error).message }), undefined, { icon: "error" }); }
@@ -534,6 +561,8 @@ function Studio({ note }: { note: Note }) {
   const applyLayout = () => {
     if (!preview) return;
     commit(preview); setPreview(null); setPop(null);
+    // a new layout can move things far (Down, re-layout all): show all of it
+    userMoved.current = false; setTimeout(() => void rf.fitView({ ...FIT, minZoom: 0.15, duration: 300 }), 60);
     toast(t("Layout applied"), { label: t("Undo"), run: undo }, { icon: "check" });
   };
   const cancelLayout = () => { setPreview(null); };
@@ -557,7 +586,8 @@ function Studio({ note }: { note: Note }) {
   const onNodeDouble = async (_: unknown, fn: FlowNode) => {
     const n = cRef.current.nodes.find((x) => x.id === fn.id);
     if (!n) return;
-    if ((kind === "c4" || n.lumenNode?.zoom) && !isGroup(n)) { const id = await zoomInto(note, cRef.current, n); if (id) { openNote(id); return; } }
+    // C4 drill-down (48H): a system / container opens its diagram one level deeper (created and linked the first time)
+    if (canZoom(cRef.current, n) && !frozen) { const id = await zoomInto(note, cRef.current, n); if (id) { openNote(id); return; } }
     setEditing(n.id);
   };
 
@@ -627,7 +657,12 @@ function Studio({ note }: { note: Note }) {
     if (tab === "Code") { if (errors.length) { toast(t("Fix the error first, then format.")); return; } const s = printDsl(cRef.current, code); setCode(s); commit({ ...cRef.current, lumenArch: { ...cRef.current.lumenArch, dsl: s } }, "code", false); }
     else if (tab === "JSON") setJsEdit(null); else setMmEdit(null);
   };
-  const doExport = () => openExport({ name: note.title, title: t("Export diagram"), themable: true, build: (p) => archSvg(cRef.current, p) });
+  const doExport = () => {
+    const el = canvasEl.current, vp = rf.getViewport();
+    const view = el ? { x: -vp.x / vp.zoom, y: -vp.y / vp.zoom, w: el.clientWidth / vp.zoom, h: el.clientHeight / vp.zoom } : undefined;
+    const s0 = selection();
+    openExportJob(archJob({ title: note.title, canvas: () => cRef.current, notes: v.notes, note, selectedIds: s0.nodes, view, link: note.shareId ? shareUrl(note.shareId) : undefined }));
+  };
   const [reviewOpen, setReviewOpen] = useState(false);
   const review = () => { setPop(null); setAi(null); setAiProp(null); setSel(null); setReviewOpen(true); };
   const openAi = (m: "describe" | "edit") => { setPop(null); setReviewOpen(false); setAiProp(null); setAi(m); };
@@ -667,6 +702,14 @@ function Studio({ note }: { note: Note }) {
   }); // re-register each render: the canvas element remounts with the layout
   // the board fits the diagram until the user pans or zooms (pane width changes with the split, list and side panels);
   // opening / closing Properties never refits: selecting something must not change the zoom
+  /** Phone (46N): the fitted diagram sits under the header, not centred in the tall pane. */
+  const topAlign = () => {
+    if (!phone) return;
+    const vis = cRef.current.nodes.filter((n) => !hiddenBy(cRef.current, n.id));
+    if (!vis.length) return;
+    const vp = rf.getViewport(), minY = Math.min(...vis.map((n) => n.y)) - 24;
+    void rf.setViewport({ x: vp.x, y: 16 - minY * vp.zoom, zoom: vp.zoom });
+  };
   const propsNow = useRef(false), propsAtFit = useRef(false);
   /** When Properties takes room from the canvas, pan (never zoom) so the selected node / edge stays in view. */
   const keepSelVisible = () => {
@@ -690,7 +733,7 @@ function Studio({ note }: { note: Note }) {
     const el = canvasEl.current;
     if (!el) return;
     let tm: ReturnType<typeof setTimeout> | undefined;
-    const ro = new ResizeObserver(() => { clearTimeout(tm); tm = setTimeout(() => { if (propsNow.current !== propsAtFit.current) { propsAtFit.current = propsNow.current; keepSelVisible(); return; } if (!userMoved.current) void rf.fitView(FIT); }, 80); });
+    const ro = new ResizeObserver(() => { clearTimeout(tm); tm = setTimeout(() => { if (propsNow.current !== propsAtFit.current) { propsAtFit.current = propsNow.current; keepSelVisible(); return; } if (!userMoved.current) void rf.fitView(FIT).then(topAlign); }, 80); });
     ro.observe(el);
     return () => { ro.disconnect(); clearTimeout(tm); };
   }, [split, phoneCode, phone, present, libDocked]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -717,9 +760,9 @@ function Studio({ note }: { note: Note }) {
   // the Layout popover hangs over the canvas's right part: the preview bar stops short of it so Apply / Cancel stay clickable
   const barRight = pop === "layout" && !phone ? Math.max(12, split === "canvas" ? 324 : 744 - (showCode ? codeW : 0)) : 12;
   const bar = (o: { g: string; gc: string; text: ReactNode; chips?: boolean; btns: ReactNode; bd: string }) => (
-    <div style={{ position: "absolute", left: 12, right: barRight, top: 12, zIndex: 20, display: "flex", alignItems: "center", gap: 10, padding: "8px 8px 8px 14px", borderRadius: 12, background: "var(--surface-2)", border: `1px solid ${o.bd}`, boxShadow: "0 10px 26px rgba(0,0,0,.25)", fontSize: 12.5, flexWrap: "wrap", animation: "arch-in .18s var(--ease)" }}>
+    <div style={{ position: "absolute", left: 12, right: barRight, top: 12, zIndex: 20, display: "flex", alignItems: "center", gap: 10, padding: "8px 8px 8px 14px", borderRadius: 12, background: "var(--surface-2)", border: `1px solid ${o.bd}`, boxShadow: "0 10px 26px rgba(0,0,0,.25)", fontSize: 12.5, flexWrap: "nowrap", animation: "arch-in .18s var(--ease)" }}>
       <Glyph name={o.g} size={16} color={o.gc} />
-      <span style={{ flex: 1, minWidth: 160 }}>{o.text}</span>
+      <span title={typeof o.text === "string" ? o.text : undefined} style={{ flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o.text}</span>
       {o.chips && ([[t("Added"), "var(--success)"], [t("Changed"), "var(--warning)"], [t("Removed"), "var(--danger)"]] as const).map(([l, col]) => <span key={l} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: col, whiteSpace: "nowrap" }}><span style={{ width: 8, height: 8, borderRadius: 2, background: col }} />{l}</span>)}
       {o.btns}
     </div>
@@ -759,7 +802,6 @@ function Studio({ note }: { note: Note }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "12px 14px", overflow: "auto" }}>
             {selNode && (isGroup(selNode) ? <GroupProps n={selNode} onChange={editNode} inside={insideCount(selNode.id)} /> : <NodeProps n={selNode} onChange={editNode} usedIn={usage.get(selNode.lumenNode?.ref ?? "") ?? 0} onReuse={() => makeReusable(selNode)} />)}
             {selEdge && <EdgeProps e={selEdge} onChange={editEdge} names={[displayOf(c.nodes.find((n) => n.id === selEdge.fromNode)!), displayOf(c.nodes.find((n) => n.id === selEdge.toNode)!)]} />}
-            {(selNode || selEdge) && <button onClick={() => removeSel()} style={{ alignSelf: "flex-start", fontSize: 12, color: "var(--danger)", display: "flex", alignItems: "center", gap: 6 }}><Glyph name="trash" size={14} />{t("Delete")}</button>}
           </div>
         </div>
       )}
@@ -768,7 +810,7 @@ function Studio({ note }: { note: Note }) {
 
   const layoutPop = (
     <Pop title={t("Layout")} sub="elkjs · layered" onClose={() => setPop(null)} style={phone ? { left: 0, right: 0, bottom: 0, animation: "arch-sheet .2s var(--ease)" } : { right: split === "canvas" ? 12 : 432, top: 8, width: 300, animation: "arch-in .16s var(--ease)" }} sheet={phone}>
-      <Block items={[{ g: "layout-auto", l: t("Auto layout"), sub: "⇧⌘L", on: true, onClick: () => void runLayout(lopts) }]} />
+      <Block items={[{ g: "layout-auto", l: t("Auto layout"), sub: MOD === "⌘" ? "⇧⌘L" : "Ctrl+Shift+L", on: true, onClick: () => void runLayout(lopts) }]} />
       <Block h={t("Direction")} seg={[t("Right"), t("Down")]} segOn={lopts.direction === "down" ? 1 : 0} onSeg={(i) => setL({ direction: i ? "down" : "right" })} />
       <Block h={t("Spacing")} seg={[t("Compact"), t("Roomy")]} segOn={lopts.spacing === "roomy" ? 1 : 0} onSeg={(i) => setL({ spacing: i ? "roomy" : "compact" })} />
       <Block seg={[t("Keep my positions"), t("Re-layout all")]} segOn={lopts.keep ? 0 : 1} onSeg={(i) => setL({ keep: i === 0 })} />
@@ -779,7 +821,7 @@ function Studio({ note }: { note: Note }) {
     <Pop title={t("Insert existing object")} sub={t("{n} in this vault", { n: objects.length })} onClose={() => setPop(null)} style={phone ? { left: 0, right: 0, bottom: 0 } : { left: 290 - (codeOnly ? 260 : 0), top: 8, width: 360, maxHeight: "calc(100% - 16px)", animation: "arch-in .16s var(--ease)" }} sheet={phone}
       foot={<><Btn disabled={!objHits[objSel]} onClick={() => objHits[objSel] && void insertObject(objHits[objSel], false)}>{t("Insert copy")}</Btn><Btn pri disabled={!objHits[objSel]} onClick={() => objHits[objSel] && void insertObject(objHits[objSel], true)}>{t("Insert linked")}</Btn></>}>
       <label style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 32, padding: "0 8px", borderRadius: 8, border: "1px solid var(--accent)" }}><Glyph name="search" size={17} /><input autoFocus value={objQ} onChange={(e) => { setObjQ(e.target.value); setObjSel(0); }} placeholder={t("Search objects…")} style={{ flex: 1, background: "transparent", outline: "none", fontSize: 12.5 }} onKeyDown={(e) => { if (e.key === "ArrowDown") setObjSel((s) => Math.min(objHits.length - 1, s + 1)); if (e.key === "ArrowUp") setObjSel((s) => Math.max(0, s - 1)); if (e.key === "Enter" && objHits[objSel]) void insertObject(objHits[objSel], true); }} /></label>
-      <Block gap="2px" items={objHits.slice(0, 40).map((o, i) => ({ g: o.node.lumenNode?.icon ?? "service", l: displayOf(o.node), sub: o.ref ? (i === 0 ? t("Used in {n} diagrams", { n: o.used }) : t("Used in {n}", { n: o.used })) : o.noteTitle, on: i === objSel, mh: "40px", onClick: () => setObjSel(i) }))}
+      <Block gap="2px" items={objHits.slice(0, 40).map((o, i) => ({ g: o.node.lumenNode?.icon ?? "service", l: displayOf(o.node), sub: o.ref ? (i === 0 ? t("Used in {n} diagram|Used in {n} diagrams", { n: o.used }) : t("Used in {n}", { n: o.used })) : o.noteTitle, on: i === objSel, mh: "40px", onClick: () => setObjSel(i) }))}
         note={objHits.length ? t("Reused objects stay linked: rename it here and every diagram updates.") : t("No objects yet. Nodes from your other diagrams show up here.")} />
     </Pop>
   );
@@ -839,13 +881,19 @@ function Studio({ note }: { note: Note }) {
         <div style={{ height: phone ? 56 : 48, flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "0 12px", borderBottom: "1px solid var(--border)", boxSizing: "border-box" }}>
           {phone && <button aria-label={t("Back")} onClick={back} style={{ width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>‹</button>}
           {!phone && <span style={{ color: "var(--muted)", fontSize: 12.5, whiteSpace: "nowrap" }}>{space?.name ?? ""}{folder ? ` / ${folder.name}` : ""} /</span>}
-          <div style={{ display: "flex", flexDirection: phone ? "column" : "row", gap: phone ? 0 : 10, minWidth: 0, flex: phone ? 1 : "0 1 auto", alignItems: phone ? "flex-start" : "center" }}>
+          <div style={{ display: "flex", flexDirection: phone ? "column" : "row", gap: phone ? 0 : 10, minWidth: phone ? 0 : 110, flex: phone ? 1 : "0 1 auto", alignItems: phone ? "flex-start" : "center" }}>
             <TitleEdit note={note} />
             {savedLine}
           </div>
-          {!phone && chain.length > 1 && (
-            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "3px 10px", borderRadius: 999, background: "var(--surface-2)", whiteSpace: "nowrap" }}>
-              {chain.map((x, i) => i < chain.length - 1 ? <button key={x.note.id} onClick={() => openNote(x.note.id)} style={{ color: "var(--muted)" }}>{t(C4_LABEL[x.level])} ›</button> : <b key={x.note.id}>{t(C4_LABEL[x.level])}</b>)}
+          {!phone && (chain.length > 1 || kind === "c4") && (
+            <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, padding: "3px 10px", borderRadius: 999, background: "var(--surface-2)", whiteSpace: "nowrap", color: "var(--muted)", minWidth: 0, overflow: "hidden", flexShrink: 1 }}>
+              {(["context", "container", "component"] as const).map((lv, i) => {
+                const hit = chain.find((x) => x.level === lv), cur = hit?.note.id === note.id;
+                const sep = i < 2 ? " ›" : "";
+                return cur ? <span key={lv}><b style={{ color: "var(--text)" }}>{t(C4_LABEL[lv])}</b>{sep}</span>
+                  : hit ? <button key={lv} onClick={() => openNote(hit.note.id)} className="hover:text-[var(--text)]" style={{ color: "var(--muted)" }}>{t(C4_LABEL[lv])}{sep}</button>
+                  : <span key={lv} title={t("Double-click a container to go one level deeper")}>{t(C4_LABEL[lv])}{sep}</span>;
+              })}
             </span>
           )}
           {!phone && <span style={{ flex: 1 }} />}
@@ -882,13 +930,13 @@ function Studio({ note }: { note: Note }) {
             <Ctx.Provider value={flowCtx}>
               <ReactFlow<FlowNode, FlowEdge> nodes={flowNodes} edges={flowEdges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onNodesChange={onNodesChange}
                 onNodeDragStart={() => { dragStart.current = new Map(cRef.current.nodes.map((n) => [n.id, { x: n.x, y: n.y }])); }} onNodeDragStop={onDragStop}
-                onNodeClick={(_, n) => { if (n.id.startsWith("lp-")) return; if (interview) setRevealed((r) => (r.has(n.id) ? r : new Set(r).add(n.id))); if (connectFrom && connectFrom !== n.id) { onConnect({ source: connectFrom, target: n.id, sourceHandle: null, targetHandle: null }); setConnectFrom(null); return; } if (_.shiftKey && !phone) { const cur = selection(); const has = cur.nodes.includes(n.id); const nodes = has ? cur.nodes.filter((x) => x !== n.id) : [...cur.nodes, n.id]; setSelS(null); setMulti({ nodes, edges: cur.edges }); return; } setSel({ kind: "node", id: n.id }); if (phone && sel?.kind === "node" && sel.id === n.id) setPop("props"); }}
+                onNodeClick={(_, n) => { if (n.id.startsWith("lp-")) return; if (interview) setRevealed((r) => (r.has(n.id) ? r : new Set(r).add(n.id))); if (connectFrom && connectFrom !== n.id) { onConnect({ source: connectFrom, target: n.id, sourceHandle: null, targetHandle: null }); setConnectFrom(null); return; } if (_.shiftKey && !phone) { const cur = selection(); const has = cur.nodes.includes(n.id); const nodes = has ? cur.nodes.filter((x) => x !== n.id) : [...cur.nodes, n.id]; setSelS(null); setMulti({ nodes, edges: cur.edges }); return; } if (Date.now() - longAt.current < 900) return; /* the lift after a long-press: its menu stays */ setSel({ kind: "node", id: n.id }); if (phone && !isGroup(cRef.current.nodes.find((x) => x.id === n.id) ?? ({} as ANode))) setPop("props"); /* phone: one tap opens Properties (46P) */ }}
                 onNodeDoubleClick={(e, n) => void onNodeDouble(e, n)} onEdgeClick={(_, e) => { setSel({ kind: "edge", id: e.id }); setLblPop(null); }} onEdgeDoubleClick={(_, e) => { if (!diff && present === null) { setSel({ kind: "edge", id: e.id }); setEditEdgeS({ id: e.id, part: "mid" }); } }} onPaneClick={() => { setLibOver(false); setSel(null); setEditing(null); setLblPop(null); setEditEdgeS(null); }}
                 edgesReconnectable={false} onConnectStart={() => setConnecting(true)} onEdgeContextMenu={(ev, e) => { ev.preventDefault(); if (frozen || present !== null) return; setSel({ kind: "edge", id: e.id }); setLblPop(e.id); }}
                 onNodeContextMenu={(e, n) => { e.preventDefault(); if (n.id.startsWith("lp-")) return; setSel({ kind: "node", id: n.id }); setMenuFor(n.id); setPop("menu"); }}
                 onPaneContextMenu={(e) => { e.preventDefault(); setPop("insert"); }}
                 onConnect={onConnect} onConnectEnd={(ev, st) => { setConnecting(false); onConnectEnd(ev, st); }} connectionMode={ConnectionMode.Loose} disableKeyboardA11y deleteKeyCode={null} selectionKeyCode={null} multiSelectionKeyCode="Shift"
-                fitView={!fitOnce.current} onInit={() => { fitOnce.current = true; }} onMoveStart={(ev) => { if (ev) { userMoved.current = true; setLblPop(null); } }} fitViewOptions={FIT} minZoom={0.15} maxZoom={2.5} proOptions={{ hideAttribution: true }} nodesConnectable={!diff && present === null} elevateEdgesOnSelect>
+                fitView={!fitOnce.current} onInit={() => { fitOnce.current = true; setTimeout(topAlign, 30); }} onMoveStart={(ev) => { if (ev) { userMoved.current = true; setLblPop(null); } }} fitViewOptions={FIT} minZoom={0.15} maxZoom={2.5} proOptions={{ hideAttribution: true }} nodesConnectable={!diff && present === null} elevateEdgesOnSelect>
                 <Background variant={BackgroundVariant.Dots} gap={22} size={1.4} color="color-mix(in srgb,var(--muted) 20%,transparent)" />
                 {!phone && present === null && <MiniMap pannable zoomable style={{ width: 150, height: 96, right: 0, bottom: 0 }} nodeColor={(n) => (n.type === "archGroup" ? "transparent" : "color-mix(in srgb,var(--accent) 35%,transparent)")} nodeStrokeColor={(n) => (n.type === "archGroup" ? "var(--accent)" : "transparent")} maskColor="color-mix(in srgb,var(--bg) 55%,transparent)" />}
               </ReactFlow>
@@ -908,8 +956,8 @@ function Studio({ note }: { note: Note }) {
             )}
             {preview && bar({ g: "layout-auto", gc: "var(--accent)", bd: "var(--accent)", text: t("Preview: auto layout · {dir} · {spacing} · {keep}", { dir: t(lopts.direction), spacing: t(lopts.spacing), keep: lopts.keep ? t("keep my positions") : t("re-layout all") }), btns: <><Btn onClick={cancelLayout}>{t("Cancel")}</Btn><Btn pri onClick={applyLayout}>{t("Apply")}</Btn></> })}
             {!preview && diff && vd && bar({ g: "diff", gc: "var(--muted)", bd: "var(--border)", chips: true, text: diff.label, btns: <><Btn onClick={() => void openVersions()}>{t("Pick versions ▾")}</Btn><Btn onClick={() => { void restoreVersion(diff.v).then(() => { setDiff(null); toast(t("Restored v{n}", { n: diff.n }), undefined, { icon: "history" }); }); }}>{t("Restore v{n}", { n: diff.n })}</Btn></> })}
-            {!preview && !diff && aiProp && <ArchDiffBar p={aiProp.p} onAccept={aiAccept} onReject={aiReject} style={{ position: "absolute", left: 12, right: 12, top: 12, zIndex: 20 }} />}
-            {!preview && !diff && !aiProp && c4parent && bar({ g: "c4-level", gc: "var(--muted)", bd: "var(--border)", text: t("{level} view of {name}. Double-click any container to go one level deeper.", { level: t(C4_LABEL[c.lumenArch.c4!.level]), name: c4parentNode ? displayOf(c4parentNode) : c4parent.title }), btns: <Btn onClick={() => openNote(c4parent.id)}>{t("‹ Back to {level}", { level: t(C4_LABEL[parseArch(c4parent.body)?.lumenArch.c4?.level ?? "context"]) })}</Btn> })}
+            {!preview && !diff && aiProp && <ArchDiffBar p={aiProp.p} counts={vd?.counts} onAccept={aiAccept} onReject={aiReject} style={{ position: "absolute", left: 12, right: 12, top: 12, zIndex: 20 }} />}
+            {!preview && !diff && !aiProp && c4parent && bar({ g: "c4-level", gc: "var(--muted)", bd: "var(--border)", text: t("{level} view of {name}. Double-click any container to go one level deeper.", { level: t(C4_LABEL[c.lumenArch.c4!.level]), name: c4parentNode ? displayOf(c4parentNode) : c4parent.title }), btns: <Btn onClick={() => openNote(c4parent.id)}>{t("‹ Back to {level}", { level: t(C4_LABEL[(() => { const pc = parseArch(c4parent.body); return pc ? c4LevelOf(pc) : "context"; })()]) })}</Btn> })}
             {connectFrom && bar({ g: "connector", gc: "var(--accent)", bd: "var(--accent)", text: t("Tap the node to connect to."), btns: <Btn onClick={() => setConnectFrom(null)}>{t("Cancel")}</Btn> })}
             {present !== null && (
               <div style={{ position: "absolute", left: "50%", bottom: 20, transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 8, padding: 6, borderRadius: 12, background: "var(--surface-2)", border: "1px solid var(--border)", boxShadow: "0 10px 26px rgba(0,0,0,.25)", zIndex: 20 }}>
@@ -927,9 +975,10 @@ function Studio({ note }: { note: Note }) {
         {pop === "insert" && insertPop}
         {pop === "versions" && versionsPop}
         {phone && pop === "library" && (
-          <Pop title={t("Library")} sub={t("Architecture")} sheet onClose={() => setPop(null)} style={{ left: 0, right: 0, bottom: 0, maxHeight: "78%", animation: "arch-sheet .22s var(--ease)" }}>
+          // the library's own sheet (one header, one close), not wrapped in a second popover
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, maxHeight: "78%", display: "flex", flexDirection: "column", zIndex: 40, animation: "arch-sheet .22s var(--ease)" }}>
             <LibraryPanel workspace="architecture" variant="sheet" onClose={() => setPop(null)} onPlace={(it) => { placeItem(it); setPop(null); }} />
-          </Pop>
+          </div>
         )}
         {phone && pop === "props" && selNode && !isGroup(selNode) && (
           <Pop title={displayOf(selNode)} sub={t(selNode.lumenNode?.kind ?? "service")} sheet onClose={() => setPop(null)} style={{ left: 0, right: 0, bottom: 0, maxHeight: "70%", animation: "arch-sheet .22s var(--ease)" }}>
@@ -957,7 +1006,7 @@ function Studio({ note }: { note: Note }) {
           ))}
         </div>
       )}
-      <LongPress onLong={(id) => { setSel({ kind: "node", id }); setMenuFor(id); setPop("menu"); }} root={canvasEl} enabled={phone} />
+      <LongPress onLong={(id) => { longAt.current = Date.now(); setSel({ kind: "node", id }); setMenuFor(id); setPop("menu"); }} root={canvasEl} enabled={phone} />
       {ai && <ArchAIPanel slotted mode={ai} dsl={code} title={note.title} phone={phone} onProposal={onAiProposal} onApplyDsl={() => {}} onCreateNote={noteFromAi} onClose={() => { if (!aiProp) setAi(null); }} />}
       {reviewOpen && phone && <ArchReviewPanel ph dsl={code} title={note.title} onClose={() => setReviewOpen(false)} onCreateNote={noteFromAi} style={{ position: "fixed", left: 0, right: 0, bottom: 0, maxHeight: "86%", minHeight: "60%", borderRadius: "20px 20px 0 0", border: "1px solid var(--border)", zIndex: 90 }} />}
       <ShareSheet target={{ kind: "note", note }} open={share} onClose={() => setShare(false)} />

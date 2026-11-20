@@ -1,5 +1,7 @@
 import type { Hono } from "hono";
 import type { Env, Helpers } from "../index";
+import { r2Prefix } from "../accounts";
+import { clearAiUsage } from "./ai-usage";
 
 /**
  * Settings › Account › Danger zone › "Delete account and all data" (Lumen 29 · R6-29L).
@@ -35,12 +37,15 @@ export default function register(api: Hono<Env>, h: Helpers) {
     if (c.env.FILES) {
       let cursor: string | undefined;
       do {
-        const l = await c.env.FILES.list({ cursor, limit: 500 });
+        // Only this account's prefix: accounts share the bucket (worker/accounts.ts r2Key).
+        const l = await c.env.FILES.list({ prefix: r2Prefix(c.env.ACCOUNT), cursor, limit: 500 });
         if (l.objects.length) { await c.env.FILES.delete(l.objects.map((o) => o.key)); files += l.objects.length; }
         cursor = l.truncated ? l.cursor : undefined;
       } while (cursor);
     }
-    for (const sql of ["DELETE FROM files", "DELETE FROM file_parts", "DELETE FROM file_meta", "DELETE FROM api_tokens", "DELETE FROM ai_usage"]) await db.prepare(sql).run().catch(() => {});
+    for (const sql of ["DELETE FROM files", "DELETE FROM file_parts", "DELETE FROM file_meta", "DELETE FROM api_tokens"]) await db.prepare(sql).run().catch(() => {});
+    // AI usage counters live in the main database, keyed per account (ai-usage.ts); clear only this account's.
+    await clearAiUsage(c.env.MAIN_DB ?? db, c.env.ACCOUNT).catch(() => {});
     return c.json({ ok: true, files });
   });
 }

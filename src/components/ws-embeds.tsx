@@ -1,4 +1,4 @@
-import { API_BASE, unfurl, type Unfurl } from "../lib/api";
+import { API_BASE, getToken, unfurl, type Unfurl } from "../lib/api";
 import { icon } from "./ws-icons";
 import { fmtNum, t } from "../lib/i18n";
 import { hydrateTimestamps, mediaCtl, remoteCtl } from "./video-players"; // video notes (D8): player registry + [12:34] chips
@@ -280,7 +280,7 @@ async function pdfCard(el: HTMLElement, ctx: EmbedCtx) {
 async function preview(href: string, fresh: boolean): Promise<Unfurl | null> {
   if (!fresh) return unfurl(href);
   try {
-    const r = await fetch(`${API_BASE}/api/unfurl?url=${encodeURIComponent(href)}&r=${Date.now()}`);
+    const r = await fetch(`${API_BASE}/api/unfurl?url=${encodeURIComponent(href)}&r=${Date.now()}`, { headers: { Authorization: `Bearer ${getToken() ?? ""}` } });
     if (!r.ok) return null;
     const d = (await r.json()) as Unfurl;
     try { localStorage.setItem("lumen.unfurl." + href, JSON.stringify(d)); } catch { /* full */ }

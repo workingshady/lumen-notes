@@ -3,7 +3,7 @@
 // Replaces Excalidraw's tall style panel and the old sticky bar (both hidden), so nothing can overlap any more.
 import { ArrangePopover } from "./layers/Arrange";
 import { selectedIsVendor } from "../../lib/library-items";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { t, tk } from "../../lib/i18n";
 import { Glyph } from "../Glyph";
 import { cx } from "../ui";
@@ -157,6 +157,7 @@ export function PropertyBar({ mode, style, pos, phone, dark, ctx, onSet, onActio
     if (!tool) push(<S key="3" />, ...arrange, tail[1]);
   } else if (mode === "sticky") {
     push(<Btn key="f" k="fill" sw={style.backgroundColor} tip={t("Paper colour")} />, <Btn key="sz" k="size" glyph="rect" label={SIZES.find(([v]) => v === style.fontSize)?.[1] ?? "M"} tip={t("Size")} />, <Btn key="fo" k="font" glyph="font" label={fontName(style.fontFamily)} tip={t("Font")} />, <S key="1" />,
+      <Btn key="fs" k="fillStyle" glyph={style.fillStyle === "solid" ? "fill-solid" : style.fillStyle === "cross-hatch" ? "fill-crosshatch" : style.fillStyle === "zigzag" ? "fill-zigzag" : "fill-hachure"} tip={t("Fill style")} />, <Btn key="r" k="rough" glyph={`sloppiness-${style.roughness ?? 1}`} tip={t("Sloppiness")} />, <Btn key="e" k="edges" glyph={style.roundness === "sharp" ? "edges-sharp" : "edges-round"} tip={t("Edges")} />, <S key="2" />,
       <Btn key="st" k="arrange" glyph="layers" label={t("Stack")} tip={t("Stack")} />,
       <button key="du" type="button" title={t("Duplicate")} aria-label={t("Duplicate")} onClick={() => onAction("duplicate")} className="flex size-[30px] items-center justify-center rounded-[7px] hover:bg-surface"><Glyph name="duplicate" size={17} /></button>,
       <button key="de" type="button" title={t("Delete")} aria-label={t("Delete")} onClick={() => onAction("delete")} className="flex size-[30px] items-center justify-center rounded-[7px] hover:bg-surface hover:text-bad"><Glyph name="trash" size={17} /></button>);
@@ -168,14 +169,16 @@ export function PropertyBar({ mode, style, pos, phone, dark, ctx, onSet, onActio
   }
 
   const popUp = !phone && pos && pos.y > 300;
+  const barRef = useRef<HTMLDivElement>(null);
+  useFitPopover(barRef, open, phone);
   return (
-    <div data-wb-chrome onPointerDown={(e) => e.stopPropagation()}
+    <div ref={barRef} data-wb-chrome onPointerDown={(e) => e.stopPropagation()}
       className={cx("absolute z-30 flex max-w-[calc(100%-20px)] flex-wrap items-center gap-[2px] whitespace-nowrap rounded-[10px] border border-line bg-surface-2 p-1 shadow-[0_10px_28px_rgba(0,0,0,.3)]", phone ? "inset-x-[10px] bottom-[calc(96px+env(safe-area-inset-bottom))] w-fit max-w-none" : "")}
       style={phone ? undefined : pos ? { left: pos.x, top: pos.y } : { left: "50%", top: 64, transform: "translateX(-50%)" }}>
       {items}
-      {open === "arrange" && <div className={phone ? "absolute inset-x-0 bottom-[calc(100%+8px)] z-40 max-h-[70vh] overflow-y-auto" : popUp ? "absolute bottom-[calc(100%+8px)] start-0 z-40 fade-in" : "absolute start-0 top-[calc(100%+8px)] z-40 fade-in"}><ArrangeOutside onClose={close}>{body()}</ArrangeOutside></div>}
+      {open === "arrange" && <div data-fit className={phone ? "absolute inset-x-0 bottom-[calc(100%+8px)] z-40 max-h-[70vh] overflow-y-auto" : popUp ? "absolute bottom-[calc(100%+8px)] start-0 z-40 fade-in" : "absolute start-0 top-[calc(100%+8px)] z-40 fade-in"}><ArrangeOutside onClose={close}>{body()}</ArrangeOutside></div>}
       {open !== "arrange" && open && (open === "stroke" || open === "fill") && wbRegistry.palette
-        ? <div className={phone ? "" : popUp ? "absolute bottom-[calc(100%+6px)] start-0 z-40 [&>[role=dialog]]:bottom-0" : "absolute start-0 top-[calc(100%+6px)] z-40"}>{body()}</div>
+        ? <div data-fit className={phone ? "" : popUp ? "absolute bottom-[calc(100%+6px)] start-0 z-40 [&>[role=dialog]]:bottom-0" : "absolute start-0 top-[calc(100%+6px)] z-40"}>{body()}</div>
         : open && open !== "arrange" && <Pop onClose={close} className={phone ? "bottom-[calc(100%+8px)] start-0" : popUp ? "bottom-[calc(100%+8px)] start-0" : "start-0 top-[calc(100%+8px)]"}>{body()}</Pop>}
     </div>
   );
@@ -194,4 +197,42 @@ function ArrangeOutside({ onClose, children }: { onClose: () => void; children: 
   // keep the three panels on screen: shift left when they would run past the window edge
   useEffect(() => { const el = ref.current; if (!el) return; const r = el.getBoundingClientRect(); const over = r.right - (innerWidth - 12); if (over > 0) el.style.transform = `translateX(${-Math.min(over, r.left - 12)}px)`; }, []);
   return <div ref={ref} className="whitespace-normal" onPointerDown={(e) => e.stopPropagation()}>{children}</div>;
+}
+
+/**
+ * Keeps the open popover fully on the board (36D connector, 37A colour): never under the toolbar (top 110 px) or past an edge.
+ * A popover that doesn't fit above the bar flips below it; what still overflows shifts in. Re-runs when the popover resizes.
+ */
+function useFitPopover(bar: React.RefObject<HTMLDivElement | null>, open: string | null, phone: boolean) {
+  useLayoutEffect(() => {
+    const b = bar.current;
+    if (!b || !open) return;
+    const el = b.querySelector<HTMLElement>(":scope > [data-fit], :scope > [role=menu]");
+    if (!el) return;
+    const fit = () => {
+      const host = (b.closest(".lumen-wb") as HTMLElement | null)?.getBoundingClientRect() ?? new DOMRect(0, 0, innerWidth, innerHeight);
+      el.style.transform = "";
+      const box = () => { const r = el.getBoundingClientRect(); const c = el.firstElementChild as HTMLElement | null; return r.height < 4 && c ? c.getBoundingClientRect() : r; };
+      const top = host.top + (phone ? 8 : 110), bottom = host.bottom - 8, left = host.left + 8, right = host.right - 8;
+      let r = box(), flip = 0;
+      const br = b.getBoundingClientRect();
+      if (r.top < top && r.bottom <= br.top + 1 && br.bottom + 8 + r.height <= bottom) { // above the bar but no room: flip below
+        flip = br.bottom + 8 - r.top;
+        el.style.transform = `translateY(${flip}px)`;
+        r = box();
+      }
+      if (r.height > bottom - top) { el.style.maxHeight = `${bottom - top}px`; el.style.overflowY = "auto"; r = box(); }
+      let dy = 0, dx = 0;
+      if (r.bottom > bottom) dy = bottom - r.bottom;
+      if (r.top + dy < top) dy = top - r.top;
+      if (r.right > right) dx = right - r.right;
+      if (r.left + dx < left) dx = left - r.left;
+      if (dx || dy) el.style.transform = `translate(${dx}px, ${flip + dy}px)`;
+    };
+    fit();
+    const ro = new ResizeObserver(() => fit());
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    return () => ro.disconnect();
+  }, [open, phone]); // eslint-disable-line react-hooks/exhaustive-deps
 }

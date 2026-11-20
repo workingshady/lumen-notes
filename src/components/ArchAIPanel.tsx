@@ -17,6 +17,8 @@ import { Glyph } from "./Glyph";
 import type { GlyphName } from "../lib/glyphs";
 import { t } from "../lib/i18n";
 import { toast } from "../lib/store";
+import { getToken } from "../lib/api";
+import { DEMO } from "../lib/db";
 import { parseDsl } from "../lib/arch-dsl";
 import {
   AiConvertError, archFromText, cardsFromDsl, convertImage, diffDsl, diffSummary, docsFromDsl, editDsl, isOnline, reviewDsl, reviewToMarkdown, reviewToTasks,
@@ -79,7 +81,10 @@ function makeProposal(instruction: string, base: string, dsl: string): ArchPropo
   const rows = diffDsl(base, dsl);
   return { instruction, base, dsl, rows, summary: diffSummary(rows) };
 }
-const errText = (e: unknown) => (e instanceof AiConvertError ? (e.code === "offline" ? t("You’re offline. The AI runs on your Cloudflare account.") : e.code === "limit" ? t("Daily free AI limit reached. Try tomorrow.") : e.code === "timeout" ? t("The AI took too long. Try again.") : e.message) : t("AI request failed."));
+const SIGN_IN = () => t("The AI needs sync unlocked: open Settings → Sync and sign in. Your diagram is unchanged.");
+/** Signed in (an API token), or demo data (the dev simulator can mock the AI). */
+const aiReady = () => !!getToken() || DEMO;
+const errText = (e: unknown) => (e instanceof AiConvertError ? (e.status === 401 || /unauthori[sz]ed/i.test(e.message) ? SIGN_IN() : e.code === "disabled" ? t("The AI is turned off for this account (Settings → AI).") : e.code === "offline" ? t("You’re offline. The AI runs on your Cloudflare account.") : e.code === "limit" ? t("Daily free AI limit reached. Try tomorrow.") : e.code === "timeout" ? t("The AI took too long. Try again.") : e.message) : t("AI request failed."));
 
 const SOURCES: { g: GlyphName; l: string; src: ArchSource }[] = [
   { g: "code", l: "Code / OpenAPI", src: "code" }, { g: "container", l: "docker-compose · k8s", src: "compose" },
@@ -113,6 +118,7 @@ function InputSheet({ mode, ph, props, onProposal, busy, setBusy }: { mode: "des
   const go = async () => {
     setErr("");
     if (!isOnline()) { setErr(t("You’re offline. The AI runs on your Cloudflare account.")); return; }
+    if (!aiReady()) { setErr(SIGN_IN()); return; }
     const c = new AbortController(); ctl.current = c; setBusy(true);
     try {
       let body = text, src: ArchSource = "describe";
@@ -176,13 +182,14 @@ function InputSheet({ mode, ph, props, onProposal, busy, setBusy }: { mode: "des
 
 // ------------------------------------------------------------------ diff (48D)
 /** The bar over the canvas: instruction, legend chips, Reject / Accept. */
-export function ArchDiffBar({ p, onAccept, onReject, style }: { p: ArchProposal; onAccept: () => void; onReject: () => void; style?: React.CSSProperties }) {
-  const s = p.summary;
+export function ArchDiffBar({ p, onAccept, onReject, style, counts }: { p: ArchProposal; onAccept: () => void; onReject: () => void; style?: React.CSSProperties; /** Node counts from the canvas diff (what the outlines show). */ counts?: { add: number; chg: number; del: number } }) {
+  // nodes only (edges are not "added components"): the same numbers the green / amber / red outlines show
+  const s = counts ? { added: counts.add, changed: counts.chg, removed: counts.del } : { added: p.summary.addedNodes.length, changed: p.summary.changedNodes.length, removed: p.summary.removedNodes.length };
   const parts = [s.added && t("{n} added", { n: s.added }), s.changed && t("{n} changed", { n: s.changed }), s.removed && t("{n} removed", { n: s.removed })].filter(Boolean).join(", ");
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 8px 8px 14px", borderRadius: 12, background: "var(--surface-2)", border: "1px solid var(--border)", boxShadow: "0 10px 26px rgba(0,0,0,.25)", fontSize: 12.5, flexWrap: "wrap", animation: "lm-aap-in .2s var(--ease) both", ...style }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 8px 8px 14px", borderRadius: 12, background: "var(--surface-2)", border: "1px solid var(--border)", boxShadow: "0 10px 26px rgba(0,0,0,.25)", fontSize: 12.5, flexWrap: "nowrap", animation: "lm-aap-in .2s var(--ease) both", ...style }}>
       <Glyph name="assistant" size={16} color="var(--muted)" />
-      <span style={{ flex: 1, minWidth: 160 }}>{`“${p.instruction.length > 80 ? p.instruction.slice(0, 80) + "…" : p.instruction}”`}{parts && ` · ${parts}`}</span>
+      <span style={{ flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{`“${p.instruction.length > 80 ? p.instruction.slice(0, 80) + "…" : p.instruction}”`}{parts && ` · ${parts}`}</span>
       {([["Added", "var(--success)"], ["Changed", "var(--warning)"], ["Removed", "var(--danger)"]] as const).map(([l, c]) => (
         <span key={l} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: c, whiteSpace: "nowrap" }}><span style={{ width: 8, height: 8, borderRadius: 2, background: c }} />{t(l)}</span>))}
       <button type="button" style={btn(false, false, 30)} onClick={onReject}>{t("Reject")}</button>
@@ -203,7 +210,7 @@ export function ArchDiffCode({ p, style }: { p: ArchProposal; style?: React.CSSP
     <div style={{ display: "flex", flexDirection: "column", minHeight: 0, background: "var(--surface)", ...style }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 10px 0", padding: "8px 10px", borderRadius: 8, fontSize: 12, background: "color-mix(in srgb,var(--muted) 10%,transparent)", color: "var(--muted)" }}>{t("Proposed change · review before it touches the canvas")}</div>
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "8px 0", font: `12.5px/21px ${mono}` }}>
-        {p.rows.map((r, k) => (
+        {p.rows.filter((r, k, all) => !(r.mark === "+" && !r.text.trim() && all.slice(k + 1).every((x) => !x.text.trim()))).map((r, k) => (
           <div key={k} style={{ display: "flex", background: r.mark === "+" ? "color-mix(in srgb,var(--success) 12%,transparent)" : r.mark === "-" ? "color-mix(in srgb,var(--danger) 12%,transparent)" : "transparent", borderInlineStart: "2px solid transparent" }}>
             <span style={{ width: 38, flexShrink: 0, textAlign: "right", paddingRight: 12, color: "var(--muted)", userSelect: "none" }}>{r.n ?? ""}</span>
             <span style={{ width: 12, flexShrink: 0, color: r.mark === "+" ? "var(--success)" : "var(--danger)" }}>{r.mark}</span>
@@ -238,6 +245,8 @@ export function ArchReviewPanel({ dsl, title, ph, onClose, onCreateNote, onCreat
 
   const load = async (which: number) => {
     setErr("");
+    if (!isOnline()) { setErr(t("You’re offline. The AI runs on your Cloudflare account.")); return; }
+    if (!aiReady()) { setErr(SIGN_IN()); return; }
     const c = new AbortController(); ctl.current = c; setLoading(true);
     try {
       if (which === 0) { const r = await reviewDsl(dsl, c.signal); setRev(r.review); setNeurons((n) => n + r.neurons); }

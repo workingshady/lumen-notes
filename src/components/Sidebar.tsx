@@ -362,8 +362,10 @@ export function Sidebar({ rail }: { rail?: boolean }) {
 
 function SyncDot({ withText }: { withText?: boolean }) {
   const s = useSync();
-  const color = s.status === "error" ? "var(--danger)" : s.status === "offline" ? "var(--warning)" : s.status === "local" ? "var(--muted)" : "var(--success)";
-  const text = s.status === "syncing" ? t("Syncing…") : s.status === "offline" ? t("Offline") : s.status === "error" ? t("Sync error") : s.status === "local" ? t("This device only") : s.last ? t("Synced {ago}", { ago: fmtAgo(s.last) }) : t("Synced");
+  const colorBase = s.status === "error" ? "var(--danger)" : s.status === "offline" ? "var(--warning)" : s.status === "local" ? "var(--muted)" : "var(--success)";
+  const stuck = s.status === "idle" && s.stuck?.length ? s.stuck.length : 0; // records too large to sync (details in the note header)
+  const color = stuck ? "var(--warning)" : colorBase;
+  const text = s.status === "syncing" ? t("Syncing…") : s.status === "offline" ? t("Offline") : s.status === "error" ? t("Sync error") : s.status === "local" ? t("This device only") : stuck ? t("{n} item too large to sync|{n} items too large to sync", { n: stuck }) : s.last ? t("Synced {ago}", { ago: fmtAgo(s.last) }) : t("Synced");
   return (
     <button type="button" onClick={() => (s.status === "local" ? go("settings") : void import("../lib/sync").then((m) => m.syncNow()))} title={text} aria-label={text} className={cx("flex min-w-0 items-center gap-2", withText && "flex-1")}>
       <span className="size-2 shrink-0 rounded-full" style={{ background: color }} />

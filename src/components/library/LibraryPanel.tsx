@@ -36,7 +36,7 @@ export function LibraryPanel({ workspace, onPlace, onClose, variant = "floating"
   const prefs = useLibPrefs();
   const docked = variant === "docked";
   // the docked studio panel (260 px) has the design's three tabs (49A–49D); icons stay one search away
-  const tabs = docked ? tabsFor(workspace).filter((x, i) => x !== "icons" || i === 0) : tabsFor(workspace);
+  const tabs = docked || (variant === "sheet" && workspace === "architecture") ? tabsFor(workspace).filter((x, i) => x !== "icons" || i === 0) : tabsFor(workspace);
   const [tab, setTabS] = useState<LibTab>(() => { const w = initialTab ?? prefs.tab[workspace] ?? tabs[0]; return tabs.includes(w) ? w : tabs[0]; });
   const setTab = (x: LibTab) => { setTabS(x); if (!initialTab) setLibPrefs({ tab: { ...prefs.tab, [workspace]: x } }); };
   const [q, setQ] = useState("");
@@ -50,7 +50,9 @@ export function LibraryPanel({ workspace, onPlace, onClose, variant = "floating"
   const loadedPacks = installedPacks();
   const [vcat, setVcat] = useState<Record<string, string>>({});
   const [vmax, setVmax] = useState<Record<string, number>>({});
-  const sub = workspace === "architecture" || workspace === "canvas" ? t("Architecture first") : workspace === "board" ? t("All") : t("Drawing first");
+  const subText = workspace === "architecture" ? t("Architecture first") : workspace === "canvas" ? t("Cards + node kinds") : workspace === "board" ? t("All") : t("Drawing first");
+  // never wider than the header leaves room for (it ellipsises instead of pushing past the panel edge)
+  const sub = <span title={subText} style={{ display: "inline-block", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "bottom" }}>{subText}</span>;
   const cols = docked ? "repeat(3,1fr)" : "repeat(4,1fr)";
   const mh = docked ? "56px" : "58px";
 
@@ -78,7 +80,7 @@ export function LibraryPanel({ workspace, onPlace, onClose, variant = "floating"
   const search = (
     <div key="search" style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 34, padding: "0 8px", borderRadius: 8, border: `1px solid ${q ? "var(--ac)" : "var(--bd)"}`, boxSizing: "border-box", color: "var(--mu)" }}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={docked ? t("Search {n} shapes…", { n: 80 }) : t("Search shapes, stamps, icons…")} aria-label={t("Search the library")} dir="auto"
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={docked || (variant === "sheet" && workspace === "architecture") ? t("Search {n} shapes…", { n: 80 }) : t("Search shapes, stamps, icons…")} aria-label={t("Search the library")} dir="auto"
         onKeyDown={(e) => { if (e.key === "Enter") { const r = searchLibrary(q)[0]; if (r) place(r); } if (e.key === "Escape" && q) { e.stopPropagation(); setQ(""); } }}
         style={{ flex: 1, minWidth: 0, background: "transparent", border: 0, outline: 0, color: "var(--tx)", fontSize: "12.5px", fontFamily: "inherit" }} />
       {q && <button type="button" aria-label={t("Clear")} onClick={() => setQ("")} style={{ background: "transparent", border: 0, color: "var(--mu)", cursor: "pointer", fontSize: 14, padding: 0 }}>×</button>}

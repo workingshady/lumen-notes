@@ -1,7 +1,7 @@
 // Starter content for each diagram type (46A–46B) and the "Payments platform" demo diagram (46C).
 import type { Note } from "../../shared/types";
 import { applyDsl, parseDsl } from "./arch-dsl";
-import { stringifyArch, type ArchCanvas, type ArchKind, type C4Level } from "./arch-model";
+import { laneLayout, seqLayout, stringifyArch, type ArchCanvas, type ArchKind, type C4Level } from "./arch-model";
 import { tk } from "./i18n";
 
 export const DIAGRAM_TYPES: [kind: ArchKind, label: string, sub: string, glyph: string][] = [
@@ -156,7 +156,8 @@ export function archFromDsl(kind: ArchKind, dsl: string, base?: ArchCanvas): Arc
 export async function createArchNote(kind: ArchKind, where: Pick<Note, "spaceId" | "folderId">, opts: { title?: string; dsl?: string; c4?: ArchCanvas["lumenArch"]["c4"] } = {}): Promise<Note> {
   const { createNote } = await import("./actions");
   let c = archFromDsl(kind, opts.dsl ?? STARTER_DSL[kind], emptyArch(kind, opts.c4));
-  try { const { elkLayout } = await import("./arch-layout"); c = await elkLayout(c, { direction: c.lumenArch.direction, spacing: "roomy", keep: false, scope: "all" }); } catch { /* placement is fine without ELK */ }
+  if (kind === "sequence") c = seqLayout(c); // participants in a row, messages as rows under the lifelines
+  else try { const { elkLayout } = await import("./arch-layout"); c = await elkLayout(c, { direction: c.lumenArch.direction, spacing: "roomy", keep: false, scope: "all" }); if (kind === "bpmn") c = laneLayout(c); } catch { /* placement is fine without ELK */ }
   const label = DIAGRAM_TYPES.find((d) => d[0] === kind)?.[1] ?? "Diagram";
   return createNote({ type: "canvas", title: opts.title ?? `${label} diagram`, body: stringifyArch(c), spaceId: where.spaceId, folderId: where.folderId });
 }

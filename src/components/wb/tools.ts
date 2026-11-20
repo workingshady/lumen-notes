@@ -45,16 +45,19 @@ export const loadInk = (which: "pen" | "hl") => read<Ink>(`lumen.wbInk.${which}`
 export const saveInk = (which: "pen" | "hl", ink: Ink) => write(`lumen.wbInk.${which}`, ink);
 
 // ------------------------------------------------------------------ last used (tool wheel: 6 slots)
-export type WheelSlot = { tool: ToolId; shape?: ShapeKind; color?: string };
-const WHEEL_DEFAULT: WheelSlot[] = [{ tool: "pen" }, { tool: "hl" }, { tool: "eraser" }, { tool: "lasso" }, { tool: "text" }, { tool: "shape", shape: "rectangle" }];
+/** pen: a pen slot that switches to this pen type (design 33E: Fountain · Brush). */
+export type WheelSlot = { tool: ToolId; shape?: ShapeKind; color?: string; pen?: string };
+// design 33E: Fountain · Highlight · Eraser · Lasso · Brush · Rectangle
+const WHEEL_DEFAULT: WheelSlot[] = [{ tool: "pen" }, { tool: "hl" }, { tool: "eraser" }, { tool: "lasso" }, { tool: "pen", pen: "brush" }, { tool: "shape", shape: "rectangle" }];
+const slotKey = (x: WheelSlot) => x.tool + (x.pen ? ":" + x.pen : "");
 export function loadRecent(): WheelSlot[] {
-  try { const v = JSON.parse(localStorage.getItem("lumen.wbRecent") ?? "null") as WheelSlot[] | null; if (Array.isArray(v) && v.length) return [...v, ...WHEEL_DEFAULT.filter((d) => !v.some((x) => x.tool === d.tool))].slice(0, 6); } catch { /* ignore */ }
+  try { const v = JSON.parse(localStorage.getItem("lumen.wbRecent") ?? "null") as WheelSlot[] | null; if (Array.isArray(v) && v.length) return [...v, ...WHEEL_DEFAULT.filter((d) => !v.some((x) => slotKey(x) === slotKey(d)))].slice(0, 6); } catch { /* ignore */ }
   return WHEEL_DEFAULT;
 }
 const WHEELABLE: ToolId[] = ["pen", "hl", "eraser", "laser", "lasso", "shape", "arrow", "text", "sticky", "frame", "hand", "select"];
 export function pushRecent(s: WheelSlot) {
   if (!WHEELABLE.includes(s.tool)) return;
-  const cur = loadRecent().filter((x) => x.tool !== s.tool);
+  const cur = loadRecent().filter((x) => slotKey(x) !== slotKey(s));
   write("lumen.wbRecent", [s, ...cur].slice(0, 6));
 }
 

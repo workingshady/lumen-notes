@@ -32,7 +32,7 @@ export const Backdrop = forwardRef<BackdropHandle, { board: LumenBoard; dark: bo
     if (!host) return;
     const [pw, ph] = PAGE_SIZE[board.mode];
     const n = Math.min(MAX_PAGES, Math.max(3, Math.ceil((bottomRef.current + ph) / (ph + PAGE_GAP))));
-    while (host.children.length < n) { const d = document.createElement("div"); d.style.cssText = "position:absolute;box-shadow:0 1px 0 rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.18);border-radius:2px"; host.appendChild(d); }
+    while (host.children.length < n) { const d = document.createElement("div"); d.style.cssText = "position:absolute;box-shadow:0 0 0 1px var(--border),0 8px 24px rgba(0,0,0,.18);border-radius:2px"; host.appendChild(d); }
     [...host.children].forEach((c, i) => {
       const d = c as HTMLDivElement;
       if (i >= n) { d.style.display = "none"; return; }

@@ -19,7 +19,21 @@ type H = { hmac(secret: string, msg: string): Promise<string>; safeEqual(a: stri
 const live = (env: Bindings) => ACCOUNTS.filter((a) => env[a.db] && typeof env[a.pass] === "string" && env[a.pass]);
 function use(c: Context<Env>, a: Account) {
   const env = c.env as Bindings;
-  c.env = { ...c.env, DB: env[a.db] as D1Database, APP_PASSCODE: env[a.pass] as string, ACCOUNT: a.id };
+  // MAIN_DB keeps the main database reachable for account-wide state (the shared Workers AI allowance, ai-usage.ts).
+  c.env = { ...c.env, MAIN_DB: c.env.MAIN_DB ?? c.env.DB, DB: env[a.db] as D1Database, APP_PASSCODE: env[a.pass] as string, ACCOUNT: a.id };
+}
+
+/**
+ * R2 keys are per account (`att/<account>/<id>`; main = "main"), so accounts sharing one bucket never see or wipe each
+ * other's files. Set before R2 is enabled: no existing objects need moving.
+ */
+export const r2Prefix = (account?: string) => `att/${account || "main"}/`;
+export const r2Key = (account: string | undefined, id: string) => r2Prefix(account) + id;
+/** Keys to try for a public GET: this account's first; on the main account also the extra accounts' and the old key. */
+export function r2Keys(env: Record<string, unknown>, id: string): string[] {
+  const account = env.ACCOUNT as string | undefined;
+  if (account && account !== "main") return [r2Key(account, id)];
+  return [r2Key("main", id), ...ACCOUNTS.filter((a) => env[a.db]).map((a) => r2Key(a.id, id)), `att/${id}`];
 }
 const sha256 = async (s: string) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map((x) => x.toString(16).padStart(2, "0")).join("");
 

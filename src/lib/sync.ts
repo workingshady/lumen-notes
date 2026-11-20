@@ -7,8 +7,11 @@ import { db, getMeta, onDirty, setMeta, TABLE } from "./db";
 import { uploadPending } from "./attachments";
 let appOpenedUpload = false;
 import { onFaults, simSync } from "./sim/faults";
+import { ackedIds, chunkItems, isStuck, MAX_ITEM_BYTES, utf8Size, type StuckItem } from "./sync-plan";
 
-export type SyncState = { status: "local" | "idle" | "syncing" | "offline" | "error"; last: number; pending: number; error?: string; first?: FirstSync };
+/** `stuck`: records the server refused (too large…): kept dirty on this device, not re-sent until edited again. */
+export type SyncState = { status: "local" | "idle" | "syncing" | "offline" | "error"; last: number; pending: number; error?: string; first?: FirstSync; stuck?: StuckItem[] };
+export type { StuckItem };
 /** First sync on a new device (Lumen 22): notes first (readable right away), then flashcards and the rest; files on demand. */
 export interface FirstSync { phase: "notes" | "cards"; got: number; total: number; notes: number; startedAt: number }
 let state: SyncState = { status: getToken() ? "idle" : "local", last: 0, pending: 0 };
@@ -19,8 +22,12 @@ export const useSync = () => useSyncExternalStore((f) => (subs.add(f), () => sub
 async function countDirty() {
   let n = 0;
   for (const k of KINDS) n += await TABLE[k].where("dirty").equals(1).count();
-  return n;
+  return Math.max(0, n - (state.stuck?.length ?? 0)); // refused records aren't "queued": they wait for an edit
 }
+
+/** /sync response (v2 Worker: per-item results + composite cursor; older Workers send only cursor/items/more). */
+type SyncRes = SyncResponse & { more: boolean; cursorKey?: string; accepted?: string[]; rejected?: { kind: string; id: string; reason: StuckItem["reason"]; size?: number }[]; serverNow?: number };
+const STUCK_KEY = "syncStuck";
 
 let running: Promise<void> | null = null;
 /** Backoff after failed rounds: background triggers (timer, edits) wait until `retryAt`; explicit ones don't. */
@@ -39,48 +46,103 @@ async function run() {
   try {
     await uploadPending(!appOpenedUpload).catch(() => {}); // attachment bytes first, so synced notes never point at missing files
     appOpenedUpload = true; // Settings › Sync › Sync files "On open": files go up on the first round after the app opens
-    // Gather dirty records.
-    const sent: { kind: Kind; id: string; updatedAt: number }[] = [];
-    const items: SyncItem[] = [];
+    // Gather dirty records, serialised once (the request body is built from these strings). Records the server refused
+    // stay dirty but are skipped until edited again; records over the size cap aren't sent at all.
+    const prevStuck = new Map((await getMeta<StuckItem[]>(STUCK_KEY, [])).map((x) => [`${x.kind}/${x.id}`, x]));
+    const stuck = new Map<string, StuckItem>();
+    const out: { key: string; kind: Kind; id: string; updatedAt: number; json: string; size: number }[] = [];
+    const now = Date.now();
     for (const kind of KINDS) {
       for (const r of await TABLE[kind].where("dirty").equals(1).toArray()) {
+        const key = `${kind}/${r.id}`;
+        const prev = prevStuck.get(key);
+        if (isStuck(prev, r.updatedAt, now)) { stuck.set(key, prev!); continue; }
         const { dirty: _d, ...data } = r;
-        items.push({ kind, id: r.id, data, updatedAt: r.updatedAt, deleted: r.deleted ?? 0 });
-        sent.push({ kind, id: r.id, updatedAt: r.updatedAt });
+        const json = JSON.stringify({ kind, id: r.id, data, updatedAt: r.updatedAt, deleted: r.deleted ?? 0 } satisfies SyncItem);
+        const size = utf8Size(json);
+        if (size > MAX_ITEM_BYTES + 200) { stuck.set(key, { kind, id: r.id, updatedAt: r.updatedAt, reason: "too_large", size, title: titleOf(r), at: now }); continue; }
+        out.push({ key, kind, id: r.id, updatedAt: r.updatedAt, json, size });
       }
     }
+    await saveStuck(stuck);
     let since = await getMeta<number>("cursor", 0);
-    if (since === 0) { since = await firstSync(); await setMeta("cursor", since); }
-    let first = true;
-    for (;;) {
-      const res = await api<SyncResponse & { more: boolean }>("/sync", { method: "POST", json: { since, items: first ? items : [] } });
-      if (first) {
-        // Clear dirty flags on records that weren't edited again while the request was in flight (bulk, per kind).
-        await db.transaction("rw", KINDS.map((k) => TABLE[k]), async () => {
-          for (const kind of KINDS) {
-            const mine = sent.filter((s) => s.kind === kind);
-            if (!mine.length) continue;
-            const cur = await TABLE[kind].bulkGet(mine.map((s) => s.id));
-            const done = cur.filter((c, i) => c && c.dirty && c.updatedAt === mine[i].updatedAt).map((c) => ({ ...c, dirty: 0 }));
-            if (done.length) await TABLE[kind].bulkPut(done);
+    let sinceKey = await getMeta<string>("cursorKey", "");
+    if (since === 0) { since = await firstSync(); sinceKey = ""; await setMeta("cursor", since); await setMeta("cursorKey", ""); }
+    // Push in chunks the Worker accepts (it refuses more than 2000 items; D1 work per request is bounded); each answer
+    // also carries a pull page, so pulling continues on the same loop once the chunks are sent.
+    const chunks = chunkItems(out);
+    for (let i = 0; ; i++) {
+      const chunk = chunks[i] ?? [];
+      const body = `{"v":2,"since":${Number(since)},"sinceKey":${JSON.stringify(sinceKey)},"items":[${chunk.map((x) => x.json).join(",")}]}`;
+      const res = await api<SyncRes>("/sync", { method: "POST", body, headers: { "Content-Type": "application/json" } });
+      if (chunk.length) {
+        await clearAcked(chunk, res);
+        if (res.rejected?.length) {
+          for (const r of res.rejected) {
+            const sent = chunk.find((x) => x.kind === r.kind && x.id === r.id);
+            if (sent) stuck.set(sent.key, { kind: r.kind, id: r.id, updatedAt: sent.updatedAt, reason: r.reason, size: r.size ?? sent.size, title: titleOf((JSON.parse(sent.json) as SyncItem).data), at: Date.now() });
           }
-        });
-        first = false;
+          await saveStuck(stuck);
+        }
       }
       await apply(res.items);
       since = res.cursor;
+      sinceKey = res.cursorKey ?? "";
       await setMeta("cursor", since);
-      if (!res.more) break;
+      await setMeta("cursorKey", sinceKey);
+      if (i >= chunks.length - 1 && !res.more) break;
       await new Promise((r) => setTimeout(r, 0)); // let the page paint between big pages
     }
     await compactTombstones();
+    await pruneVersionsSometimes();
     failures = 0; retryAt = 0;
     set({ status: "idle", last: Date.now(), pending: await countDirty() });
   } catch (e) {
     failures++;
-    retryAt = Date.now() + Math.min(60_000 * 2 ** (failures - 1), 15 * 60_000); // 1, 2, 4, 8, 15 min
+    // 1, 2, 4, 8, 15 min, +-20 % jitter so several devices don't retry in lockstep.
+    retryAt = Date.now() + Math.min(60_000 * 2 ** (failures - 1), 15 * 60_000) * (0.8 + Math.random() * 0.4);
     set({ status: navigator.onLine ? "error" : "offline", error: (e as Error).message, pending: await countDirty(), first: undefined });
   }
+}
+
+const titleOf = (r: unknown) => {
+  const o = (r ?? {}) as { title?: unknown; name?: unknown };
+  return String(o.title ?? o.name ?? "").slice(0, 120);
+};
+async function saveStuck(stuck: Map<string, StuckItem>) {
+  const list = [...stuck.values()];
+  await setMeta(STUCK_KEY, list);
+  set({ stuck: list.length ? list : undefined });
+}
+/** Load the refused list at start-up so the badge shows before the first round. */
+void getMeta<StuckItem[]>(STUCK_KEY, []).then((l) => { if (l.length) set({ stuck: l }); }).catch(() => {});
+
+/**
+ * Clear dirty flags only for records the server acknowledged (`accepted`, minus `rejected`), and only where the local
+ * row wasn't edited again while the request was in flight (same updatedAt). Everything else stays dirty and is sent
+ * again next round: nothing is marked clean that the server never stored.
+ */
+async function clearAcked(chunk: { key: string; kind: Kind; id: string; updatedAt: number }[], res: SyncRes) {
+  const ok = ackedIds(chunk, res.accepted, res.rejected);
+  const mine = chunk.filter((x) => ok.has(x.key));
+  if (!mine.length) return;
+  await db.transaction("rw", KINDS.map((k) => TABLE[k]), async () => {
+    for (const kind of KINDS) {
+      const list = mine.filter((s) => s.kind === kind);
+      if (!list.length) continue;
+      const cur = await TABLE[kind].bulkGet(list.map((s) => s.id));
+      const done = cur.filter((c, i) => c && c.dirty && c.updatedAt === list[i].updatedAt).map((c) => ({ ...c, dirty: 0 }));
+      if (done.length) await TABLE[kind].bulkPut(done);
+    }
+  });
+}
+
+/** Version retention (lib/actions.ts pruneVersions) after a good round, at most every 6 h per device. */
+async function pruneVersionsSometimes() {
+  const last = await getMeta<number>("versionsPrunedAt", 0);
+  if (Date.now() - last < 6 * 3_600_000) return;
+  await setMeta("versionsPrunedAt", Date.now());
+  try { await (await import("./actions")).pruneVersions(); } catch { /* retention never breaks sync */ }
 }
 
 const FIRST_PHASES: { phase: FirstSync["phase"]; kinds: Kind[] }[] = [
@@ -98,13 +160,14 @@ async function firstSync(): Promise<number> {
   const startedAt = Date.now();
   let got = 0, cursor = Infinity;
   for (const { phase, kinds } of FIRST_PHASES) {
-    let since = 0;
+    let since = 0, sinceKey = "";
     for (;;) {
       set({ first: { phase, got, total, notes, startedAt } });
-      const res = await api<SyncResponse & { more: boolean }>("/sync", { method: "POST", json: { since, items: [], kinds } });
+      const res = await api<SyncRes>("/sync", { method: "POST", json: { v: 2, since, sinceKey, items: [], kinds } });
       await apply(res.items);
       got += res.items.length;
       since = res.cursor;
+      sinceKey = res.cursorKey ?? "";
       if (!res.more) break;
       await new Promise((r) => setTimeout(r, 0));
     }

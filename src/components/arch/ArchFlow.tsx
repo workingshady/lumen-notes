@@ -5,7 +5,7 @@ import { createContext, memo, useContext, useEffect, useRef, useState } from "re
 import type { Side } from "../../../shared/types";
 import { Glyph } from "../Glyph";
 import { t } from "../../lib/i18n";
-import { displayOf, groupColor, nodeColor, STATUS, type AEdge, type ANode, type DiffMark } from "../../lib/arch-model";
+import { displayOf, GROUP_KINDS, groupColor, nodeColor, STATUS, type AEdge, type ANode, type DiffMark } from "../../lib/arch-model";
 import type { Route } from "../../lib/arch-route";
 import type { RouteSrc } from "../../lib/arch-render";
 import type { LabelPart } from "../../lib/arch-label";
@@ -35,7 +35,7 @@ export interface FlowCtx {
   nodeAt?: (x: number, y: number) => { id: string; side: Side } | null;
 }
 export const Ctx = createContext<FlowCtx>({ ro: false, editEdge: null, setEditEdge: () => {}, saveLabel: () => {}, patchEdge: () => {}, labelClick: () => {}, hl: null, sel: null, editing: null, setHover: () => {}, rename: () => {}, stopEdit: () => {}, toggleCollapse: () => {}, inside: () => 0 });
-export type NData = { n: ANode; mark?: DiffMark; chip?: string; ghost?: boolean };
+export type NData = { n: ANode; mark?: DiffMark; chip?: string; ghost?: boolean; /** Sequence diagrams: lifeline length under the participant. */ life?: number };
 export type FlowNode = RFNode<NData>;
 export type EData = { e: AEdge; r: Route; src: RouteSrc; mark?: DiffMark };
 export type FlowEdge = RFEdge<EData>;
@@ -71,7 +71,8 @@ export const ArchNode = memo(function ArchNode({ id, data, selected }: NodeProps
   const masked = !!c.masked?.has(id);
   return (
     <div onMouseEnter={() => c.setHover(id)} onMouseLeave={() => c.setHover(null)}
-      style={{ position: "relative", width: "100%", height: "100%", boxSizing: "border-box", borderRadius: 10, background: bg, border: bd, boxShadow: ring, display: "flex", flexDirection: fields ? "column" : "row", alignItems: fields ? "stretch" : "center", gap: fields ? 0 : 8, padding: fields ? 0 : "0 10px", opacity: mark === "del" ? 0.7 : 1, transition: "box-shadow .12s, border-color .12s" }}>
+      style={{ overflow: "visible", position: "relative", width: "100%", height: "100%", boxSizing: "border-box", borderRadius: 10, background: bg, border: bd, boxShadow: ring, display: "flex", flexDirection: fields ? "column" : "row", alignItems: fields ? "stretch" : "center", gap: fields ? 0 : 8, padding: fields ? 0 : "0 10px", opacity: mark === "del" ? 0.7 : 1, transition: "box-shadow .12s, border-color .12s" }}>
+      {data.life ? <span aria-hidden style={{ position: "absolute", left: "50%", top: "100%", height: data.life, borderLeft: "1.5px dashed color-mix(in srgb,var(--muted) 55%,transparent)", pointerEvents: "none" }} /> : null}
       {fields ? (
         <>
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 10px", height: 38, borderBottom: "1px solid var(--border)" }}>
@@ -87,7 +88,7 @@ export const ArchNode = memo(function ArchNode({ id, data, selected }: NodeProps
       ) : (
         <>
           <span style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: `color-mix(in srgb,${col} 16%,transparent)`, color: col }}><NodeIcon icon={ln.icon} fallback="service" size={18} /></span>
-          <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1, paddingInlineEnd: st ? 12 : 0 }}>
             <Name id={id} text={masked ? "? ? ?" : displayOf(n)} style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecoration: mark === "del" ? "line-through" : "none" }} />
             {ln.tech && !masked && <span dir="auto" style={{ fontSize: 10.5, color: "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ln.tech}</span>}
           </div>
@@ -105,7 +106,9 @@ export const ArchGroup = memo(function ArchGroup({ id, data, selected }: NodePro
   const c = useContext(Ctx);
   const { n, mark } = data;
   const col = mark ? DC[mark] : groupColor(n), lg = n.lumenGroup;
-  const k = [lg?.kind, lg?.sub].filter(Boolean).join(" · ");
+  // the kind is UI text (translated, e.g. Arabic); the sub label is the user's own text
+  const kindL = lg?.kind ? GROUP_KINDS.find((x) => x[0] === lg.kind)?.[1] : undefined;
+  const k = [kindL ? t(kindL).toLowerCase() : lg?.kind, lg?.sub].filter(Boolean).join(" · ");
   const on = selected || c.hl === id;
   if (lg?.collapsed) {
     // collapsed into a summary node (47A "Collapsed group")

@@ -197,7 +197,7 @@ export function Presenter({ steps, start = 0, counter, notesHead, scene, renderS
           </div>
         </div>
         {notesOn && (
-          <div className="flex w-[300px] shrink-0 flex-col gap-2.5 self-stretch rounded-[12px] p-[18px] text-[14px] leading-[22px]" style={{ background: "#12151A", color: "#C9C6BF", maxHeight: 560, alignSelf: "center", height: box.h }}>
+          <div className="flex w-[300px] shrink-0 flex-col gap-2.5 self-stretch rounded-[12px] p-[18px] text-[14px] leading-[22px]" style={{ background: "#12151A", color: "#C9C6BF", maxHeight: 560, alignSelf: "center", height: 560 /* design 41A: the notes column runs the full stage height */ }}>
             <span className="text-[11px] font-semibold tracking-[.08em]" style={{ color: "#7D7A73" }}>{notesHead ? notesHead(i, step) : t("PRESENTER NOTES · {n}", { n: i + 1 })}</span>
             {onNotes ? (
               <textarea key={step?.id} dir="auto" defaultValue={step?.notes ?? ""} placeholder={t("Add notes for this slide…")} onBlur={(e) => onNotes(i, e.target.value)}

@@ -27,11 +27,12 @@ const strip = (p: Palette, dark: boolean) => {
 };
 
 /** Palette switcher rows (design: 54×14 strip · name · sub), then "New palette…". */
-export function PaletteSwitcher({ list, current, dark, onPick }: { list: Palette[]; current: string; dark: boolean; onPick: (id: string) => void }) {
+export function PaletteSwitcher({ list, current, dark, onPick, onNew }: { list: Palette[]; current: string; dark: boolean; onPick: (id: string) => void; /** The manager opens alone (37E): the caller closes its popover. */ onNew?: () => void }) {
   const newPalette = async () => {
     const id = Math.random().toString(36).slice(2, 10);
     await writeCustom((cur) => [...cur, { id, name: t("New palette"), sub: "", custom: true, colors: [] }]);
     setPalPrefs({ palette: id });
+    onNew?.();
     openWbPanel("palette", { edit: id });
   };
   return (
@@ -87,10 +88,19 @@ export function ColourPopover(p: ColourCtx) {
   const base = selIdx >= 0 ? cur.colors[selIdx].c : p.value && p.value !== "transparent" ? p.value : cur.colors[0]?.c ?? "#1e1e1e";
   const [hex, setHex] = useState<string | null>(null);
   const pick = (c: string) => { p.onPick(c); pushRecent(c); setHex(null); };
-  const shownHex = (c: string | null) => { if (!c || c === "transparent") return c ?? ""; const x = parseHex(shown(c, p.dark)); return x ? toHex(x[0], x[1], x[2], x[3]) : c; };
+  const shownHex = (c: string | null) => { if (!c || c === "transparent") return "";const x = parseHex(shown(c, p.dark)); return x ? toHex(x[0], x[1], x[2], x[3]) : c; };
   const warn = p.pair ? (() => { const r = contrast(p.pair[0], p.pair[1]); return r < 4.5 ? { r, s: suggestShade(p.pair[1], p.pair[0]) } : null; })() : null;
   const pastel = cur.id === "okabe" ? "Okabe-Ito" : t("Swatches");
   const col = Math.min(Math.max(cur.colors.length, 1), 6);
+  // Recent (design 37A: 8 colours): the colours you picked last, topped up with the ones this board already uses
+  const recent = useMemo(() => {
+    const out: string[] = [];
+    for (const c of [...pal.recent, ...(list.find((x) => x.id === "board")?.colors.map((s) => s.c) ?? [])]) {
+      if (c && c !== "transparent" && !out.some((o) => o.toLowerCase() === c.toLowerCase())) out.push(c);
+      if (out.length === 8) break;
+    }
+    return out;
+  }, [pal.recent, list]);
 
   return (
     <PanelShell glyph="palette" title={t("Colour")} sub={p.target === "stroke" ? t("Stroke") : t("Fill")} onClose={p.onClose} sheet={p.phone} portal={p.phone}
@@ -100,11 +110,11 @@ export function ColourPopover(p: ColourCtx) {
         <Glyph name="palette" size={18} /><span className="min-w-0 flex-1 truncate text-start font-semibold">{t(cur.name)}</span><span className="text-[11px] text-muted">{switching ? "▴" : "▾"}</span>
       </button>
       {switching ? (
-        <PaletteSwitcher list={list} current={cur.id} dark={p.dark} onPick={(id) => { setPalPrefs({ palette: id }); setSwitching(false); }} />
+        <PaletteSwitcher list={list} current={cur.id} dark={p.dark} onPick={(id) => { setPalPrefs({ palette: id }); setSwitching(false); }} onNew={p.onClose} />
       ) : (
         <>
           <div className="flex flex-col gap-2">
-            <BlockHead h={pastel} right={cur.custom ? t("Edit") : undefined} onRight={cur.custom ? () => openWbPanel("palette", { edit: cur.id }) : undefined} />
+            <BlockHead h={pastel} right={cur.custom ? t("Edit") : undefined} onRight={cur.custom ? () => { p.onClose(); openWbPanel("palette", { edit: cur.id }); } : undefined} />
             {cur.colors.length ? (
               <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${col},1fr)` }}>
                 {cur.colors.map((s, i) => <ColourTile key={s.c + i} c={shown(s.c, p.dark)} title={s.name ?? colourName(s.c) ?? s.c} sel={i === selIdx} onClick={() => pick(s.c)} />)}
@@ -119,16 +129,16 @@ export function ColourPopover(p: ColourCtx) {
               </div>
             </div>
           )}
-          {pal.recent.length > 0 && (
+          {recent.length > 0 && (
             <div className="flex flex-col gap-2">
               <BlockHead h={t("Recent")} />
-              <div className="grid grid-cols-8 gap-1">{pal.recent.map((c) => <ColourTile key={c} c={shown(c, p.dark)} title={colourName(c) ?? c} onClick={() => pick(c)} />)}</div>
+              <div className="grid grid-cols-8 gap-1">{recent.map((c) => <ColourTile key={c} c={shown(c, p.dark)} title={colourName(c) ?? c} sel={val === c.toLowerCase()} onClick={() => pick(c)} />)}</div>
             </div>
           )}
           <div className="grid grid-cols-[1fr_36px] gap-1">
             <label className="flex min-h-[34px] items-center gap-2 rounded-[8px] border border-line px-2 text-[12.5px]">
               <span className="box-border size-4 shrink-0 rounded-[4px] border border-line" style={{ background: p.value && p.value !== "transparent" ? shown(p.value, p.dark) : "transparent" }} />
-              <input value={hex ?? (p.value ? shownHex(p.value) : "")} onChange={(e) => setHex(e.target.value)} spellCheck={false} dir="ltr" aria-label={t("Hex colour")} placeholder="#RRGGBB"
+              <input value={hex ?? (p.value ? shownHex(p.value) : "")} onChange={(e) => setHex(e.target.value)} spellCheck={false} dir="ltr" aria-label={t("Hex colour")} placeholder={p.value === "transparent" ? t("No fill") : "#RRGGBB"}
                 onKeyDown={(e) => { if (e.key === "Enter") { const v = (hex ?? "").trim(); const x = parseHex(v.startsWith("#") ? v : "#" + v); if (x) pick(toHex(x[0], x[1], x[2], x[3])); else toast(t("Use a hex colour like #5CC8C2")); } }}
                 onBlur={() => { const v = (hex ?? "").trim(); const x = v && parseHex(v.startsWith("#") ? v : "#" + v); if (x) pick(toHex(x[0], x[1], x[2], x[3])); else setHex(null); }}
                 className="min-w-0 flex-1 bg-transparent font-medium uppercase outline-none" />

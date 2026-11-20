@@ -57,7 +57,7 @@ const dropSyntax = (s: string) => s.replace(/\s*[\u{1F4C5}\u{1F6EB}\u{23F3}]️?
   // round-4 Markdown: status pills keep their text; glyphs, block ids, ::: fences, {.attrs}, [[toc]] and == marks go
   .replace(/:status\[([^\]]*)\](\{[^}]*\})?/g, "$1").replace(/:glyph\[[^\]]*\]/g, "").replace(/\s\^[A-Za-z0-9-]+$/gm, "")
   .replace(/^\s*:{3,}.*$/gm, "").replace(/\{\.[^}]*\}/g, "").replace(/\[\[toc\]\]/gi, "").replace(/==/g, "");
-const preview = (n: Note) => (n.type === "canvas" ? t("Canvas board") : isWbType(n.type) ? t("Whiteboard") : noteDerived("listPreview", n, (x) => excerpt(dropSyntax(listBody(x.body.slice(0, 8000))), 160)) || t("Empty"));
+const preview = (n: Note) => (n.type === "canvas" ? t("Canvas board") : n.type === "board" ? t("Board") : isWbType(n.type) ? t("Whiteboard") : noteDerived("listPreview", n, (x) => excerpt(dropSyntax(listBody(x.body.slice(0, 8000))), 160)) || t("Empty"));
 
 /**
  * Big vaults (design 20b A15): the list renders LIST_PAGE rows at a time; the footer says "Showing 200 of 738" and

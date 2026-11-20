@@ -238,7 +238,7 @@ function SendMenu({ payload }: { payload: DndPayload }) {
         ))}
         {targets.map((n, i) => (
           <button key={n.id} ref={!zones.length && i === 0 ? first : undefined} type="button" disabled={busy} className={row} onClick={async () => { setBusy(true); const ok = await sendToNote(payload, n); closeSendTo(); if (!ok) announce(t("That can’t be sent there")); }}>
-            <Glyph name={n.type === "canvas" ? "canvas" : "whiteboard"} size={16} color="var(--muted)" /><span dir="auto" className="min-w-0 flex-1 truncate">{n.title}</span><span className="text-[11px] text-muted">{n.type === "board" ? t("Board") : n.type === "canvas" ? t("Canvas") : t("Whiteboard")}</span>
+            <Glyph name={n.type === "canvas" ? "canvas" : n.type === "board" ? "board" : "whiteboard"} size={16} color="var(--muted)" /><span dir="auto" className="min-w-0 flex-1 truncate">{n.title}</span><span className="text-[11px] text-muted">{n.type === "board" ? t("Board") : n.type === "canvas" ? t("Canvas") : t("Whiteboard")}</span>
           </button>
         ))}
         {!zones.length && !targets.length && <div className="px-3 py-4 text-[12.5px] text-muted">{t("No boards or canvases yet. Create one from New…")}</div>}

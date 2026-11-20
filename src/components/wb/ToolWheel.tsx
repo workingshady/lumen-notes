@@ -7,9 +7,10 @@ import { AC_BG } from "./ui";
 import { SHAPE_GLYPH, SHAPE_NAME, TOOL_META, type WheelSlot } from "./tools";
 
 const LABEL: Partial<Record<string, string>> = { pen: "Pen", hl: "Highlight", eraser: "Eraser" };
+const PEN: Record<string, [glyph: string, name: string]> = { fountain: ["pen-fountain", "Fountain"], ballpoint: ["pen-ballpoint", "Ballpoint"], brush: ["pen-brush", "Brush"], marker: ["pen-marker", "Marker"], pencil: ["pen-pencil", "Pencil"], calligraphy: ["pen-calligraphy", "Calligraphy"] };
 
-export function ToolWheel({ x, y, slots, current, penColor, hlColor, onPick, onUndo, onRedo, onClose }: {
-  x: number; y: number; slots: WheelSlot[]; current: string; penColor: string; hlColor: string;
+export function ToolWheel({ x, y, slots, current, penColor, hlColor, penType = "fountain", onPick, onUndo, onRedo, onClose }: {
+  x: number; y: number; slots: WheelSlot[]; current: string; penColor: string; hlColor: string; penType?: string;
   onPick: (s: WheelSlot) => void; onUndo: () => void; onRedo: () => void; onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -28,10 +29,11 @@ export function ToolWheel({ x, y, slots, current, penColor, hlColor, onPick, onU
       {slots.slice(0, 6).map((s, i) => {
         const a = -Math.PI / 2 + i * Math.PI / 3;
         const [g, name] = TOOL_META[s.tool];
-        const glyph = s.tool === "shape" && s.shape ? SHAPE_GLYPH[s.shape] : s.tool === "pen" ? "pen-fountain" : g;
-        const label = s.tool === "shape" && s.shape ? SHAPE_NAME[s.shape] : LABEL[s.tool] ?? name;
+        const pt = s.tool === "pen" ? PEN[s.pen ?? penType] ?? PEN.fountain : null; // saved pens show by name (33E)
+        const glyph = s.tool === "shape" && s.shape ? SHAPE_GLYPH[s.shape] : pt ? pt[0] : g;
+        const label = s.tool === "shape" && s.shape ? SHAPE_NAME[s.shape] : pt ? pt[1] : LABEL[s.tool] ?? name;
         const dot = s.tool === "pen" ? penColor : s.tool === "hl" ? hlColor : undefined;
-        const on = i === 0 && current === s.tool;
+        const on = current === s.tool && (s.tool !== "pen" || (s.pen ?? penType) === penType) && slots.findIndex((o) => o.tool === s.tool) === i;
         return (
           <button key={i} type="button" role="menuitem" onPointerUp={() => onPick(s)} onClick={() => onPick(s)}
             className="absolute -ms-7 -mt-7 flex size-14 flex-col items-center justify-center gap-[2px] rounded-full text-[9.5px] hover:bg-surface-2"

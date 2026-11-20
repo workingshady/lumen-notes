@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Glyph } from "../Glyph";
 import { t, tk } from "../../lib/i18n";
 import { openNote, useVault } from "../../lib/store";
-import { displayOf, EDGE_STYLE, endsOf, GROUP_KINDS, NODE_KINDS, PRESET, STATUS, type AEdge, type LabelStyle, type ANode, type ArchStatus, type EdgeShape, type EdgeStyle, type Ends } from "../../lib/arch-model";
+import { displayOf, EDGE_STYLE, endsOf, GROUP_KINDS, NODE_KINDS, PRESET, SIZE, STATUS, type NodeSize, type AEdge, type LabelStyle, type ANode, type ArchStatus, type EdgeShape, type EdgeStyle, type Ends } from "../../lib/arch-model";
 import { Block, Row } from "./ArchUi";
 import { NodeIcon } from "./ArchFlow";
 
@@ -65,10 +65,13 @@ export function NodeProps({ n, onChange, usedIn, onReuse, phone }: { n: ANode; o
   };
   if (phone) return (
     <>
-      <Block items={[{ children: <Pick label={t("Kind")} value={ln.kind ?? "service"} options={NODE_KINDS.map(([k, l]) => [k, t(l)])} onChange={(k) => set({ kind: k, icon: NODE_KINDS.find((x) => x[0] === k)?.[2] })} /> }, { children: <Field label={t("Technology")} value={ln.tech ?? ""} onChange={(x) => set({ tech: x || undefined })} /> }].map((i) => ({ ...i, l: undefined }))} />
+      <Block gap="2px">
+        <Pick label={t("Kind")} value={ln.kind ?? "service"} options={NODE_KINDS.map(([k, l]) => [k, t(l)])} onChange={(k) => set({ kind: k, icon: NODE_KINDS.find((x) => x[0] === k)?.[2] })} />
+        <Field label={t("Technology")} value={ln.tech ?? ""} onChange={(x) => set({ tech: x || undefined })} />
+      </Block>
       <Block h={t("Status")} seg={statuses.map((s) => t(STATUS[s][2]))} segOn={Math.max(0, statuses.indexOf(ln.status ?? "planned"))} onSeg={(i) => set({ status: statuses[i] })} />
       <Block h={t("Links")} items={(ln.links ?? []).map((l) => ({ g: linkGlyph(l), l, bd: "var(--border)", onClick: () => open(l) }))} cols="1fr 1fr" />
-      <Block items={[{ g: "reused-object", l: usedIn > 1 ? t("Used in {n} diagrams", { n: usedIn }) : ln.ref ? t("Reusable object") : t("Make reusable"), on: !!ln.ref, onClick: onReuse }]} />
+      <Block items={[{ g: "reused-object", l: ln.ref ? t("Used in {n} diagram|Used in {n} diagrams", { n: Math.max(1, usedIn) }) : t("Make reusable"), on: !!ln.ref, onClick: onReuse }]} />
     </>
   );
   return (
@@ -88,6 +91,9 @@ export function NodeProps({ n, onChange, usedIn, onReuse, phone }: { n: ANode; o
           style={{ fontSize: 11.5, lineHeight: "17px", color: "var(--text)", background: "var(--surface-2)", padding: "8px 10px", borderRadius: 8, outline: "none", resize: "vertical", border: "none" }} />
       </Block>
       <Block h={t("Status")} seg={statuses.map((s) => t(STATUS[s][2]))} segOn={ln.status ? statuses.indexOf(ln.status) : -1} onSeg={(i) => set({ status: ln.status === statuses[i] ? undefined : statuses[i] })} />
+      {/* node size (47A): S / M / L set the card's size; a resized card shows none selected */}
+      <Block h={t("Size")} seg={["S", "M", "L"]} segOn={(() => { const s = ln.size ?? (Object.entries(SIZE).find(([, [w, h]]) => w === n.width && h === n.height)?.[0] as NodeSize | undefined); return s ? ["S", "M", "L"].indexOf(s) : -1; })()}
+        onSeg={(i) => { const s = (["S", "M", "L"] as const)[i], [w, h] = SIZE[s]; onChange({ ...n, x: n.x + (n.width - w) / 2, y: n.y + (n.height - h) / 2, width: w, height: h, lumenNode: { ...ln, size: s } } as ANode); }} />
       <Block h={t("Links")} gap="4px" items={(ln.links ?? []).map((l, i) => ({ g: linkGlyph(l), l, bd: "var(--border)", onClick: () => open(l), children: <span role="button" aria-label={t("Remove link")} onClick={(e) => { e.stopPropagation(); set({ links: (ln.links ?? []).filter((_, j) => j !== i) }); }} style={{ color: "var(--muted)", padding: "0 2px" }}>×</span> }))}>
         <input value={newLink} onChange={(e) => setNewLink(e.target.value)} placeholder={t("Add a link: [[Note]], REQ-4, repo URL…")} onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter" && newLink.trim()) { set({ links: [...(ln.links ?? []), newLink.trim()] }); setNewLink(""); } }}
           style={{ minHeight: 30, padding: "0 8px", borderRadius: 8, border: "1px dashed var(--border)", background: "transparent", outline: "none", fontSize: 12 }} />
@@ -110,10 +116,10 @@ export function GroupProps({ n, onChange, inside }: { n: ANode; onChange: (n: AN
     <>
       <Block>
         <Field label={t("Name")} value={displayOf(n)} onChange={(x) => x && onChange({ ...n, label: x, lumenGroup: { ...lg, name: x } } as ANode)} />
-        <Field label={t("Label")} value={lg.sub ?? ""} onChange={(x) => set({ sub: x || undefined })} placeholder="eu-west-1" />
+        <Field label={t("Label")} value={lg.sub ?? ""} onChange={(x) => set({ sub: x || undefined })} placeholder="—" />
       </Block>
       <Block h={t("Kind")} items={GROUP_KINDS.map(([k, l, c]) => ({ g: k, gc: c, l: t(l), bd: c, mh: "34px", on: lg.kind === k, onClick: () => set({ kind: k, icon: undefined }) }))} cols="1fr 1fr 1fr" note={t("Nestable. Collapse a group into a summary node with an “N inside” chip.")} />
-      <Block items={[{ g: "chevron-down", l: lg.collapsed ? t("Expand ({n} inside)", { n: inside }) : t("Collapse into a summary node"), tog: !!lg.collapsed, onClick: () => set({ collapsed: !lg.collapsed }) }]} />
+      <Block items={[{ g: "chevron-down", l: lg.collapsed ? t("Collapsed · {n} inside", { n: inside }) : t("Collapse into a summary node"), tog: !!lg.collapsed, onClick: () => set({ collapsed: !lg.collapsed }) }]} />
     </>
   );
 }

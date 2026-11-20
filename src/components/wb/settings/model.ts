@@ -22,7 +22,7 @@ export interface LumenBoard {
   zen: boolean;
   viewOnly: boolean;
 }
-export const BOARD_DEFAULTS: LumenBoard = { bg: "theme", custom: "#2B2F3A", pattern: "dots", density: 22, mode: "infinite", snapGrid: false, snapObjects: false, angleSnap: false, minimap: false, zen: false, viewOnly: false };
+export const BOARD_DEFAULTS: LumenBoard = { bg: "theme", custom: "#2B2F3A", pattern: "dots", density: 22, mode: "infinite", snapGrid: true, snapObjects: true, angleSnap: false, minimap: true, zen: false, viewOnly: false };
 
 /** Settings › Diagrams defaults for new boards (synced with the other settings). */
 export type BoardDefaults = Pick<LumenBoard, "bg" | "custom" | "pattern" | "density" | "mode" | "snapGrid" | "snapObjects" | "angleSnap">;

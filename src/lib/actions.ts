@@ -3,6 +3,7 @@ import { db, newFolder, newNote, newSpace, now, patch, save, uid } from "./db";
 import { NOTE_TYPES, STATUSES, type NoteType, type Status } from "../../shared/types";
 import { firstH1, fmList, inlineTags, setFrontMatter, slugify, splitFrontMatter } from "./parse";
 import { TEMPLATES, type Template } from "./templates";
+import { versionsToPrune } from "./sync-plan";
 import { activityHint, activityQuiet, activityVersion, purgeActivity, thisDevice } from "./activity";
 
 export async function createNote(p: Partial<Note> & { template?: string; fm?: Record<string, string> } = {}) {
@@ -100,9 +101,26 @@ async function maybeSnapshot(n: Note) {
     return;
   }
   lastSnap.set(n.id, t);
-  const last = (await db.versions.where("noteId").equals(n.id).sortBy("createdAt")).pop();
-  if (last && last.body === n.body && last.title === n.title) return;
+  // No-op guard: the newest live version (retention tombstones have an empty body) already holds this body.
+  const last = (await db.versions.where("noteId").equals(n.id).filter((v) => !v.deleted).sortBy("createdAt")).pop();
+  if (last && last.body === n.body) return;
   await snapshot(n, "");
+}
+
+/**
+ * Version retention (run by sync.ts after a good round, at most every 6 h): all versions from the last 24 h, then the
+ * newest per hour for 7 days, per day for 90 days, per week after that; named versions and each note's newest stay.
+ * Pruned versions become tombstones (deleted: 1, empty body) so every device and D1 drop the bodies too.
+ * One note at a time, so a vault with big board histories never loads every body at once.
+ */
+export async function pruneVersions(at = now()): Promise<number> {
+  let n = 0;
+  for (const noteId of (await db.versions.orderBy("noteId").uniqueKeys()) as string[]) {
+    const vs = await db.versions.where("noteId").equals(noteId).toArray();
+    const drop = new Set(versionsToPrune(vs, at));
+    for (const v of vs) if (drop.has(v.id)) { await save("version", { ...v, deleted: 1, body: "" }); n++; }
+  }
+  return n;
 }
 export async function snapshot(n: Note, label: string) {
   const v: Version = { id: uid(), noteId: n.id, title: n.title, body: n.body, label, createdAt: now(), updatedAt: now(), deleted: 0, device: thisDevice() };

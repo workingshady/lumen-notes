@@ -259,3 +259,16 @@ Also (S): add `public/_headers` (none exists today) with a CSP (`script-src 'sel
 5. (M) F5.1 version retention and no-op detection; F2.2 byte-budgeted pull and tie-safe cursor.
 6. (M) F3.3 orphan GC cron; F4.2 AI cache and abort signals.
 7. (M-L) F2.4 element merge (start with a "Merge both" button), F1.2 body blobs, token scopes.
+
+---
+
+## Design note: per-element board merge (not built; follow-up to F2.4)
+
+Status 2026-11-20: F1.1, F2.1, F2.2, F2.3 (clamp), F3.1, F4.1 (auth order + per-account counters), F5.1 (retention + no-op), F6.1, F6.2 and the R2 prefix (F7) are fixed; this merge is designed only.
+
+- **Where:** client only, in `apply()` (`src/lib/sync.ts`), for `whiteboard`/`board` notes when the local row is dirty (or was written by another `lumenDevice`). Server stays LWW.
+- **Merge:** parse both scenes; `elements = reconcileElements(local, remote, appState)` from `@excalidraw/excalidraw` 0.18.1 (higher `version` wins, tie on lower `versionNonce`); `files` = union by id; other scene fields from the newer note; `lumenPending` concatenated and de-duplicated by content. Save the result through `save()` (dirty, `updatedAt = max + 1`) and still keep the losing body as a Version (the existing conflict hook).
+- **Tombstones:** saved scenes drop deleted elements today, so a merge would resurrect them. Keep `{id, type, version, versionNonce, isDeleted: true, updated}` in the stored scene for 7 days (pruned on save), hidden by Excalidraw and stripped on `.excalidraw` export.
+- **JSON Canvas:** nodes/edges get `lumenV` (bumped per edit) and `lumenDel: 1` tombstones for 7 days; merge by id on higher `lumenV`, tie by device id; `lumenArch` taken from the newer note. Allowed by the `lumen*` rule.
+- **Guardrails:** parse failure, or a merged body over `MAX_ITEM_BYTES` (1.8 MB), falls back to LWW; never merge markdown or diagram bodies; bodies over 1 MB merge in a Web Worker. Unit tests: disjoint edits, same-element edits, delete vs edit, tombstone expiry.
+- **First step:** a "Merge both" button in `ws-conflict.tsx` running the same function on demand, before making it automatic.

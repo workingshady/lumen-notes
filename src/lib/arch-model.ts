@@ -116,14 +116,26 @@ export function parseArch(body: string): ArchCanvas | null {
   try {
     const c = JSON.parse(body || "{}") as ArchCanvas;
     if (!c || typeof c !== "object" || !c.lumenArch) return null;
-    return { ...c, nodes: Array.isArray(c.nodes) ? c.nodes : [], edges: Array.isArray(c.edges) ? c.edges : [], lumenArch: { ...c.lumenArch, direction: c.lumenArch.direction ?? "right", kind: c.lumenArch.kind ?? "architecture" } };
+    // lenient: a broken node / edge is set aside under `lumenUnread` (stringifyArch writes it back unchanged), the rest loads
+    const prev = (c as { lumenUnread?: { nodes: unknown[]; edges: unknown[] } }).lumenUnread;
+    const unread = { nodes: [...(prev?.nodes ?? [])], edges: [...(prev?.edges ?? [])] };
+    const ids = new Set<string>(), nodes: ANode[] = [], edges: AEdge[] = [];
+    for (const n of Array.isArray(c.nodes) ? c.nodes : []) {
+      const ok = n && typeof n === "object" && typeof n.id === "string" && n.id && !ids.has(n.id) && ["text", "file", "link", "group"].includes(n.type) && (["x", "y", "width", "height"] as const).every((k) => typeof n[k] === "number" && Number.isFinite(n[k]));
+      if (ok) { ids.add(n.id); nodes.push(n); } else unread.nodes.push(n);
+    }
+    for (const e of Array.isArray(c.edges) ? c.edges : []) { if (e && typeof e === "object" && typeof e.id === "string" && ids.has(e.fromNode) && ids.has(e.toNode)) edges.push(e); else unread.edges.push(e); }
+    const { lumenUnread: _u, ...rest } = c as ArchCanvas & { lumenUnread?: unknown };
+    return { ...rest, nodes, edges, ...(unread.nodes.length + unread.edges.length ? { lumenUnread: unread } : {}), lumenArch: { ...c.lumenArch, direction: c.lumenArch.direction ?? "right", kind: c.lumenArch.kind ?? "architecture" } };
   } catch { return null; }
 }
 /** JSON Canvas order: nodes, edges, then lumenArch (keeps other canvas-level lumen keys). */
 export function stringifyArch(c: ArchCanvas): string {
-  const { nodes, edges, lumenArch, ...rest } = c;
-  return JSON.stringify({ nodes, edges, ...rest, lumenArch }, null, 2);
+  const { nodes, edges, lumenArch, lumenUnread, ...rest } = c as ArchCanvas & { lumenUnread?: { nodes: unknown[]; edges: unknown[] } };
+  return JSON.stringify({ nodes: [...nodes, ...(lumenUnread?.nodes ?? [])], edges: [...edges, ...(lumenUnread?.edges ?? [])], ...rest, lumenArch }, null, 2);
 }
+/** Items a lenient `parseArch` set aside (0 = the body loaded fully). */
+export const unreadCount = (c: ArchCanvas) => { const u = (c as { lumenUnread?: { nodes: unknown[]; edges: unknown[] } }).lumenUnread; return u ? u.nodes.length + u.edges.length : 0; };
 
 /** Descendant ids of a group (nested). */
 export function descendants(c: ArchCanvas, id: string): Set<string> {
@@ -159,6 +171,11 @@ export function fitGroups(c: ArchCanvas): ArchCanvas {
     const x0 = Math.min(...ks.map((k) => k.x)), y0 = Math.min(...ks.map((k) => k.y));
     const x1 = Math.max(...ks.map((k) => k.x + k.width)), y1 = Math.max(...ks.map((k) => k.y + k.height));
     g.x = x0 - PAD; g.y = y0 - TOP; g.width = x1 - x0 + PAD * 2; g.height = y1 - y0 + TOP + PAD;
+  }
+  // BPMN-lite: top-level groups are swimlanes, all as wide as the widest (lane label column on the left)
+  if (c.lumenArch.kind === "bpmn") {
+    const lanes = nodes.filter((n) => isGroup(n) && !(parentOf(n) && by.has(parentOf(n)!)));
+    if (lanes.length > 1) { const lx0 = Math.min(...lanes.map((l) => l.x)), lx1 = Math.max(...lanes.map((l) => l.x + l.width)); for (const l of lanes) { l.x = lx0; l.width = lx1 - lx0; } }
   }
   return { ...c, nodes };
 }
@@ -255,4 +272,51 @@ export function diffArch(older: ArchCanvas, now: ArchCanvas): ArchDiff {
   const counts = { add: 0, del: 0, chg: 0 };
   for (const v of nodes.values()) counts[v]++;
   return { nodes, edges, ghostNodes, ghostEdges, counts };
+}
+
+// ------------------------------------------------------------------ sequence diagrams (46A "Sequence · Code-first")
+/** Vertical step between two messages, and the gap under the participant row before the first one. */
+export const SEQ_ROW = 44, SEQ_TOP = 40;
+/** Sequence layout: participants side by side in the order they stand (drag one sideways to reorder), messages top to bottom
+ * in code order, each on its own row under the lifelines. Groups are not used. */
+export function seqLayout(c: ArchCanvas): ArchCanvas {
+  const parts = c.nodes.filter((n) => !isGroup(n)).sort((a, b) => a.x - b.x || c.nodes.indexOf(a) - c.nodes.indexOf(b));
+  const at = new Map(parts.map((n, i) => [n.id, i]));
+  let moved = false;
+  const nodes = c.nodes.map((n) => {
+    const i = at.get(n.id);
+    if (i === undefined) return n;
+    const x = i * 200, y = 0, width = Math.max(130, Math.min(170, n.width)), height = 56;
+    if (n.x === x && n.y === y && n.width === width && n.height === height) return n;
+    moved = true;
+    return { ...n, x, y, width, height };
+  });
+  return moved ? { ...c, nodes } : c;
+}
+/** Height of a lifeline under the participant row. */
+export const seqLife = (c: ArchCanvas) => SEQ_TOP + Math.max(1, c.edges.length) * SEQ_ROW;
+
+// ------------------------------------------------------------------ BPMN-lite swimlanes (46A "BPMN-lite · Swimlanes")
+/** Swimlanes: the top-level groups become full-width horizontal lanes stacked top to bottom; the steps keep their left-to-right
+ * order across lanes (the flow reads left to right through the lanes). */
+export function laneLayout(c: ArchCanvas): ArchCanvas {
+  const by = new Map(c.nodes.map((n) => [n.id, n]));
+  const lanes = c.nodes.filter((n) => isGroup(n) && !(parentOf(n) && by.has(parentOf(n)!))).sort((a, b) => a.y - b.y || a.x - b.x);
+  if (!lanes.length) return c;
+  const laneOf = (n: ANode): string | undefined => { let p = parentOf(n), last: string | undefined; while (p && by.has(p)) { last = p; p = parentOf(by.get(p)!); } return last; };
+  const steps = c.nodes.filter((n) => !isGroup(n)).sort((a, b) => a.x - b.x || a.y - b.y);
+  // one column per step in flow order, so a step never sits under another step's lane neighbour
+  const col = new Map(steps.map((n, i) => [n.id, i]));
+  const pos = new Map<string, { x: number; y: number }>();
+  let top = 0;
+  for (const lane of lanes) {
+    const kids = steps.filter((n) => laneOf(n) === lane.id);
+    const h = Math.max(60, ...kids.map((k) => k.height));
+    for (const k of kids) pos.set(k.id, { x: 140 + col.get(k.id)! * 190, y: top + 36 + (h - k.height) / 2 });
+    top += 36 + h + 24 + 16;
+  }
+  let y2 = top;
+  for (const k of steps) if (!pos.has(k.id)) { pos.set(k.id, { x: 140 + col.get(k.id)! * 190, y: y2 }); }
+  y2 += 0;
+  return fitGroups({ ...c, nodes: c.nodes.map((n) => (pos.has(n.id) ? { ...n, ...pos.get(n.id)! } : n)) });
 }

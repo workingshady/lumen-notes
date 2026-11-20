@@ -33,7 +33,8 @@ export const shapeOf = (n: CanvasNode): NodeShape => (SHAPE_SET.has(X(n).lumenSh
 export const borderOf = (n: CanvasNode): BorderStyle => (["solid", "dashed", "dotted", "none"].includes(X(n).lumenBorder ?? "") ? X(n).lumenBorder! : "solid");
 export const fillOf = (n: CanvasNode): FillStyle => (["none", "tint", "solid"].includes(X(n).lumenFill ?? "") ? X(n).lumenFill! : "tint");
 export const isCollapsed = (n: CanvasNode) => n.type === "group" && !!X(n).lumenCollapsed;
-export const patternOf = (n: CanvasNode): Pattern => (["none", "dots", "grid", "lines"].includes(X(n).lumenPattern ?? "") ? X(n).lumenPattern! : "none");
+/** Group fill pattern; the design default is Dots (43A), so "none" is the value that gets stored. */
+export const patternOf = (n: CanvasNode): Pattern => (["none", "dots", "grid", "lines"].includes(X(n).lumenPattern ?? "") ? X(n).lumenPattern! : "dots");
 
 /** Set (or, for the default value, remove) a `lumen*` field so untouched cards stay plain JSON Canvas. */
 function put<T extends CanvasNode | CanvasEdge>(o: T, key: string, value: unknown, dflt: unknown): T {
@@ -44,7 +45,7 @@ export const setShape = (n: CanvasNode, v: NodeShape) => put(n, "lumenShape", v,
 export const setBorder = (n: CanvasNode, v: BorderStyle) => put(n, "lumenBorder", v, "solid");
 export const setFill = (n: CanvasNode, v: FillStyle) => put(n, "lumenFill", v, "tint");
 export const setCollapsed = (n: CanvasNode, v: boolean) => put(n, "lumenCollapsed", v, false);
-export const setPattern = (n: CanvasNode, v: Pattern) => put(n, "lumenPattern", v, "none");
+export const setPattern = (n: CanvasNode, v: Pattern) => put(n, "lumenPattern", v, "dots");
 export const NODE_STYLE_KEYS = ["lumenShape", "lumenBorder", "lumenFill"] as const;
 export const nodeStyleOf = (n: CanvasNode) => ({ shape: shapeOf(n), border: borderOf(n), fill: fillOf(n) });
 

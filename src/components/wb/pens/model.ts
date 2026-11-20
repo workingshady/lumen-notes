@@ -40,7 +40,7 @@ export const THICK_PRESETS = [1, 2.5, 5, 10, 18];
 const BASE: Omit<PenSettings, "type"> = { color: "#1e1e1e", width: 2.5, opacity: 100, smoothing: "low", pressure: true, curve: "linear", straight: true };
 export const PEN_DEFAULTS: Record<PenType, PenSettings> = {
   ballpoint: { ...BASE, type: "ballpoint", width: 1.5, pressure: false },
-  fountain: { ...BASE, type: "fountain", width: 3 },
+  fountain: { ...BASE, type: "fountain", width: 2.5 },
   brush: { ...BASE, type: "brush", width: 8, smoothing: "high" },
   marker: { ...BASE, type: "marker", width: 8, opacity: 80, pressure: false },
   highlighter: { ...BASE, type: "highlighter", color: "#FFD43B", width: 14, opacity: 40, pressure: false },

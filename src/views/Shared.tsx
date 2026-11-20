@@ -231,7 +231,7 @@ function SpaceViewer({ token, data }: { token: string; data: SpaceData }) {
               {notes.map((n) => (
                 <a key={n.id} href={`/s/${token}/${n.id}`} onClick={(e) => { e.preventDefault(); open(n.id); }} className="flex flex-col gap-1.5 rounded-[12px] border border-line bg-surface p-3.5 hover:border-accent">
                   <div className="flex items-center gap-2"><span className="size-[7px] shrink-0 rounded-full" style={{ background: n.status ? STATUS_COLOR[n.status] : "var(--muted)" }} /><span dir="auto" className="flex-1 truncate font-semibold">{n.title}</span></div>
-                  <span dir="auto" className="line-clamp-2 h-9 text-[12.5px] leading-[18px] text-muted">{n.type === "canvas" ? t("Canvas board") : isWbType(n.type) ? t("Whiteboard") : n.excerpt}</span>
+                  <span dir="auto" className="line-clamp-2 h-9 text-[12.5px] leading-[18px] text-muted">{n.type === "canvas" ? t("Canvas board") : n.type === "board" ? t("Board") : isWbType(n.type) ? t("Whiteboard") : n.excerpt}</span>
                   <span className="text-[11.5px] text-muted">{t(KIND[n.type] ?? "Note")} · {relTime(n.updatedAt)}</span>
                 </a>
               ))}

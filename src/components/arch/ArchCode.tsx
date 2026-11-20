@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Glyph } from "../Glyph";
 import { ARCH_ICONS, isIcon } from "../../lib/arch-model";
+import { GLYPHS } from "../../lib/glyphs";
 import { DSL_KEYWORDS, type DslError } from "../../lib/arch-dsl";
 import { t } from "../../lib/i18n";
 
@@ -92,7 +93,7 @@ const bandGutter = gutterLineClass.compute([markField], (s) => {
 const theme = EditorView.theme({
   "&": { height: "100%", fontSize: "12.5px", backgroundColor: "transparent", color: "var(--text)" },
   "&.cm-focused": { outline: "none" },
-  ".cm-scroller": { fontFamily: "'JetBrains Mono', monospace", fontSize: "12.5px", lineHeight: "21px", padding: "8px 0" },
+  ".cm-scroller": { fontFamily: "'JetBrains Mono', monospace", fontSize: "12.5px", lineHeight: "21px", padding: "0 0 8px" },
   ".cm-gutterElement": { fontSize: "12.5px", lineHeight: "21px" },
   ".cm-content": { padding: 0, caretColor: "var(--accent)" },
   ".cm-line": { padding: "0 0 0 0", borderInlineStart: "2px solid transparent" },
@@ -139,9 +140,13 @@ export function ArchCode({ value, onChange, lang, errors = [], marks = [], band,
       if (iconM) {
         const w = iconM[1];
         const nodeHits = cbs.current.names.filter((n) => n.name.toLowerCase().startsWith(w.toLowerCase())).map((n) => ({ label: n.name, detail: t("node · line {n}", { n: n.line }), info: undefined, type: "node", g: n.icon ?? "service", apply: n.name }));
+        // prefix matches first (architecture icons, then the rest of the glyph set), then names that contain the text
+        const lw = w.toLowerCase(), arch = new Set(ARCH_ICONS);
+        const rank = (i: string) => (i.startsWith(lw) ? (arch.has(i) ? 0 : 1) : i.includes(lw) ? (arch.has(i) ? 2 : 3) : 9);
+        const icons = [...new Set([...ARCH_ICONS.filter((i) => isIcon(i)), ...Object.keys(GLYPHS)])].map((i) => [i, rank(i)] as const).filter(([, r]) => r < 9).sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0])).slice(0, 40);
         return {
-          from: ctx.pos - w.length, filter: true,
-          options: [...ARCH_ICONS.filter((i) => isIcon(i)).map((i) => ({ label: i, detail: t("icon"), g: i, boost: i.startsWith(w) ? 1 : 0 })), ...nodeHits.map((n) => ({ ...n, apply: (v: EditorView, _c: unknown, from: number, to: number) => v.dispatch({ changes: { from, to, insert: n.label } }) }))],
+          from: ctx.pos - w.length, filter: false,
+          options: [...icons.map(([i], k) => ({ label: i, detail: t("icon"), g: i, boost: 99 - k })), ...nodeHits.map((n) => ({ ...n, apply: (v: EditorView, _c: unknown, from: number, to: number) => v.dispatch({ changes: { from, to, insert: n.label } }) }))],
         };
       }
       const word = ctx.matchBefore(/[\p{L}\p{N}_-]+/u);
@@ -155,7 +160,7 @@ export function ArchCode({ value, onChange, lang, errors = [], marks = [], band,
       };
     };
     return [
-      theme, markField, markGutter, bandGutter, ...(lang === "dsl" ? [dslColors] : []),
+      theme, markField, markGutter, bandGutter, EditorView.lineWrapping, ...(lang === "dsl" ? [dslColors] : []),
       autocompletion({ override: [complete], icons: false, addToOptions: [{ render: (c) => glyphEl((c as { g?: string }).g ?? "code"), position: 20 }] }),
       EditorView.domEventHandlers({
         mousemove(e, v) { const p = v.posAtCoords({ x: e.clientX, y: e.clientY }); cbs.current.onHoverLine?.(p === null ? null : v.state.doc.lineAt(p).number); },
