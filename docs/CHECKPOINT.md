@@ -1,6 +1,18 @@
 # Checkpoint: where work stopped (2026-11-20, round 7 wave 1 done)
 
-## Latest: round 7 (Claude Design pages 33–52), paused after wave 1
+## Update: wave 2 done and live (deploy `39120b8f`, merge commit `70f74f2`)
+- **W2-A:** pens (8 types, settings, saved pens synced in Inbox `props.lumenPens`, pen mode, erasers, ruler, auto-shape), lasso + AI convert, handwriting search, palettes (+ custom, synced in `props.lumenPalettes`), whiteboard export via `openExportJob`, direct Delete row in the board ⋯ menu. Paper-theme frames 34B/37C/37F not verified.
+- **W2-B:** shared library (`src/components/library/*`, `src/lib/library-items.ts`), stamps, icon insert, connector/style/text/sticky popovers. "Later" in the UI: dotted fill, Serif/Arabic fonts, text highlight, sticky author line. Vendor packs come from the user's own SVGs.
+- **W2-C:** drag and drop (`src/lib/dnd.ts`, `src/components/dnd/*`). Tested with synthetic events only; diagram "insert as shapes" and canvas portal cards are not built.
+- **W2-D:** architecture edges: reconnect, bend points, label drag, reset route, label options (start/mid/end, styles, placement, protocol chip).
+- **Extras (deployed between waves from a worktree, now merged):**
+  - sidebar mode open / hover / click, plus On top / Push per mode;
+  - note list: Del, Ctrl/Shift multi-select, Ctrl+A, right-click menu, Shift+Delete for the open note;
+  - architecture desktop ⋯ menu + Delete diagram;
+  - the architecture studio uses the shared library and the drop zone.
+- **Next: wave 3** (W3-A layers / board settings / frames / presentation; W3-B Mixed Board cards + conversions; W3-C architecture AI hook-up + Shared.tsx view-only), then the final Opus review and the first real AI-convert test.
+
+## Round 7 (Claude Design pages 33–52), paused after wave 1
 Live: deploy `c012e97c` · commit `f3a4d49` on `main`. Everything deployed, committed and pushed; no agents running.
 
 - **Handoff:** `design/handoffs/2026-11-20-round-7/` (from `Lumen Index Design Rounds (2).zip`). Reference PNG per artboard in `frames/` (141, with `frames/index.json` = labels + designer notes). Serve the pages with `node design/tools/serve-design.mjs 5397 design/handoffs/2026-11-20-round-7`. Frames are re-rendered by `design-frames.mjs` (in the old session scratchpad); rewrite it if needed: it screenshots each themed box under the `NNx` captions.
