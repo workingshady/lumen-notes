@@ -56,7 +56,7 @@ For each feature: search for current best practice and benchmark apps (Excalidra
 - [ ] **Performance:** large boards (3,000+ elements), lazy chunks, workers, memory.
 - [ ] **Security:** SVG sanitising, API token scopes, input validation on the new routes.
 
-## Stage 4: regression, compatibility, consistency, small details
+## Stage 4: regression, compatibility, consistency, small details: running (2 agents → docs/audit/r7-regression.md, r7-consistency.md)
 - [ ] **Old features:** notes, editor/Read, review/flashcards, paths/roadmaps, project hub, PDF, slides, Ask/tutor, imports, share/blog, Android, Arabic.
 - [ ] **Compatibility:**
   - [ ] old `.canvas` / `.excalidraw` files and notes open;
@@ -79,7 +79,9 @@ For each feature: search for current best practice and benchmark apps (Excalidra
   - [ ] "Later" items still disabled (dotted fill, Serif / Arabic fonts, text highlight);
   - [ ] canvas portal cards.
 
-## Stage 5: fix wave
+## Stage 5a: audit + backend fix wave: DONE and deployed (63fb2a3e, f81ec95): whiteboard 33 fixed, arch/canvas/export 36 fixed + 5 partial, backend criticals all fixed (42/42 server tests)
+
+## Stage 5b: research enhancements (palm rejection, low-latency ink, flat marker, spatial index, handwriting eval, vector PDF, AI edit as ops, board merge…)
 - [ ] Agents close every item from stages 1–4 (each with web research and best practice), with file ownership and parallel waves as before.
 
 ## Stage 6: final check and deploy
