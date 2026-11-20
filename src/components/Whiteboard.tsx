@@ -1,4 +1,4 @@
-import { Excalidraw, convertToExcalidrawElements, exportToSvg, restore, restoreElements, serializeAsJSON } from "@excalidraw/excalidraw";
+import { Excalidraw, convertToExcalidrawElements, exportToBlob, exportToSvg, restore, restoreElements, serializeAsJSON } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import { Check, Shapes, StickyNote, GitFork, Workflow, X } from "lucide-react";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
@@ -13,7 +13,7 @@ import { useSettings, activeTheme } from "../lib/settings";
 import { t, tk } from "../lib/i18n";
 import { back, openNote, setUI, toast, useUI, useVaultSelector } from "../lib/store";
 import { canGoBack } from "../lib/nav-history";
-import { openExport } from "../lib/diagram-export";
+import { openExportJob, type BuildRequest } from "../lib/export-job";
 import { parseScene, placeBoundArrows, sk, type Scene, type Skeleton } from "../lib/whiteboard";
 import { Button, cx } from "./ui";
 import { useRtl } from "./ws-dir";
@@ -30,7 +30,25 @@ import { FrameChip, Minimap, ZoomCluster } from "./wb/BottomBar";
 import { Banner, EmptyBoard } from "./wb/States";
 import { NoteCardPicker, noteCardSkeleton } from "./wb/NoteCard";
 import { Glyph } from "./Glyph";
-import { KEY_TOOL, loadInk, loadRecent, lumenTool, PAPER, pushRecent, saveInk, shown, type Ink, type LineKind, type ShapeKind, type ToolId, type WheelSlot } from "./wb/tools";
+import "./library/register"; // W2-B: shared library panel + Shapes popover registration
+import { KEY_TOOL, loadRecent, lumenTool, PAPER, pushRecent, shown, type LineKind, type ShapeKind, type ToolId, type WheelSlot } from "./wb/tools";
+import "./wb/pens/register";
+import { appStyle, currentPen, ERASER_PX, finishStroke, getInk, hlPen, onInk, PEN_DEFAULTS, setPen, swToPx, useInk, type PenSettings, type PenType } from "./wb/pens/model";
+import { live as wbLive, setLive } from "./wb/pens/live";
+import { alongRuler, bump, commit, deleteIds, lassoed, partialErase, scratchOut, sendBehindInk, snapStroke, toScene, toScreen, touches as touchesEl, unsnap } from "./wb/pens/engine";
+import { recognise, snappedElement, absPoints, SNAP_NAME } from "./wb/pens/shapes";
+import { EraserBar } from "./wb/pens/InkBars";
+import { LassoPath, Ruler, rulerEdge, SnapChip } from "./wb/pens/Overlays";
+import { LassoBar, type LassoAction } from "./wb/pens/LassoBar";
+import { PenPanel, shownType } from "./wb/pens/PenPanel";
+import { countInk, recogniseInk } from "./wb/pens/Handwriting";
+import { ColourPopover } from "./wb/palette/ColourPopover";
+import { exactColour } from "./wb/palette/palettes";
+import { AIReview, type AIReviewResult } from "./AIReview";
+import { bindWbApi } from "./dnd/wb-drop";
+import { useLibPrefs } from "../lib/library-items";
+import { StampsPopover, InsertIconPopover } from "./library/register";
+import type { ConvertKind } from "../lib/ai-convert";
 
 type API = WbAPI;
 type El = Record<string, unknown> & { id: string; type: string; x: number; y: number; width: number; height: number; isDeleted?: boolean; containerId?: string | null; boundElements?: { id: string; type: string }[] | null; groupIds?: string[] };
@@ -159,9 +177,28 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   const [line, setLine] = useState<LineKind>("arrow");
   const [arrowType, setArrowType] = useState<ArrowType>("round");
   const [locked, setLocked] = useState(false);
-  const [penInk, setPenInk] = useState<Ink>(() => loadInk("pen"));
-  const [hlInk, setHlInk] = useState<Ink>(() => loadInk("hl"));
+  const ink = useInk();
   const hlMode = useRef(false);
+  const lassoOn = useRef(false);
+  const toolRef = useRef<ToolId>("select");
+  /** W2-A ink input: the freedraw element being drawn, the pen timing (hold-to-straighten), lasso / eraser gestures. */
+  const strokeId = useRef<string | null>(null);
+  const penDown = useRef<{ lastMove: number; x: number; y: number; shift: boolean } | null>(null);
+  const gesture = useRef<null | { kind: "lasso" | "lasso-erase" | "erase"; pts: [number, number][]; mode?: "stroke" | "partial"; hit: Set<string> }>(null);
+  const [lassoPts, setLassoPts] = useState<[number, number][]>([]);
+  const [lassoScene, setLassoScene] = useState<[number, number][] | null>(null);
+  const cursorEl = useRef<HTMLSpanElement>(null);
+  const exactNew = useRef(false);
+  const [snap, setSnap] = useState<{ x: number; y: number; name: string; shapeId: string; strokeId: string } | null>(null);
+  const [review, setReview] = useState<{ blob: Blob; kind: ConvertKind; ids: string[]; box: { x: number; y: number; w: number; h: number }; color: string } | null>(null);
+  const [lassoBusy, setLassoBusy] = useState<LassoAction | null>(null);
+  const [penSheet, setPenSheet] = useState(false);
+  const [hw, setHw] = useState(() => !!(initial.scene as { lumenHandwriting?: boolean }).lumenHandwriting);
+  const hwTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const hwRef = useRef(hw);
+  hwRef.current = hw;
+  const libPrefs = useLibPrefs();
+  useEffect(() => { const k = libPrefs.lastShape.replace(/^draw:/, ""); const m: Record<string, ShapeKind> = { rect: "rectangle", ellipse: "ellipse", decision: "diamond", diamond: "diamond" }; if (m[k]) setShape(m[k]); }, [libPrefs.lastShape]);
   const [zoom, setZoom] = useState(1);
   const [tick, setTick] = useState(0);
   const [count, setCount] = useState(-1);
@@ -194,13 +231,23 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   const saved = useSavedLine();
 
   useEffect(() => onRegistry(() => setReg((n) => n + 1)), []);
+  // Pens: a pen change re-applies the ink while the pen / highlighter is active.
+  useEffect(() => onInk(() => { const tl = toolRef.current; if (tl === "pen") applyInkRef.current(currentPen()); else if (tl === "hl") applyInkRef.current(hlPen()); }), []);
+  const applyInkRef = useRef((p: PenSettings) => { api.current?.updateScene({ appState: appStyle(p) }); });
+  // Board actions the W2-A panels call.
+  wbLive.activate = (id) => activate(id);
+  wbLive.setPenMode = (v) => api.current?.updateScene({ appState: { penMode: v, penDetected: true } });
+  wbLive.openPanel = (p) => openPanel(p);
+  wbLive.setHandwriting = (v) => { setHw(v); setLive({ hw: v }); setTimeout(() => { save(); if (v) void runHw(); }, 50); };
+  wbLive.recognise = () => runHw();
+  useEffect(() => { setLive({ hw, dark }); }, [hw, dark]);
   useEffect(() => { const m = matchMedia("(max-width: 767px)"); const f = () => setPhone(m.matches); m.addEventListener("change", f); return () => m.removeEventListener("change", f); }, []);
   // A conversion ("Mermaid block → Whiteboard" with no block found) asks to open the Mermaid dialog.
   useEffect(() => {
     try { if (sessionStorage.getItem("lumen.wbMermaid.open") === note.id) { sessionStorage.removeItem("lumen.wbMermaid.open"); setMermaidOpen(true); } } catch { /* ignore */ }
   }, [note.id]);
 
-  const ctx: WbCtx = { api: apiReady, noteId: note.id, kind, close: () => setOpen(null), save: () => scheduleSave(100) };
+  const ctx: WbCtx = { api: apiReady, noteId: note.id, kind, close: () => setOpen(null), save: () => scheduleSave(100), dark, phone, style: bar?.style, setStyle: (p) => setStyle(p) };
   const openPanel = (p: WbPanel) => {
     setMenu(false);
     if (wbRegistry.panels[p]) setOpen(p);
@@ -212,7 +259,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     if (!sel.length) {
       const g = (k: string) => st[STYLE_KEYS[k]] as never;
       const r = g("roundness") as unknown as string;
-      return { ...EMPTY_STYLE, strokeColor: g("strokeColor"), backgroundColor: g("backgroundColor"), fillStyle: g("fillStyle"), strokeWidth: g("strokeWidth"), strokeStyle: g("strokeStyle"), roughness: g("roughness"), roundness: r === "sharp" ? "sharp" : "round", fontFamily: g("fontFamily"), fontSize: g("fontSize"), textAlign: g("textAlign"), opacity: g("opacity"), startArrowhead: g("startArrowhead"), endArrowhead: g("endArrowhead"), arrowType: g("arrowType") };
+      return { ...EMPTY_STYLE, exact: exactNew.current, strokeColor: g("strokeColor"), backgroundColor: g("backgroundColor"), fillStyle: g("fillStyle"), strokeWidth: g("strokeWidth"), strokeStyle: g("strokeStyle"), roughness: g("roughness"), roundness: r === "sharp" ? "sharp" : "round", fontFamily: g("fontFamily"), fontSize: g("fontSize"), textAlign: g("textAlign"), opacity: g("opacity"), startArrowhead: g("startArrowhead"), endArrowhead: g("endArrowhead"), arrowType: g("arrowType") };
     }
     const ids = new Set(sel.map((e) => e.id));
     const texts = els.filter((e) => e.type === "text" && !e.isDeleted && (ids.has(e.id) || (!!e.containerId && ids.has(e.containerId))));
@@ -224,13 +271,18 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
       roundness: same(base.map((e) => (e.roundness ? "round" : "sharp"))) as "round" | "sharp" | null,
       fontFamily: v(texts, "fontFamily"), fontSize: v(texts, "fontSize"), textAlign: v(texts, "textAlign"), opacity: v(sel, "opacity"),
       startArrowhead: v(base, "startArrowhead"), endArrowhead: v(base, "endArrowhead"), arrowType: same(base.map((e) => (e.elbowed ? "elbow" : e.roundness ? "round" : "sharp"))),
-      link: v(sel, "link"), locked: sel.every((e) => !!e.locked),
+      link: v(sel, "link"), locked: sel.every((e) => !!e.locked), exact: sel.every((e) => !!(e.customData as Record<string, unknown> | undefined)?.lumenExact),
     };
   };
   const track = (els: readonly El[], st: Record<string, unknown>) => {
     const at = st.activeTool as { type: string; locked?: boolean } | undefined;
-    const lt = lumenTool(at?.type ?? "selection", hlMode.current);
+    if (at?.type !== "selection" && lassoOn.current) lassoOn.current = false;
+    const lt = at?.type === "selection" && lassoOn.current ? "lasso" : lumenTool(at?.type ?? "selection", hlMode.current);
     if (lt !== tool) setTool(lt);
+    toolRef.current = lt;
+    setLive({ tool: lt, penMode: !!st.penMode, dark });
+    const ne = st.newElement as El | null | undefined;
+    if (ne && ne.type === "freedraw") strokeId.current = ne.id;
     if (!!at?.locked !== locked) setLocked(!!at?.locked);
     if (!!st.zenModeEnabled !== zen) setZen(!!st.zenModeEnabled);
     if (!!st.penMode !== penMode) setPenMode(!!st.penMode);
@@ -239,15 +291,10 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     // Drawing (pen, shapes): skip the per-move work so strokes stay smooth; only the docked tool bar shows.
     const drawing = st.cursorButton === "down" || !!st.newElement || !!st.multiElement || !!st.selectedElementsAreBeingDragged || !!st.resizingElement || !!st.editingTextElement;
     if (drawing) { if (barKey.current && !barKey.current.startsWith("tool")) { barKey.current = ""; setBar(null); } return; }
-    if (at && at.type === "freedraw") {
-      // remember the ink the user set (pen and highlighter keep their own)
-      const ink: Ink = { color: String(st.currentItemStrokeColor), width: Number(st.currentItemStrokeWidth), opacity: Number(st.currentItemOpacity) };
-      const cur = hlMode.current ? hlInk : penInk;
-      if (ink.color !== cur.color || ink.width !== cur.width || ink.opacity !== cur.opacity) { if (hlMode.current) { setHlInk(ink); saveInk("hl", ink); } else { setPenInk(ink); saveInk("pen", ink); } }
-    }
     const selMap = (st.selectedElementIds as Record<string, boolean>) ?? {};
     const selIds = Object.keys(selMap);
     const sel = selIds.length ? (els.filter((e) => selMap[e.id] && !e.isDeleted) as El[]) : [];
+    if (!sel.length && lassoScene) setLassoScene(null);
     let b: BarState | null = null;
     if (sel.length && at?.type === "selection") {
       const all = (f: (e: El) => boolean) => sel.every(f);
@@ -285,6 +332,29 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   const setStyle = (p: Partial<Style>) => {
     const a = api.current;
     if (!a) return;
+    if (p.exact != null) {
+      const on = p.exact;
+      if (!bar || !bar.ids.length) { exactNew.current = on; barKey.current = ""; track(a.getSceneElements() as El[], a.getAppState()); }
+      else restyle(bar.ids, (e, selected) => {
+        if (!selected && e.type !== "text") return null;
+        const cd = { ...((e.customData as Record<string, unknown>) ?? {}) };
+        const prev = cd.lumenExact as { strokeColor?: string; backgroundColor?: string } | undefined;
+        if (on && !prev) { cd.lumenExact = { strokeColor: e.strokeColor, backgroundColor: e.backgroundColor }; return { ...e, customData: cd, strokeColor: exactColour(String(e.strokeColor)), backgroundColor: e.backgroundColor === "transparent" ? e.backgroundColor : exactColour(String(e.backgroundColor)) }; }
+        if (!on && prev) { delete cd.lumenExact; return { ...e, customData: cd, strokeColor: prev.strokeColor ?? e.strokeColor, backgroundColor: prev.backgroundColor ?? e.backgroundColor }; }
+        return null;
+      });
+      const { exact: _x, ...rest } = p;
+      if (!Object.keys(rest).length) return;
+      p = rest;
+    }
+    if (bar && !bar.ids.length && bar.mode === "tool-ink") {
+      // the pen bar edits the pen (pen and highlighter keep their own settings)
+      const ps: Partial<PenSettings> = {};
+      if (p.strokeColor != null) ps.color = p.strokeColor;
+      if (p.strokeWidth != null) ps.width = swToPx(p.strokeWidth);
+      if (p.opacity != null) ps.opacity = p.opacity;
+      if (Object.keys(ps).length) { setPen(ps, shownType(toolRef.current, getInk().current)); return; }
+    }
     const app: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(p)) if (STYLE_KEYS[k] && v != null) app[STYLE_KEYS[k]] = v;
     if (Object.keys(app).length) a.updateScene({ appState: app });
@@ -292,8 +362,11 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     restyle(bar.ids, (e, selected) => {
       const isText = e.type === "text", isLine = e.type === "arrow" || e.type === "line";
       const out: El = { ...e };
+      const ex = (e.customData as Record<string, unknown> | undefined)?.lumenExact as Record<string, unknown> | undefined;
+      if (ex && (p.strokeColor != null || p.backgroundColor != null)) out.customData = { ...(e.customData as object), lumenExact: { ...ex, ...(p.strokeColor != null ? { strokeColor: p.strokeColor } : {}), ...(p.backgroundColor != null ? { backgroundColor: p.backgroundColor } : {}) } };
       if (p.strokeColor != null && (selected || !isText)) { if (!(isText && e.containerId && PAPER.includes(String((a.getSceneElements() as El[]).find((x) => x.id === e.containerId)?.backgroundColor).toLowerCase()))) out.strokeColor = p.strokeColor; }
-      if (p.backgroundColor != null && !isText && !isLine && e.type !== "freedraw") { out.backgroundColor = p.backgroundColor; if (isSticky(e)) out.strokeColor = "transparent"; if (p.backgroundColor !== "transparent" && !p.fillStyle && isSticky({ ...e, backgroundColor: p.backgroundColor } as El)) out.fillStyle = "solid"; }
+      if (ex && p.strokeColor != null && out.strokeColor === p.strokeColor) out.strokeColor = exactColour(p.strokeColor);
+      if (p.backgroundColor != null && !isText && !isLine && e.type !== "freedraw") { out.backgroundColor = ex && p.backgroundColor !== "transparent" ? exactColour(p.backgroundColor) : p.backgroundColor; if (isSticky(e)) out.strokeColor = "transparent"; if (p.backgroundColor !== "transparent" && !p.fillStyle && isSticky({ ...e, backgroundColor: p.backgroundColor } as El)) out.fillStyle = "solid"; }
       if (p.fillStyle != null && !isText && !isLine) out.fillStyle = p.fillStyle;
       if (p.strokeWidth != null && !isText) out.strokeWidth = p.strokeWidth;
       if (p.strokeStyle != null && !isText) out.strokeStyle = p.strokeStyle;
@@ -355,19 +428,21 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   };
 
   // ------------------------------------------------------------------ tools
-  const applyInk = (ink: Ink) => api.current?.updateScene({ appState: { currentItemStrokeColor: ink.color, currentItemStrokeWidth: ink.width, currentItemOpacity: ink.opacity } });
+  const applyInk = (p: PenSettings) => api.current?.updateScene({ appState: appStyle(p) });
   const activate = (id: ToolId, o: { shape?: ShapeKind; line?: LineKind; arrow?: ArrowType } = {}) => {
     const a = api.current;
     if (!a) return;
     setDockMore(false);
     const wasHl = hlMode.current;
-    if (wasHl && id !== "hl") { hlMode.current = false; applyInk(penInk); }
+    if (wasHl && id !== "hl") { hlMode.current = false; applyInk(currentPen()); }
+    if (id !== "lasso") lassoOn.current = false;
+    setLassoScene(null);
     const set = (type: string) => a.setActiveTool({ type, locked });
     switch (id) {
       case "select": set("selection"); break;
-      case "lasso": if (wbRegistry.lasso) wbRegistry.lasso(ctx); else { set("selection"); toast(t("Lasso: drag a box to select for now; free-form lasso comes with the pens update")); } break;
-      case "pen": hlMode.current = false; applyInk(penInk); set("freedraw"); setTool("pen"); break;
-      case "hl": hlMode.current = true; applyInk(hlInk); set("freedraw"); setTool("hl"); break;
+      case "lasso": lassoOn.current = true; set("selection"); setTool("lasso"); toolRef.current = "lasso"; wbRegistry.lasso?.(ctx); break;
+      case "pen": hlMode.current = false; applyInk(currentPen()); set("freedraw"); setTool("pen"); toolRef.current = "pen"; break;
+      case "hl": hlMode.current = true; applyInk(hlPen()); set("freedraw"); setTool("hl"); toolRef.current = "hl"; break;
       case "shape": { const s = o.shape ?? shape; setShape(s); try { localStorage.setItem("lumen.wbShape", s); } catch { /* ignore */ } set(s); break; }
       case "arrow": { const l = o.line ?? line; setLine(l); if (o.arrow) { setArrowType(o.arrow); a.updateScene({ appState: { currentItemArrowType: o.arrow } }); } set(l); break; }
       case "sticky": addSticky(); break;
@@ -431,6 +506,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     }
     s.files = files;
     s.source = "lumen";
+    if (hwRef.current) (s as Scene & { lumenHandwriting?: boolean }).lumenHandwriting = true;
     return JSON.stringify(s);
   };
   /** Full .excalidraw (dataURLs inlined) for downloads, so the file opens anywhere. */
@@ -542,7 +618,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     applyPending(scene);
   }, [note.body]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => () => { clearTimeout(timer.current); }, []);
+  useEffect(() => () => { clearTimeout(timer.current); clearTimeout(hwTimer.current); bindWbApi(null); }, []);
 
   // Keyboard: the design's tool keys (1 select · 2 lasso · 3 pen · 4 highlighter · 5 eraser · 6 shapes · 7 arrow · 8 text ·
   // 9 sticky · 0 image · N note card · F frame · H hand · K laser), L layers, ⌥P present, ⇧⌘E export. Key 0 / image go to the
@@ -556,6 +632,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && k === "e") { stop(); doExport(); return; }
     if (e.altKey && !e.ctrlKey && !e.metaKey && (e.code === "KeyP")) { stop(); openPanel("present"); return; }
+    if (e.shiftKey && e.key === "Delete" && !Object.keys(api.current?.getAppState().selectedElementIds ?? {}).length) { stop(); void trashBoard(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (k === "l" && !e.shiftKey && wbRegistry.panels.layers) { stop(); openPanel("layers"); return; }
     const id = KEY_TOOL[k];
@@ -591,6 +668,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   const press = useRef<{ t: ReturnType<typeof setTimeout>; x: number; y: number } | null>(null);
   const touches = useRef(new Map<number, { x: number; y: number }>());
   const onPointerDownCapture = (e: React.PointerEvent) => {
+    if (inkDown(e)) return;
     if (e.pointerType !== "touch" || !(e.target as HTMLElement).closest("canvas")) return;
     touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (press.current) { clearTimeout(press.current.t); press.current = null; }
@@ -601,11 +679,130 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     press.current = { x: cx, y: cy, t: setTimeout(() => { press.current = null; openWheel(cx, cy); }, 550) };
   };
   const onPointerMoveCapture = (e: React.PointerEvent) => {
+    if (inkMove(e)) return;
     if (e.pointerType !== "touch") return;
     const p0 = touches.current.get(e.pointerId);
     if (p0 && press.current && Math.hypot(e.clientX - p0.x, e.clientY - p0.y) > 10) { clearTimeout(press.current.t); press.current = null; }
   };
-  const onPointerUpCapture = (e: React.PointerEvent) => { touches.current.delete(e.pointerId); if (press.current) { clearTimeout(press.current.t); press.current = null; } };
+  const onPointerUpCapture = (e: React.PointerEvent) => { if (inkUp(e)) return; touches.current.delete(e.pointerId); if (press.current) { clearTimeout(press.current.t); press.current = null; } };
+  // ------------------------------------------------------------------ W2-A ink input: lasso, erasers, pen timing
+  const hostXY = (e: { clientX: number; clientY: number }): [number, number] => { const r = host.current!.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  const zoomNow = () => (api.current!.getAppState() as { zoom: { value: number } }).zoom.value;
+  const selectionBox = () => {
+    const a = api.current!;
+    const sel = a.getAppState().selectedElementIds as Record<string, boolean>;
+    const els = (a.getSceneElements() as El[]).filter((x) => sel?.[x.id]);
+    if (!els.length) return null;
+    return { x0: Math.min(...els.map((x) => x.x)), y0: Math.min(...els.map((x) => x.y)), x1: Math.max(...els.map((x) => x.x + x.width)), y1: Math.max(...els.map((x) => x.y + x.height)) };
+  };
+  const eraseAt = (e: { clientX: number; clientY: number }) => {
+    const a = api.current!, g = gesture.current!;
+    const p = toScene(a, host.current!, e.clientX, e.clientY);
+    const r = ERASER_PX[getInk().eraserSize] / 2 / zoomNow();
+    if (g.mode === "partial") { partialErase(a, p, r, "EVENTUALLY"); return; }
+    const hit = (a.getSceneElements() as El[]).filter((x) => !g.hit.has(x.id) && touchesEl(x as never, p, r));
+    if (!hit.length) return;
+    hit.forEach((x) => g.hit.add(x.id));
+    deleteIds(a, new Set(hit.map((x) => x.id)), "EVENTUALLY");
+  };
+  const moveCursor = (e: { clientX: number; clientY: number } | null) => {
+    const c = cursorEl.current;
+    if (!c) return;
+    if (!e || toolRef.current !== "eraser" || getInk().eraser === "lasso") { c.style.display = "none"; return; }
+    const [x, y] = hostXY(e), r = ERASER_PX[getInk().eraserSize] / 2;
+    Object.assign(c.style, { display: "block", left: x - r + "px", top: y - r + "px", width: r * 2 + "px", height: r * 2 + "px" });
+  };
+  /** Returns true when the pointer-down belongs to a Lumen gesture (Excalidraw does not see it). */
+  const inkDown = (e: React.PointerEvent): boolean => {
+    const a = api.current;
+    if (!a || !host.current || !(e.target as HTMLElement).closest("canvas") || (e.button !== 0 && e.pointerType !== "pen")) return false;
+    if (e.pointerType === "touch" && a.getAppState().penMode) return false; // finger pans in pen mode
+    const tl = toolRef.current, ink0 = getInk();
+    const stylusErase = e.pointerType === "pen" && (e.buttons & 32) !== 0 && ink0.stylusErases && (tl === "pen" || tl === "hl");
+    let kind: "lasso" | "lasso-erase" | "erase" | null = null;
+    if (tl === "lasso") {
+      const b = selectionBox(), [x, y] = toScene(a, host.current, e.clientX, e.clientY);
+      if (b && x >= b.x0 - 6 && x <= b.x1 + 6 && y >= b.y0 - 6 && y <= b.y1 + 6) return false; // drag the selection
+      kind = "lasso";
+    } else if (tl === "eraser" || stylusErase) kind = ink0.eraser === "lasso" ? "lasso-erase" : "erase";
+    if (!kind) {
+      if (tl === "pen" || tl === "hl") penDown.current = { lastMove: performance.now(), x: e.clientX, y: e.clientY, shift: e.shiftKey };
+      return false;
+    }
+    e.stopPropagation(); e.preventDefault();
+    host.current.setPointerCapture?.(e.pointerId);
+    gesture.current = { kind, pts: [hostXY(e)], mode: ink0.eraser === "partial" ? "partial" : "stroke", hit: new Set() };
+    if (kind === "erase") eraseAt(e);
+    else { setLassoScene(null); setLassoPts(gesture.current.pts); if (kind === "lasso") a.updateScene({ appState: { selectedElementIds: {}, selectedGroupIds: {} } }); }
+    return true;
+  };
+  const inkMove = (e: React.PointerEvent): boolean => {
+    moveCursor(e);
+    const pd = penDown.current;
+    if (pd && Math.hypot(e.clientX - pd.x, e.clientY - pd.y) > 3) { pd.lastMove = performance.now(); pd.x = e.clientX; pd.y = e.clientY; }
+    if (pd) pd.shift = e.shiftKey;
+    const g = gesture.current;
+    if (!g) return false;
+    e.stopPropagation();
+    g.pts.push(hostXY(e));
+    if (g.kind === "erase") eraseAt(e); else setLassoPts([...g.pts]);
+    return true;
+  };
+  const inkUp = (e: React.PointerEvent): boolean => {
+    const pd = penDown.current;
+    penDown.current = null;
+    if (pd) { const held = performance.now() - pd.lastMove >= 450, shift = pd.shift; setTimeout(() => processStroke(held, shift), 40); }
+    const g = gesture.current, a = api.current;
+    if (!g || !a || !host.current) return false;
+    gesture.current = null;
+    e.stopPropagation();
+    if (g.kind === "erase") { a.updateScene({ elements: a.getSceneElementsIncludingDeleted(), captureUpdate: "IMMEDIATELY" }); return true; }
+    setLassoPts([]);
+    const r = host.current.getBoundingClientRect();
+    const poly = g.pts.map(([x, y]) => toScene(a, host.current!, x + r.left, y + r.top));
+    const hit = lassoed(a.getSceneElements() as never, poly);
+    if (g.kind === "lasso-erase") {
+      if (hit.length) { deleteIds(a, new Set(hit.map((x) => x.id))); toast(t("Erased {n} items", { n: hit.length })); }
+      return true;
+    }
+    if (!hit.length) return true;
+    const groups = Object.fromEntries(hit.flatMap((x) => (x.groupIds?.length ? [[x.groupIds[x.groupIds.length - 1], true]] : [])));
+    a.updateScene({ appState: { selectedElementIds: Object.fromEntries(hit.map((x) => [x.id, true])), selectedGroupIds: groups } });
+    setLassoScene(poly);
+    return true;
+  };
+
+  /** After a pen stroke: scratch-out, ruler edge, auto-shape, hold-to-straighten, pen look, highlighter z-order. */
+  const processStroke = (held: boolean, shift: boolean) => {
+    const a = api.current, id = strokeId.current;
+    strokeId.current = null;
+    if (!a || !id) return;
+    const el = (a.getSceneElements() as El[]).find((x) => x.id === id);
+    if (!el || el.type !== "freedraw" || (el.customData as Record<string, unknown> | undefined)?.lumenPen) return;
+    const isHl = hlMode.current, ix = getInk();
+    const pen = isHl ? hlPen() : currentPen();
+    if (!isHl && ix.scratchOut) { const n = scratchOut(a, el as never); if (n) { toast(t("Scratched out {n} items", { n })); return; } }
+    let src: El = el;
+    if (ix.ruler && host.current) {
+      const [ea, eb] = rulerEdge(), r = host.current.getBoundingClientRect();
+      const A = toScene(a, host.current, ea[0] + r.left, ea[1] + r.top), B = toScene(a, host.current, eb[0] + r.left, eb[1] + r.top);
+      const pr = alongRuler(absPoints(el), A, B, 30 / zoomNow());
+      if (pr) { const [ox, oy] = pr[0]; src = { ...el, x: ox, y: oy, points: pr.map(([x, y]) => [x - ox, y - oy]), pressures: pr.map(() => 0.5), simulatePressure: false }; held = false; }
+    }
+    if (!isHl && ix.autoShape !== "off" && (ix.autoShape === "always" || held) && src === el) {
+      const res = snapStroke(a, finishStroke(el, pen) as never);
+      if (res) {
+        const s = (a.getSceneElements() as El[]).find((x) => x.id === res.id);
+        if (s) { const [sx, sy] = toScreen(a, s.x, s.y + Math.abs(s.height)); setSnap({ x: Math.max(8, sx), y: sy + 14, name: SNAP_NAME[res.rec.kind], shapeId: res.id, strokeId: id }); }
+        return;
+      }
+    }
+    let out = finishStroke(src, pen, { straight: held && (pen.straight || isHl), angleSnap: shift });
+    if (exactNew.current) out = { ...out, customData: { ...(out.customData as object), lumenExact: { strokeColor: out.strokeColor } }, strokeColor: exactColour(String(out.strokeColor)) };
+    const all = a.getSceneElementsIncludingDeleted() as El[];
+    commit(a, all.map((x) => (x.id === id ? bump(out) : x)) as never, "NEVER");
+    if (isHl) sendBehindInk(a, id);
+  };
   const pickSlot = (s: WheelSlot) => { setWheel(null); activate(s.tool, { shape: s.shape }); };
 
   async function runScript() {
@@ -639,20 +836,164 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     await add(skel);
   }
 
-  /** Export: the shared export dialog (format, scale, background, padding…) with the board as an SVG source. */
+  /** Export (W2-A): the shared export dialog with whole / selection / visible / frames, PDF per frame, media placeholders. */
   function doExport() {
     const a = api.current;
     if (!a) return;
-    openExport({
-      name: note.title, title: t("Export whiteboard"), themable: true,
-      build: async (p) => {
-        const bgKind = p.background, darkOut = p.theme === "dark" || (p.theme === "app" && dark);
-        const svg = await exportToSvg({ elements: a.getSceneElements() as never, files: a.getFiles() as never, exportPadding: p.padding,
-          appState: { ...a.getAppState(), exportBackground: bgKind !== "transparent", viewBackgroundColor: bgKind === "custom" ? p.color : darkOut ? "#0F1115" : "#ffffff", exportWithDarkMode: darkOut, exportEmbedScene: false } as never });
-        return { svg: new XMLSerializer().serializeToString(svg), width: Number(svg.getAttribute("width")) || 800, height: Number(svg.getAttribute("height")) || 600 };
+    const els0 = a.getSceneElements() as El[];
+    const frames = els0.filter((e) => e.type === "frame" || e.type === "magicframe");
+    const media = els0.filter((e) => e.type === "embeddable" && (e.customData as Record<string, unknown> | undefined)?.lumenMedia);
+    const gifs = media.filter((e) => (e.customData as Record<string, unknown>).lumenMedia === "gif").length;
+    const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || (dark ? "#0F1115" : "#FAF8F3");
+    const sel = a.getAppState().selectedElementIds as Record<string, boolean>;
+    const scopes: ("whole" | "selection" | "visible" | "frames")[] = ["whole", "visible"];
+    if (Object.keys(sel ?? {}).length) scopes.splice(1, 0, "selection");
+    if (frames.length) scopes.push("frames");
+    openExportJob({
+      kind: kind === "board" ? "board" : "whiteboard", title: note.title, name: note.title, sourceExt: ".excalidraw", themable: true, hasPattern: true, boardBackground: bg,
+      scopes, pickers: { frames: frames.map((f, i) => ({ id: f.id, name: String(f.name ?? t("Frame {n}", { n: i + 1 })) })) },
+      content: ["frameNames", "media", "embedScene"], media: { videos: media.length - gifs, gifs },
+      build: async ({ scope, ids, opts, format, scale, maxPx }: BuildRequest) => {
+        const st = a.getAppState() as Record<string, unknown> & { zoom: { value: number }; scrollX: number; scrollY: number; width: number; height: number };
+        const selected = st.selectedElementIds as Record<string, boolean>;
+        const all = a.getSceneElements() as El[];
+        let els = all;
+        if (scope === "selection") { const set = new Set(all.filter((e) => selected?.[e.id]).map((e) => e.id)); els = all.filter((e) => set.has(e.id) || (e.containerId && set.has(e.containerId))); }
+        else if (scope === "frames") els = all.filter((e) => ids.includes(e.id) || ids.includes(String(e.frameId ?? "")));
+        else if (scope === "visible") {
+          const z = st.zoom.value, x0 = -st.scrollX, y0 = -st.scrollY, x1 = x0 + (host.current?.clientWidth ?? st.width) / z, y1 = y0 + (host.current?.clientHeight ?? st.height) / z;
+          els = all.filter((e) => e.x < x1 && e.x + e.width > x0 && e.y < y1 && e.y + e.height > y0);
+        }
+        if (opts.media === "placeholder") {
+          // GIF / video / audio cards become labelled boxes (images can't play them)
+          const ph = els.filter((e) => e.type === "embeddable" && (e.customData as Record<string, unknown> | undefined)?.lumenMedia);
+          if (ph.length) {
+            const kinds: Record<string, string> = { gif: t("GIF"), video: t("Video"), audio: t("Audio") };
+            const boxes = convertToExcalidrawElements(ph.map((e) => ({ type: "rectangle", x: e.x, y: e.y, width: e.width, height: e.height, backgroundColor: "#e9ecef", fillStyle: "solid", strokeColor: "#868e96", roughness: 0, label: { text: kinds[String((e.customData as Record<string, unknown>).lumenMedia)] ?? t("Media"), fontSize: 18 } })) as never) as unknown as El[];
+            const drop = new Set(ph.map((e) => e.id));
+            els = [...els.filter((e) => !drop.has(e.id)), ...boxes];
+          }
+        }
+        const one = scope === "frames" && ids.length === 1 ? all.find((e) => e.id === ids[0]) : null;
+        let sc = scale ?? 1;
+        if (scale == null) { const xs = els.map((e) => e.x), ys = els.map((e) => e.y); const w = Math.max(1, Math.max(...els.map((e) => e.x + e.width)) - Math.min(...xs)), h = Math.max(1, Math.max(...els.map((e) => e.y + e.height)) - Math.min(...ys)); sc = Math.max(0.1, maxPx / Math.max(w, h)); }
+        const common = {
+          elements: els as never, files: a.getFiles() as never, exportPadding: opts.padding, exportingFrame: (one ?? null) as never,
+          appState: { ...a.getAppState(), exportBackground: opts.bgColor !== null, viewBackgroundColor: opts.bgColor ?? "#ffffff", exportWithDarkMode: opts.theme === "dark" || (opts.theme === "app" && dark), exportScale: sc, exportEmbedScene: opts.embedScene, frameRendering: { enabled: true, name: opts.frameNames, outline: opts.frameNames, clip: true } } as never,
+        };
+        if (format === "svg") { const svg = await exportToSvg(common); return { svg: svg.outerHTML, width: Number(svg.getAttribute("width")) || 800, height: Number(svg.getAttribute("height")) || 600 }; }
+        const blob = await exportToBlob({ ...common, mimeType: "image/png" });
+        const bm = await createImageBitmap(blob);
+        const out = { blob, width: bm.width, height: bm.height };
+        bm.close();
+        return out;
       },
+      source: () => serializeFull(),
     });
   }
+
+  // ------------------------------------------------------------------ lasso actions (34F / 34G / 44I)
+  const lassoSel = () => { const a = api.current!; const s = a.getAppState().selectedElementIds as Record<string, boolean>; return (a.getSceneElements() as El[]).filter((e) => s?.[e.id]); };
+  const selImage = async (els: El[]) => exportToBlob({ elements: els as never, files: api.current!.getFiles() as never, mimeType: "image/png", exportPadding: 16, appState: { exportBackground: true, viewBackgroundColor: "#ffffff", exportWithDarkMode: false } as never });
+  const lassoAction = async (x: LassoAction) => {
+    const a = api.current;
+    if (!a) return;
+    const sel = lassoSel();
+    if (!sel.length) return;
+    switch (x) {
+      case "move": lassoOn.current = false; a.setActiveTool({ type: "selection" }); setTool("select"); toolRef.current = "select"; toast(t("Drag the selection to move it, or use the arrow keys")); return;
+      case "duplicate": key("d"); return;
+      case "group": key("g"); return;
+      case "copy-image": {
+        try { const blob = await selImage(sel); await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]); toast(t("Copied as image")); }
+        catch { toast(t("Couldn't copy the image. Your browser blocked the clipboard.")); }
+        return;
+      }
+      case "shapes": {
+        const all = a.getSceneElementsIncludingDeleted() as El[];
+        const made: El[] = [], gone = new Set<string>();
+        for (const e of sel) {
+          if (e.type !== "freedraw") continue;
+          const rec = recognise(absPoints(e as never));
+          if (!rec) continue;
+          gone.add(e.id);
+          made.push({ ...snappedElement(rec, e), id: rid(), seed: Math.floor(Math.random() * 2 ** 31), version: 1, versionNonce: Math.floor(Math.random() * 2 ** 31), updated: Date.now(), isDeleted: false, boundElements: null, link: null, locked: false, index: null } as unknown as El);
+        }
+        if (!made.length) { toast(t("No shapes recognised in this ink")); return; }
+        commit(a, [...all.map((e) => (gone.has(e.id) ? bump({ ...e, isDeleted: true }) : e)), ...made] as never, "IMMEDIATELY", { selectedElementIds: Object.fromEntries(made.map((m) => [m.id, true])) });
+        setLassoScene(null);
+        toast(t("Converted {n} strokes to shapes", { n: made.length }));
+        return;
+      }
+      case "text": case "math": case "mermaid": {
+        setLassoBusy(x);
+        try {
+          const blob = await selImage(sel);
+          const box = { x: Math.min(...sel.map((e) => e.x)), y: Math.min(...sel.map((e) => e.y)), w: 0, h: 0 };
+          box.w = Math.max(...sel.map((e) => e.x + e.width)) - box.x; box.h = Math.max(...sel.map((e) => e.y + e.height)) - box.y;
+          setReview({ blob, kind: x, ids: sel.map((e) => e.id), box, color: String(sel.find((e) => e.type === "freedraw")?.strokeColor ?? "#1e1e1e") });
+        } finally { setLassoBusy(null); }
+        return;
+      }
+    }
+  };
+  /** Change pen of the selected strokes (keeps their colour, except the highlighter). */
+  const lassoPen = (type: PenType) => {
+    const a = api.current;
+    if (!a) return;
+    const ids = new Set(lassoSel().filter((e) => e.type === "freedraw").map((e) => e.id));
+    if (!ids.size) return toast(t("Select some ink first"));
+    const all = a.getSceneElementsIncludingDeleted() as El[];
+    commit(a, all.map((e) => (ids.has(e.id) ? bump(finishStroke(e, { ...PEN_DEFAULTS[type], color: type === "highlighter" ? PEN_DEFAULTS.highlighter.color : String(e.strokeColor) })) : e)) as never, "IMMEDIATELY");
+  };
+
+  /** AI review result → board (Replace ink / Add next to it), one undo step each. */
+  const applyReview = async (r: AIReviewResult, replace: boolean) => {
+    const a = api.current, rv = review;
+    if (!a || !rv) return;
+    const at = { x: replace ? rv.box.x : rv.box.x + rv.box.w + 40, y: rv.box.y };
+    let skel: Skeleton[];
+    if (r.kind === "mermaid" || r.kind === "shapes-hint") {
+      const { parseMermaidToExcalidraw } = await import("@excalidraw/mermaid-to-excalidraw");
+      const { elements, files } = await parseMermaidToExcalidraw(r.text);
+      if (files) a.addFiles(Object.values(files));
+      skel = elements as Skeleton[];
+    } else {
+      const latex = r.kind === "math";
+      skel = [{ type: "text", x: 0, y: 0, text: r.text, fontSize: 20, fontFamily: latex ? 8 : 5, strokeColor: rv.color, ...(latex ? { customData: { lumenLatex: r.text } } : {}) } as Skeleton];
+    }
+    const conv = convertToExcalidrawElements(skel as never, { regenerateIds: true }) as unknown as El[];
+    const mx = Math.min(...conv.map((e) => e.x)), my = Math.min(...conv.map((e) => e.y));
+    const placed = conv.map((e) => ({ ...e, x: e.x - mx + at.x, y: e.y - my + at.y }));
+    const ids = new Set(rv.ids);
+    const all = a.getSceneElementsIncludingDeleted() as El[];
+    withBoundIds(all, ids);
+    const firstInk = rv.ids.find((id) => all.find((e) => e.id === id)?.type === "freedraw");
+    const kept = all.map((e) => {
+      if (replace && ids.has(e.id)) return bump({ ...e, isDeleted: true });
+      if (!replace && e.id === firstInk && r.kind === "text") return bump({ ...e, customData: { ...((e.customData as object) ?? {}), lumenText: r.text } });
+      return e;
+    });
+    commit(a, [...kept, ...placed] as never, "IMMEDIATELY", { selectedElementIds: Object.fromEntries(placed.map((e) => [e.id, true])) });
+    setLassoScene(null);
+    scheduleSave(200);
+  };
+  const withBoundIds = (all: El[], ids: Set<string>) => { for (const e of all) if (e.containerId && ids.has(e.containerId)) ids.add(e.id); };
+  const openAsArchitecture = async (mermaid: string) => {
+    const [{ createArchNote }, { detectPaste, toDsl }] = await Promise.all([import("../lib/arch-starters"), import("../lib/arch-convert")]);
+    const { dsl, archKind } = toDsl(mermaid, detectPaste(mermaid) ?? "mermaid-flowchart");
+    const n = await createArchNote(archKind ?? "flowchart", note, { title: t("{title} · diagram", { title: note.title }), dsl });
+    openNote(n.id);
+  };
+
+  // ------------------------------------------------------------------ handwriting search (34H)
+  const runHw = async () => {
+    const a = api.current;
+    if (!a) return;
+    await recogniseInk(a, () => scheduleSave(100));
+    const c = countInk(a);
+    setLive({ hwDone: c.done, hwTotal: c.total });
+  };
   const downloadExcalidraw = async () => download(`${note.title}.excalidraw`, await serializeFull(), "application/json");
 
   const openTab = (tb: CodeTab) => {
@@ -693,6 +1034,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     if (first) return;
     if (histOp.current) histOp.current = false; else if (canRedo) setCanRedo(false);
     scheduleSave(900);
+    if (hwRef.current) { clearTimeout(hwTimer.current); hwTimer.current = setTimeout(() => void runHw(), 5000); }
   };
   live.current.onPaste = (ev) => {
     const files = [...(ev?.clipboardData?.files ?? [])].filter(ours);
@@ -703,6 +1045,8 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   live.current.onApi = (a) => {
     api.current = a as API;
     setApiReady(a as API);
+    bindWbApi(a as API, host.current);
+    setTimeout(() => { const c = countInk(a as API); setLive({ hwDone: c.done, hwTotal: c.total }); }, 300);
     if (!pendingDone.current) { pendingDone.current = true; void hydrate(initial.scene.files as Record<string, SceneFile>); setTimeout(() => applyPending(initial.scene), 60); }
   };
   // Note cards link to "lumen:note/<id>": open the note in Lumen instead of a browser tab.
@@ -730,7 +1074,11 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   ), [initialData, dark, embeds, stable]);
 
   // ------------------------------------------------------------------ chrome data
-  const penLook = wbRegistry.penLook?.() ?? { glyph: "pen-fountain", color: shown(penInk.color, dark), label: t("Pen") };
+  void ink;
+  const penLook = wbRegistry.penLook?.() ?? { glyph: "pen-fountain", color: shown(currentPen().color, dark), label: t("Pen") };
+  const inkSel = bar?.mode === "ink" ? (() => { const types = new Set(bar.ids.map((id) => ((api.current?.getSceneElements() as El[] | undefined)?.find((e) => e.id === id)?.customData as { lumenPen?: { type?: PenType } } | undefined)?.lumenPen?.type ?? "fountain")); return types.size === 1 ? [...types][0] : null; })() : null;
+  const inkSelMeta = inkSel ? { glyph: ({ ballpoint: "pen-ballpoint", fountain: "pen-fountain", brush: "pen-brush", marker: "pen-marker", highlighter: "pen-highlighter", pencil: "pen-pencil", calligraphy: "pen-calligraphy", laser: "laser" } as Record<PenType, string>)[inkSel], label: t(inkSel.charAt(0).toUpperCase() + inkSel.slice(1)) } : null;
+  const lassoBar = tool === "lasso" && !!bar?.ids.length;
   const perf = count > PERF_LIMIT && !perfOff;
   const toggleZen = () => api.current?.updateScene({ appState: { zenModeEnabled: !zen } });
   const togglePenMode = () => api.current?.updateScene({ appState: { penMode: !penMode, penDetected: true } });
@@ -743,6 +1091,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     { glyph: "gear", label: t("Board settings"), run: () => openPanel("settings") },
     { glyph: "download", label: t("Download .excalidraw"), run: () => void downloadExcalidraw() },
   ];
+  async function trashBoard() { const title = note.title; await trashNote(note.id); setUI({ noteId: null }); toast(t("“{title}” moved to Trash", { title }), { label: t("Undo"), run: () => { void restoreNote(note.id); openNote(note.id); } }); }
   const menuItems: MenuItem[] = [
     { id: "settings", glyph: "gear", label: t("Board settings"), run: () => openPanel("settings") },
     { id: "layers", glyph: "layers", label: t("Layers"), hint: "L", run: () => openPanel("layers") },
@@ -751,9 +1100,10 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     { id: "export", glyph: "export", label: t("Export…"), hint: "⇧⌘E", run: doExport },
     { id: "convert", glyph: "switch", label: t("Convert to…"), hint: "›", run: () => openPanel("convert") },
     { id: "history", glyph: "history", label: t("History"), run: openHistory },
-    { id: "handwriting", glyph: "searchable", label: t("Handwriting search"), hint: wbRegistry.panels.handwriting ? t("On") : t("Off"), run: () => openPanel("handwriting") },
+    { id: "handwriting", glyph: "searchable", label: t("Handwriting search"), hint: hw ? t("On") : t("Off"), run: () => openPanel("handwriting") },
     { id: "zen", glyph: "zen", label: t("Zen mode"), hint: "⌥Z", on: zen, run: toggleZen },
     { id: "note", glyph: "note", label: t("Note"), hint: "›", run: () => {} },
+    { id: "delete", glyph: "trash", label: kind === "board" ? t("Delete board") : t("Delete whiteboard"), hint: "Shift+Del", run: () => void trashBoard() },
   ];
   const noteItems: MenuItem[] = [
     { id: "pin", glyph: "pin", label: note.pinned ? t("Unpin") : t("Pin"), run: () => void updateNote(note.id, { pinned: note.pinned ? 0 : 1 }) },
@@ -761,7 +1111,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     { id: "props", glyph: "info", label: t("Properties"), run: () => setUI({ panel: "properties" }) },
     { id: "share", glyph: "link", label: t("Share / publish…"), run: () => setShare(true) },
     { id: "dup", glyph: "duplicate", label: t("Duplicate"), run: async () => { const d = await duplicateNote(note.id); if (d) openNote(d.id); } },
-    { id: "trash", glyph: "trash", label: t("Move to trash"), run: async () => { const title = note.title; await trashNote(note.id); setUI({ noteId: null }); toast(t("“{title}” moved to Trash", { title }), { label: t("Undo"), run: () => { void restoreNote(note.id); openNote(note.id); } }); } },
+    { id: "trash", glyph: "trash", label: t("Move to trash"), run: () => void trashBoard() },
   ];
   const dockMoreItems = [
     { glyph: "select", label: t("Select"), run: () => activate("select"), on: tool === "select" },
@@ -779,7 +1129,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     { glyph: "script", label: t("Script"), run: () => openTab("script") },
     { glyph: "export", label: t("Export"), run: doExport },
   ];
-  const showBar = !!bar && !zen && !(phone && dockMore) && !wheel;
+  const showBar = !!bar && !zen && !(phone && dockMore) && !wheel && !lassoBar && !penSheet;
   const empty = count === 0 && tool === "select" && !panel;
   const panelRender = open ? wbRegistry.panels[open] : undefined;
   const drawingPhone = phone && (tool !== "select" && tool !== "hand" || !!bar?.ids.length);
@@ -797,7 +1147,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
           </feComponentTransfer>
         </filter>
       </svg>
-      <BoardHeader crumb={crumb} title={note.title} saved={saved} phone={phone} onBack={() => (canGoBack() ? history.back() : back())}
+      <BoardHeader crumb={crumb} title={note.title} saved={saved} phone={phone} badge={hw ? t("Searchable") : undefined} onBack={() => (canGoBack() ? history.back() : back())}
         buttons={[
           { glyph: "history", tip: t("History"), run: openHistory, on: ui.panel === "versions" },
           { glyph: "layers", tip: t("Layers") + " · L", run: () => openPanel("layers") },
@@ -819,7 +1169,9 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
             e.preventDefault(); e.stopPropagation();
             openWheel(e.clientX, e.clientY);
           }}
+          onDragOverCapture={(e) => { if (wbRegistry.drop && e.dataTransfer.types.includes("application/x-lumen+json")) e.preventDefault(); }}
           onDropCapture={(e) => {
+            if (wbRegistry.drop && api.current && host.current) { const [x, y] = toScene(api.current, host.current, e.clientX, e.clientY); if (wbRegistry.drop(e, { ...ctx, at: { x, y } })) { e.preventDefault(); e.stopPropagation(); return; } }
             // Photos (fast path) and GIF / video / audio (playable embeds) are Lumen's; SVG, .excalidraw and text stay Excalidraw's.
             const files = [...e.dataTransfer.files].filter(ours);
             if (!files.length) return;
@@ -834,19 +1186,33 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
           {!zen && !phone && (
             <Toolbar tool={tool} shape={shape} line={line} arrowType={arrowType} locked={locked} pen={penLook}
               onTool={(id) => activate(id)} onLock={toggleLock} onShape={(s) => activate("shape", { shape: s })} onLine={(l, at) => activate("arrow", { line: l, arrow: at })}
-              more={moreItems} penPopover={wbRegistry.pens?.({ ...ctx, anchor: null, target: "tool" })} shapePopover={wbRegistry.shapes?.({ ...ctx, anchor: null, target: "tool" })} />
+              more={moreItems} penPopover={wbRegistry.pens ? (close) => wbRegistry.pens!({ ...ctx, close, anchor: null, target: "tool" }) : undefined}
+              shapePopover={wbRegistry.shapes ? (close) => wbRegistry.shapes!({ ...ctx, close, anchor: null, target: "tool" }) : undefined}
+              shapeGlyph={/^draw:(rect|ellipse|decision|diamond)$/.test(libPrefs.lastShape) ? undefined : libPrefs.lastShape.startsWith("draw:") ? libPrefs.lastShape.slice(5) : undefined}
+              libPop={(k, close) => (k === "stamps" ? <StampsPopover ctx={{ ...ctx, close }} onPlaced={close} /> : <InsertIconPopover ctx={{ ...ctx, close }} onPlaced={close} />)} />
           )}
           {showBar && bar && (
             <PropertyBar key={bar.ids.join() || bar.mode} mode={bar.mode} style={bar.style} pos={bar.pos} phone={phone} dark={dark} ctx={ctx} onSet={setStyle} onAction={action}
-              penLabel={bar.mode === "ink" && wbRegistry.pens ? t("Pen") : undefined} onPens={wbRegistry.pens ? () => openPanel("pens") : undefined} />
+              penLabel={bar.mode === "ink" ? (inkSelMeta?.label ?? t("Pen")) : undefined} penGlyph={inkSelMeta?.glyph} onPens={() => (phone ? setPenSheet(true) : openPanel("pens"))} />
           )}
+          {lassoBar && !zen && bar && (
+            <LassoBar pos={bar.pos ? { x: Math.max(10, Math.min(bar.pos.x, (host.current?.clientWidth ?? 1200) - 640)), y: bar.pos.y } : null} phone={phone} color={bar.style.strokeColor ? shown(bar.style.strokeColor, dark) : "var(--muted)"} busy={lassoBusy} onAction={(x) => void lassoAction(x)} onPen={lassoPen}
+              recolour={(close) => <ColourPopover api={apiReady} dark={dark} phone={phone} target="stroke" value={bar.style.strokeColor} opacity={bar.style.opacity} exact={bar.style.exact ?? null} onPick={(c) => setStyle({ strokeColor: c })} onOpacity={(n) => setStyle({ opacity: n })} onExact={(v) => setStyle({ exact: v })} onClose={close} />} />
+          )}
+          {tool === "eraser" && !zen && !(phone && dockMore) && <EraserBar phone={phone} />}
+          <span ref={cursorEl} className="pointer-events-none absolute z-20 hidden rounded-full border border-muted" style={{ background: "color-mix(in srgb,var(--muted) 12%,transparent)" }} />
+          {lassoPts.length > 1 && <LassoPath pts={lassoPts} erase={tool === "eraser"} />}
+          {lassoScene && apiReady && tool === "lasso" && <LassoPath pts={lassoScene.map(([x, y]) => toScreen(apiReady, x, y))} />}
+          {!zen && <Ruler host={host.current} />}
+          {snap && <SnapChip x={snap.x} y={snap.y} name={snap.name} onUndo={() => { if (api.current) unsnap(api.current, snap.shapeId, snap.strokeId); setSnap(null); }} onDone={() => setSnap(null)} />}
+          {penSheet && phone && <PenPanel api={apiReady} dark={dark} phone onClose={() => setPenSheet(false)} />}
           {banner && !zen && <Banner {...banner} phone={phone} />}
           {empty && <EmptyBoard kind={kind} phone={phone} onDraw={() => activate("pen")} onCard={() => setPicker(true)} onPaste={() => void pasteImage()} />}
           {picker && <NoteCardPicker phone={phone} exclude={note.id} onPick={addNoteCard} onClose={() => setPicker(false)} />}
           {!zen && <ZoomCluster api={apiReady} zoom={zoom} canRedo={canRedo} onUndo={undo} onRedo={redo} />}
           {!zen && minimap && <Minimap api={apiReady} tick={tick} />}
           {!zen && !empty && <FrameChip api={apiReady} count={frameCount} tick={tick} minimap={minimap} onMinimap={toggleMinimap} onFrames={() => openPanel("frames")} />}
-          {wheel && <ToolWheel x={wheel.x} y={wheel.y} slots={wheel.slots} current={tool} penColor={shown(penInk.color, dark)} hlColor={hlInk.color} onPick={pickSlot} onUndo={undo} onRedo={redo} onClose={() => setWheel(null)} />}
+          {wheel && <ToolWheel x={wheel.x} y={wheel.y} slots={wheel.slots} current={tool} penColor={shown(currentPen().color, dark)} hlColor={hlPen().color} onPick={pickSlot} onUndo={undo} onRedo={redo} onClose={() => setWheel(null)} />}
 
           {/* Phone: undo/redo top-start while drawing, pen-mode rule chip top-end, dock at the bottom */}
           {phone && !panel && (
@@ -857,9 +1223,9 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
                   <button type="button" aria-label={t("Redo")} onClick={redo} className={cx("flex size-11 items-center justify-center rounded-[12px] border border-line bg-surface", !canRedo && "text-muted")}><Glyph name="redo" size={20} /></button>
                 </div>
               )}
-              {penMode && <div data-wb-chrome className="absolute end-3 top-3 z-20 flex h-8 items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 text-[11.5px] text-muted">{t("Stylus draws · finger pans")}</div>}
-              <PhoneDock tool={tool} penGlyph={penLook.glyph} penColor={penLook.color} more={dockMoreItems} moreOpen={dockMore} onMore={setDockMore}
-                onTool={(id) => (id === tool && id !== "hand" && id !== "select" ? activate("select") : activate(id))} />
+              {penMode && <button type="button" data-wb-chrome title={t("Turn pen mode off")} onClick={togglePenMode} className="absolute end-3 top-3 z-20 flex h-8 items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 text-[11.5px] text-muted">{t("Stylus draws · finger pans")}</button>}
+              <PhoneDock tool={tool} penGlyph={penLook.glyph} penColor={penLook.color} more={dockMoreItems} moreOpen={dockMore} onMore={setDockMore} onPenSheet={() => { if (tool !== "pen") activate("pen"); setPenSheet(true); }}
+                onTool={(id) => (id === "shape" ? openPanel("library") : id === tool && id !== "hand" && id !== "select" ? activate("select") : activate(id))} />
             </>
           )}
           {panelRender && <div data-wb-chrome className="contents">{panelRender(ctx)}</div>}
@@ -904,6 +1270,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
         )}
       </div>
 
+      {review && <AIReview image={review.blob} kind={review.kind} phone={phone} onReplace={(r) => void applyReview(r, true)} onAdd={(r) => void applyReview(r, false)} onOpenAsArchitecture={(m) => void openAsArchitecture(m)} onClose={() => setReview(null)} />}
       <ShareSheet target={{ kind: "note", note }} open={share} onClose={() => setShare(false)} />
       {mermaidOpen && <MermaidDialog dark={dark} onClose={() => setMermaidOpen(false)} onAdd={(c, o) => fromMermaid(c, o)} />}
     </div>

@@ -33,7 +33,10 @@ export function parseScene(text: string): { scene: Scene; error: string | null }
 /** Plain text in a whiteboard (for search and previews). */
 export function sceneText(body: string) {
   try {
-    return ((JSON.parse(body) as Scene).elements ?? []).filter((e) => !e.isDeleted && typeof e.text === "string").map((e) => e.text as string).join("\n");
+    // text elements, plus handwriting the vision model read (W2-A: customData.lumenText on ink strokes)
+    return ((JSON.parse(body) as Scene).elements ?? []).filter((e) => !e.isDeleted)
+      .map((e) => (typeof e.text === "string" ? e.text : (e.customData as { lumenText?: unknown } | undefined)?.lumenText))
+      .filter((x): x is string => typeof x === "string" && !!x).join("\n");
   } catch { return ""; }
 }
 

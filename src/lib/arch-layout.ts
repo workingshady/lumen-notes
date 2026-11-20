@@ -97,7 +97,7 @@ export async function elkLayout(c: ArchCanvas, o: LayoutOpts): Promise<ArchCanva
     const r = routes.get(e.id);
     if (!r) return e;
     const { fromSide: _a, toSide: _b, ...rest } = e;
-    return { ...rest, lumenEdge: { ...(e.lumenEdge ?? {}), shape: "orthogonal", points: r, pointsKey: "" } };
+    return { ...rest, lumenEdge: { ...(e.lumenEdge ?? {}), shape: "orthogonal", manual: undefined, points: r, pointsKey: "" } };
   }) };
   // stamp keys after positions are final
   next = { ...next, edges: next.edges.map((e) => (e.lumenEdge?.points && routes.has(e.id) ? { ...e, lumenEdge: { ...e.lumenEdge, pointsKey: routeKey(next, e.fromNode, e.toNode) } } : e)) };

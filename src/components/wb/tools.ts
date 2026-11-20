@@ -64,4 +64,4 @@ export const LUMEN_INK_LIGHT = ["#1e1e1e", "#6A655C", "#C42B2B", "#B45F0E", "#A8
 /** Sticky paper colours (also fills). */
 export const PAPER = ["#fff3bf", "#d3f9d8", "#d0ebff", "#ffd8a8", "#eebefa", "#ffc9c9"];
 /** What a stored colour looks like on screen: the dark theme flips near-black ink to light (see the ink filter). */
-export const shown = (c: string, dark: boolean) => (dark && /^#(1e1e1e|000000|000)$/i.test(c) ? "#E8E6E1" : c);
+export const shown = (c: string, dark: boolean) => (dark && /^#1e1e1e$/i.test(c) ? "#E8E6E1" : c);

@@ -23,7 +23,11 @@ import { ar as canvasOptions } from "./ar/canvas-options"; // canvas options (ro
 import { ar as visualChooser } from "./ar/visual-chooser"; // round 7: New visual chooser + templates gallery
 import { ar as aiVisual } from "./ar/ai-visual"; // round 7: AI review sheet + architecture AI
 import { ar as whiteboard } from "./ar/whiteboard"; // round 7 whiteboard shell (W1-A)
+import { ar as wbPens } from "./ar/wb-pens"; // round 7 pens, palettes, lasso (W2-A)
+import { ar as dnd } from "./ar/dnd"; // drag and drop (round 7, W2-C)
+import { ar as library } from "./ar/library"; // shared library, connector / style popovers, stamps (round 7, W2-B)
 import { ar as arch } from "./ar/arch"; // architecture studio (round 7)
+import { ar as archEdges } from "./ar/arch-edges"; // architecture edge editing (round 7 W2-D)
 import { ar as api } from "./ar/api"; // Settings › Developer endpoints // round 6: note list filter/multi-select, tags, history panel
 
 /**
@@ -31,4 +35,4 @@ import { ar as api } from "./ar/api"; // Settings › Developer endpoints // rou
  * Split by area so several people can add strings without conflicts; later areas override earlier ones on a clash.
  * Product names (Lumen) and technical terms Arabic users expect in English (Markdown, PDF, FSRS, JSON, URL) stay as is.
  */
-export const AR: Catalog = { ...arch, ...aiVisual, ...activity, ...scale, ...shell, ...home, ...workspace, ...editor, ...paths, ...review, ...settings, ...data, ...dialogs, ...imports, ...accounts, ...sweep, ...r6b, ...r6a, ...organize, ...api, ...canvas, ...whiteboard, ...canvasOptions, ...exportAr, ...common, ...visualChooser };
+export const AR: Catalog = { ...dnd, ...library, ...arch, ...archEdges, ...aiVisual, ...activity, ...scale, ...shell, ...home, ...workspace, ...editor, ...paths, ...review, ...settings, ...data, ...dialogs, ...imports, ...accounts, ...sweep, ...r6b, ...r6a, ...organize, ...api, ...canvas, ...wbPens, ...whiteboard, ...canvasOptions, ...exportAr, ...common, ...visualChooser };

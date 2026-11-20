@@ -24,10 +24,12 @@ const HBtn = ({ glyph, label, tip, onClick, on, primary }: { glyph: string; labe
   </button>
 );
 
-export function BoardHeader({ crumb, title, saved, phone, buttons, onBack, right }: {
+export function BoardHeader({ crumb, title, saved, phone, buttons, onBack, right, badge }: {
   crumb: string; title: string; saved: { text: string; color: string }; phone: boolean;
   buttons: { glyph: string; label?: string; tip: string; run: () => void; on?: boolean; primary?: boolean }[];
   onBack?: () => void; right?: ReactNode;
+  /** Handwriting search badge (34H): "Searchable". */
+  badge?: string;
 }) {
   if (phone) return (
     <header data-wb-chrome className="safe-t flex h-[52px] shrink-0 items-center gap-2.5 border-b border-line bg-bg px-2.5">
@@ -45,6 +47,7 @@ export function BoardHeader({ crumb, title, saved, phone, buttons, onBack, right
       <span className="text-muted">/</span>
       <span dir="auto" className="truncate text-[13.5px] font-semibold">{title}</span>
       <span className="flex items-center gap-1.5 whitespace-nowrap text-[12px]" style={{ color: saved.color }}><span className="size-1.5 rounded-full" style={{ background: saved.color }} />{saved.text}</span>
+      {badge && <span title={badge} className="whitespace-nowrap rounded-full border border-line px-2 py-0.5 text-[11px] text-muted">{badge}</span>}
       <span className="flex-1" />
       {buttons.map((b) => <HBtn key={b.tip} glyph={b.glyph} label={b.label} tip={b.tip} onClick={b.run} on={b.on} primary={b.primary} />)}
     </header>

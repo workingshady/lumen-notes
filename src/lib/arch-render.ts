@@ -3,11 +3,14 @@ import type { DiagramExportPrefs } from "./settings";
 import type { BuiltSvg } from "./diagram-export";
 import { GLYPHS } from "./glyphs";
 import { displayOf, edgeSides, endsOf, groupColor, hiddenBy, isGroup, nodeColor, STATUS, EDGE_STYLE, type AEdge, type ANode, type ArchCanvas } from "./arch-model";
-import { portAt, route, type Route } from "./arch-route";
+import { portAt, route, type Pt, type Route } from "./arch-route";
+import type { Side } from "../../shared/types";
 import { routeKey } from "./arch-layout";
+import { chipOf, labelLook, labelSpots, lblStyle } from "./arch-label";
 
 /** Endpoints of an edge on the board: hidden ends (inside a collapsed group) attach to that group. */
-export function edgeRoute(c: ArchCanvas, e: AEdge, by: Map<string, ANode>): (Route & { from: string; to: string }) | null {
+export interface RouteSrc { p: Pt; ps: Side; q: Pt; qs: Side; shape: "orthogonal" | "straight" | "curved"; ends: { start: boolean; end: boolean } }
+export function edgeRoute(c: ArchCanvas, e: AEdge, by: Map<string, ANode>): (Route & { from: string; to: string; fs: Side; ts: Side; src: RouteSrc }) | null {
   const fromId = hiddenBy(c, e.fromNode) ?? e.fromNode, toId = hiddenBy(c, e.toNode) ?? e.toNode;
   if (fromId === toId) return null;
   const a = by.get(fromId), b = by.get(toId);
@@ -16,9 +19,11 @@ export function edgeRoute(c: ArchCanvas, e: AEdge, by: Map<string, ANode>): (Rou
   const fs = fromId === e.fromNode && e.fromSide ? e.fromSide : auto[0];
   const ts = toId === e.toNode && e.toSide ? e.toSide : auto[1];
   const le = e.lumenEdge;
-  const pts = le?.points && le.pointsKey && fromId === e.fromNode && toId === e.toNode && le.pointsKey === routeKey(c, e.fromNode, e.toNode) ? le.points : undefined;
+  const manual = !!le?.manual && !!le.points && fromId === e.fromNode && toId === e.toNode;
+  const pts = manual ? le!.points : le?.points && le.pointsKey && fromId === e.fromNode && toId === e.toNode && le.pointsKey === routeKey(c, e.fromNode, e.toNode) ? le.points : undefined;
   const ends = endsOf(e);
-  return { ...route(portAt(a, fs), fs, portAt(b, ts), ts, le?.shape ?? "orthogonal", { start: ends === "both", end: ends !== "none" }, pts), from: fromId, to: toId };
+  const src: RouteSrc = { p: portAt(a, fs), ps: fs, q: portAt(b, ts), qs: ts, shape: le?.shape ?? "orthogonal", ends: { start: ends === "both", end: ends !== "none" } };
+  return { ...route(src.p, fs, src.q, ts, src.shape, src.ends, pts, manual), from: fromId, to: toId, fs, ts, src };
 }
 
 const PAL = {
@@ -61,7 +66,15 @@ export async function archSvg(c: ArchCanvas, p: DiagramExportPrefs): Promise<Bui
     const [col, dash] = EDGE_STYLE[e.lumenEdge?.style ?? "sync"];
     const cc = vars(col);
     out.push(`<path d="${r.d}" fill="none" stroke="${cc}" stroke-width="1.6" stroke-linejoin="round"${dash !== "none" ? ` stroke-dasharray="${dash}"` : ""}/>`, ...r.heads.map((h) => `<path d="${h}" fill="${cc}"/>`));
-    if (e.label) { const w = e.label.length * 6.4 + 10; out.push(`<rect x="${r.mid.x - w / 2}" y="${r.mid.y - 8}" width="${w}" height="16" rx="4" fill="${P.bg}"/><text x="${r.mid.x}" y="${r.mid.y + 3.5}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="500" fill="${P.mu}">${xml(e.label)}</text>`); }
+    for (const sp of labelSpots(e, r)) {
+      const ls = lblStyle(e), look = labelLook(ls), chip = sp.part === "mid" ? chipOf(e) : "";
+      const cw = chip ? chip.length * 5.6 + 14 : 0, tw = sp.text.length * look.fs * 0.61, w = tw + (sp.text ? 12 : 0) + (chip && sp.text ? 6 : 0) + cw, h = look.fs + 6;
+      const bgc = vars(look.bg), bd = look.border.includes("transparent") ? "none" : P.bd;
+      const tf = sp.angle ? ` transform="rotate(${sp.angle} ${sp.x} ${sp.y})"` : "";
+      out.push(`<g${tf}><rect x="${sp.x - w / 2}" y="${sp.y - h / 2}" width="${w}" height="${h}" rx="${Math.min(look.radius, h / 2)}" fill="${bgc}"${bd !== "none" ? ` stroke="${bd}"` : ""}/>`
+        + (sp.text ? `<text x="${sp.x - w / 2 + 6}" y="${sp.y + look.fs * 0.35}" font-family="JetBrains Mono, monospace" font-size="${look.fs}" font-weight="${look.fw}" fill="${vars(look.color)}">${xml(sp.text)}</text>` : "")
+        + (chip ? `<rect x="${sp.x + w / 2 - cw - 3}" y="${sp.y - 7}" width="${cw}" height="14" rx="7" fill="${P.sf2}" stroke="${P.bd}"/><text x="${sp.x + w / 2 - cw / 2 - 3}" y="${sp.y + 3}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9.5" fill="${P.mu}">${xml(chip)}</text>` : "") + "</g>");
+    }
   }
   for (const n of shown.filter((x) => !isGroup(x) || x.lumenGroup?.collapsed)) {
     const col = isGroup(n) ? groupColor(n) : nodeColor(n);

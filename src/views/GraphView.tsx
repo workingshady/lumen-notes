@@ -5,7 +5,8 @@ import { graphSvg } from "../lib/visual-export";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Note } from "../../shared/types";
 import { matcher, parseQuery } from "../lib/search";
-import { go, openNote, toast, useUI, useVault } from "../lib/store";
+import { getVault, go, openNote, toast, useUI, useVault } from "../lib/store";
+import { linksAmong, startPointerDrag } from "../lib/dnd";
 import { sharedTagEdges, tagNodeEdges } from "../lib/graph-tags";
 import { tidy, type LNode, type TidyMode } from "../lib/graph-layout";
 import { vaultChecks } from "../lib/graph-checks";
@@ -975,6 +976,19 @@ export function Canvas2D({ nodes, links, focus, onOpen, selected, onSelect, onSe
             const cx = (a.x + b.x) / 2 - r.left, cy = (a.y + b.y) / 2 - r.top;
             s.k = k; s.x = cx - ((p.cx - p.x) * k) / p.k; s.y = cy - ((p.cy - p.y) * k) / p.k;
             return;
+          }
+          // Drag a note out of the graph (beyond its edge, or with Alt held) onto a canvas / board: the typed graph-nodes payload (lib/dnd.ts). Shift adds the neighbours.
+          if (s.drag?.note && s.moved && e.pointerType !== "touch") {
+            const r = ref.current!.getBoundingClientRect();
+            if (e.altKey || e.clientX < r.left - 10 || e.clientX > r.right + 10 || e.clientY < r.top - 10 || e.clientY > r.bottom + 10) {
+              const d = s.drag, v = getVault();
+              const ids = [d.note!.id];
+              if (e.shiftKey) for (const id of [...(v.outlinks.get(d.note!.id) ?? []), ...(v.backlinks.get(d.note!.id) ?? [])]) if (!ids.includes(id) && v.byId.get(id)) ids.push(id);
+              if (s.dragFixed) { d.x = d.fx!; d.y = d.fy!; } else { d.fx = null; d.fy = null; s.sim?.alphaTarget(0); }
+              s.drag = null; s.pan = null;
+              startPointerDrag({ kind: "graph-nodes", ids, edges: linksAmong(ids) }, e);
+              return;
+            }
           }
           if (s.drag) { const p = toWorld(e); s.drag.fx = p.x; s.drag.fy = p.y; if (s.dragFixed) { s.drag.x = p.x; s.drag.y = p.y; s.animT++; } s.moved = true; }
           else if (s.pan) { s.x = e.clientX - s.pan.x; s.y = e.clientY - s.pan.y; s.moved = true; }

@@ -29,6 +29,7 @@ import { openTag, tagTree, useTagMeta, type TagNode } from "../lib/tag-tree";
 import { openTagMenu } from "./TagPage";
 import { ITEMS, SECTIONS, SidebarOverlays, WIDTH, getSb, openSidebarCustomise, setSb, useSb, type ItemKey, type SectionKey } from "./sidebar-r6";
 import { isWbType } from "../../shared/types";
+import { setDrag } from "../lib/dnd";
 import "../lib/ai-usage"; // registers the AI usage listener at startup (Settings › AI meter)
 
 /** Space kind labels, translated on read (getters), so `KIND_LABEL[k]` is already in the interface language. */
@@ -404,7 +405,7 @@ function NoteRow({ n, indent = 0 }: { n: Note; indent?: number }) {
   const ui = useUI();
   const on = ui.noteId === n.id && ui.view === "notes";
   const g = isWbType(n.type) ? "whiteboard" : n.type === "canvas" ? "canvas" : n.type === "path" ? "path" : "lesson";
-  return <Row glyph={g} label={n.title || t("Untitled")} title={n.title} active={on} indent={indent} onClick={() => openNote(n.id)} dragProps={{ draggable: true, onDragStart: (e) => dragNote(e, n.id) }} />;
+  return <Row glyph={g} label={n.title || t("Untitled")} title={n.title} active={on} indent={indent} onClick={() => openNote(n.id)} dragProps={{ draggable: true, onDragStart: (e) => dragNote(e, n.id), "data-dnd-note": n.id } as React.HTMLAttributes<HTMLButtonElement> & { draggable?: boolean }} />;
 }
 
 function Favourites({ closed }: { closed: boolean }) {
@@ -593,7 +594,7 @@ function SpaceSwitcher({ onClose, rail }: { onClose: () => void; rail?: boolean 
 // ------------------------------------------------------------------ folders (drag notes in, ⋯ menu with colour row)
 const DRAG = "application/x-lumen";
 type DragData = { kind: "note" | "folder"; id: string };
-export const dragNote = (e: React.DragEvent, id: string) => { e.dataTransfer.setData(DRAG, JSON.stringify({ kind: "note", id })); e.dataTransfer.effectAllowed = "move"; };
+export const dragNote = (e: React.DragEvent, id: string) => { e.dataTransfer.setData(DRAG, JSON.stringify({ kind: "note", id })); setDrag(e, { kind: "note", id }); e.dataTransfer.effectAllowed = "copyMove"; }; // + the typed payload for boards (lib/dnd.ts)
 
 function Folders({ closed }: { closed: boolean }) {
   const ui = useUI();

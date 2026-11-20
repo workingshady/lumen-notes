@@ -7,6 +7,8 @@ import { Glyph } from "../Glyph";
 import { cx } from "../ui";
 import { wbRegistry, type WbCtx } from "./hooks";
 import { LUMEN_INK_DARK, LUMEN_INK_LIGHT, PAPER, shown } from "./tools";
+import { pxToSw, swToPx, THICK_PRESETS } from "./pens/model";
+import { libraryPopover } from "../library/register";
 import { AC_BG, Choices, Label, Pop, Row, Swatch } from "./ui";
 
 export type BarMode = "shape" | "line" | "ink" | "sticky" | "text" | "media" | "tool-ink" | "tool-shape" | "tool-line" | "tool-text";
@@ -14,6 +16,8 @@ export type Style = {
   strokeColor: string | null; backgroundColor: string | null; fillStyle: string | null; strokeWidth: number | null; strokeStyle: string | null;
   roughness: number | null; roundness: "round" | "sharp" | null; fontFamily: number | null; fontSize: number | null; textAlign: string | null;
   opacity: number | null; startArrowhead: string | null; endArrowhead: string | null; arrowType: string | null; link: string | null; locked: boolean;
+  /** W2-A: customData.lumenExact on every selected element (keep exact colour in dark theme). */
+  exact?: boolean | null;
 };
 export type Action = "front" | "forward" | "backward" | "back" | "group" | "ungroup" | "duplicate" | "delete" | "lock" | "align-left" | "align-center" | "align-right" | "align-top" | "align-middle" | "align-bottom";
 
@@ -24,9 +28,9 @@ const fontName = (f: number | null) => t(FONTS.find(([v]) => v === f)?.[1] ?? (f
 
 type Key = "stroke" | "fill" | "fillStyle" | "width" | "rough" | "edges" | "font" | "size" | "opacity" | "arrange" | "link" | "more" | "heads" | "type";
 
-export function PropertyBar({ mode, style, pos, phone, dark, ctx, onSet, onAction, penLabel, onPens }: {
+export function PropertyBar({ mode, style, pos, phone, dark, ctx, onSet, onAction, penLabel, penGlyph, onPens }: {
   mode: BarMode; style: Style; pos: { x: number; y: number } | null; phone: boolean; dark: boolean; ctx: WbCtx;
-  onSet: (p: Partial<Style>) => void; onAction: (a: Action) => void; penLabel?: string; onPens?: () => void;
+  onSet: (p: Partial<Style>) => void; onAction: (a: Action) => void; penLabel?: string; penGlyph?: string; onPens?: () => void;
 }) {
   const [open, setOpen] = useState<Key | null>(null);
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
@@ -48,7 +52,7 @@ export function PropertyBar({ mode, style, pos, phone, dark, ctx, onSet, onActio
   const S = () => <span aria-hidden className="mx-[3px] h-5 w-px shrink-0 bg-line" />;
 
   const colours = (target: "stroke" | "fill") => {
-    if (wbRegistry.palette) return wbRegistry.palette({ ...ctx, close, anchor, target });
+    if (wbRegistry.palette) return wbRegistry.palette({ ...ctx, dark, phone, style, setStyle: onSet, close, anchor, target });
     const cur = target === "stroke" ? style.strokeColor : style.backgroundColor;
     const list = target === "stroke" ? ink : ["transparent", ...PAPER, ...ink.slice(1)];
     return (
@@ -69,19 +73,21 @@ export function PropertyBar({ mode, style, pos, phone, dark, ctx, onSet, onActio
       <span className="w-10 text-end text-[12px] tabular-nums text-muted">{v}{unit}</span>
     </div>
   );
-  const widths: [number, string, string][] = mode === "ink" || mode === "tool-ink" ? [[1, "stroke-thin", "1 px"], [2, "stroke-solid", "2 px"], [4, "stroke-bold", "4 px"], [8, "stroke-bold", "8 px"], [16, "stroke-bold", "16 px"]] : [[1, "stroke-thin", t("Thin")], [2, "stroke-solid", t("Bold")], [4, "stroke-bold", t("Extra bold")]];
+  const inkMode = mode === "ink" || mode === "tool-ink";
+  const widths: [number, string, string][] = inkMode ? THICK_PRESETS.map((px) => [pxToSw(px), "stroke-solid", px + " px"] as [number, string, string]) : [[1, "stroke-thin", t("Thin")], [2, "stroke-solid", t("Bold")], [4, "stroke-bold", t("Extra bold")]];
 
   const body = (): ReactNode => {
+    if (!(inkMode && open === "width")) { const lib = libraryPopover(open, mode, { ...ctx, dark, phone, style, setStyle: onSet, close }); if (lib) return lib; }
     switch (open) {
       case "stroke": return colours("stroke");
       case "fill": return colours("fill");
       case "fillStyle": return <div className="p-1"><Label>{t("Fill style")}</Label><Choices value={style.fillStyle} onPick={(v) => onSet({ fillStyle: v })} items={[["hachure", "fill-hachure", t("Hachure")], ["cross-hatch", "fill-crosshatch", t("Cross-hatch")], ["solid", "fill-solid", t("Solid")], ["zigzag", "fill-zigzag", t("Zigzag")]]} /></div>;
       case "width": return (
         <div className="flex flex-col gap-2 p-1">
-          <Label right={style.strokeWidth != null ? `${style.strokeWidth} px` : "—"}>{t("Thickness")}</Label>
+          <Label right={style.strokeWidth != null ? `${inkMode ? swToPx(style.strokeWidth) : style.strokeWidth} px` : "—"}>{t("Thickness")}</Label>
           <div className="flex gap-1">{widths.map(([v, , tip]) => (
-            <button key={v} type="button" title={tip} onClick={() => onSet({ strokeWidth: v })} className={cx("flex h-[32px] min-w-[36px] items-center justify-center rounded-[8px] border", style.strokeWidth === v ? "border-accent" : "border-line hover:bg-surface-2")} style={style.strokeWidth === v ? { background: AC_BG } : undefined}>
-              <span className="rounded-full bg-ink" style={{ width: Math.max(4, Math.min(16, v + 2)), height: Math.max(4, Math.min(16, v + 2)) }} />
+            <button key={v} type="button" title={tip} onClick={() => onSet({ strokeWidth: v })} className={cx("flex h-[32px] min-w-[36px] items-center justify-center rounded-[8px] border", Math.abs((style.strokeWidth ?? -9) - v) < 0.01 ? "border-accent" : "border-line hover:bg-surface-2")} style={Math.abs((style.strokeWidth ?? -9) - v) < 0.01 ? { background: AC_BG } : undefined}>
+              <span className="rounded-full bg-ink" style={{ width: inkMode ? Math.max(4, Math.min(16, swToPx(v))) : Math.max(4, Math.min(16, v + 2)), height: inkMode ? Math.max(4, Math.min(16, swToPx(v))) : Math.max(4, Math.min(16, v + 2)) }} />
             </button>))}</div>
           {mode !== "ink" && mode !== "tool-ink" && <><Label>{t("Stroke style")}</Label><Choices value={style.strokeStyle} onPick={(v) => onSet({ strokeStyle: v })} items={[["solid", "stroke-solid", t("Solid")], ["dashed", "stroke-dashed", t("Dashed")], ["dotted", "stroke-dotted", t("Dotted")]]} /></>}
         </div>
@@ -151,8 +157,8 @@ export function PropertyBar({ mode, style, pos, phone, dark, ctx, onSet, onActio
     if (!tool) push(<S key="3" />, ...arrange, ...tail);
   } else if (mode === "ink" || mode === "tool-ink") {
     push(<Btn key="s" k="stroke" sw={style.strokeColor} tip={t("Colour")} />);
-    if (penLabel && onPens) push(<button key="pen" type="button" title={t("Change pen")} onClick={onPens} className="flex h-[30px] items-center gap-[5px] rounded-[7px] px-[6px] text-[12px] hover:bg-surface"><Glyph name="pen-fountain" size={17} />{penLabel}</button>);
-    push(<Btn key="w" k="width" glyph="stroke-solid" label={tool ? `${style.strokeWidth ?? 2} px` : String(style.strokeWidth ?? "—")} tip={t("Thickness")} />, <Btn key="o" k="opacity" glyph="opacity" label={tool ? `${style.opacity ?? 100}%` : undefined} tip={t("Opacity")} />);
+    if (penLabel && onPens) push(<button key="pen" type="button" title={t("Change pen")} onClick={onPens} className="flex h-[30px] items-center gap-[5px] rounded-[7px] px-[6px] text-[12px] hover:bg-surface"><Glyph name={penGlyph ?? "pen-fountain"} size={17} />{penLabel}</button>);
+    push(<Btn key="w" k="width" glyph="stroke-solid" label={style.strokeWidth == null ? "—" : tool ? `${swToPx(style.strokeWidth)} px` : String(swToPx(style.strokeWidth))} tip={t("Thickness")} />, <Btn key="o" k="opacity" glyph="opacity" label={tool ? `${style.opacity ?? 100}%` : undefined} tip={t("Opacity")} />);
     if (tool && wbRegistry.inkExtras) push(<S key="x" />, <span key="ex" className="contents">{wbRegistry.inkExtras(ctx)}</span>);
     if (!tool) push(<S key="3" />, ...arrange, tail[1]);
   } else if (mode === "sticky") {
@@ -173,7 +179,9 @@ export function PropertyBar({ mode, style, pos, phone, dark, ctx, onSet, onActio
       className={cx("absolute z-30 flex max-w-[calc(100%-20px)] flex-wrap items-center gap-[2px] whitespace-nowrap rounded-[10px] border border-line bg-surface-2 p-1 shadow-[0_10px_28px_rgba(0,0,0,.3)]", phone ? "inset-x-[10px] bottom-[calc(96px+env(safe-area-inset-bottom))] w-fit max-w-none" : "")}
       style={phone ? undefined : pos ? { left: pos.x, top: pos.y } : { left: "50%", top: 64, transform: "translateX(-50%)" }}>
       {items}
-      {open && <Pop onClose={close} className={phone ? "bottom-[calc(100%+8px)] start-0" : popUp ? "bottom-[calc(100%+8px)] start-0" : "start-0 top-[calc(100%+8px)]"}>{body()}</Pop>}
+      {open && (open === "stroke" || open === "fill") && wbRegistry.palette
+        ? <div className={phone ? "" : popUp ? "absolute bottom-[calc(100%+6px)] start-0 z-40 [&>[role=dialog]]:bottom-0" : "absolute start-0 top-[calc(100%+6px)] z-40"}>{body()}</div>
+        : open && <Pop onClose={close} className={phone ? "bottom-[calc(100%+8px)] start-0" : popUp ? "bottom-[calc(100%+8px)] start-0" : "start-0 top-[calc(100%+8px)]"}>{body()}</Pop>}
     </div>
   );
 }

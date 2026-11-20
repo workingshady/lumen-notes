@@ -32,7 +32,20 @@ export interface LumenNode {
   zoom?: string;
 }
 export interface LumenGroup { kind: string; parent?: string; collapsed?: boolean; name?: string; icon?: string; /** DSL label: shown after the kind ("region · eu-west-1"). */ sub?: string }
-export interface LumenEdge { style?: EdgeStyle; shape?: EdgeShape; protocol?: string; port?: number; points?: { x: number; y: number }[]; pointsKey?: string }
+export type LabelStyleKind = "plain" | "pill" | "boxed";
+export type LabelPlace = "on" | "above" | "below";
+/** Look of an edge label (JSON only; the DSL keeps just the middle text). */
+export interface LabelStyle { kind?: LabelStyleKind; size?: NodeSize; color?: string; bg?: string; bold?: boolean; place?: LabelPlace; follow?: boolean; hidden?: boolean; chip?: boolean }
+export interface LumenEdge {
+  style?: EdgeStyle; shape?: EdgeShape; protocol?: string; port?: number; points?: { x: number; y: number }[]; pointsKey?: string;
+  /** User-shaped route: `points` are the interior bend points only; both ends keep following their ports. */
+  manual?: boolean;
+  /** Label position along the route, 0 (start) to 1 (end); unset = the route's natural middle. */
+  labelPos?: number;
+  /** Extra labels at the ends; the middle text lives in the edge `label` (the DSL text) and is mirrored here. */
+  labels?: { start?: string; mid?: string; end?: string };
+  labelStyle?: LabelStyle;
+}
 
 export type ANode = CanvasNode & { lumenNode?: LumenNode; lumenGroup?: LumenGroup };
 export type AEdge = CanvasEdge & { lumenEdge?: LumenEdge };

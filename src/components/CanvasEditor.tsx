@@ -37,7 +37,11 @@ import { openNote, setUI, toast, useVault } from "../lib/store";
 import { canvasToSkeleton, type Skeleton } from "../lib/whiteboard";
 import { plainExcerpt } from "./nav-text";
 import { Preview } from "./Preview";
+import { useCustomPaletteMap } from "./wb/palette/palettes";
 import { HL_MIME, hlDropNode, PdfFileCard, PdfHighlightCard } from "./pdf-canvas";
+import { registerZone } from "../lib/dnd";
+import { canvasZone } from "./dnd/canvas-drop";
+import { DndHost } from "./dnd/DndHost";
 import { parseHlCard } from "../lib/pdf-format";
 import { cx, relTime, STATUS_COLOR } from "./ui";
 import {
@@ -235,7 +239,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
     </>
   );
   const { title, body } = splitTitle(n.text);
-  const rich = /\$|\*\*|`|\[\[|^\s*([-*>]|\d+\.)\s/m.test(body);
+  const rich = /\$|\*\*|`|\[\[|!?\[[^\]]*\]\(att:|^\*[^*\n]+\* · |^\s*([-*>]|\d+\.)\s/m.test(body); // + attachments dropped onto the board (lib/dnd.ts) and their progress line
   return (
     <>
       <NodeResizer isVisible={!!selected && !isLocked(n)} minWidth={120} minHeight={50} {...RESIZER} />
@@ -337,11 +341,15 @@ const LinkNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
   let host = n.url;
   try { host = new URL(n.url).hostname.replace(/^www\./, ""); } catch { /* keep */ }
   const badge = host.split(".")[0].slice(0, 2).toUpperCase();
+  const embed = (n as unknown as { lumenEmbed?: string }).lumenEmbed; // YouTube / Vimeo dropped from the browser: a live player (lib/dnd.ts)
   return (
     <>
       <NodeResizer isVisible={!!selected && !isLocked(n)} minWidth={140} minHeight={50} {...RESIZER} />
       <Handles n={n} />
       <CardShell n={n} selected={!!selected}>
+        {embed ? (
+          <iframe src={embed} title={meta?.title || host} loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture; fullscreen" allowFullScreen className="nodrag h-full w-full rounded-[inherit] border-0" />
+        ) : (
         <a href={n.url} target="_blank" rel="noopener noreferrer" className="nodrag flex h-full items-center gap-3 p-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-[8px] text-[13px] font-bold text-white" style={{ background: BADGE }}>{badge}</span>
           <span className="flex min-w-0 flex-col gap-[3px]">
@@ -349,6 +357,7 @@ const LinkNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
             <span className="flex min-w-0 items-center gap-1 text-[12px] text-link"><Link2 size={12} className="shrink-0" /><span className="truncate">{n.url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}</span></span>
           </span>
         </a>
+        )}
       </CardShell>
     </>
   );
@@ -489,6 +498,7 @@ function ZoomPill() {
 
 function Inner({ note }: { note: Note }) {
   const v = useVault();
+  const customPalettes = useCustomPaletteMap(); // W2-A: synced custom palettes for the colour options
   const initial = useMemo(() => parseCanvas(note.body), []); // eslint-disable-line react-hooks/exhaustive-deps
   const flow = useMemo(() => toFlow(initial.canvas), [initial]);
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(flow.nodes);
@@ -652,6 +662,31 @@ function Inner({ note }: { note: Note }) {
     if (node.type !== "group") node = setFill(setBorder(setShape(node, defNode.shape), defNode.border), defNode.fill);
     setNodes((ns) => [...ns.map((x) => ({ ...x, selected: false })), { ...toFlow({ nodes: [node] }).nodes[0], selected: true }]);
   };
+  // Drag and drop target (lib/dnd.ts, components/dnd/canvas-drop.ts): notes, graph nodes, files, text, URLs, library items.
+  const dropLatest = useRef({ undo, snap: view.snap, defNode, title: note.title });
+  dropLatest.current = { undo, snap: view.snap, defNode, title: note.title };
+  useEffect(() => {
+    const el = boardRef.current;
+    if (!el) return;
+    const L = dropLatest;
+    const abs = (): CanvasNode[] => nodesRef.current.map((n) => ({ ...n.data.node, x: n.position.x, y: n.position.y, width: n.width ?? n.measured?.width ?? n.data.node.width, height: n.height ?? n.measured?.height ?? n.data.node.height }));
+    const zone = canvasZone({
+      rf, el, name: L.current.title, noteId: note.id,
+      get grid() { return L.current.snap ? 20 : undefined; },
+      nodes: abs,
+      add: (ns, es) => {
+        const d = L.current.defNode;
+        const styled = ns.map((n) => (n.type === "group" ? n : setFill(setBorder(setShape(n, d.shape), d.border), d.fill)));
+        const f = toFlow({ nodes: styled, edges: es });
+        setNodes((old) => [...old.map((x) => (x.selected ? { ...x, selected: false } : x)), ...f.nodes.map((x) => ({ ...x, selected: true }))]);
+        if (f.edges.length) setEdges((old) => [...old.map((x) => (x.selected ? { ...x, selected: false } : x)), ...f.edges]);
+      },
+      update: (id, patch) => setNodes((ns) => ns.map((n) => (n.id === id ? { ...n, data: { node: { ...n.data.node, ...patch } as CanvasNode } } : n))),
+      undo: () => L.current.undo(),
+      pan: (dx, dy) => { const vp = rf.getViewport(); rf.setViewport({ x: vp.x + dx, y: vp.y + dy, zoom: vp.zoom }); },
+    });
+    return registerZone({ ...zone, ignore: (dt) => dt.types.includes(HL_MIME) });
+  }, [note.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const selected = nodes.filter((n) => n.selected);
   const anySel = selected.length > 0 || edges.some((e) => e.selected);
   const setColor = (c: string | undefined) => {
@@ -1105,6 +1140,7 @@ function Inner({ note }: { note: Note }) {
     <GroupCtx.Provider value={groupCtx}>
     <div className="flex h-full min-h-0 flex-col md:flex-row">
       <style>{CANVAS_CSS}</style>
+      <DndHost />
       <div ref={boardRef} className={cx("lumen-canvas relative min-h-0 flex-1", connecting && "connecting")}
         onPointerMove={(e) => { pointer.current = { x: e.clientX, y: e.clientY }; }}
         // A highlight dragged from the PDF reader's panel → highlight card where it's dropped.
@@ -1153,7 +1189,7 @@ function Inner({ note }: { note: Note }) {
           <div className="fade-in absolute inset-0 z-30 overflow-y-auto bg-bg p-4 md:inset-auto md:bottom-3 md:end-3 md:top-[64px] md:w-[372px] md:bg-transparent md:p-0 md:pe-0.5">
             <CanvasOptions selNodes={selNodes.length} selEdges={selEdges.length} node={nodeStyle} onNode={onNodeStyle} edge={edgeStyle} onEdge={onEdgeStyle}
               color={curColor} anySel={anySel} onColor={setColor} groups={{ collapsible: collapsibleOf(meta), pattern: groupPattern, example: exampleCount }} onGroups={onGroups}
-              bg={{ pattern: bgPat, color: bgCol }} onBg={onBg} onClose={() => setOptsOpen(false)}
+              bg={{ pattern: bgPat, color: bgCol }} onBg={onBg} onClose={() => setOptsOpen(false)} customPalettes={customPalettes}
               onPresent={() => toast(t("Presenting groups as slides arrives with the presentation update"))}
               onExport={() => { setOptsOpen(false); openCanvasExport(); }} />
           </div>

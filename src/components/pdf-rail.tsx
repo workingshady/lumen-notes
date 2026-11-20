@@ -8,6 +8,8 @@ import { resolveAtt } from "../lib/attachments";
 import { renderThumb, type OutlineItem, type PdfDoc } from "../lib/pdf-doc";
 import { allTags, filterHighlights, HL_COLORS, hlCardText, hlHex, sortHighlights, type HlColor, type Highlight } from "../lib/pdf-format";
 import { HL_MIME } from "../lib/pdf-note";
+import { setDrag } from "../lib/dnd";
+import { getVault } from "../lib/store";
 import { PopMenu } from "./pdf-dialogs";
 import { fmtNum, t, tk, useLang } from "../lib/i18n";
 import { cx } from "./ui";
@@ -124,7 +126,7 @@ function HlBody({ h, size, lh }: { h: Highlight; size: number; lh: number }) {
 function DragHl({ h, title, onClick, className, style, children }: { h: Highlight; title: string; onClick: () => void; className: string; style?: React.CSSProperties; children: React.ReactNode }) {
   return (
     <button draggable onClick={onClick} className={className} style={style} title={t("Click to jump · drag onto a canvas to make a card")}
-      onDragStart={(e) => { e.dataTransfer.setData(HL_MIME, JSON.stringify({ title, h })); e.dataTransfer.setData("text/plain", hlCardText(title, h)); e.dataTransfer.effectAllowed = "copy"; }}>
+      onDragStart={(e) => { e.dataTransfer.setData(HL_MIME, JSON.stringify({ title, h })); e.dataTransfer.setData("text/plain", hlCardText(title, h)); e.dataTransfer.effectAllowed = "copy"; if (h.quote) { const pn = getVault().byTitle.get(title.toLowerCase()); setDrag(e, { kind: "text", text: h.quote, ...(pn ? { from: { id: pn.id, title: pn.title } } : {}) }); e.dataTransfer.effectAllowed = "copy"; } }}>
       {children}
     </button>
   );

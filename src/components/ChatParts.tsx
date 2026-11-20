@@ -73,7 +73,7 @@ export function SourceCard({ s, hot, dim, row, v, onOpen }: { s: ChatSource; hot
   const title = s.heading ? `${s.title} · ${s.heading}` : s.title;
   const glyph = v.byId.get(s.noteId)?.type ?? "note";
   if (row) return (
-    <button data-src={s.n} onClick={() => onOpen(s.noteId)} className={cx("flex min-h-[40px] items-center gap-2.5 rounded-[10px] border bg-surface px-2.5 py-1.5 text-start hover:bg-surface-2", hot ? "border-accent" : "border-line", dim && "opacity-60")}>
+    <button data-src={s.n} data-dnd-note={s.noteId} draggable onClick={() => onOpen(s.noteId)} className={cx("flex min-h-[40px] items-center gap-2.5 rounded-[10px] border bg-surface px-2.5 py-1.5 text-start hover:bg-surface-2", hot ? "border-accent" : "border-line", dim && "opacity-60")}>
       <span className="text-[12px] font-semibold text-link">{s.n}</span>
       <Glyph name={glyph} size={13} color="var(--muted)" />
       <span dir="auto" className="min-w-0 flex-1 truncate text-[12.5px]">{title}</span>
@@ -81,7 +81,7 @@ export function SourceCard({ s, hot, dim, row, v, onOpen }: { s: ChatSource; hot
   );
   // R5-23: radius 10, surface, 8×10 padding; 12px/600 head (number in link colour), 12.5px muted quote (UI font)
   return (
-    <button data-src={s.n} onClick={() => onOpen(s.noteId)} title={s.title}
+    <button data-src={s.n} data-dnd-note={s.noteId} draggable onClick={() => onOpen(s.noteId)} title={s.title}
       className={cx("flex min-w-0 flex-col gap-1 rounded-[10px] border bg-surface px-2.5 py-2 text-start hover:bg-surface-2", hot ? "border-accent" : "border-line", dim && "opacity-60")}>
       <span className="flex min-w-0 items-center gap-1.5 text-[12px] font-semibold">
         <span className="text-link">{s.n}</span>

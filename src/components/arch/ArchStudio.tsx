@@ -2,16 +2,16 @@
 // Library · canvas · code (Code · Mermaid · JSON). The note's JSON Canvas body is the single source of truth: typing in
 // any tab parses and writes back to it (debounced, last valid state wins); dragging, renaming or connecting on the board
 // rewrites the code. Positions live only in the JSON; only new nodes get placed.
-import { Background, BackgroundVariant, ConnectionMode, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Connection, type NodeChange, type OnConnectEnd } from "@xyflow/react";
+import { Background, BackgroundVariant, ConnectionMode, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Connection, type Edge as RFE, type NodeChange, type OnConnectEnd } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Note, Version } from "../../../shared/types";
 import { Glyph } from "../Glyph";
 import { ShareSheet } from "../ShareSheet";
 import { useSaving, useSyncLook } from "../ws-sync";
-import { restoreVersion, snapshot, updateNote } from "../../lib/actions";
+import { restoreNote, restoreVersion, snapshot, trashNote, updateNote } from "../../lib/actions";
 import { fmtDate, fmtTime, t, useLang } from "../../lib/i18n";
-import { back, openNote, toast, useVault } from "../../lib/store";
+import { back, openNote, setUI, toast, useVault } from "../../lib/store";
 import { openExport } from "../../lib/diagram-export";
 import { uid } from "../../lib/db";
 import { applyDsl, dslFor, parseDsl, printDsl, type DslError } from "../../lib/arch-dsl";
@@ -25,7 +25,12 @@ import { archVersions, c4Chain, C4_LABEL, ensureRef, listObjects, propagate, use
 import type { LayoutOpts } from "../../lib/arch-layout";
 import { ArchCode } from "./ArchCode";
 import { Ctx, edgeTypes, FLOW_CSS, nodeTypes, type FlowCtx, type FlowEdge, type FlowNode } from "./ArchFlow";
-import { EdgeProps, GroupProps, Library, MIME, NodeProps, type Shape } from "./ArchPanels";
+import { EdgeProps, GroupProps, LabelOptions, NodeProps, type Shape } from "./ArchPanels";
+import { LibraryPanel } from "../library/LibraryPanel";
+import { canvasNodeFor, getLibraryItem, type LibItem } from "../../lib/library-items";
+import { registerZone } from "../../lib/dnd";
+import { archZone, type ArchDropApi } from "../dnd/arch-drop";
+import { labelSpot, type LabelPart } from "../../lib/arch-label";
 import { AC, Block, Btn, Pop } from "./ArchUi";
 import { archAiReview } from "./ai-hooks";
 
@@ -56,6 +61,10 @@ function Studio({ note }: { note: Note }) {
   const [sel, setSel] = useState<Sel>(null);
   const [hoverNode, setHoverNode] = useState<string | null>(null), [hoverLine, setHoverLine] = useState<number | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
+  const [editEdgeS, setEditEdgeS] = useState<{ id: string; part: LabelPart } | null>(null);
+  const [lblPop, setLblPop] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState(false);
+  const reconEnd = useRef<"source" | "target">("source");
   const [pop, setPop] = useState<PopKind>(null);
   const [paste, setPaste] = useState<{ kind: PasteKind; text: string; before: string } | null>(null);
   const [lopts, setLopts] = useState<LayoutOpts>({ direction: c.lumenArch.direction, spacing: "roomy", keep: true, scope: "all" });
@@ -217,9 +226,9 @@ function Studio({ note }: { note: Note }) {
     return view.edges.flatMap((e) => {
       const r = edgeRoute(view, e, by);
       if (!r) return [];
-      return [{ id: e.id, source: r.from, target: r.to, sourceHandle: "right", targetHandle: "left", type: "arch", data: { e, r, mark: vd?.edges.get(e.id) }, selected: sel?.kind === "edge" && sel.id === e.id, zIndex: 1500 } as FlowEdge];
+      return [{ id: e.id, source: r.from, target: r.to, sourceHandle: r.fs, targetHandle: r.ts, type: "arch", data: { e, r, src: r.src, mark: vd?.edges.get(e.id) }, selected: sel?.kind === "edge" && sel.id === e.id, reconnectable: sel?.kind === "edge" && sel.id === e.id && !diff && present === null, zIndex: 1500 } as FlowEdge];
     });
-  }, [view, vd, sel]);
+  }, [view, vd, sel, diff, present]);
 
   // ------------------------------------------------------------ board edits
   const dragStart = useRef<Map<string, { x: number; y: number }> | null>(null);
@@ -280,6 +289,47 @@ function Studio({ note }: { note: Note }) {
     setSel({ kind: "node", id });
     return id;
   };
+  const centre = () => { const r = canvasEl.current?.getBoundingClientRect(); return r ? rf.screenToFlowPosition({ x: r.left + r.width / 2, y: r.top + r.height / 2 }) : { x: 0, y: 0 }; };
+  /** Shared-library item -> node at `at` (default: canvas centre), nested into the group under it. One undo step. */
+  const placeItem = (item: LibItem): void => {
+    const cur = cRef.current, p = centre();
+    const parent = deepestGroupAt(cur, p.x, p.y, new Set());
+    const id = `n-${uid().slice(0, 8)}`;
+    const n = canvasNodeFor(item, p, id, uniqueName(item.name));
+    if (parent) { if (n.lumenGroup) n.lumenGroup = { ...n.lumenGroup, parent: parent.id }; else if (n.lumenNode) n.lumenNode = { ...n.lumenNode, parent: parent.id }; else (n as { lumenNode?: unknown }).lumenNode = { name: nameOf(n), parent: parent.id }; }
+    commit(fitGroups({ ...cur, nodes: [...cur.nodes, n] }));
+    setSel({ kind: "node", id });
+  };
+  // drag & drop (brief §12.1): a drop is one undo step even when it creates several nodes
+  const dropAt = useRef(0);
+  const dropHist = () => { const first = Date.now() - dropAt.current > 1500; dropAt.current = Date.now(); return first; };
+  const dropApi = useRef<ArchDropApi>(null as unknown as ArchDropApi);
+  dropApi.current = {
+    screenToFlow: (p) => rf.screenToFlowPosition(p),
+    hit: (pt) => {
+      const cur = cRef.current, f = rf.screenToFlowPosition(pt);
+      const mk = (n: ANode, group: boolean) => ({ id: n.id, label: displayOf(n), group, el: document.querySelector<HTMLElement>(`.react-flow__node[data-id="${n.id}"]`) });
+      const on = [...cur.nodes].reverse().find((n) => !isGroup(n) && f.x >= n.x && f.x <= n.x + n.width && f.y >= n.y && f.y <= n.y + n.height);
+      if (on) return mk(on, false);
+      const g = deepestGroupAt(cur, f.x, f.y, new Set());
+      return g ? mk(g, true) : null;
+    },
+    addNode: (spec, at, parentId) => {
+      const cur = cRef.current, id = `n-${uid().slice(0, 8)}`, name = uniqueName(spec.label || "Node");
+      const lib = spec.item && typeof spec.item.id === "string" ? getLibraryItem(spec.item.id) : undefined;
+      let n: ANode;
+      if (lib) n = canvasNodeFor(lib, at, id, name);
+      else { const icon = spec.glyph ?? "service"; n = { id, type: "text", text: name, x: at.x - 75, y: at.y - 30, width: 150, height: 60, lumenNode: { name, icon, kind: kindOfIcon(icon) } } as ANode; }
+      const ln = { ...(n.lumenNode ?? { name }), ...(parentId ? { parent: parentId } : {}), ...(spec.links ? { links: spec.links } : {}), ...(spec.description ? { description: spec.description } : {}) };
+      if (n.type === "group") { if (parentId) n.lumenGroup = { ...n.lumenGroup!, parent: parentId }; } else n.lumenNode = ln as ANode["lumenNode"];
+      commit(fitGroups({ ...cur, nodes: [...cur.nodes, n] }), "canvas", dropHist());
+      return id;
+    },
+    addLink: (id, link) => { const cur = cRef.current; commit({ ...cur, nodes: cur.nodes.map((n) => (n.id !== id ? n : { ...n, lumenNode: { ...(n.lumenNode ?? { name: nameOf(n) }), links: [...(n.lumenNode?.links ?? []), link] } } as ANode)) }, "canvas", dropHist()); },
+    appendText: (id, text) => { const cur = cRef.current; commit({ ...cur, nodes: cur.nodes.map((n) => (n.id !== id ? n : { ...n, lumenNode: { ...(n.lumenNode ?? { name: nameOf(n) }), description: [n.lumenNode?.description, text].filter(Boolean).join("\n\n") } } as ANode)) }, "canvas", dropHist()); },
+    addEdge: (a, b) => { const cur = cRef.current; commit({ ...cur, edges: [...cur.edges, { id: `e-${uid().slice(0, 8)}`, fromNode: a, toNode: b, lumenEdge: { style: "sync" as const } }] }, "canvas", dropHist()); },
+    undo: () => undo(),
+  };
   const onConnect = (cn: Connection) => {
     if (!cn.source || !cn.target || cn.source === cn.target) return;
     const cur = cRef.current;
@@ -326,7 +376,39 @@ function Studio({ note }: { note: Note }) {
     const m = next.nodes.find((x) => x.id === n.id);
     if (m?.lumenNode?.ref) void propagate(m, v.notes, note.id).then((k) => k && toast(t("Updated in {n} other diagram|Updated in {n} other diagrams", { n: k }), undefined, { icon: "check" }));
   };
-  const editEdge = (e: AEdge) => { const cur = cRef.current; commit({ ...cur, edges: cur.edges.map((x) => (x.id === e.id ? e : x)) }); };
+  /** One undo step. The code is rewritten only when the topology or the middle text changes; points, label styles and the rest live in the JSON alone. */
+  const editEdge = (e: AEdge) => {
+    const cur = cRef.current, old = cur.edges.find((x) => x.id === e.id);
+    const dslSame = !!old && old.fromNode === e.fromNode && old.toNode === e.toNode && old.label === e.label && old.lumenEdge?.style === e.lumenEdge?.style && old.fromEnd === e.fromEnd && old.toEnd === e.toEnd;
+    commit({ ...cur, edges: cur.edges.map((x) => (x.id === e.id ? e : x)) }, dslSame ? "code" : "canvas");
+  };
+  const patchEdge = (id: string, fn: (e: AEdge) => AEdge) => { const e = cRef.current.edges.find((x) => x.id === id); if (e) editEdge(fn(e)); };
+  const saveLabel = (id: string, part: LabelPart, text: string) => patchEdge(id, (e) => {
+    const x = text.trim(), le = { ...e.lumenEdge }, labels = { ...le.labels };
+    if (x) labels[part] = x; else delete labels[part];
+    if (x && le.labelStyle?.hidden) le.labelStyle = { ...le.labelStyle, hidden: undefined };
+    const out: AEdge = { ...e, lumenEdge: { ...le, labels: Object.keys(labels).length ? labels : undefined } };
+    if (part === "mid") { if (x) out.label = x; else delete out.label; }
+    return out;
+  });
+  const labelClick = (id: string) => { setSel({ kind: "edge", id }); setLblPop((p) => (p === id ? null : id)); };
+  /** Drag an end of the selected edge onto another node or side. */
+  const onReconnect = (old: RFE, cn: Connection) => {
+    const cur = cRef.current, e = cur.edges.find((x) => x.id === old.id);
+    if (!e || !cn.source || !cn.target || cn.source === cn.target) return;
+    // which end moved: the one whose node changed; for a side change on the same node the reported type is the fixed end
+    const srcMoved = cn.source !== e.fromNode, tgtMoved = cn.target !== e.toNode;
+    const from = srcMoved !== tgtMoved ? srcMoved : reconEnd.current === "target";
+    const fixed = from ? e.toNode : e.fromNode;
+    const node = from ? cn.source : cn.target;
+    const side = (from ? cn.sourceHandle : cn.targetHandle) as AEdge["fromSide"];
+    if (!node || node === fixed) return;
+    const { fromSide: _a, toSide: _b, ...rest } = e;
+    const keep = from ? { ...(e.toSide ? { toSide: e.toSide } : {}), ...(side ? { fromSide: side } : {}) } : { ...(e.fromSide ? { fromSide: e.fromSide } : {}), ...(side ? { toSide: side } : {}) };
+    const { points: _p, pointsKey: _k, manual: _m, ...le } = e.lumenEdge ?? {};
+    editEdge({ ...rest, ...(from ? { fromNode: node } : { toNode: node }), ...keep, lumenEdge: le } as AEdge);
+    setSel({ kind: "edge", id: e.id });
+  };
   const makeReusable = (n: ANode) => {
     if (n.lumenNode?.ref) { setPop("insert"); return; }
     editNode({ ...n, lumenNode: { ...n.lumenNode, ref: `obj-${uid().slice(0, 8)}` } } as ANode);
@@ -355,6 +437,8 @@ function Studio({ note }: { note: Note }) {
 
   // ------------------------------------------------------------ versions (History) and C4
   const [versions, setVersions] = useState<Version[]>([]);
+  // Delete (owner request): same flow as canvas/whiteboard: trash + Undo toast.
+  const deleteDiagram = async () => { const title = note.title; await trashNote(note.id); setUI({ noteId: null }); toast(t("“{title}” moved to Trash", { title }), { label: t("Undo"), run: () => { void restoreNote(note.id); openNote(note.id); } }); };
   const openVersions = async () => { setVersions(await archVersions(note.id)); setPop("versions"); };
   const compare = (ver: Version, all: Version[]) => {
     const older = parseArch(ver.body);
@@ -396,7 +480,7 @@ function Studio({ note }: { note: Note }) {
     const k = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey;
       if (mod && e.shiftKey && e.key.toLowerCase() === "l") { e.preventDefault(); setPop("layout"); void runLayout(lopts); return; }
-      if (e.key === "Escape") { if (present !== null) setPresent(null); else if (preview) cancelLayout(); else if (diff) setDiff(null); else if (pop) setPop(null); else if (paste) keepPaste(); else setSel(null); return; }
+      if (e.key === "Escape") { if (present !== null) setPresent(null); else if (preview) cancelLayout(); else if (diff) setDiff(null); else if (lblPop) setLblPop(null); else if (pop) setPop(null); else if (paste) keepPaste(); else setSel(null); return; }
       if (typing(e)) return;
       if (preview && e.key === "Enter") { e.preventDefault(); applyLayout(); return; }
       if (present !== null) { if (e.key === "ArrowRight" || e.key === " ") setPresent((p) => (p ?? 0) + 1); if (e.key === "ArrowLeft") setPresent((p) => Math.max(0, (p ?? 0) - 1)); return; }
@@ -431,6 +515,12 @@ function Studio({ note }: { note: Note }) {
   const review = () => { void archAiReview(cRef.current).catch((e: Error) => toast(e.message, undefined, { icon: "info" })); };
   const fitOnce = useRef(false);
   const userMoved = useRef(false);
+  useEffect(() => {
+    const el = canvasEl.current;
+    if (!el) return;
+    const api: ArchDropApi = new Proxy({} as ArchDropApi, { get: (_, k) => dropApi.current[k as keyof ArchDropApi] });
+    return registerZone(archZone(el, note.title, api));
+  }); // re-register each render: the canvas element remounts with the layout
   // the board fits the diagram until the user pans or zooms (pane width changes with the split, list and side panels)
   useEffect(() => {
     const el = canvasEl.current;
@@ -448,7 +538,7 @@ function Studio({ note }: { note: Note }) {
   const codeOnly = split === "code" && !phone, canvasOnly = split === "canvas" || phone;
   const showCode = (!canvasOnly || hasProps) && !phone;
   const space = v.spaceMap.get(note.spaceId), folder = note.folderId ? v.folderMap.get(note.folderId) : undefined;
-  const flowCtx: FlowCtx = { hl, sel: sel?.id ?? null, editing, setHover: setHoverNode, rename, stopEdit: () => setEditing(null), toggleCollapse, inside: insideCount };
+  const flowCtx: FlowCtx = { hl, sel: sel?.id ?? null, editing, setHover: setHoverNode, rename, stopEdit: () => setEditing(null), toggleCollapse, inside: insideCount, ro: !!diff || present !== null, editEdge: editEdgeS, setEditEdge: (x) => { setEditEdgeS(x); if (x) setLblPop(null); }, saveLabel, patchEdge, labelClick };
 
   const H = ({ g, l, pri, onClick, title, children }: { g?: string; l?: string; pri?: boolean; onClick?: () => void; title?: string; children?: ReactNode }) => (
     <button type="button" title={title ?? l} onClick={onClick} className={pri ? "hover:brightness-110" : "hover:bg-surface-2"}
@@ -530,6 +620,23 @@ function Studio({ note }: { note: Note }) {
         note={versions.length ? t("Added nodes show green, removed red, changed amber.") : t("No saved versions yet. Ctrl+S saves one.")} />
     </Pop>
   );
+  /** Small popover on the label (46N): look, size, placement, rotation and visibility; the properties panel has the rest. */
+  const labelPop = (() => {
+    if (!selEdge) return null;
+    const r = edgeRoute(c, selEdge, new Map(c.nodes.map((n) => [n.id, n]))), box = canvasEl.current?.getBoundingClientRect();
+    if (!r || !box) return null;
+    const sp = labelSpot(selEdge, r, "mid"), sc = rf.flowToScreenPosition({ x: sp.x, y: sp.y });
+    const left = Math.max(8, Math.min(box.width - 276, sc.x - box.left - 130)), top = Math.max(8, Math.min(box.height - 330, sc.y - box.top + 26));
+    return (
+      <Pop title={t("Label")} sub={selEdge.label ?? ""} sheet={phone} onClose={() => setLblPop(null)} style={phone ? { left: 0, right: 0, bottom: 0, maxHeight: "70%", animation: "arch-sheet .22s var(--ease)" } : { left, top, width: 264, maxHeight: "calc(100% - 16px)", animation: "arch-in .16s var(--ease)" }}>
+        <Block gap="2px" items={[
+          { g: "text", l: t("Edit text"), sub: t("double-click"), onClick: () => { setLblPop(null); setEditEdgeS({ id: selEdge.id, part: "mid" }); } },
+          ...(selEdge.lumenEdge?.labelPos != null ? [{ g: "undo", l: t("Reset label position"), onClick: () => editEdge({ ...selEdge, lumenEdge: { ...selEdge.lumenEdge, labelPos: undefined } }) }] : []),
+        ]} />
+        <LabelOptions e={selEdge} onChange={editEdge} pop />
+      </Pop>
+    );
+  })();
   const nodeMenu = menuFor && c.nodes.find((n) => n.id === menuFor);
   const others = c.nodes.filter((n) => n.id !== menuFor && !isGroup(n) && !hiddenBy(c, n.id));
   const menuPop = nodeMenu && (
@@ -554,7 +661,7 @@ function Studio({ note }: { note: Note }) {
   );
 
   return (
-    <div className="arch-flow" style={{ position: "absolute", inset: 0, overflow: "hidden", background: "var(--bg)", fontFamily: "Inter,'IBM Plex Sans Arabic',system-ui,sans-serif", fontSize: 13, color: "var(--text)", display: "flex", flexDirection: "column" }}>
+    <div className={connecting ? "arch-flow connecting" : "arch-flow"} style={{ position: "absolute", inset: 0, overflow: "hidden", background: "var(--bg)", fontFamily: "Inter,'IBM Plex Sans Arabic',system-ui,sans-serif", fontSize: 13, color: "var(--text)", display: "flex", flexDirection: "column" }}>
       <style>{FLOW_CSS}</style>
       {/* header */}
       {present === null && (
@@ -587,6 +694,7 @@ function Studio({ note }: { note: Note }) {
               <H g="present" l={t("Present")} onClick={() => { setSel(null); setPresent(0); }} />
               <H g="export" l={t("Export")} onClick={doExport} />
               <H g="link" l={t("Share")} pri onClick={() => setShare(true)} />
+              <H g="more" onClick={() => setPop(pop === "more" ? null : "more")} title={t("More")} />
             </>
           )}
         </div>
@@ -594,23 +702,21 @@ function Studio({ note }: { note: Note }) {
       <div style={{ flex: 1, minHeight: 0, display: "flex", position: "relative" }}>
         {!phone && !codeOnly && present === null && (
           <div style={{ width: 260, flexShrink: 0, borderInlineEnd: "1px solid var(--border)", background: "var(--surface)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px 8px" }}><span style={{ fontWeight: 600, fontSize: 13.5, flex: 1 }}>{t("Library")}</span><span style={{ fontSize: 11.5, color: "var(--muted)" }}>{t("Architecture first")}</span></div>
-            <div style={{ padding: "4px 14px 14px", overflow: "auto", minHeight: 0 }} className="[scrollbar-width:thin]"><Library onAdd={(s) => addShape(s)} /></div>
+            <LibraryPanel workspace="architecture" variant="docked" onPlace={placeItem} />
           </div>
         )}
         {(!codeOnly || phone) && !(phone && phoneCode) && (
-          <div ref={canvasEl} style={{ flex: 1, minWidth: 0, position: "relative", overflow: "hidden" }}
-            onDragOver={(e) => { if (e.dataTransfer.types.includes(MIME)) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; } }}
-            onDrop={(e) => { const raw = e.dataTransfer.getData(MIME); if (!raw) return; e.preventDefault(); addShape(JSON.parse(raw) as Shape, rf.screenToFlowPosition({ x: e.clientX, y: e.clientY })); }}>
+          <div ref={canvasEl} style={{ flex: 1, minWidth: 0, position: "relative", overflow: "hidden" }}>
             <Ctx.Provider value={flowCtx}>
               <ReactFlow<FlowNode, FlowEdge> nodes={flowNodes} edges={flowEdges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onNodesChange={onNodesChange}
                 onNodeDragStart={() => { dragStart.current = new Map(cRef.current.nodes.map((n) => [n.id, { x: n.x, y: n.y }])); }} onNodeDragStop={onDragStop}
                 onNodeClick={(_, n) => { if (n.id.startsWith("lp-")) return; if (connectFrom && connectFrom !== n.id) { onConnect({ source: connectFrom, target: n.id, sourceHandle: null, targetHandle: null }); setConnectFrom(null); return; } setSel({ kind: "node", id: n.id }); if (phone && sel?.kind === "node" && sel.id === n.id) setPop("props"); }}
-                onNodeDoubleClick={(e, n) => void onNodeDouble(e, n)} onEdgeClick={(_, e) => setSel({ kind: "edge", id: e.id })} onPaneClick={() => { setSel(null); setEditing(null); }}
+                onNodeDoubleClick={(e, n) => void onNodeDouble(e, n)} onEdgeClick={(_, e) => { setSel({ kind: "edge", id: e.id }); setLblPop(null); }} onEdgeDoubleClick={(_, e) => { if (!diff && present === null) { setSel({ kind: "edge", id: e.id }); setEditEdgeS({ id: e.id, part: "mid" }); } }} onPaneClick={() => { setSel(null); setEditing(null); setLblPop(null); setEditEdgeS(null); }}
+                edgesReconnectable onReconnect={onReconnect} onReconnectStart={(_, __, h) => { reconEnd.current = h; setConnecting(true); }} onReconnectEnd={() => setConnecting(false)} onConnectStart={() => setConnecting(true)} reconnectRadius={12}
                 onNodeContextMenu={(e, n) => { e.preventDefault(); if (n.id.startsWith("lp-")) return; setSel({ kind: "node", id: n.id }); setMenuFor(n.id); setPop("menu"); }}
                 onPaneContextMenu={(e) => { e.preventDefault(); setPop("insert"); }}
-                onConnect={onConnect} onConnectEnd={onConnectEnd} connectionMode={ConnectionMode.Loose} deleteKeyCode={null} selectionKeyCode={null} multiSelectionKeyCode="Shift"
-                fitView={!fitOnce.current} onInit={() => { fitOnce.current = true; }} onMoveStart={(ev) => { if (ev) userMoved.current = true; }} fitViewOptions={{ padding: 0.12 }} minZoom={0.15} maxZoom={2.5} proOptions={{ hideAttribution: true }} nodesConnectable={!diff && present === null} elevateEdgesOnSelect>
+                onConnect={onConnect} onConnectEnd={(ev, st) => { setConnecting(false); onConnectEnd(ev, st); }} connectionMode={ConnectionMode.Loose} deleteKeyCode={null} selectionKeyCode={null} multiSelectionKeyCode="Shift"
+                fitView={!fitOnce.current} onInit={() => { fitOnce.current = true; }} onMoveStart={(ev) => { if (ev) { userMoved.current = true; setLblPop(null); } }} fitViewOptions={{ padding: 0.12 }} minZoom={0.15} maxZoom={2.5} proOptions={{ hideAttribution: true }} nodesConnectable={!diff && present === null} elevateEdgesOnSelect>
                 <Background variant={BackgroundVariant.Dots} gap={22} size={1.4} color="color-mix(in srgb,var(--muted) 20%,transparent)" />
                 {!phone && present === null && <MiniMap pannable zoomable style={{ width: 150, height: 96, right: 0, bottom: 0 }} nodeColor={(n) => (n.type === "archGroup" ? "transparent" : "color-mix(in srgb,var(--accent) 35%,transparent)")} nodeStrokeColor={(n) => (n.type === "archGroup" ? "var(--accent)" : "transparent")} maskColor="color-mix(in srgb,var(--bg) 55%,transparent)" />}
               </ReactFlow>
@@ -632,6 +738,7 @@ function Studio({ note }: { note: Note }) {
                 <Btn pri onClick={() => setPresent(null)}>{t("Exit")}</Btn>
               </div>
             )}
+            {lblPop && selEdge?.id === lblPop && present === null && !diff && labelPop}
           </div>
         )}
         {(showCode || (phone && phoneCode)) && present === null && codePane}
@@ -640,7 +747,7 @@ function Studio({ note }: { note: Note }) {
         {pop === "versions" && versionsPop}
         {phone && pop === "library" && (
           <Pop title={t("Library")} sub={t("Architecture")} sheet onClose={() => setPop(null)} style={{ left: 0, right: 0, bottom: 0, maxHeight: "78%", animation: "arch-sheet .22s var(--ease)" }}>
-            <Library sheet onAdd={(s) => addShape(s)} onClose={() => setPop(null)} />
+            <LibraryPanel workspace="architecture" variant="sheet" onClose={() => setPop(null)} onPlace={(it) => { placeItem(it); setPop(null); }} />
           </Pop>
         )}
         {phone && pop === "props" && selNode && !isGroup(selNode) && (
@@ -648,9 +755,9 @@ function Studio({ note }: { note: Note }) {
             <NodeProps phone n={selNode} onChange={editNode} usedIn={usage.get(selNode.lumenNode?.ref ?? "") ?? 0} onReuse={() => makeReusable(selNode)} />
           </Pop>
         )}
-        {phone && pop === "more" && (
-          <Pop title={note.title} sub={t("Diagram")} sheet onClose={() => setPop(null)} style={{ left: 0, right: 0, bottom: 0, animation: "arch-sheet .22s var(--ease)" }}>
-            <Block gap="0" items={([["reused-object", t("Insert existing object"), () => setPop("insert")], ["diff", t("Compare versions"), () => void openVersions()], ["c-question", t("Review"), review], ["present", t("Present"), () => { setPop(null); setPresent(0); }], ["export", t("Export"), () => { setPop(null); doExport(); }], ["link", t("Share"), () => { setPop(null); setShare(true); }]] as const).map(([g, l, fn]) => ({ g, l, mh: "44px", onClick: fn }))} />
+        {pop === "more" && (
+          <Pop title={note.title} sub={t("Diagram")} sheet={phone} onClose={() => setPop(null)} style={phone ? { left: 0, right: 0, bottom: 0, animation: "arch-sheet .22s var(--ease)" } : { right: 12, top: 52, width: 260 }}>
+            <Block gap="0" items={([["reused-object", t("Insert existing object"), () => setPop("insert")], ["diff", t("Compare versions"), () => void openVersions()], ["c-question", t("Review"), review], ["present", t("Present"), () => { setPop(null); setPresent(0); }], ["export", t("Export"), () => { setPop(null); doExport(); }], ["link", t("Share"), () => { setPop(null); setShare(true); }], ["trash", t("Delete diagram"), () => { setPop(null); void deleteDiagram(); }]] as const).map(([g, l, fn]) => ({ g, l, mh: "44px", onClick: fn }))} />
           </Pop>
         )}
         {(pop === "menu" || pop === "connectTo" || pop === "moveTo" || pop === "sendTo") && menuPop}

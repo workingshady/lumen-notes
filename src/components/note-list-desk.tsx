@@ -174,7 +174,7 @@ export const DeskRow = memo(function DeskRow({ n, active, selecting, selected, s
   const on = selecting && selected;
   const shown = n.tags.slice(0, 3), more = n.tags.length - shown.length;
   return (
-    <div role="button" tabIndex={0} draggable={!selecting} onDragStart={onDragStart} onClick={onClick} aria-selected={selecting ? selected : active} data-note-row={n.id}
+    <div role="button" tabIndex={0} draggable={!selecting || selected} data-dnd-note={selecting && !selected ? undefined : n.id} onDragStart={onDragStart} onClick={onClick} aria-selected={selecting ? selected : active} data-note-row={n.id}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(e as unknown as React.MouseEvent); } }}
       className={cx("flex w-full shrink-0 cursor-pointer gap-2.5 border-b border-[color-mix(in_srgb,var(--border)_60%,transparent)] px-3 py-[9px] text-start outline-none focus-visible:bg-surface", !on && !(active && !selecting) && "hover:bg-surface")}
       style={{ background: on ? "color-mix(in srgb, var(--accent) 10%, transparent)" : active && !selecting ? "var(--surface)" : undefined, boxShadow: active && !selecting ? "inset 2px 0 0 var(--accent)" : undefined }}>

@@ -103,7 +103,7 @@ function Backlinks({ note }: { note: Note }) {
     <div className={cx("flex flex-col gap-2 px-0.5 py-2.5", top && "border-t border-line")} data-links={title}>
       <div className="text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("{title} · {n}", { title, n: items.length })}</div>
       {items.length ? <FolderGroups notes={items} item={(n) => (
-        <button key={n.id} dir="auto" onClick={() => openNote(n.id)} title={v.folderMap.get(n.folderId ?? "")?.name ?? v.spaceMap.get(n.spaceId)?.name ?? ""}
+        <button key={n.id} dir="auto" data-dnd-note={n.id} draggable onClick={() => openNote(n.id)} title={v.folderMap.get(n.folderId ?? "")?.name ?? v.spaceMap.get(n.spaceId)?.name ?? ""}
           className="-mx-1.5 truncate rounded-[6px] px-1.5 text-start text-[13px] font-medium hover:bg-surface-2">{n.title}</button>
       )} /> : <div className="text-[12.5px] text-muted">{t("None")}</div>}
     </div>
@@ -180,7 +180,7 @@ function UnlinkedMentions({ note }: { note: Note }) {
   const Group = ({ g, muted }: { g: MentionGroup; muted?: boolean }) => (
     <div className={cx("group/m flex flex-col gap-1", muted && "opacity-60")}>
       <div className="flex items-center gap-1.5">
-        <button dir="auto" onClick={() => openNote(g.src.id)} className="min-w-0 flex-1 truncate text-start text-[13px] font-medium hover:underline">{g.src.title}</button>
+        <button dir="auto" data-dnd-note={g.src.id} draggable onClick={() => openNote(g.src.id)} className="min-w-0 flex-1 truncate text-start text-[13px] font-medium hover:underline">{g.src.title}</button>
         <button onClick={() => void setIgnored(g.src.title, !muted)} title={muted ? t("Show this note's mentions again") : t("Hide this note's mentions")} className={cx("shrink-0 text-[11.5px] text-muted hover:text-ink", !muted && "opacity-0 focus:opacity-100 group-hover/m:opacity-100 max-md:opacity-100")}>{muted ? "Unignore" : "Ignore"}</button>
       </div>
       {!muted && g.ms.map((m, i) => (

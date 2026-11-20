@@ -12,6 +12,7 @@ import { excerpt } from "../lib/parse";
 import { noteDerived, openNote, scoped, setUI, toast, useUI, useVault } from "../lib/store";
 import { TEMPLATES } from "../lib/templates";
 import { dragNote } from "./Sidebar";
+import { setDrag } from "../lib/dnd";
 import { Button, cx, Empty, Sheet, STATUS_COLOR } from "./ui";
 import { PRESETS } from "../lib/canvas";
 import { Glyph } from "./Glyph";
@@ -260,7 +261,7 @@ export function NoteList() {
         {smartSel?.sf ? shown.map((n) => <SmartRow key={n.id} n={n} active={n.id === ui.noteId} onOpen={() => openNote(n.id)} />)
           : rows.map((r, i) => ("id" in r
             ? <DeskRow key={r.id} n={r} active={r.id === ui.noteId} selecting={selecting} selected={selected.has(r.id)} colors={colors} preview={preview(r)} time={listTime(sort === "created" ? r.createdAt : r.updatedAt)}
-                space={ui.spaceId === "all" ? v.spaceMap.get(r.spaceId) : undefined} onClick={(e) => onRowRef.current(e, r)} onDragStart={(e) => dragNote(e, r.id)} />
+                space={ui.spaceId === "all" ? v.spaceMap.get(r.spaceId) : undefined} onClick={(e) => onRowRef.current(e, r)} onDragStart={(e) => { if (selecting && selected.has(r.id) && selIds.length > 1) setDrag(e, { kind: "notes", ids: selIds }); else dragNote(e, r.id); }} />
             : <GroupHeader key={"h" + i + r.h} h={r.h} pin={r.pin} />))}
         {more}
         {deskEmpty}

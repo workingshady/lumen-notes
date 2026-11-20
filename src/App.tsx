@@ -1,3 +1,4 @@
+import { DndHost } from "./components/dnd/DndHost";
 import { CircleAlert, CircleCheck, CloudOff, Copy, FileText, GitMerge, Globe, History, House, Info, LayoutGrid, Layers, Link2, Menu, Plus, Trash2 } from "lucide-react";
 import { FirstSyncCard } from "./components/first-sync"; // Lumen 22: first sync on a new device
 import { useEffect, useRef, useState } from "react";
@@ -258,6 +259,7 @@ function Workspace() {
       <ConflictSheet />
       <ShareSheet />
       <Toasts />
+      <DndHost />
       <Splash ready={ready} />
       <VaultWatchers />
       {DEMO && (

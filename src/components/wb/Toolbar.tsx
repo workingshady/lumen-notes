@@ -13,31 +13,36 @@ export function Toolbar(p: {
   tool: ToolId; shape: ShapeKind; line: LineKind; arrowType: ArrowType; locked: boolean;
   pen: { glyph: string; color: string; label: string };
   onTool: (t: ToolId) => void; onLock: () => void; onShape: (s: ShapeKind) => void; onLine: (l: LineKind, a?: ArrowType) => void;
-  more: MoreItem[]; penPopover?: ReactNode; shapePopover?: ReactNode;
+  more: MoreItem[]; penPopover?: (close: () => void) => ReactNode; shapePopover?: (close: () => void) => ReactNode;
+  /** Shapes split-button glyph from the library's remembered shape (W2-B). */
+  shapeGlyph?: string;
+  /** Stamps / Insert icon popovers (W2-B), opened from More. */
+  libPop?: (k: "stamps" | "icons", close: () => void) => ReactNode;
 }) {
-  const [open, setOpen] = useState<null | "pen" | "shape" | "arrow" | "more">(null);
+  const [open, setOpen] = useState<null | "pen" | "shape" | "arrow" | "more" | "stamps" | "icons">(null);
   const B = (id: ToolId, extra: Partial<Parameters<typeof ToolBtn>[0]> = {}) => {
     const [g, name, k] = TOOL_META[id];
     return <ToolBtn key={id} glyph={g} tip={t(name)} k={k} on={p.tool === id} onClick={() => p.onTool(id)} {...extra} />;
   };
   const close = () => setOpen(null);
   return (
-    <div data-wb-chrome className="absolute left-1/2 top-[12px] z-30 hidden -translate-x-1/2 items-center gap-[2px] rounded-[12px] border border-line bg-surface p-1 shadow-[0_8px_24px_rgba(0,0,0,.18)] md:flex" onPointerDown={(e) => e.stopPropagation()}>
+    <div data-wb-chrome className="absolute left-1/2 top-[12px] z-[31] hidden -translate-x-1/2 items-center gap-[2px] rounded-[12px] border border-line bg-surface p-1 shadow-[0_8px_24px_rgba(0,0,0,.18)] md:flex" onPointerDown={(e) => e.stopPropagation()}>
+      {open === "pen" && p.penPopover?.(close)}
       <ToolBtn glyph={p.locked ? "lock" : "unlock"} tip={t("Keep tool active")} on={p.locked} onClick={p.onLock} />
       <Sep />
       {B("select")}{B("lasso")}{B("hand")}
       <Sep />
       <span className="relative" data-pop-anchor>
         {B("pen", { glyph: p.pen.glyph, dot: p.pen.color, split: true, onCaret: () => { p.onTool("pen"); setOpen(open === "pen" ? null : "pen"); } })}
-        {open === "pen" && p.penPopover && <Pop onClose={close} className="left-0 top-[44px]" label={t("Pens")}>{p.penPopover}</Pop>}
       </span>
       {B("hl")}{B("eraser")}{B("laser")}
       <Sep />
       <span className="relative" data-pop-anchor>
-        {B("shape", { glyph: SHAPE_GLYPH[p.shape], tip: t("Shapes") + " · " + t(SHAPE_NAME[p.shape]), split: true, onCaret: () => setOpen(open === "shape" ? null : "shape") })}
-        {open === "shape" && (
+        {B("shape", { glyph: p.shapeGlyph ?? SHAPE_GLYPH[p.shape], tip: t("Shapes") + " · " + t(SHAPE_NAME[p.shape]), split: true, onCaret: () => setOpen(open === "shape" ? null : "shape") })}
+        {open === "shape" && p.shapePopover && p.shapePopover(close)}
+        {open === "shape" && !p.shapePopover && (
           <Pop onClose={close} className="left-0 top-[44px] w-[200px]" label={t("Shapes")}>
-            {p.shapePopover ?? (["rectangle", "ellipse", "diamond"] as ShapeKind[]).map((s) => <Row key={s} glyph={SHAPE_GLYPH[s]} label={t(SHAPE_NAME[s])} on={p.shape === s} onClick={() => { p.onShape(s); close(); }} />)}
+            {(["rectangle", "ellipse", "diamond"] as ShapeKind[]).map((s) => <Row key={s} glyph={SHAPE_GLYPH[s]} label={t(SHAPE_NAME[s])} on={p.shape === s} onClick={() => { p.onShape(s); close(); }} />)}
           </Pop>
         )}
       </span>
@@ -64,8 +69,10 @@ export function Toolbar(p: {
         {open === "more" && (
           <Pop onClose={close} className="end-0 top-[44px] w-[230px]" label={t("More")}>
             {p.more.map((m) => <Row key={m.label} glyph={m.glyph} label={m.label} hint={m.hint} on={m.on} onClick={() => { close(); m.run(); }} />)}
+            {p.libPop && <><Row glyph="stamp" label={t("Stamps")} onClick={() => setOpen("stamps")} /><Row glyph="shape-library" label={t("Insert icon")} onClick={() => setOpen("icons")} /></>}
           </Pop>
         )}
+        {(open === "stamps" || open === "icons") && p.libPop && <Pop onClose={close} className="end-0 top-[44px]" label={open === "stamps" ? t("Stamps") : t("Insert icon")}>{p.libPop(open, close)}</Pop>}
       </span>
     </div>
   );

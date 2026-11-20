@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Glyph } from "../Glyph";
 import { t, tk } from "../../lib/i18n";
 import { openNote, useVault } from "../../lib/store";
-import { displayOf, EDGE_STYLE, endsOf, GROUP_KINDS, NODE_KINDS, STATUS, type AEdge, type ANode, type ArchStatus, type EdgeShape, type EdgeStyle, type Ends } from "../../lib/arch-model";
+import { displayOf, EDGE_STYLE, endsOf, GROUP_KINDS, NODE_KINDS, PRESET, STATUS, type AEdge, type LabelStyle, type ANode, type ArchStatus, type EdgeShape, type EdgeStyle, type Ends } from "../../lib/arch-model";
 import { Block, Row, type Item } from "./ArchUi";
 
 // ------------------------------------------------------------------ catalogue (≈80 shapes)
@@ -163,14 +163,59 @@ export function GroupProps({ n, onChange, inside }: { n: ANode; onChange: (n: AN
   );
 }
 
+/** Colour swatches (preset palette, "none" = the default look). */
+function Swatches({ label, value, onPick }: { label: string; value?: string; onPick: (c: string | undefined) => void }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 32, padding: "0 8px", fontSize: 12.5 }}>
+      <span style={{ flex: 1, whiteSpace: "nowrap" }}>{label}</span>
+      <span style={{ display: "flex", gap: 5 }}>
+        <button type="button" aria-label={t("Default")} title={t("Default")} aria-pressed={!value} onClick={() => onPick(undefined)} style={{ width: 18, height: 18, borderRadius: "50%", border: `1.5px solid ${!value ? "var(--accent)" : "var(--border)"}`, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)" }}><Glyph name="not-allowed" size={11} /></button>
+        {Object.entries(PRESET).map(([k, c]) => <button key={k} type="button" aria-label={c} aria-pressed={value === k} onClick={() => onPick(k)} style={{ width: 18, height: 18, borderRadius: "50%", background: c, border: `2px solid ${value === k ? "var(--text)" : "transparent"}`, boxSizing: "border-box" }} />)}
+      </span>
+    </div>
+  );
+}
+/** Label look: style, size, bold, placement, rotation, show / hide, colours and the protocol chip (the panel and the label popover share it). */
+export function LabelOptions({ e, onChange, pop }: { e: AEdge; onChange: (e: AEdge) => void; pop?: boolean }) {
+  const ls: LabelStyle = e.lumenEdge?.labelStyle ?? {};
+  const set = (p: Partial<LabelStyle>) => { const next = { ...ls, ...p }; for (const k of Object.keys(next) as (keyof LabelStyle)[]) if (next[k] === undefined) delete next[k]; onChange({ ...e, lumenEdge: { ...e.lumenEdge, labelStyle: next } }); };
+  const kinds = ["plain", "pill", "boxed"] as const, sizes = ["S", "M", "L"] as const, places = ["on", "above", "below"] as const;
+  const hasChip = !!(e.lumenEdge?.protocol || e.lumenEdge?.port);
+  return (
+    <>
+      <Block h={t("Label style")} seg={[t("Plain"), t("Pill"), t("Boxed")]} segOn={kinds.indexOf(ls.kind ?? "plain")} onSeg={(i) => set({ kind: kinds[i] })} />
+      <Block h={t("Size")} seg={["S", "M", "L"]} segOn={sizes.indexOf(ls.size ?? "M")} onSeg={(i) => set({ size: sizes[i] })} />
+      <Block h={t("Placement")} seg={[t("On the line"), t("Above"), t("Below")]} segOn={places.indexOf(ls.place ?? "on")} onSeg={(i) => set({ place: places[i] })} />
+      <Block gap="2px" items={[
+        { g: "text", l: t("Bold"), tog: !!ls.bold, onClick: () => set({ bold: ls.bold ? undefined : true }) },
+        { g: "path-curved", l: t("Follow the line"), tog: !!ls.follow, onClick: () => set({ follow: ls.follow ? undefined : true }) },
+        { g: ls.hidden ? "eye-off" : "eye", l: t("Show label"), tog: !ls.hidden, onClick: () => set({ hidden: ls.hidden ? undefined : true }) },
+        ...(hasChip ? [{ g: "tag", l: t("Protocol · port chip"), tog: ls.chip !== false, onClick: () => set({ chip: ls.chip === false ? undefined : false }) }] : []),
+      ]} />
+      {!pop && <Block gap="0"><Swatches label={t("Text colour")} value={ls.color} onPick={(c) => set({ color: c })} /><Swatches label={t("Background")} value={ls.bg} onPick={(c) => set({ bg: c })} /></Block>}
+    </>
+  );
+}
+
 export function EdgeProps({ e, onChange, names }: { e: AEdge; onChange: (e: AEdge) => void; names: [string, string] }) {
   const le = e.lumenEdge ?? {};
   const styles: EdgeStyle[] = ["sync", "async", "data", "control"], shapes: EdgeShape[] = ["straight", "orthogonal", "curved"], ends: Ends[] = ["none", "one", "both"];
-  const setLe = (p: Partial<typeof le>) => onChange({ ...e, lumenEdge: { ...le, ...p, ...(p.shape ? { points: undefined, pointsKey: undefined } : {}) } });
+  const setLe = (p: Partial<typeof le>) => onChange({ ...e, lumenEdge: { ...le, ...p, ...(p.shape ? { points: undefined, pointsKey: undefined, manual: undefined } : {}) } });
+  const setLabels = (p: { start?: string; mid?: string; end?: string }) => { const l = { ...le.labels, ...p }; for (const k of Object.keys(l) as (keyof typeof l)[]) if (!l[k]) delete l[k]; setLe({ labels: Object.keys(l).length ? l : undefined }); };
+  const shaped = !!(le.points?.length || le.manual);
   return (
     <>
       <Row it={{ g: "connector", l: `${names[0]} → ${names[1]}`, bd: "var(--border)", fw: 600 }} />
-      <Field label={t("Label")} value={e.label ?? ""} onChange={(x) => onChange({ ...e, label: x || undefined })} placeholder="HTTPS · 443 · JSON" />
+      <Block h={t("Labels")} gap="0">
+        <Field label={t("Label")} value={e.label ?? ""} onChange={(x) => onChange({ ...e, label: x || undefined, lumenEdge: { ...le, ...(x || le.labels?.mid ? { labels: { ...le.labels, mid: x || undefined } } : {}) } })} placeholder="HTTPS · 443 · JSON" />
+        <Field label={t("Start label")} value={le.labels?.start ?? ""} onChange={(x) => setLabels({ start: x })} />
+        <Field label={t("End label")} value={le.labels?.end ?? ""} onChange={(x) => setLabels({ end: x })} />
+      </Block>
+      <LabelOptions e={e} onChange={onChange} />
+      <Block h={t("Route")} gap="2px" items={[
+        { g: "undo", l: t("Reset route"), sub: shaped ? t("manual") : t("auto"), op: shaped ? 1 : 0.5, onClick: shaped ? () => setLe({ points: undefined, pointsKey: undefined, manual: undefined }) : undefined },
+        ...(le.labelPos != null ? [{ g: "undo", l: t("Reset label position"), onClick: () => setLe({ labelPos: undefined }) }] : []),
+      ]} note={t("Select a line, then drag the dots to bend it: a midpoint adds a point, double-click a point to remove it. Drag a label along the line; drag an end onto another node or side to reconnect.")} />
       <Block h={t("Connection")} gap="2px" items={styles.map((s) => ({ g: `edge-${s}`, gc: EDGE_STYLE[s][0], l: t(EDGE_STYLE[s][2]), on: (le.style ?? "sync") === s, onClick: () => setLe({ style: s }) }))} />
       <Block h={t("Shape")} seg={[t("Straight"), t("Orthogonal"), t("Curved")]} segOn={shapes.indexOf(le.shape ?? "orthogonal")} onSeg={(i) => setLe({ shape: shapes[i] })} />
       <Block h={t("Ends")} seg={[t("None"), t("One"), t("Both")]} segOn={ends.indexOf(endsOf(e))} onSeg={(i) => { const { fromEnd: _f, toEnd: _t, ...rest } = e; onChange({ ...rest, ...(ends[i] === "both" ? { fromEnd: "arrow" } : {}), ...(ends[i] === "none" ? { toEnd: "none" } : {}) }); }} />

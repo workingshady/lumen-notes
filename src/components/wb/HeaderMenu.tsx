@@ -26,7 +26,7 @@ export function HeaderMenu({ items, noteItems, phone, onClose }: { items: MenuIt
   );
   const rows = (
     <div className={cx("flex flex-col p-[12px_14px_14px]", phone ? "gap-0" : "gap-0")}>
-      {list.map((m) => <Row key={m.id} glyph={m.glyph} label={m.label} hint={m.hint} on={m.on} danger={m.id === "trash"} onClick={() => { if (m.id === "note") { setSub(true); return; } onClose(); m.run(); }} />)}
+      {list.map((m) => <Row key={m.id} glyph={m.glyph} label={m.label} hint={m.hint} on={m.on} danger={m.id === "trash" || m.id === "delete"} onClick={() => { if (m.id === "note") { setSub(true); return; } onClose(); m.run(); }} />)}
     </div>
   );
   if (phone) return (

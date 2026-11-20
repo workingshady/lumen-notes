@@ -27,7 +27,8 @@ export function toMermaid(c: ArchCanvas, flavor: MermaidFlavor = defaultFlavor(c
   const by = new Map(c.nodes.map((n) => [n.id, n]));
   const L: string[] = [];
   const lr = c.lumenArch.direction === "down" ? "TB" : "LR";
-  const label = (e: AEdge) => (e.label ? esc(e.label) : "");
+  /** Mermaid has one label per edge: the middle text, with any start / end text joined on. */
+  const label = (e: AEdge) => { const l = e.lumenEdge?.labels; const t = [l?.start, e.label, l?.end].filter(Boolean).join(" · "); return t ? esc(t) : ""; };
   if (flavor === "architecture-beta") {
     L.push("architecture-beta");
     for (const n of c.nodes.filter(isGroup)) { const p = parentOf(n); L.push(`  group ${id.get(n.id)}(cloud)[${esc([displayOf(n), n.lumenGroup?.sub ?? ""].filter(Boolean).join(" "))}]${p && by.has(p) ? ` in ${id.get(p)}` : ""}`); }

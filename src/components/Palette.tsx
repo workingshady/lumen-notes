@@ -302,7 +302,7 @@ export function Palette() {
                 if (r.kind === "note") return (
                   <Fragment key={r.key}>
                     {head}
-                    <button data-i={i} onMouseMove={() => setSel(i)} onClick={(e) => choose(r, e.ctrlKey || e.metaKey)}
+                    <button data-i={i} data-dnd-note={r.note?.id} draggable={!!r.note} onMouseMove={() => setSel(i)} onClick={(e) => choose(r, e.ctrlKey || e.metaKey)}
                       className={cx("flex w-full items-center gap-3 border-b border-line px-5 py-3 text-start md:rounded-[8px] md:border-0 md:px-2.5 md:py-[9px]", on && "md:bg-surface")}>
                       <span className={cx("hidden shrink-0 md:block", on ? "text-accent" : "text-muted")}>{r.icon}</span>
                       <span className="flex min-w-0 flex-1 flex-col gap-1 md:gap-0.5">

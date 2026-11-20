@@ -1,7 +1,8 @@
 // Whiteboard shell plug-in points (W1-A). Later packages register here instead of editing Whiteboard.tsx:
 //   W2-A pens / palettes / lasso, W2-B library, W3-A layers / frames / board settings / presentation, W1-F convert.
 // Every hook gets a WbCtx (the Excalidraw API plus a few Lumen helpers) and returns UI or performs the action.
-import type { ReactNode } from "react";
+import type { DragEvent as ReactDragEvent, ReactNode } from "react";
+import type { Style } from "./PropertyBar";
 
 /** Excalidraw's imperative API, narrowed to what the shell uses. */
 export type WbAPI = {
@@ -9,7 +10,7 @@ export type WbAPI = {
   getSceneElementsIncludingDeleted: () => readonly Record<string, unknown>[];
   getAppState: () => Record<string, unknown>;
   getFiles: () => Record<string, unknown>;
-  updateScene: (s: { elements?: readonly unknown[]; appState?: Record<string, unknown> }) => void;
+  updateScene: (s: { elements?: readonly unknown[]; appState?: Record<string, unknown>; captureUpdate?: "IMMEDIATELY" | "EVENTUALLY" | "NEVER" }) => void;
   scrollToContent: (target?: unknown, opts?: { fitToContent?: boolean; animate?: boolean }) => void;
   addFiles: (files: unknown[]) => void;
   setActiveTool: (t: { type: string; locked?: boolean }) => void;
@@ -26,6 +27,14 @@ export interface WbCtx {
   close: () => void;
   /** Ask the board to save now (after programmatic edits). */
   save: () => void;
+  /** Theme and layout (W2-A). */
+  dark?: boolean;
+  phone?: boolean;
+  /** Current style of the selection (or the active tool) and the shell's style setter (selection + next element). */
+  style?: Style;
+  setStyle?: (p: Partial<Style>) => void;
+  /** Restyle the selection with Lumen-only data (e.g. customData.lumenExact). */
+  setCustom?: (fn: (e: Record<string, unknown>) => Record<string, unknown> | null) => void;
 }
 
 /** A registered panel: rendered by Whiteboard while open (floating desktop panel or phone sheet is up to the panel). */
@@ -47,6 +56,8 @@ export interface WbRegistry {
   inkExtras?: (ctx: WbCtx) => ReactNode;
   /** Current pen look for the toolbar slot (W2-A): glyph name and colour. */
   penLook?: () => { glyph: string; color: string; label: string } | null;
+  /** Drop handler run before the board's own (W2-C: Lumen drag payloads, application/x-lumen+json). Return true when handled. */
+  drop?: (e: DragEvent | ReactDragEvent, ctx: WbCtx & { at?: { x: number; y: number } }) => boolean;
 }
 
 export const wbRegistry: WbRegistry = { panels: {} };

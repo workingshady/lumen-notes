@@ -25,6 +25,10 @@ Handoff: **`design/handoffs/2026-11-20-round-7/`** (from `Lumen Index Design Rou
 - **Performance:** no main-thread freezes (images already shrink off-thread: `src/lib/wb-files.ts`); heavy libs (elkjs, pdf) are lazy chunks.
 - **File ownership:** only edit the files your package owns (table below) plus new files you create. Shared files: re-read right before editing, keep the change to a small hook, and mention it in the report. Other agents work at the same time.
 - **Don't** commit, deploy, start a second dev server, or run more than one Edge at a time; close the browser when done.
+- **Wave 2 on (owner's rule): implement by converting the Claude Design code, not from screenshots.**
+  - Build from the `.dc.html` source converted 1:1 into JSX.
+  - Don't screenshot while implementing.
+  - Take screenshots **only at the end, to verify**: one per main frame, compared with the frame PNG, then fix the differences.
 - **Speed (owner's rule):** go fast, minimal testing: at most one quick screenshot check per main frame, no long test loops. Deploy happens after each wave.
 - **Check:** `npx tsc -b` and `npx vite build` must pass at the end. Browser check against the frames: app at http://localhost:5330/?demo=1 → click "Continue offline" → "Skip" through onboarding; demo whiteboard "Study plan — November", canvas "Backprop study board" (open with Ctrl+K + title, clicking the app shell first). puppeteer-core + Edge (`C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe`) are installed in `C:\Users\worki\AppData\Local\Temp\claude\a36550ff316812e0\7d09b627-7163-423d-8ee0-6ea8dedb02b4\scratchpad` (scripts go there). Save your app screenshots next to the frame they match: `design/verify/r7/<package>/<frameID>-app.png`.
 - **Report** (under 350 words): frames done (IDs), frames partly done and what's missing, files changed, new files, shared-file hooks, anything the next wave needs.

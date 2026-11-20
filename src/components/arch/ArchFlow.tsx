@@ -1,22 +1,28 @@
 // Board pieces of the architecture studio on React Flow: node, group (and collapsed summary), junction, layout ghost
 // and edge, ported from ArchStudio.dc.html (nodes / groups / edges / elbl markup) and R6Parts "archnodes".
-import { BaseEdge, EdgeLabelRenderer, Handle, Position, type EdgeProps, type NodeProps, type Node as RFNode, type Edge as RFEdge } from "@xyflow/react";
+import { Handle, Position, type NodeProps, type Node as RFNode, type Edge as RFEdge } from "@xyflow/react";
 import { createContext, memo, useContext, useEffect, useRef, useState } from "react";
 import type { Side } from "../../../shared/types";
 import { Glyph } from "../Glyph";
 import { t } from "../../lib/i18n";
-import { displayOf, EDGE_STYLE, groupColor, nodeColor, STATUS, type AEdge, type ANode, type DiffMark } from "../../lib/arch-model";
+import { displayOf, groupColor, nodeColor, STATUS, type AEdge, type ANode, type DiffMark } from "../../lib/arch-model";
 import type { Route } from "../../lib/arch-route";
+import type { RouteSrc } from "../../lib/arch-render";
+import type { LabelPart } from "../../lib/arch-label";
+import { ArchEdge } from "./ArchEdge";
 
 export const DC: Record<DiffMark, string> = { add: "var(--success)", del: "var(--danger)", chg: "var(--warning)" };
 export interface FlowCtx {
   hl: string | null; sel: string | null; editing: string | null;
+  /** Edge editing: read-only in diff / present, the label being edited inline, and the board callbacks (each one undo step). */
+  ro: boolean; editEdge: { id: string; part: LabelPart } | null; setEditEdge: (x: { id: string; part: LabelPart } | null) => void;
+  saveLabel: (id: string, part: LabelPart, text: string) => void; patchEdge: (id: string, fn: (e: AEdge) => AEdge) => void; labelClick: (id: string) => void;
   setHover: (id: string | null) => void; rename: (id: string, v: string) => void; stopEdit: () => void; toggleCollapse: (id: string) => void; inside: (id: string) => number;
 }
-export const Ctx = createContext<FlowCtx>({ hl: null, sel: null, editing: null, setHover: () => {}, rename: () => {}, stopEdit: () => {}, toggleCollapse: () => {}, inside: () => 0 });
+export const Ctx = createContext<FlowCtx>({ ro: false, editEdge: null, setEditEdge: () => {}, saveLabel: () => {}, patchEdge: () => {}, labelClick: () => {}, hl: null, sel: null, editing: null, setHover: () => {}, rename: () => {}, stopEdit: () => {}, toggleCollapse: () => {}, inside: () => 0 });
 export type NData = { n: ANode; mark?: DiffMark; chip?: string; ghost?: boolean };
 export type FlowNode = RFNode<NData>;
-export type EData = { e: AEdge; r: Route; mark?: DiffMark };
+export type EData = { e: AEdge; r: Route; src: RouteSrc; mark?: DiffMark };
 export type FlowEdge = RFEdge<EData>;
 
 const SIDES: [Side, Position][] = [["top", Position.Top], ["right", Position.Right], ["bottom", Position.Bottom], ["left", Position.Left]];
@@ -112,32 +118,15 @@ export const ArchGhost = memo(function ArchGhost() {
   return <div style={{ width: "100%", height: "100%", border: "1.5px dashed var(--accent)", borderRadius: 10, background: "color-mix(in srgb,var(--accent) 6%,transparent)", pointerEvents: "none", animation: "arch-ghost .2s var(--ease)" }} />;
 });
 
-export const ArchEdge = memo(function ArchEdge({ id, data, selected }: EdgeProps<FlowEdge>) {
-  if (!data) return null;
-  const { e, r, mark } = data;
-  const [ec, da] = EDGE_STYLE[e.lumenEdge?.style ?? "sync"];
-  const c = mark ? DC[mark] : selected ? "var(--accent)" : ec;
-  const dash = mark === "del" ? "5 4" : da;
-  return (
-    <>
-      <BaseEdge id={id} path={r.d} interactionWidth={14} style={{ fill: "none", stroke: c, strokeWidth: mark ? 2.2 : selected ? 2.2 : 1.6, strokeDasharray: dash === "none" ? undefined : dash, strokeLinejoin: "round" }} />
-      {r.heads.map((h, i) => <path key={i} d={h} style={{ fill: c, stroke: "none" }} />)}
-      {e.label && (
-        <EdgeLabelRenderer>
-          <span className="nodrag nopan" style={{ position: "absolute", transform: `translate(-50%,-50%) translate(${r.mid.x}px,${r.mid.y}px)`, font: "500 10.5px 'JetBrains Mono',monospace", color: mark ? DC[mark] : "var(--muted)", background: "var(--bg)", padding: "1px 5px", borderRadius: 4, whiteSpace: "nowrap", textDecoration: mark === "del" ? "line-through" : "none", pointerEvents: "all" }}>{e.label}</span>
-        </EdgeLabelRenderer>
-      )}
-    </>
-  );
-});
-
 export const nodeTypes = { arch: ArchNode, archGroup: ArchGroup, archGhost: ArchGhost };
 export const edgeTypes = { arch: ArchEdge };
 export const FLOW_CSS = `
 .arch-flow .react-flow__node { font-family: Inter, 'IBM Plex Sans Arabic', system-ui, sans-serif; color: var(--text); }
 .arch-flow .react-flow__node-archGroup { z-index: -1 !important; }
+.arch-flow .react-flow__edgelabel-renderer { z-index: 3000; }
 .arch-flow .arch-port { width: 9px; height: 9px; min-width: 0; min-height: 0; border-radius: 50%; background: var(--bg); border: 2px solid var(--accent); opacity: 0; transition: opacity .12s; }
 .arch-flow .react-flow__node.selected .arch-port, .arch-flow .react-flow__node:hover .arch-port, .arch-flow.connecting .arch-port { opacity: 1; }
+.arch-flow .arch-port.connectingto, .arch-flow .arch-port.valid { opacity: 1; transform: scale(1.5); background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb,var(--accent) 25%,transparent); }
 .arch-flow .react-flow__node-archGroup .arch-port { opacity: 0; pointer-events: none; }
 .arch-flow .react-flow__minimap { border-radius: 10px; border: 1px solid var(--border); background: var(--surface); overflow: hidden; }
 .arch-flow .react-flow__connectionline path { stroke: var(--accent); stroke-width: 1.6; }
