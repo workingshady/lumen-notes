@@ -12,6 +12,7 @@ import { paymentsCanvas } from "./arch-starters";
 import { serializeHighlight, type Highlight } from "./pdf-format";
 import { flashcards, inlineTags, splitFrontMatter } from "./parse";
 import type { Settings } from "./settings";
+import { PLAN_DEMO_IDS, planDemoNotes } from "./plan-demo";
 
 type LumenDB = typeof defaultDb;
 
@@ -451,6 +452,9 @@ export async function seedDemo(db: LumenDB = defaultDb): Promise<void> {
     space({ id: S.net, name: "Networking", kind: "area", icon: "glyph:globe", color: "#57AB5A", sort: 4, description: "Protocols I keep having to look up.", createdAt: at(aug(10), "10:00"), updatedAt: at(nov(10), "21:00") }),
     space({ id: S.health, name: "Health & sleep", kind: "area", icon: "glyph:health", color: "#E5534B", sort: 5, description: "Daily notes, sleep and training.", createdAt: at(aug(1), "10:00") }),
     space({ id: S.math, name: "Math reference", kind: "resource", icon: "glyph:book", color: "#E3B341", sort: 6, description: "Formulas and identities I reach for.", createdAt: at(aug(5), "10:00") }),
+    // round 8 plans (Lumen 53 / 54): the English course and a Plans area with four example plans (lib/plan-demo.ts)
+    space({ id: PLAN_DEMO_IDS.englishSpace, name: "English A1 to C2", kind: "course", icon: "glyph:language", color: "#5CC8C2", sort: 6.2, roadmapId: PLAN_DEMO_IDS.englishRoadmap, description: "Roadmap, learning path, lessons, skills, resources and study plan", props: { provider: "Self-study course", levels: "CEFR A1 – C2", language: "English", pace: "4", start: iso(3) }, createdAt: at(1, "10:00") }),
+    space({ id: PLAN_DEMO_IDS.plansSpace, name: "Plans", kind: "area", icon: "glyph:timeline", color: "#F2A93B", sort: 6.4, description: "Courses, projects, exam prep and research as plans.", createdAt: at(1, "10:00") }),
     space({ id: "dm-s-calc", name: "Calculus refresher", kind: "archive", icon: "glyph:math", sort: 7, archived: 1, createdAt: at(130, "10:00"), updatedAt: at(100, "10:00") }),
     space({ id: "dm-s-spanish", name: "Spanish A1", kind: "archive", icon: "glyph:language", sort: 8, archived: 1, createdAt: at(130, "10:00"), updatedAt: at(110, "10:00") }),
     space({ id: "dm-s-drafts", name: "Old blog drafts", kind: "archive", icon: "glyph:archive", sort: 9, archived: 1, createdAt: at(130, "10:00"), updatedAt: at(115, "10:00") }),
@@ -937,6 +941,7 @@ flowchart LR
   // ---------------------------------------------------------------- Inbox (3)
   add({ id: "dm-inbox-videos", title: "Videos to find", space: S.inbox, type: "note", updated: ago(400), created: ago(410), text: "- [ ] Find a good video on KL divergence\n" });
   add({ id: "dm-inbox-linformer", title: "Linformer paper", space: S.inbox, type: "note", updated: at(1, "12:00"), created: at(1, "11:58"), text: "https://arxiv.org/abs/2006.04768\n" });
+  for (const p of planDemoNotes(iso)) add({ id: p.id, title: p.title, space: p.space, type: "roadmap", updated: at(1, "20:00"), created: at(40, "10:00"), body: p.body });
   add({ id: "dm-inbox-zoo", title: "Idea: optimizer zoo canvas", space: S.inbox, type: "note", updated: ago(380), created: ago(380), text: "One card per optimizer, arrows for “adds to”.\n" });
 
   // ---------------------------------------------------------------- archived spaces

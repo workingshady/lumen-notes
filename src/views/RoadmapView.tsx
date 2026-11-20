@@ -18,7 +18,9 @@ import { announce } from "./dnd-parts";
 import { Builder, Outline, PhoneOutline, type TopicOps } from "./roadmap-outline";
 import { RM_STYLE, RoadmapTray, useInlineConfirm, useModuleFold } from "./roadmap-parts";
 import { PhoneTopicSheet, TopicSheet } from "./roadmap-sheet";
-import { Timeline } from "./roadmap-timeline";
+import { CourseTimeline, CourseTimelineTools } from "../components/plan/CourseTimeline";
+import { PlanPage } from "../components/plan/PlanViews";
+import { isPlanNote } from "../lib/plan-sources";
 import { Tree } from "./roadmap-tree";
 import { usePhone } from "./spaces-util";
 import { fmtNum, t, tk, tx } from "../lib/i18n";
@@ -116,7 +118,13 @@ export function ViewSwitch({ view, onView, phone }: { view: RoadmapViewKind; onV
  * The roadmap's three views. `compact` = embedded in a course space page (the page owns the header above the tabs).
  * The view can be controlled (`view`/`onView`) so the page can adapt its header on phones.
  */
-export function RoadmapView({ note, compact, target, view: cView, onView, header }: { note: Note; compact?: boolean; target?: string | null; view?: RoadmapViewKind; onView?: (v: RoadmapViewKind) => void; header?: ReactNode }) {
+type RoadmapViewProps = { note: Note; compact?: boolean; target?: string | null; view?: RoadmapViewKind; onView?: (v: RoadmapViewKind) => void; header?: ReactNode };
+/** A roadmap note with `plan:` front matter opens as a plan (Lumen 54: Timeline · Lanes · Board · Agenda). */
+export function RoadmapView(props: RoadmapViewProps) {
+  return !props.compact && isPlanNote(props.note) ? <PlanPage note={props.note} /> : <CourseRoadmapView {...props} />;
+}
+/** Course roadmap; its Timeline tab is the course timeline (Lumen 53). `target` stays in the props for callers. */
+function CourseRoadmapView({ note, compact, view: cView, onView, header }: RoadmapViewProps) {
   const [uView, setUView] = useState<RoadmapViewKind>("outline");
   const mods = useMemo(() => roadmap(note.body), [note.body]);
   const empty = !mods.some((m) => m.topics.length);
@@ -215,6 +223,7 @@ export function RoadmapView({ note, compact, target, view: cView, onView, header
               <ViewSwitch view={view} onView={setView} />
               <span className="flex-1" />
               {!compact && !header && <span className="flex items-center gap-2 pb-3 text-[12px] text-muted"><span className="h-1.5 w-[150px] overflow-hidden rounded-[3px] bg-surface-2"><span className="block h-full bg-ok" style={{ width: `${p.pct}%` }} /></span>{t("{done} of {total} done", { done: p.done, total: p.total })}</span>}
+              {view === "timeline" && !empty && <CourseTimelineTools note={note} />}
               {view === "outline" && !empty && (
                 <button onClick={() => fold.setAll(!fold.allOpen)} className="flex items-center gap-1.5 pb-3 text-muted hover:text-ink">
                   <Glyph name={fold.allOpen ? "wide" : "expand"} size={16} />{fold.allOpen ? t("Collapse all") : t("Expand all")}
@@ -235,7 +244,7 @@ export function RoadmapView({ note, compact, target, view: cView, onView, header
               : empty ? <Builder mods={mods} ops={ops} />
                 : <Outline mods={mods} sel={sel ?? undefined} onSelect={select} ops={ops} fold={fold} fresh={fresh} />)}
             {view === "tree" && <ReactFlowProvider><Tree mods={mods} sel={sel} phone={phone} fold={fold} fresh={fresh} onSelect={select} onConnect={addNeed} onCreate={createTopic} onRemoveNeed={(tp, n) => { write(removeTopicNeed(note.body, tp.line, n)); announce(t("{a} no longer needs {b}", { a: tp.name, b: n })); }} onEditLinks={(f, said) => { write(f(note.body)); announce(said); }} /></ReactFlowProvider>}
-            {view === "timeline" && <Timeline mods={mods} target={target} onSelect={select} onDue={(t, due) => write(setTopicDue(note.body, t.line, due))} fresh={fresh} />}
+            {view === "timeline" && <CourseTimeline note={note} ops={ops} phone={phone} />}
           </div>
           {tray && <RoadmapTray spaceId={note.spaceId} used={used} onPick={pickNote} builder={empty} onAddAll={addAll} />}
         </div>

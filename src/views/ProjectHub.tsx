@@ -16,7 +16,9 @@ import { cx, relTime } from "../components/ui";
 import { Assistant, type AssistantHandle } from "./hub-assistant";
 import { Board } from "./hub-board";
 import { addDays, addTask, cardDay, cardsOfDoc, dayMon, DocPill, menuRow, Popover, TaskGlyph, todayISO } from "./hub-parts";
-import { diagramNotes, Diagrams, Gantt, Requirements } from "./hub-plan";
+import { diagramNotes, Diagrams, Requirements } from "./hub-plan";
+import { PlanViews } from "../components/plan/PlanViews";
+import { planFromProject } from "../lib/plan-sources";
 import { usePhone } from "./spaces-util";
 import { fmtNum, t as tr, tk, tx } from "../lib/i18n";
 
@@ -76,12 +78,12 @@ export function ProjectHub({ sp, overview, more, color }: { sp: Space; overview:
           ))}
         </nav>
       </div></div>
-      <div className={cx("min-h-0 flex-1", tab === "board" ? "flex flex-col overflow-hidden" : "overflow-y-auto", phone ? "px-4 py-3.5" : "px-8 py-[18px]")}>
+      <div className={cx("min-h-0 flex-1", tab === "board" || tab === "timeline" ? "flex flex-col overflow-hidden" : "overflow-y-auto", phone ? "px-4 py-3.5" : "px-8 py-[18px]")}>
         {tab === "overview" ? <Overview cards={cards} docs={docs} health={health} phone={phone} onDoc={(id) => { pickDoc(id); setTab("docs"); }}>{overview}</Overview>
           : tab === "docs" ? <Docs sp={sp} docs={docs} cards={cards} sel={docSel} onSel={pickDoc} phone={phone} />
           : tab === "board" ? <Board sp={sp} cards={cards} notes={notes} phone={phone} />
           : tab === "requirements" ? <Requirements reqs={reqs} phone={phone} />
-          : tab === "timeline" ? <Gantt cards={cards} phone={phone} />
+          : tab === "timeline" ? <div className={cx("relative min-h-0 flex-1", phone ? "-mx-4 -my-3.5" : "-my-[18px]")}><PlanViews plan={planFromProject(sp, v.notes)} embedded /></div>
           : tab === "diagrams" ? <Diagrams sp={sp} cards={cards} reqs={reqs} notes={notes} phone={phone} />
           : <Assistant ref={assistant} sp={sp} notes={notes} cards={cards} reqs={reqs} />}
       </div>

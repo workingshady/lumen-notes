@@ -14,6 +14,7 @@ import { KIND_LABEL } from "../components/Sidebar";
 import { Button, cx, Empty, Field, inputCls, Sheet } from "../components/ui";
 import { ShareSheet } from "../components/ShareSheet";
 import { SpaceIcon, SpaceIconPicker } from "../components/SpaceIcon";
+import { CourseHeader } from "../components/plan/CourseHeader";
 import { currentTopic, openTopicNote, Ring, RoadmapView, type RoadmapViewKind } from "./RoadmapView";
 import { DAY, fmtDay, fmtFull, recentLabel, todayIso, usePhone } from "./spaces-util";
 import { digits, t, tx } from "../lib/i18n";
@@ -162,21 +163,8 @@ export function SpaceView() {
   );
   // ---------------------------------------------------------------- course page with a roadmap (design R4 RoadmapDesk 15A)
   if (isCourse && rm) {
-    const sub = [sp.props.provider, t("course"), p ? t("{done} of {total} topics done", { done: p.done, total: p.total }) : null, deadline ? t("target {date}", { date: fmtDay(deadline) }) : null].filter(Boolean).join(" · ");
-    const header = (
-      <div className="flex items-center gap-3.5">
-        <SpaceIcon space={sp} size={24} tile color={color} />
-        <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
-          <span className="truncate whitespace-nowrap text-[20px] font-[650] tracking-[-.02em]" dir="auto" title={sp.description || undefined}>{sp.name}{sp.description ? ` · ${sp.description}` : ""}</span>
-          {/* RoadmapDesk header; ScreenCourse's extra facts (days left, learning count, notes) stay one hover away */}
-          <span className={cx("truncate whitespace-nowrap text-muted", daysLeft !== null && daysLeft < 0 && "text-bad")}
-            title={[sub, daysLeft !== null ? (daysLeft < 0 ? t("{n} day late|{n} days late", { n: -daysLeft }) : t("{n} day left|{n} days left", { n: daysLeft })) : null, p ? t("{n} learning", { n: learning }) : null, t("{n} note|{n} notes", { n: notes.length })].filter(Boolean).join(" · ")}>{sp.props.url ? <a href={sp.props.url} target="_blank" rel="noreferrer" className="hover:text-ink">{sub}</a> : sub}</span>
-        </div>
-        {p && <><span className="h-1.5 w-[150px] shrink-0 overflow-hidden rounded-[3px] bg-surface-2" title={t("{n} learning", { n: learning })}><span className="block h-full bg-ok" style={{ width: `${p.pct}%` }} /></span><span className="w-[34px] shrink-0 text-muted">{t("{pct}%", { pct: p.pct })}</span></>}
-        {cur && <button className="flex h-[34px] max-w-[260px] shrink-0 items-center gap-2 whitespace-nowrap rounded-[10px] bg-accent px-3.5 font-semibold text-accent-fg hover:brightness-110" onClick={() => void openTopicNote(rm, cur, v.byTitle)}><Play size={13} className="shrink-0" /><span className="truncate">{tx("Continue: {name}", { name: <span dir="auto">{cur.name}</span> })}</span></button>}
-        {moreBtn}
-      </div>
-    );
+    // design round 8 (Lumen 53A): two-line title, chips, ring, Continue with the module above the topic
+    const header = <CourseHeader sp={sp} rm={rm} color={color} done={p?.done ?? 0} total={p?.total ?? 0} onContinue={cur ? () => void openTopicNote(rm, cur, v.byTitle) : undefined} more={moreBtn} />;
     return (
       <div className="relative flex h-full flex-col overflow-hidden">
         <div className="safe-t min-h-0 flex-1"><RoadmapView note={rm} compact header={header} target={deadline || null} view={view} onView={setView} /></div>

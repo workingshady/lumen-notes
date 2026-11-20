@@ -38,6 +38,7 @@ Timestamps are relative to `Date.now()`: minute/hour items ("12m", "2 h ago") ar
 | Pinned | ML Foundations — map of content (24 links), Exam 2 cheat sheet (due 28 Nov), Arabic: verb forms I–X (ids sort first) + Gradient descent, Adam | Lumen 01, ScreenWorkspace |
 | Daily notes | `Journal YYYY-MM-DD` for 2–6 and 9–13 Nov (Health & sleep space) | Lumen 05b (calendar) |
 | Attachments | Storage "largest files" metadata (entropy-per-layer.mp4 92 MB, lecture-07-attention.m4a 61 MB, backprop-demo.webm 48 MB, vaswani pdf 2.1 MB, whiteboard-photo.jpg 9.8 MB); real SVG blobs for feature-maps and loss-curve | Lumen 11 (4D) |
+| Plans (round 8) | English A1 to C2 course space (178-topic levelled roadmap, 4 h/week) + Plans area: English A1 to C2 (plan from the roadmap), Deep learning: zero to LLMs, Lumen 2.0 launch (owners Sara/Ahmed/Lin), AWS Solutions Architect (back from the exam date), MSc thesis (`src/lib/plan-demo.ts`) | Lumen 53, 54 |
 
 ## Known gaps (the designs contradict each other)
 
