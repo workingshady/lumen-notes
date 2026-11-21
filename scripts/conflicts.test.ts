@@ -47,7 +47,8 @@ ok(changed.toks.some((x) => x.k === "-" && /the same/.test(x.s)) && changed.toks
 ok(changed.toks.some((x) => x.k === "=" && /kernel slides/.test(x.s)), "unchanged words kept");
 const st = statOf(d);
 ok(st.changed >= 1, "stat counts changed lines");
-eq(d[0].h, 1, "heading level kept");
+eq(diffLines(old, cur, true)[0].h, 1, "heading level kept (rendered view)");
+eq(d[0].h, 0, "source view keeps the raw line");
 // restore selection: take the old wording back for the changed row only
 const idx = changed.i;
 const back = restoreRows(d, new Set([idx]));
