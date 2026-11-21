@@ -7,7 +7,7 @@ import { EmptyState } from "../components/EmptyState";
 import { ArrowDown, ArrowUp, CalendarDays, Check, Columns3, GripVertical, Layers, ListChecks, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NOTE_TYPES, STATUSES, type Note, type NoteType } from "../../shared/types";
-import { createNote, purgeNote, restoreNote, updateNote } from "../lib/actions";
+import { createNote, purgeNote, purgeOldTrash, restoreNote, updateNote } from "../lib/actions";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../lib/db";
 import { flashcards, words } from "../lib/parse";
@@ -428,11 +428,12 @@ export function ReviewView() {
 
 // ------------------------------------------------------------------ Trash
 export function TrashView() {
+  useEffect(() => { void purgeOldTrash(); }, []);
   const trashed = useLiveQuery(() => db.notes.where("deleted").equals(1).toArray(), []) ?? [];
   const items = trashed.filter((n) => n.title !== "(deleted)").sort((a, b) => b.updatedAt - a.updatedAt);
   return (
     <div className="flex h-full flex-col">
-      <Header title={t("Trash")} sub={t("Deleted notes stay here until you delete them forever")} />
+      <Header title={t("Trash")} sub={t("Deleted notes stay here for 30 days, then they are deleted forever")} />
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 md:px-8">
         {items.length ? items.map((n) => (
           <div key={n.id} className="flex items-center gap-2 rounded-[10px] px-3 py-2 hover:bg-surface">

@@ -5,7 +5,7 @@
 // Every record has a fixed id and `dirty: 0` (demo data never syncs). Timestamps are computed relative to
 // Date.now(): "12 min ago" style items are exact offsets, calendar items ("Yesterday", "Mon", "3 Nov") keep
 // their wall-clock time and move by whole days. With the clock pinned to DEMO_NOW every label matches the design.
-import type { AttachmentMeta, Card, Folder, Note, NoteType, Session, Space, Status, Version } from "../../shared/types";
+import type { AttachmentMeta, Card, Folder, Note, NoteType, ReviewLog, Session, Space, Status, Version } from "../../shared/types";
 import { db as defaultDb } from "./db";
 import { demoPdf } from "./demo-pdf";
 import { paymentsCanvas } from "./arch-starters";
@@ -1074,7 +1074,13 @@ See also ${links.map((x) => `[[${x.title}]]`).join(", ")}.
   const dueAt = new Map<string, number>();
   let order = 0;
   for (const [nid, idxs] of dueOrder) for (const i of idxs) dueAt.set(`${nid}#${i}`, now - (40 - order++) * 60 * MIN);
+  const LEECH_CARDS = new Set([3, 10, 17, 24, 31, 38, 45]); // 7 leeches (4+ lapses)
   const cards: Card[] = [];
+  const reviewLogs: ReviewLog[] = [];
+  // Review history (Lumen 57): every studied card has an FSRS memory state and a last review 1-12 days ago, so retention,
+  // "last seen N d ago", the progress bars and a 12-day review streak (today not reviewed yet) are all real data.
+  // dm-bayes and dm-mle-map are untouched new cards, which is what "Study N new" offers when the day's queue is done.
+  const NEW_NOTES = new Set(["dm-bayes", "dm-mle-map"]);
   let ci = 0;
   for (const n of notes) {
     if (n.type === "canvas" || n.type === "whiteboard") continue;
@@ -1084,8 +1090,19 @@ See also ${links.map((x) => `[[${x.title}]]`).join(", ")}.
       let dueT = dueAt.get(key);
       if (dueT === undefined && tomorrowSet[n.id]?.includes(i)) dueT = tomorrow.getTime() + i * MIN;
       dueT ??= t0.getTime() + (3 + (ci % 27)) * DAY + 9 * 60 * MIN;
-      const interval = isNew ? 0 : 1 + (ci % 20);
-      cards.push({ id: `${n.id}:${fc.key}`, noteId: n.id, ease: 2.3 + (ci % 5) / 10, interval, due: dueT, reps: isNew ? 0 : 1 + (ci % 6), lapses: ci % 7 === 0 ? 1 : 0, updatedAt: Math.min(now - MIN, dueT - interval * DAY), deleted: 0, dirty: 0 });
+      const fresh = isNew || NEW_NOTES.has(n.id);
+      if (NEW_NOTES.has(n.id)) dueT = tomorrow.getTime() + (60 + ci) * MIN;
+      const interval = fresh ? 0 : 1 + (ci % 20);
+      const leech = !fresh && LEECH_CARDS.has(ci);
+      const base: Card = { id: `${n.id}:${fc.key}`, noteId: n.id, ease: 2.3 + (ci % 5) / 10, interval, due: dueT, reps: fresh ? 0 : 1 + (ci % 6), lapses: leech ? 4 : ci % 7 === 0 ? 1 : 0, updatedAt: Math.min(now - MIN, dueT - interval * DAY), deleted: 0, dirty: 0 };
+      if (!fresh) {
+        const last = Math.min(dueT - interval * DAY, now - (1 + (ci % 12)) * DAY - (ci % 5) * 3 * 60 * MIN);
+        Object.assign(base, { stability: Math.max(1, interval), difficulty: 4 + (ci % 5), lastReview: last, state: "review" as const });
+        base.updatedAt = last;
+        // one review per card on its last day (1 in 9 forgotten, 89 % retention) plus an earlier pass for older cards
+        reviewLogs.push({ id: `dm-rv-${ci}`, cardId: base.id, noteId: n.id, at: last, grade: ci % 9 === 4 ? 0 : ci % 4 === 0 ? 3 : ci % 3 === 0 ? 1 : 2, state: "review", elapsed: Math.max(1, interval), scheduled: interval, updatedAt: last, deleted: 0, dirty: 0 } as ReviewLog);
+      }
+      cards.push(base);
       ci++;
     });
   }
@@ -1118,6 +1135,7 @@ See also ${links.map((x) => `[[${x.title}]]`).join(", ")}.
     await db.notes.bulkPut(notes);
     await db.versions.bulkPut(versions);
     await db.cards.bulkPut(cards);
+    await db.reviews.bulkPut(reviewLogs);
     await db.sessions.bulkPut(sessions);
     await db.attachments.bulkPut(attachments);
     await db.blobs.bulkPut(blobs);

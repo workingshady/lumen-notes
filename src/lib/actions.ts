@@ -67,6 +67,16 @@ export async function purgeNote(id: string) {
   for (const v of await db.versions.where("noteId").equals(id).toArray()) await save("version", { ...v, deleted: 1, body: "" });
 }
 
+export const TRASH_DAYS = 30;
+/** Trash keeps a deleted note for 30 days; after that it is purged the normal way (purgeNote: the tombstone stays with an
+ *  empty body, so every device and D1 drop the content and the sync keeps its deletion rule). Returns how many were purged. */
+export async function purgeOldTrash(at = now()): Promise<number> {
+  const cutoff = at - TRASH_DAYS * 86_400_000;
+  const old = await db.notes.where("deleted").equals(1).filter((n) => n.title !== "(deleted)" && n.updatedAt < cutoff).primaryKeys();
+  for (const id of old) await purgeNote(id as string);
+  return old.length;
+}
+
 export async function duplicateNote(id: string) {
   const n = await db.notes.get(id);
   if (!n) return;

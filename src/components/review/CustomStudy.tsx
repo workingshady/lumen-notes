@@ -13,7 +13,13 @@ export function CustomStudy({ items, spaces, forgotten, phone, secPer, onClose, 
   items: DueItem[]; spaces: Space[]; forgotten: Set<string>; phone: boolean; secPer: number;
   onClose: () => void; onStart: (queue: DueItem[], timeLimit: number, title: string) => void;
 }) {
-  const [o, setO] = useState<CustomOpts>({ from: [], which: 0, order: 0, limit: 1 });
+  // Design 57E opens with the decks you are studying already picked in FROM: the two spaces with the most cards due.
+  const [o, setO] = useState<CustomOpts>(() => {
+    const due = new Map<string, number>(), at = Date.now();
+    for (const x of items) if (x.card.due <= at) due.set(x.note.spaceId, (due.get(x.note.spaceId) ?? 0) + 1);
+    const top = spaces.filter((s) => due.has(s.id) && !s.archived).sort((a, b) => (due.get(b.id) ?? 0) - (due.get(a.id) ?? 0)).slice(0, 2).map((s) => `s:${s.id}`);
+    return { from: top, which: 0, order: 0, limit: 1 };
+  });
   const [extra, setExtra] = useState<{ key: string; l: string; c: string }[]>([]);
   const [pick, setPick] = useState(false);
   const [q, setQ] = useState("");

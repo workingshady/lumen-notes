@@ -106,7 +106,7 @@ export const ar: Catalog = {
   "{n} match · sorted by {sort}": "{n} نتيجة · مرتبة حسب {sort}",
   "Click to sort · Shift-click for a secondary sort · drag to reorder": "انقر للترتيب · Shift مع النقر لترتيب ثانوي · اسحب لإعادة الترتيب",
   "Double-click to rename": "انقر مرتين لإعادة التسمية", "No notes match.": "لا ملاحظات مطابقة.", "Show columns": "إظهار الأعمدة", "Map of content": "خريطة محتوى",
-  "Deleted notes stay here until you delete them forever": "تبقى الملاحظات المحذوفة هنا حتى تحذفها نهائيًا", "deleted {ago}": "حُذفت {ago}",
+  "Deleted notes stay here for 30 days, then they are deleted forever": "تبقى الملاحظات المحذوفة هنا 30 يومًا ثم تُحذف نهائيًا", "deleted {ago}": "حُذفت {ago}",
   Restore: "استعادة", "Delete forever": "حذف نهائي", "Delete “{title}” forever? Its history goes too.": "حذف «{title}» نهائيًا؟ سيُحذف سجلّه أيضًا.",
   "Trash is empty. Deleted notes wait here.": "المهملات فارغة. تنتظر الملاحظات المحذوفة هنا.", "Back to notes": "العودة إلى الملاحظات",
   // ---- Graph

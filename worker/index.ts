@@ -24,6 +24,7 @@ import registerLinks from "./ext/links";
 import { isWbType } from "../shared/types";
 import { ensureIndices } from "../shared/board-index";
 import { carryTombstones } from "../src/lib/board-merge";
+import { purgeTrashAll } from "./trash";
 import registerRest from "./ext/rest"; // REST API for scripts and agents (docs/API.md) // Note › Links tab: page snapshots + link check (round 6)
 
 export type Env = {
@@ -761,5 +762,9 @@ extOg(api, helpers); ogPages(app); // OG image routes + /s/:token, /blog/:slug m
 app.route("/api", api);
 app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
-export default app;
+export default {
+  fetch: app.fetch,
+  /** Daily cron (wrangler.jsonc triggers): the 30-day Trash purge (worker/trash.ts). */
+  scheduled(_e: ScheduledController, env: Env["Bindings"], ctx: ExecutionContext) { ctx.waitUntil(purgeTrashAll(env)); },
+};
 export { SlidesRemote } from "./study-remote";

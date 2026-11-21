@@ -738,8 +738,16 @@ function Studio({ note }: { note: Note }) {
     const { x, y, zoom } = rf.getViewport(), W = el.clientWidth, H = el.clientHeight;
     const sx0 = box.x * zoom + x, sx1 = (box.x + box.width) * zoom + x, sy0 = box.y * zoom + y, sy1 = (box.y + box.height) * zoom + y;
     if (sx0 >= 8 && sx1 <= W - 8 && sy0 >= 8 && sy1 <= H - 8) return;
+    // the whole diagram fits at this zoom: pan it all back into view (Properties never hides part of a diagram that fits)
+    const vis = cur.nodes.filter((n) => !hiddenBy(cur, n.id));
+    if (vis.length) {
+      const x0 = Math.min(...vis.map((n) => n.x)), y0 = Math.min(...vis.map((n) => n.y)), x1 = Math.max(...vis.map((n) => n.x + n.width)), y1 = Math.max(...vis.map((n) => n.y + n.height));
+      if ((x1 - x0) * zoom <= W - 24 && (y1 - y0) * zoom <= H - 24) { void rf.setCenter((x0 + x1) / 2, (y0 + y1) / 2, { zoom, duration: 200 }); return; }
+    }
     void rf.setCenter(box.x + box.width / 2, box.y + box.height / 2, { zoom, duration: 200 });
   };
+  // a newly selected node / edge that sits under the Properties column (or off screen) is panned into view
+  useEffect(() => { if (!sel || phone) return; const tm = setTimeout(keepSelVisible, 260); return () => clearTimeout(tm); }, [sel?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const el = canvasEl.current;
     if (!el) return;

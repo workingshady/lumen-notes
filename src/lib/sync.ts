@@ -176,6 +176,7 @@ async function pruneVersionsSometimes() {
   if (Date.now() - last < 6 * 3_600_000) return;
   await setMeta("versionsPrunedAt", Date.now());
   try { await (await import("./actions")).pruneVersions(); } catch { /* retention never breaks sync */ }
+  try { await (await import("./actions")).purgeOldTrash(); } catch { /* the 30-day Trash purge never breaks sync either */ }
 }
 
 const FIRST_PHASES: { phase: FirstSync["phase"]; kinds: Kind[] }[] = [

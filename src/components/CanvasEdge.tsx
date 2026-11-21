@@ -4,7 +4,7 @@
 // dot to move it, double-click it to remove it) and a label moved along the line by its grip (`lumenLabelPos`, 0…1).
 // Both are lumen* keys, so the file stays plain JSON Canvas; each drag is one undo step on release.
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, getStraightPath, useReactFlow, useStore, type EdgeProps } from "@xyflow/react";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { CanvasEdge, Side } from "../../shared/types";
 import { t } from "../lib/i18n";
 
@@ -77,11 +77,16 @@ export function canvasNodeAt(x: number, y: number): { id: string; side: Side } |
 }
 
 type Kind = "straight" | "step" | "curved";
+/** Zoom rounded to quarter-octave steps (and flat from 0.8 up, where the hit width stops depending on it). */
+const zoomStep = (z: number) => (z >= 0.8 ? 0.8 : 2 ** (Math.round(Math.log2(z) * 4) / 4));
 function makeEdge(kind: Kind) {
   return function CanvasEdge(p: EdgeProps) {
     const api = useContext(CanvasEdgeCtx), rf = useReactFlow();
-    const zoom = useStore((s) => s.transform[2]);
     const [drag, setDrag] = useState<{ end: "source" | "target"; x: number; y: number } | null>(null);
+    // Perf: an idle edge only needs the zoom for its hit width, so it reads a coarse step (no re-render per zoom frame
+    // on boards with hundreds of edges); the selected / dragged edge reads the exact zoom for its handles.
+    const exact = !!p.selected || !!drag;
+    const zoom = useStore(useCallback((s: { transform: [number, number, number] }) => (exact ? s.transform[2] : zoomStep(s.transform[2])), [exact]));
     const args = { sourceX: p.sourceX, sourceY: p.sourceY, targetX: p.targetX, targetY: p.targetY, sourcePosition: p.sourcePosition, targetPosition: p.targetPosition };
     const ed = (p.data?.edge ?? {}) as RoutedEdge;
     const [draft, setDraft] = useState<Pt[] | null>(null);

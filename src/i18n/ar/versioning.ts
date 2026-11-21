@@ -3,7 +3,7 @@ import type { Catalog } from "../../lib/i18n";
 /** Arabic: versioning (round 8 · R8-58): history studio, compare, sync conflicts, PDF versions, Settings › Versions & history. */
 export const ar: Catalog = {
   "Compare v{a} → current": "مقارنة v{a} ← الحالية",
-  "Deleted notes": "الملاحظات المحذوفة", "Trash · until you empty it": "سلة المحذوفات · حتى تفرغها", "Show fewer spaces": "عرض مساحات أقل", "Show all {n} spaces": "عرض كل المساحات ({n})",
+  "Deleted notes": "الملاحظات المحذوفة", "Trash · 30 days": "سلة المحذوفات · 30 يومًا", "Show fewer spaces": "عرض مساحات أقل", "Show all {n} spaces": "عرض كل المساحات ({n})",
   "Rendered": "منسّق", "Source": "المصدر", "Properties changed": "تغيّرت الخصائص",
   "Restored {n} line|Restored {n} lines": { zero: "تمت استعادة {n} سطرًا", one: "تمت استعادة سطر واحد", two: "تمت استعادة سطرين", few: "تمت استعادة {n} أسطر", many: "تمت استعادة {n} سطرًا", other: "تمت استعادة {n} سطرًا" },
   "+{n} line|+{n} lines": { zero: "+{n} سطرًا", one: "+سطر واحد", two: "+سطران", few: "+{n} أسطر", many: "+{n} سطرًا", other: "+{n} سطرًا" },

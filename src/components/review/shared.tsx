@@ -2,7 +2,6 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { db } from "../../lib/db";
-import { useVault } from "../../lib/store";
 
 /** The design's short tokens (--sf, --bd, …) mapped onto the app's CSS variables, so styles port 1:1. */
 export const TOKENS = {
@@ -26,26 +25,21 @@ export function usePhone() {
 
 const DAY = 86_400_000;
 const dayKey = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
-/** Days in a row with study activity (edits, timer sessions, reviews), ending today or yesterday. Same rule as Home's streak. */
+/** The review streak: days in a row on which you reviewed cards, ending today or yesterday (so finishing today's queue
+ *  makes 12 into 13, design 57I). Home's streak is wider (edits and timer sessions count too). */
 export function useStreak(tick: number) {
-  const v = useVault();
   const data = useLiveQuery(async () => ({
-    sessions: await db.sessions.toArray(),
-    versions: await db.versions.where("createdAt").above(Date.now() - 400 * DAY).toArray(),
     reviews: await db.reviews.where("at").above(Date.now() - 400 * DAY).toArray(),
   }), [tick]);
   return useMemo(() => {
     if (!data) return 0;
     const days = new Set<string>();
-    for (const x of data.versions) days.add(dayKey(x.createdAt));
-    for (const n of v.notes) days.add(dayKey(n.updatedAt));
-    for (const s of data.sessions) if (!s.deleted) days.add(dayKey(s.at));
     for (const r of data.reviews) if (!r.deleted) days.add(dayKey(r.at));
     let streak = 0;
     let d = days.has(dayKey(Date.now())) ? Date.now() : Date.now() - DAY;
     for (; days.has(dayKey(d)); d -= DAY) streak++;
     return streak;
-  }, [data, v.notes]);
+  }, [data]);
 }
 
 /** Hover, animation and card-face styles for the review screens (scoped to .rv57). */

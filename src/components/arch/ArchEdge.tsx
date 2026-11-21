@@ -7,7 +7,7 @@ import { t } from "../../lib/i18n";
 import { EDGE_STYLE, type AEdge } from "../../lib/arch-model";
 import { interiorOf, movePoint, nearestT, route, slideSegment, splitSegment, startsHorizontal, type Pt } from "../../lib/arch-route";
 import { chipOf, labelLook, labelSpot, labelSpots, lblStyle, type LabelPart } from "../../lib/arch-label";
-import { Ctx, DC, type FlowEdge } from "./ArchFlow";
+import { Ctx, DC, type FlowEdge } from "./arch-flow-ctx";
 import type { DiffMark } from "../../lib/arch-model";
 
 let lastDown = { key: "", at: 0 };

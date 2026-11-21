@@ -9,7 +9,10 @@ import { toast } from "../../lib/store";
 
 export const DAY = 86400000;
 export const dayStart = (ts: number) => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
-export const hm = (ts: number) => fmtDate(ts, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+/** Minutes (ts / 60000) that more than one version of the open note falls in (a restore adds "Before" + "Restored" at once).
+ *  historyRows fills it; hm() then adds the seconds so those rows can be told apart. */
+let crowdedMinutes = new Set<number>();
+export const hm = (ts: number) => fmtDate(ts, crowdedMinutes.has(Math.floor(ts / 60000)) ? { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" } : { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 /** "Yesterday 23:05", "Mon 20:18" (this week), "8 Nov 20:18". */
 export function whenShort(ts: number) {
   const d0 = dayStart(Date.now());
@@ -33,6 +36,8 @@ export interface HRow { v: Version | null; kind: Kind; n: number; from: number; 
 
 /** `live` is newest first. Version numbers count from the oldest (v1). Autosaves from one device within 30 min form a session. */
 export function historyRows(live: Version[], device: string): HRow[] {
+  const seen = new Set<number>(); crowdedMinutes = new Set<number>();
+  for (const v of live) { const m = Math.floor(v.createdAt / 60000); if (seen.has(m)) crowdedMinutes.add(m); seen.add(m); }
   const total = live.length;
   const rows: HRow[] = [];
   for (let i = 0; i < live.length; i++) {

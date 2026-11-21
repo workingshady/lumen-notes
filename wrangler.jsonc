@@ -24,5 +24,7 @@
   "durable_objects": { "bindings": [{ "name": "REMOTE", "class_name": "SlidesRemote" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SlidesRemote"] }],
   "vars": { "BLOG_NAME": "Lumen" },
+  // Daily 03:17 UTC: purge notes that have been in Trash for 30 days (worker/trash.ts).
+  "triggers": { "crons": ["17 3 * * *"] },
   "observability": { "enabled": true }
 }

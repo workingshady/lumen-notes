@@ -1,5 +1,5 @@
 import {
-  addEdge, Background, BackgroundVariant, ConnectionMode, Handle, MiniMap, NodeResizer, Position, ReactFlow, ReactFlowProvider,
+  addEdge, Background, BackgroundVariant, ConnectionMode, getViewportForBounds, Handle, MiniMap, NodeResizer, Position, ReactFlow, ReactFlowProvider,
   useEdgesState, useNodesState, useReactFlow, useViewport, type Connection, type Edge, type Node as RFNode, type NodeChange, type NodeProps,
 } from "@xyflow/react";
 import {
@@ -38,7 +38,7 @@ import { download } from "../lib/io";
 import { openExportJob } from "../lib/export-job";
 import { canvasJob } from "../lib/export-jobs";
 import { fmtNum, t, tk, tx, useLang } from "../lib/i18n";
-import { openNote, setUI, toast, useVault } from "../lib/store";
+import { openNote, setUI, toast, useVault, useVaultSelector } from "../lib/store";
 import { canvasToSkeleton, type Skeleton } from "../lib/whiteboard";
 import { plainExcerpt } from "./nav-text";
 import { Preview } from "./Preview";
@@ -87,6 +87,12 @@ function toFlow(c: JsonCanvas): { nodes: FlowNode[]; edges: Edge[] } {
   }));
   const edges = (c.edges ?? []).map(toFlowEdge);
   return { nodes, edges };
+}
+/** Same card apart from its geometry (x, y, width, height live on the React Flow node; see `load`). */
+function sameContent(a: CanvasNode, b: CanvasNode) {
+  const { x: _ax, y: _ay, width: _aw, height: _ah, ...ra } = a;
+  const { x: _bx, y: _by, width: _bw, height: _bh, ...rb } = b;
+  return JSON.stringify(ra) === JSON.stringify(rb);
 }
 /** Drop the edge's bend points and label position (lumen keys, CanvasEdge.tsx): the line routes itself again. */
 const clearRoute = (e: CanvasEdge): CanvasEdge => { const { lumenPoints: _p, lumenLabelPos: _l, ...rest } = e as RoutedEdge; return rest; };
@@ -194,6 +200,40 @@ function CardShell({ n, selected, base = "var(--surface)", children, ...rest }: 
   );
 }
 const RESIZER = { lineStyle: { borderColor: "transparent" } };
+/**
+ * Perf (reactflow.dev/learn/advanced-use/performance): a card re-renders only when its own data or selection changes.
+ * React Flow also passes the position, so the default memo would re-render a card on every drag frame / Tidy step.
+ */
+const sameCard = (a: NodeProps<FlowNode>, b: NodeProps<FlowNode>) => a.id === b.id && a.data === b.data && a.selected === b.selected;
+
+/**
+ * Rich card bodies (Markdown, KaTeX) render in idle time, a few per frame, so a big board paints its cards at once
+ * and fills in the formatted text right after (instead of a blank board while every card renders Markdown).
+ */
+const idleQueue: (() => void)[] = [];
+let idleBusy = false;
+function pumpIdle() {
+  if (idleBusy) return;
+  idleBusy = true;
+  const ric = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
+  // the React commit for the woken cards runs after this callback, so it's capped by count, not by time
+  const run = () => {
+    for (let i = 0; i < 4 && idleQueue.length; i++) idleQueue.shift()!();
+    if (idleQueue.length) { if (ric) ric(run, { timeout: 120 }); else setTimeout(run, 16); } else idleBusy = false;
+  };
+  if (ric) ric(run, { timeout: 120 }); else setTimeout(run, 16);
+}
+function useIdleReady(on: boolean) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!on || ready) return;
+    let live = true;
+    idleQueue.push(() => { if (live) setReady(true); });
+    pumpIdle();
+    return () => { live = false; };
+  }, [on, ready]);
+  return ready;
+}
 
 /** "# Idea\nbody…" → title + body, so a text card reads like the design (bold title, muted body). */
 function splitTitle(t: string) {
@@ -238,12 +278,17 @@ function CardIcon({ icon }: { icon: string }) {
   if (icon.startsWith("vendor:")) return url ? <img src={url} alt="" draggable={false} style={{ width: 22, height: 22, objectFit: "contain" }} /> : <Glyph name="service" size={20} />;
   return <Glyph name={icon} size={20} />;
 }
+/** Body text that needs the Markdown renderer (+ attachments dropped onto the board, lib/dnd.ts, and their progress line). */
+const RICH = /\$|\*\*|`|\[\[|!?\[[^\]]*\]\(att:|^\*[^*\n]+\* · |^\s*([-*>]|\d+\.)\s/m;
 const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
   useLang();
   const n = data.node as Extract<CanvasNode, { type: "text" }>;
   const { updateNodeData } = useReactFlow();
   const { spaceId, mark } = useContext(Ctx);
   const [edit, setEdit] = useState(!n.text);
+  const { title, body } = splitTitle(n.text);
+  const rich = RICH.test(body);
+  const richReady = useIdleReady(rich && !edit);
   useEffect(() => { const f = (e: Event) => { if ((e as CustomEvent<string>).detail === id) setEdit(true); }; addEventListener("lumen-canvas-edit", f); return () => removeEventListener("lumen-canvas-edit", f); }, [id]);
   const diagram = !edit ? parseDiagramText(n.text) : null;
   if (diagram) return (
@@ -262,9 +307,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
       <div className="h-full w-full" onDoubleClick={() => setEdit(true)}><PdfHighlightCard n={n} card={hl} selected={!!selected} /></div>
     </>
   );
-  const { title, body } = splitTitle(n.text);
   const icon = (n as { lumenNode?: { icon?: string } }).lumenNode?.icon; // a card from the architecture studio / library keeps its icon
-  const rich = /\$|\*\*|`|\[\[|!?\[[^\]]*\]\(att:|^\*[^*\n]+\* · |^\s*([-*>]|\d+\.)\s/m.test(body); // + attachments dropped onto the board (lib/dnd.ts) and their progress line
   return (
     <>
       <NodeResizer isVisible={!!selected && !isLocked(n)} minWidth={120} minHeight={50} {...RESIZER} />
@@ -283,7 +326,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
             {icon && <CardIcon icon={icon} />}
             {title && <span dir="auto" className="text-[14px] font-[650]">{title}</span>}
             {body ? (
-              rich
+              rich && richReady
                 ? <div className="text-[13px] leading-[19px] opacity-85 [&_.katex]:text-[15px]"><Preview note={{ id, body: body.replace(/([^\n])\n(?=[^\n])/g, "$1  \n"), spaceId }} className="!font-sans !text-[13px] !leading-[19px]" /></div>
                 : <span dir="auto" className="whitespace-pre-line text-[13px] leading-[19px] text-ink opacity-85">{body}</span>
             ) : !title && <span className="text-[13px] text-muted">{t("Double-click to edit")}</span>}
@@ -292,7 +335,7 @@ const TextNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
       </CardShell>
     </>
   );
-});
+}, sameCard);
 
 /** A file card pointing at a `.mermaid` file: name + type header (drag handle), the zoomable diagram, and where it came from. */
 function DiagramFileCard({ n, note, selected }: { n: CanvasNode; note: Note; selected: boolean }) {
@@ -317,13 +360,16 @@ function DiagramFileCard({ n, note, selected }: { n: CanvasNode; note: Note; sel
   );
 }
 
+const sameNote = (a: Note | undefined, b: Note | undefined) => a === b || (!!a && !!b && a.id === b.id && a.body === b.body && a.title === b.title && a.type === b.type && a.status === b.status
+  && a.folderId === b.folderId && a.spaceId === b.spaceId && a.updatedAt === b.updatedAt && a.deleted === b.deleted && JSON.stringify(a.props) === JSON.stringify(b.props));
 const FileNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
   useLang();
   const n = data.node as Extract<CanvasNode, { type: "file" }>;
-  const v = useVault();
   const { spaceId } = useContext(Ctx);
   const title = n.file.replace(/\.md$/i, "").split("/").pop()!;
-  const note = v.byTitle.get(title.toLowerCase());
+  // Perf: only this card's note (not every vault rebuild, e.g. each save of the board itself) re-renders the card.
+  const note = useVaultSelector((v) => v.byTitle.get(title.toLowerCase()), sameNote);
+  const folderName = useVaultSelector((v) => (note ? (note.folderId ? v.folderMap.get(note.folderId)?.name : v.spaceMap.get(note.spaceId)?.name) : undefined));
   if (note?.type === "diagram") return (
     <>
       <NodeResizer isVisible={!!selected && !isLocked(n)} minWidth={240} minHeight={180} {...RESIZER} />
@@ -338,7 +384,7 @@ const FileNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
       <PdfFileCard n={n} note={note} selected={!!selected} />
     </>
   );
-  const folder = note ? (note.folderId ? v.folderMap.get(note.folderId)?.name : v.spaceMap.get(note.spaceId)?.name) : n.file.split("/").slice(-2, -1)[0];
+  const folder = note ? folderName : n.file.split("/").slice(-2, -1)[0];
   return (
     <>
       <NodeResizer isVisible={!!selected && !isLocked(n)} minWidth={140} minHeight={60} {...RESIZER} />
@@ -357,7 +403,7 @@ const FileNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
       </CardShell>
     </>
   );
-});
+}, sameCard);
 
 const BADGE = "#8C1515";
 const LinkNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
@@ -387,7 +433,7 @@ const LinkNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
       </CardShell>
     </>
   );
-});
+}, sameCard);
 
 /** Board-level group options (collapsible, "N cards" counts, toggling) shared with every group card. */
 const GroupCtx = createContext<{ counts: Map<string, number>; collapsible: boolean }>({ counts: new Map(), collapsible: true });
@@ -403,7 +449,7 @@ const GroupNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
   const collapsed = isCollapsed(n), count = g.counts.get(id) ?? 0, pat = patternOf(n);
   const label = (
     <input
-      className="group-handle h-6 min-w-0 cursor-move outline-none"
+      aria-label={t("Group title")} className="group-handle h-6 min-w-0 cursor-move rounded-[4px] outline-none focus-visible:shadow-[0_0_0_2px_var(--accent)]"
       style={g.collapsible ? { flex: 1, background: "transparent", fontSize: 12, fontWeight: 600, color: "var(--text)", padding: 0 } : { position: "absolute", top: -30, left: 0, borderRadius: 6, padding: "0 10px", fontSize: 12.5, fontWeight: 600, color: "#0F1115", background: c, width: `${Math.max(6, (n.label ?? "Group").length + 3)}ch` }}
       defaultValue={n.label ?? ""}
       placeholder={t("Group@@noun")}
@@ -430,7 +476,7 @@ const GroupNode = memo(({ id, data, selected }: NodeProps<FlowNode>) => {
       </div>
     </>
   );
-});
+}, sameCard);
 
 const nodeTypes = { text: TextNode, file: FileNode, link: LinkNode, group: GroupNode };
 
@@ -629,8 +675,27 @@ function Inner({ note }: { note: Note }) {
 
   const load = useCallback((c: JsonCanvas, only?: string[]) => {
     // Keep the board selection across reloads (JSON edits, scripts, sync), or select `only` (undo/redo, paste).
-    setNodes((old) => { const sel = new Set(only ?? old.filter((n) => n.selected).map((n) => n.id)); return toFlow(c).nodes.map((n) => (sel.has(n.id) ? { ...n, selected: true } : n)); });
-    setEdges((old) => { const sel = new Set(only ?? old.filter((e) => e.selected).map((e) => e.id)); return toFlow(c).edges.map((e) => (sel.has(e.id) ? { ...e, selected: true } : e)); });
+    // Perf: a card whose content didn't change keeps its data object (only its position / size are new), and an
+    // unchanged edge keeps its object, so React Flow and the memoised cards skip them (Tidy up, undo, sync, JSON edits).
+    setNodes((old) => {
+      const sel = new Set(only ?? old.filter((n) => n.selected).map((n) => n.id));
+      const prev = new Map(old.map((n) => [n.id, n]));
+      return toFlow(c).nodes.map((n) => {
+        const o = prev.get(n.id), selected = sel.has(n.id);
+        const data = o && o.type === n.type && sameContent(o.data.node, n.data.node) ? o.data : n.data;
+        return selected || data !== n.data ? { ...n, data, ...(selected ? { selected: true } : {}) } : n;
+      });
+    });
+    setEdges((old) => {
+      const sel = new Set(only ?? old.filter((e) => e.selected).map((e) => e.id));
+      const prev = new Map(old.map((e) => [e.id, e]));
+      return toFlow(c).edges.map((e) => {
+        const o = prev.get(e.id), selected = sel.has(e.id);
+        if (o && !!o.selected === selected && JSON.stringify(o.data?.edge) === JSON.stringify(e.data?.edge) && o.source === e.source && o.target === e.target
+          && (o.sourceHandle ?? null) === e.sourceHandle && (o.targetHandle ?? null) === e.targetHandle && o.label === e.label) return o;
+        return selected ? { ...e, selected: true } : e;
+      });
+    });
   }, [setNodes, setEdges]);
   const restore = (body: string, sel: string[]) => { silent.current = true; const c = parseCanvas(body).canvas; extraRef.current = extraOf(c); load(c, sel); setMetaRaw(pickMeta(c)); setHistV((x) => x + 1); };
   const undo = () => {
@@ -651,7 +716,7 @@ function Inner({ note }: { note: Note }) {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       const s = stringify(snap());
-      if (!jsonFocus.current && !codeErr) setCodeText(s);
+      if (code && !jsonFocus.current && !codeErr) setCodeText(s); // the panel reloads the text when it opens (togglePanel)
       if (s === lastSaved.current) return;
       if (guard.current && !userEdited.current) return; // never write a partial / failed load over the stored body
       lastSaved.current = s;
@@ -769,26 +834,37 @@ function Inner({ note }: { note: Note }) {
     return m;
   }, [nodes]);
   memberMapRef.current = memberMap;
-  const groupCtx = useMemo(() => ({ counts: new Map([...memberMap].map(([k, v]) => [k, v.length] as [string, number])), collapsible: collapsibleOf(meta) }), [memberMap, meta]);
+  // Perf: the counts only change when a card enters / leaves a group, not on every drag frame (each new value re-renders every group).
+  const countsKey = [...memberMap].map(([k, v]) => `${k}:${v.length}`).join("|");
+  const collapsible = collapsibleOf(meta);
+  const groupCtx = useMemo(() => ({ counts: new Map([...memberMapRef.current].map(([k, v]) => [k, v.length] as [string, number])), collapsible }), [countsKey, collapsible]); // eslint-disable-line react-hooks/exhaustive-deps
   const shownNodes = useMemo(() => {
     const hide = new Set<string>();
     for (const n of nodes) if (isCollapsed(n.data.node)) for (const id of memberMap.get(n.id) ?? []) hide.add(id);
     return nodes.map((n) => (hide.has(n.id) ? { ...n, hidden: true } : isCollapsed(n.data.node) ? { ...n, height: GROUP_HEAD, style: { ...n.style, pointerEvents: "none" as const } } : n));
   }, [nodes, memberMap]);
   // Edges to or from a card hidden in a collapsed group are drawn to the group itself (its summary edge); both ends in one group: hidden.
+  // Perf: the collapsed-group owners only change when a group collapses or its members change, not on every drag
+  // frame; each edge keeps its decorated object while its stored edge is the same (React Flow then skips it).
+  const ownerKey = nodes.filter((n) => isCollapsed(n.data.node)).map((n) => `${n.id}:${(memberMap.get(n.id) ?? []).join(",")}`).join("|");
+  const decorated = useRef(new WeakMap<Edge, { shape: EdgeShape; a?: string; b?: string; out: Edge }>());
   const shownEdges = useMemo(() => {
     const owner = new Map<string, string>();
-    for (const n of nodes) if (isCollapsed(n.data.node)) for (const id of memberMap.get(n.id) ?? []) owner.set(id, n.id);
+    for (const n of nodesRef.current) if (isCollapsed(n.data.node)) for (const id of memberMapRef.current.get(n.id) ?? []) owner.set(id, n.id);
     const out: Edge[] = [];
+    const cache = decorated.current;
     for (const e of edges) {
       const a = owner.get(e.source), b = owner.get(e.target);
-      const d = decorateEdge(e, edgeShape);
-      if (!a && !b) { out.push(d); continue; }
       if (a && a === b) continue;
-      out.push({ ...d, id: e.id, source: a ?? e.source, target: b ?? e.target, sourceHandle: a ? "right" : e.sourceHandle, targetHandle: b ? "left" : e.targetHandle, selectable: false, focusable: false });
+      const hit = cache.get(e);
+      if (hit && hit.shape === edgeShape && hit.a === a && hit.b === b) { out.push(hit.out); continue; }
+      const d = decorateEdge(e, edgeShape);
+      const o = !a && !b ? d : { ...d, id: e.id, source: a ?? e.source, target: b ?? e.target, sourceHandle: a ? "right" : e.sourceHandle, targetHandle: b ? "left" : e.targetHandle, selectable: false, focusable: false };
+      cache.set(e, { shape: edgeShape, a, b, out: o });
+      out.push(o);
     }
     return out;
-  }, [edges, edgeShape, nodes, memberMap]);
+  }, [edges, edgeShape, ownerKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const onGroups = (p: Partial<{ collapsible: boolean; pattern: Pattern }>) => {
     if (p.collapsible !== undefined) setMeta({ lumenGroups: { collapsible: p.collapsible } });
     if (p.pattern) { const all = !selGroups.length; setNodes((ns) => ns.map((n) => (n.data.node.type === "group" && (all || n.selected) ? { ...n, data: { node: setPattern(n.data.node, p.pattern!) } } : n))); }
@@ -846,6 +922,22 @@ function Inner({ note }: { note: Note }) {
   const clip = useRef<string | null>(null); // last copy, for the menu's Paste when the system clipboard can't be read
   const pointer = useRef<{ x: number; y: number } | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
+  // Open fitted: React Flow's `fitView` waits until every card is measured, so a big board first painted at 100 % on
+  // the top-left (blank) for a second or more. The board is measured before the first paint and the flow starts at
+  // the fitted viewport from the stored sizes (getViewportForBounds, the same maths fitView uses); fitView still runs.
+  const [boardBox, setBoardBox] = useState<{ w: number; h: number } | null>(null);
+  useLayoutEffect(() => { const r = boardRef.current?.getBoundingClientRect(); setBoardBox({ w: r?.width || innerWidth, h: r?.height || innerHeight }); }, []);
+  const fitPad = innerWidth < 768 ? 0.06 : 0.15;
+  const initialView = useMemo(() => {
+    if (!boardBox) return undefined;
+    const all = initial.canvas.nodes ?? [];
+    const hidden = new Set(all.filter((g) => g.type === "group" && isCollapsed(g)).flatMap((g) => membersOf(g, all)));
+    const shown = all.filter((n) => !hidden.has(n.id));
+    if (!shown.length) return undefined;
+    const x0 = Math.min(...shown.map((n) => n.x)), y0 = Math.min(...shown.map((n) => n.y));
+    const x1 = Math.max(...shown.map((n) => n.x + n.width)), y1 = Math.max(...shown.map((n) => n.y + (n.type === "group" && isCollapsed(n) ? GROUP_HEAD : n.height)));
+    return getViewportForBounds({ x: x0, y: y0, width: x1 - x0, height: y1 - y0 }, boardBox.w, boardBox.h, 0.05, 1, fitPad);
+  }, [boardBox]); // eslint-disable-line react-hooks/exhaustive-deps
   const copySel = (): string | null => {
     const ids = selSet();
     if (!ids.size) return null;
@@ -885,8 +977,7 @@ function Inner({ note }: { note: Note }) {
   };
   // ------------------------------------------------------------ edges: reconnect, labels in place (CanvasEdge.tsx)
   const [edgeEdit, setEdgeEdit] = useState<string | null>(null);
-  const edgeApi: CanvasEdgeApi = {
-    editing: edgeEdit, setEditing: setEdgeEdit,
+  const edgeFns: Omit<CanvasEdgeApi, "editing" | "setEditing"> = {
     patch: (id, fn) => setEdges((es) => es.map((e) => (e.id !== id ? e : { ...e, data: { edge: fn(edgeOf(e)) } }))),
     select: (id) => { setNodes((ns) => (ns.some((n) => n.selected) ? ns.map((n) => (n.selected ? { ...n, selected: false } : n)) : ns)); setEdges((es) => es.map((e) => (e.selected === (e.id === id) ? e : { ...e, selected: e.id === id }))); },
     saveLabel: (id, text) => { const x = text.trim(); setEdges((es) => es.map((e) => (e.id !== id ? e : { ...e, label: x || undefined, data: { edge: { ...edgeOf(e), ...(x ? { label: x } : {}) } } }))); },
@@ -896,11 +987,20 @@ function Inner({ note }: { note: Note }) {
       return end === "source" ? { ...e, source: node, sourceHandle: side ?? null, selected: true } : { ...e, target: node, targetHandle: side ?? null, selected: true };
     })),
   };
+  // Perf: one context value per label edit, not per board render; a new value would re-render all edges (context
+  // skips React Flow's edge memo), so the functions go through a ref.
+  const edgeFnsRef = useRef(edgeFns);
+  edgeFnsRef.current = edgeFns;
+  const edgeApi = useMemo<CanvasEdgeApi>(() => ({
+    editing: edgeEdit, setEditing: setEdgeEdit,
+    patch: (id, fn) => edgeFnsRef.current.patch(id, fn), select: (id) => edgeFnsRef.current.select(id),
+    saveLabel: (id, text) => edgeFnsRef.current.saveLabel(id, text), reconnect: (id, end, node, side) => edgeFnsRef.current.reconnect(id, end, node, side),
+  }), [edgeEdit]);
   /** Ctrl+G: a group around the selected cards (groups are spatial: everything inside belongs to it). */
   const groupSel = () => {
     const sel = nodesRef.current.filter((n) => n.selected && n.data.node.type !== "group");
     if (!sel.length) return;
-    const ns = sel.map((n) => n.data.node);
+    const ns = sel.map((n) => ({ x: n.position.x, y: n.position.y, width: n.width ?? n.measured?.width ?? n.data.node.width, height: n.height ?? n.measured?.height ?? n.data.node.height }));
     const x0 = Math.min(...ns.map((n) => n.x)), y0 = Math.min(...ns.map((n) => n.y)), x1 = Math.max(...ns.map((n) => n.x + n.width)), y1 = Math.max(...ns.map((n) => n.y + n.height));
     addNode({ type: "group", label: t("Group"), width: x1 - x0 + 80, height: y1 - y0 + 100 }, { x: x0 - 40, y: y0 - 60 });
   };
@@ -1233,11 +1333,11 @@ function Inner({ note }: { note: Note }) {
           const p = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY });
           addNode({ type: "text", text: "" }, { x: Math.round(p.x / 20) * 20, y: Math.round(p.y / 20) * 20 });
         }}>
-        <CanvasEdgeCtx.Provider value={edgeApi}><ReactFlow
+        {boardBox && <CanvasEdgeCtx.Provider value={edgeApi}><ReactFlow
           nodes={shownNodes} edges={shownEdges} onNodesChange={onNodesChangeH} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={nodeTypes} edgeTypes={canvasEdgeTypes}
           onNodeDragStart={dragStart} onNodeDragStop={dragStop} onSelectionDragStart={dragStart} onSelectionDragStop={dragStop}
           onConnectStart={() => setConnecting(true)} onConnectEnd={() => setConnecting(false)}
-          connectionMode={ConnectionMode.Loose} fitView fitViewOptions={{ padding: innerWidth < 768 ? 0.06 : 0.15, maxZoom: 1 }} minZoom={0.05} maxZoom={3} snapToGrid={view.snap} snapGrid={[20, 20]} zoomOnDoubleClick={false}
+          connectionMode={ConnectionMode.Loose} fitView fitViewOptions={{ padding: fitPad, maxZoom: 1 }} defaultViewport={initialView} minZoom={0.05} maxZoom={3} snapToGrid={view.snap} snapGrid={[20, 20]} zoomOnDoubleClick={false}
           deleteKeyCode={["Delete", "Backspace"]} onDelete={({ nodes: dn, edges: de }) => { const ids = new Set(dn.map((x) => x.id)); const n = dn.length + de.filter((e) => !ids.has(e.source) && !ids.has(e.target)).length; if (n) { toast(t("Deleted {n} item|Deleted {n} items", { n }), { label: t("Undo"), run: () => undo() }); } }} multiSelectionKeyCode={["Shift", "Meta", "Control"]} proOptions={{ hideAttribution: true }}
           connectionLineStyle={{ stroke: "var(--accent)", strokeWidth: 2 }} style={bgCol ? { background: `color-mix(in srgb, ${colorOf(bgCol)} 10%, var(--bg))` } : undefined}
           onEdgeDoubleClick={(_, e) => setEdgeEdit(e.id)} disableKeyboardA11y
@@ -1248,7 +1348,7 @@ function Inner({ note }: { note: Note }) {
           {!panel && !optsOpen && view.minimap && <MiniMap pannable zoomable className="!hidden lg:!block" style={{ width: 176, height: 112 }} nodeBorderRadius={3}
             nodeColor={(n) => { const c = colorOf((n.data as Data).node.color); return c ? `color-mix(in srgb, ${c} 45%, transparent)` : "color-mix(in srgb, var(--muted) 45%, transparent)"; }}
             maskColor="color-mix(in srgb, var(--surface) 55%, transparent)" maskStrokeColor="var(--accent)" maskStrokeWidth={2} />}
-        </ReactFlow></CanvasEdgeCtx.Provider>
+        </ReactFlow></CanvasEdgeCtx.Provider>}
 
         {/* Desktop toolbar: Undo Redo | Add | Arrange | Style | Code | ⋯. It fits its own board width (lvl): captions and
             labels go first, then whole groups move into ⋯, so it never runs under the side panel. */}

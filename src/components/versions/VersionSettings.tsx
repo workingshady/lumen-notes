@@ -112,7 +112,7 @@ export function VersionSettings() {
             <select aria-label={t("One per day")} value={p.verDailyDays} onChange={(e) => setVersionPrefs({ verDailyDays: Number(e.target.value) })} style={select}>{DAILY_DAYS.map((d) => <option key={d} value={d}>{days(d)}</option>)}</select></div>
           <div style={tile}><div style={{ flex: 1 }}><div style={{ fontWeight: 500 }}>{t("One per week")}</div><div style={{ fontSize: 11.5, color: "var(--muted)" }}>{t("after that")}</div></div></div>
           <div style={tile}><div style={{ flex: 1 }}><div style={{ fontWeight: 500 }}>{t("Named versions")}</div><div style={{ fontSize: 11.5, color: "var(--muted)" }}>{t("forever")}</div></div></div>
-          <div style={tile}><div style={{ flex: 1 }}><div style={{ fontWeight: 500 }}>{t("Deleted notes")}</div><div style={{ fontSize: 11.5, color: "var(--muted)" }}>{t("Trash · until you empty it")}</div></div></div>
+          <div style={tile}><div style={{ flex: 1 }}><div style={{ fontWeight: 500 }}>{t("Deleted notes")}</div><div style={{ fontSize: 11.5, color: "var(--muted)" }}>{t("Trash · 30 days")}</div></div></div>
         </div>
       </Block>
 
@@ -152,9 +152,13 @@ export function VersionSettings() {
       <Block h={t("Storage")}>
         <div style={{ display: "grid", gridTemplateColumns: phone ? "1fr" : "1fr 1fr", gap: "6px 16px" }}>
           {([[t("Notes"), sizes?.notes ?? 0], [t("Attachments & PDFs"), sizes?.atts ?? 0], [t("Visuals"), sizes?.visuals ?? 0]] as [string, number][]).map(([l, b]) => (
-            <div key={l} style={{ display: "flex", flexDirection: "column", gap: 6, padding: "6px 0" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span>{l}</span><span style={{ color: "var(--muted)" }}>{MB(b)}</span></div>
-              <div style={{ height: 6, borderRadius: 3, background: "var(--surface-2)" }}><div style={{ width: pct(b), height: "100%", borderRadius: 3, background: "var(--accent)" }} /></div>
+            <div key={l} style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 32, padding: "0 8px", fontSize: 12.5 }}>
+              <span style={{ flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{l}</span>
+              <span style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "nowrap" }}>{MB(b)}</span>
+              {/* the design's slider: the track fills to the share of the total, with a knob at its end (read-only) */}
+              <span role="img" aria-label={`${l} ${pct(b)}`} style={{ flex: 1, minWidth: 60, height: 4, borderRadius: 2, position: "relative", background: `linear-gradient(90deg, var(--accent) ${pct(b)}, var(--border) ${pct(b)})` }}>
+                <span style={{ position: "absolute", insetInlineStart: pct(b), top: -6, width: 16, height: 16, marginInlineStart: -8, borderRadius: "50%", background: "var(--text)" }} />
+              </span>
             </div>
           ))}
           <button type="button" onClick={() => void prune()} disabled={busy} style={{ ...tile, textAlign: "start", opacity: busy ? 0.6 : 1 }}>
