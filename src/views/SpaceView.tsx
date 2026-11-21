@@ -1,5 +1,6 @@
+import { askConfirm } from "../components/dialogs-r9";
 import { EmptyState } from "../components/EmptyState";
-import { Archive, ArchiveRestore, Check, EllipsisVertical, FileText, FileUp, Flag, GraduationCap, LayoutTemplate, Loader2, MoreHorizontal, Pencil, Play, Plus, Settings2, Share2, Sparkles, Target, Trash2 } from "lucide-react";
+import { ChevronLeft, Archive, ArchiveRestore, Check, EllipsisVertical, FileText, FileUp, Flag, GraduationCap, LayoutTemplate, Loader2, MoreHorizontal, Pencil, Play, Plus, Settings2, Share2, Sparkles, Target, Trash2 } from "lucide-react";
 import { ProjectHub } from "./ProjectHub";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { SPACE_KINDS, type Note, type Space } from "../../shared/types";
@@ -8,13 +9,16 @@ import { aiRun, getToken } from "../lib/api";
 import { DEFAULT_SPACE, patch, save } from "../lib/db";
 import { PRESETS } from "../lib/canvas";
 import { progress, roadmap, tasks, type Module, type Task } from "../lib/parse";
-import { openNote, setUI, toast, useUI, useVault } from "../lib/store";
+import { back, openNote, setUI, toast, useUI, useVault } from "../lib/store";
 import { ROADMAP_PRESETS } from "../lib/templates";
 import { KIND_LABEL } from "../components/Sidebar";
 import { Button, cx, Empty, Field, inputCls, Sheet } from "../components/ui";
 import { ShareSheet } from "../components/ShareSheet";
 import { SpaceIcon, SpaceIconPicker } from "../components/SpaceIcon";
 import { CourseHeader } from "../components/plan/CourseHeader";
+import { courseFacts } from "../components/plan/CourseTimeline";
+import { fmtMonthYear } from "../components/plan/plan-ui";
+import { canGoBack } from "../lib/nav-history";
 import { currentTopic, openTopicNote, Ring, RoadmapView, type RoadmapViewKind } from "./RoadmapView";
 import { DAY, fmtDay, fmtFull, recentLabel, todayIso, usePhone } from "./spaces-util";
 import { digits, t, tx } from "../lib/i18n";
@@ -130,13 +134,13 @@ export function SpaceView() {
 
   // ---------------------------------------------------------------- phone course page (design 1E / 1E′)
   if (phone && isCourse && rm) {
-    const tree = view === "tree";
     // design 15H: 38px glyph tile, name 16/650, "9 of 24 · target 20 Dec"; share lives in the ⋯ menu
-    const sub = [t("{done} of {total}", { done: p?.done ?? 0, total: p?.total ?? 0 }), deadline ? t("target {date}", { date: fmtDay(deadline) }) : null].filter(Boolean).join(" · ");
+    const cf = courseFacts(rm, sp);
+    const sub = `${t("{done} of {total} topics", { done: p?.done ?? 0, total: p?.total ?? 0 })} · ${fmtMonthYear(cf.lo)} – ${fmtMonthYear(cf.hi)}`;
     return (
       <div className="relative flex h-full flex-col">
         <div className="safe-t shrink-0"><div className="relative flex items-center gap-3 px-4 py-2">
-          <SpaceIcon space={sp} size={22} tile color={color} />
+          <button aria-label={t("Back")} title={t("Back")} onClick={() => (canGoBack() ? history.back() : back())} className="-ms-2 flex h-11 w-11 shrink-0 items-center justify-center text-ink"><ChevronLeft size={22} className="rtl:rotate-180" /></button>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className="truncate text-[16px] font-[650]" dir="auto">{sp.name}</span>
             <span className="truncate text-[12px] text-muted">{sub}</span>
@@ -144,12 +148,15 @@ export function SpaceView() {
           <button aria-label={t("More")} onClick={() => setMenu((x) => !x)} className="-me-2 flex h-11 w-11 items-center justify-center text-muted"><EllipsisVertical size={20} /></button>
           {menuEl && <div className="absolute end-4 top-full z-30">{menuEl}</div>}
         </div></div>
-        <div className="min-h-0 flex-1"><RoadmapView note={rm} compact target={deadline || null} view={view} onView={setView} /></div>
-        {cur && !tree && (
-          <div className="shrink-0 px-4 py-3">
-            <button onClick={() => void openTopicNote(rm, cur, v.byTitle)} className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[12px] bg-accent text-[15px] font-semibold text-accent-fg"><Play size={14} />{tx("Continue: {name}", { name: <span dir="auto">{cur.name}</span> })}</button>
+        {cur && (
+          <div className="shrink-0 px-4 pb-2.5">
+            <button onClick={() => void openTopicNote(rm, cur, v.byTitle)} className="flex h-[58px] w-full items-center gap-3 rounded-[14px] bg-accent px-3 text-start text-accent-fg">
+              <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-black/15"><Play size={14} fill="currentColor" /></span>
+              <span className="flex min-w-0 flex-col"><span className="truncate text-[12px] font-medium opacity-75" dir="auto">{t("Continue · {where}", { where: cf.where })}</span><span className="truncate text-[15px] font-[650]" dir="auto">{cur.name}</span></span>
+            </button>
           </div>
         )}
+        <div className="min-h-0 flex-1"><RoadmapView note={rm} compact target={deadline || null} view={view} onView={setView} /></div>
         {hidden}
       </div>
     );
@@ -412,7 +419,7 @@ function EditSpace({ open, onClose }: { open: boolean; onClose: () => void }) {
             <Button size="sm" onClick={() => { set({ archived: sp.archived ? 0 : 1 }); onClose(); }}>{sp.archived ? <><ArchiveRestore size={14} /> {t("Unarchive")}</> : <><Archive size={14} /> {t("Archive")}</>}</Button>
             <span className="flex-1" />
             <Button size="sm" variant="danger" onClick={async () => {
-              if (!confirm(t("Delete space “{name}”? Its notes and folders move to Inbox.", { name: sp.name }))) return;
+              if (!(await askConfirm({ title: t("Delete space “{name}”?", { name: sp.name }), body: t("Its notes and folders move to Inbox."), ok: t("Delete space"), danger: true }))) return;
               for (const n of v.notes.filter((x) => x.spaceId === sp.id)) await save("note", { ...n, spaceId: DEFAULT_SPACE });
               for (const f of v.folders.filter((x) => x.spaceId === sp.id)) await save("folder", { ...f, spaceId: DEFAULT_SPACE });
               await patch("space", sp.id, { deleted: 1 });

@@ -7,7 +7,7 @@ import { useState } from "react";
 import { t } from "../../lib/i18n";
 import { useVaultSelector } from "../../lib/store";
 import {
-  ALL_GLYPHS, ICON_COLORS, ICON_GROUPS, STAMPS, TAB_LABEL, getLibraryItem, itemsOf, orderedCats, searchLibrary, setLibPrefs, setLibraryDrag,
+  ALL_GLYPHS, ICON_COLORS, categoryOf, ICON_GROUPS, STAMPS, TAB_LABEL, getLibraryItem, itemsOf, orderedCats, searchLibrary, setLibPrefs, setLibraryDrag,
   svgDataUrl, tabsFor, toggleFav, touchRecent, useLibPrefs, type LibCat, type LibItem, type LibTab, type PlaceOpts, type Workspace,
 } from "../../lib/library-items";
 import { installedPacks, packCategories, packIcons, vendorRef, useVendorPacks } from "../../lib/vendor-icons";
@@ -104,10 +104,11 @@ export function LibraryPanel({ workspace, onPlace, onClose, variant = "floating"
     },
   });
   const blocks: Blk[] = [];
+  let vendorFoot: Blk | null = null; // pinned at the foot of the panel (49C)
   if (q.trim()) {
     const res = searchLibrary(q);
     blocks.push(docked
-      ? { key: "res", h: t("Results · {n}", { n: res.length }), items: res.map((it, i) => ({ ...mk(it, { col: false, mh: "34px", on: i === 0, l: t(it.name), sub: t(it.tab === "architecture" ? "Architecture" : it.tab === "drawing" ? "Drawing" : it.tab === "stamps" ? "Stamps" : "Icons"), g: it.vendorSvg ? undefined : it.glyph, gs: 18 }), star: undefined, bd: i === 0 ? "var(--ac)" : "transparent" })) }
+      ? { key: "res", h: t("Results · {n}", { n: res.length }), items: res.map((it, i) => ({ ...mk(it, { col: false, mh: "34px", on: i === 0, l: t(it.name), sub: t(it.tab === "architecture" ? (categoryOf(it.id) ?? "Architecture") : it.tab === "drawing" ? "Drawing" : it.tab === "stamps" ? "Stamps" : "Icons"), g: it.vendorSvg ? undefined : it.glyph, gs: 18 }), star: undefined, bd: i === 0 ? "var(--ac)" : "transparent" })) }
       : { key: "res", h: t("Results · {n}", { n: res.length }), items: res.map((it) => mk(it)), cols, note: res.length ? undefined : t("Nothing matches “{q}”.", { q }) });
     if (docked && !res.length) blocks.push({ key: "none", note: t("Nothing matches “{q}”.", { q }) });
   } else {
@@ -125,7 +126,7 @@ export function LibraryPanel({ workspace, onPlace, onClose, variant = "floating"
       // the design groups the small drawing categories in one block: UML · Mind map · Containers · Math & study
       if (merged.length) blocks.push({ key: "merged", h: merged.map((c) => t(c.name)).join(" · "), items: merged.flatMap((c) => itemsOf(c)).map((it) => mk(it)), cols, note: t("Click to place in the centre, or drag onto the board.") });
       if (tab === "architecture") {
-        blocks.push({ key: "vendor", items: [{ l: t("Vendor icons & brand logos"), tog: prefs.vendor, onClick: () => setLibPrefs({ vendor: !prefs.vendor }), mh: "34px", bd: "var(--bd)" }], note: prefs.vendor ? t("Packs are downloaded once, cached for offline use and shown unmodified, never recoloured.") : undefined });
+        vendorFoot = ({ key: "vendor", items: [{ l: t("Vendor icons & brand logos"), tog: prefs.vendor, onClick: () => setLibPrefs({ vendor: !prefs.vendor }), mh: "34px", bd: "var(--bd)" }], note: prefs.vendor ? t("Packs are downloaded once, cached for offline use and shown unmodified, never recoloured.") : undefined } as Blk);
         if (prefs.vendor) {
           for (const p of loadedPacks) {
             const all = packIcons(p.id), cat = vcat[p.id] ?? (p.group === "Brands & tech" ? "Clouds & platforms" : "");
@@ -206,17 +207,18 @@ export function LibraryPanel({ workspace, onPlace, onClose, variant = "floating"
       )}
     </>
   );
+  const foot = view === "browse" && !q.trim() ? vendorFoot : null;
   const shellProps = { title: t("Library"), g: "shape-library", sub: view === "customise" ? t("Customise") : sub, onClose: docked ? undefined : onClose };
 
   if (docked) {
     return (
-      <PanelShell {...shellProps} flat w={width ?? "100%"} style={{ height: "100%", border: 0 }} bodyStyle={{ overflowY: "auto", gap: 12 }}>
+      <PanelShell {...shellProps} flat w={width ?? "100%"} style={{ height: "100%", border: 0 }} bodyStyle={{ overflowY: "auto", gap: 12 }} foot={foot ? <div style={{ flex: 1 }}><Block bk={foot} /></div> : undefined}>
         {body}
       </PanelShell>
     );
   }
   return (
-    <PanelShell {...shellProps} w={width ?? (variant === "sheet" ? "100%" : 320)} style={{ maxHeight: "100%", ...(variant === "sheet" ? { borderRadius: "20px 20px 0 0" } : { animation: "lib-in .16s var(--ease,ease) both" }) }} bodyStyle={{ overflowY: "auto", gap: 14 }}>
+    <PanelShell {...shellProps} foot={foot ? <div style={{ flex: 1 }}><Block bk={foot} /></div> : undefined} w={width ?? (variant === "sheet" ? "100%" : 320)} style={{ maxHeight: "100%", ...(variant === "sheet" ? { borderRadius: "20px 20px 0 0" } : { animation: "lib-in .16s var(--ease,ease) both" }) }} bodyStyle={{ overflowY: "auto", gap: 14 }}>
       {body}
     </PanelShell>
   );

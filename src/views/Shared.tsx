@@ -271,11 +271,11 @@ function SpaceNote({ token, id, titles }: { token: string; id: string; titles: L
   useEffect(() => { setNote(null); publicApi<{ note: PubNote }>(`/share/${token}/note/${id}`).then((d) => { setNote(d.note); scrollTo(0, 0); }).catch((e) => setErr(e.message)); }, [token, id]);
   if (err) return <p className="py-16 text-center text-muted">{err}</p>;
   if (!note) return <div className="mx-auto mt-14 h-60 max-w-[680px] animate-pulse rounded-[14px] bg-surface" />;
-  return <NoteViewer note={note} refsPath={`/share/${token}/refs?note=${encodeURIComponent(id)}`} onWiki={(t) => { const hit = titles.find((n) => n.title.toLowerCase() === t.toLowerCase()); if (hit) go(`/s/${token}/${hit.id}`); }} />;
+  return <NoteViewer note={note} refsPath={`/share/${token}/refs?note=${encodeURIComponent(id)}`} onWiki={(t) => { const hit = titles.find((n) => n.title.toLowerCase() === t.toLowerCase()); if (hit) go(`/s/${token}/${hit.id}`); }} canLink={(t) => titles.some((n) => n.title.toLowerCase() === t.toLowerCase())} />;
 }
 
 // ------------------------------------------------------------------ single note, by type
-function NoteViewer({ note, onWiki, refsPath }: { note: PubNote; onWiki?: (title: string) => void; refsPath?: string }) {
+function NoteViewer({ note, onWiki, canLink, refsPath }: { note: PubNote; onWiki?: (title: string) => void; canLink?: (title: string) => boolean; refsPath?: string }) {
   if (note.type === "slides") return <SlidesPage note={note} />;
   if (note.type === "flashcards") return <FlashcardsPage note={note} />;
   if (isBoard(note.type)) return (
@@ -284,7 +284,7 @@ function NoteViewer({ note, onWiki, refsPath }: { note: PubNote; onWiki?: (title
       <BoardInline note={note} refsPath={refsPath} />
     </div>
   );
-  return <Article note={note} onWiki={onWiki} />;
+  return <Article note={note} onWiki={onWiki} canLink={canLink} />;
 }
 
 function BoardInline({ note, refsPath }: { note: PubNote; refsPath?: string }) {
@@ -315,7 +315,7 @@ function useActiveHeading(lines: number[], root: React.RefObject<HTMLElement | n
   return active;
 }
 
-function Article({ note, onWiki }: { note: PubNote; onWiki?: (t: string) => void }) {
+function Article({ note, onWiki, canLink }: { note: PubNote; onWiki?: (t: string) => void; canLink?: (t: string) => boolean }) {
   const ref = useRef<HTMLElement>(null);
   const toc = useMemo(() => outline(note.body).filter((h) => h.level >= 2 && h.level <= 3), [note.body]);
   const lines = useMemo(() => toc.map((h) => h.line), [toc]);
@@ -337,7 +337,7 @@ function Article({ note, onWiki }: { note: PubNote; onWiki?: (t: string) => void
         <h1 dir="auto" className="text-[32px] font-bold leading-[1.15] tracking-[-.02em] md:text-[46px]">{note.title}</h1>
         <Meta note={note} extra={note.type !== "roadmap" && <><span>·</span><span>{t("{n} min read", { n: readingMinutes(note.body) })}</span>{note.tags.length > 0 && <span>·</span>}</>} />
         {note.type === "roadmap" ? <div className="font-sans"><RoadmapReadOnly body={note.body} titles={[]} /></div>
-          : <Markdown body={withoutTitle(note.body, note.title)} onWiki={onWiki} className="!max-w-none" style={{ "--read-font": SERIF, "--read-size": "17px", lineHeight: "30px" } as React.CSSProperties} />}
+          : <Markdown body={withoutTitle(note.body, note.title)} onWiki={onWiki} canLink={canLink} className="!max-w-none" style={{ "--read-font": SERIF, "--read-size": "17px", lineHeight: "30px" } as React.CSSProperties} />}
       </article>
     </div>
   );
@@ -350,15 +350,17 @@ function withoutTitle(body: string, title: string) {
   const m = /^\s*#\s+(.+?)\s*(\r?\n|$)/.exec(rest);
   return m && m[1].trim().toLowerCase() === title.trim().toLowerCase() ? fm + rest.slice(m[0].length) : body;
 }
-function Markdown({ body, onWiki, className, style }: { body: string; onWiki?: (t: string) => void; className?: string; style?: React.CSSProperties }) {
+function Markdown({ body, onWiki, canLink, className, style }: { body: string; onWiki?: (t: string) => void; canLink?: (t: string) => boolean; className?: string; style?: React.CSSProperties }) {
   const ref = useRef<HTMLDivElement>(null);
   const html = useMemo(() => render(body), [body]);
   useEffect(() => {
     const el = ref.current!;
     el.innerHTML = html;
     el.querySelectorAll<HTMLInputElement>("input[type=checkbox]").forEach((c) => (c.disabled = true));
+    // Lumen 10: a link to a note outside what was shared reads as plain text (nothing to open, nothing to leak)
+    el.querySelectorAll<HTMLAnchorElement>("a.wikilink").forEach((a) => { if (!onWiki || (canLink && !canLink(a.dataset.note ?? ""))) { const sp = document.createElement("span"); sp.textContent = a.textContent; sp.className = "wikilink-plain"; a.replaceWith(sp); } });
     hydrate(el, { canvas: (c, json) => { const { canvas, error } = parseCanvas(json); c.innerHTML = error ? "" : previewSvg(canvas); } });
-  }, [html]);
+  }, [html, !onWiki]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div ref={ref} style={style} className={"prose " + (className ?? "")} onClick={(e) => {
       if (handleCopyClick(e)) return;

@@ -8,7 +8,7 @@ import { t } from "./i18n";
 void _crc;
 const IMG = new Set(["png", "jpeg", "webp", "svg", "pdf"]);
 export const isImageFormat = (f: string) => IMG.has(f);
-export const EXTS: Record<string, string> = { png: "png", jpeg: "jpg", webp: "webp", svg: "svg", pdf: "pdf", mermaid: "mmd", markdown: "md" };
+export const EXTS: Record<string, string> = { png: "png", jpeg: "jpg", webp: "webp", svg: "svg", pdf: "pdf", mermaid: "mmd", markdown: "md", html: "html" };
 const MIME: Record<string, string> = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
 export const PICKER_SCOPES: Record<string, "frames" | "groups" | "layers"> = { frames: "frames", groups: "groups", layers: "layers" };
 
@@ -181,6 +181,15 @@ export async function textOutput(job: VisualExportJob, o: ExportOptions): Promis
     return { blob: asBlob(r.text, "text/markdown"), text: r.text, ext: "md", name: o.fileName };
   }
   if (f === "mermaid") { const v = await job.mermaid!(o, o.mermaidKind); return { blob: asBlob(v, "text/plain"), text: v, ext: "mmd", name: o.fileName }; }
+  if (f === "html") {
+    // one self-contained, read-only page: the vector image with wheel zoom, drag to pan, double-click to reset (no network, no scripts from elsewhere)
+    const u = await renderUnit(job, { ...o, format: "svg" }, o.ids ?? [], "svg");
+    if (!("svg" in u)) throw new Error(t("This workspace can't export SVG"));
+    const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
+    const bg = o.bgColor ?? "#ffffff";
+    const html = `<!doctype html><html lang="${docLang()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(job.title)}</title><style>html,body{margin:0;height:100%;background:${bg};font-family:system-ui,sans-serif}#v{position:fixed;inset:0;overflow:hidden;cursor:grab;touch-action:none}#v:active{cursor:grabbing}#s{transform-origin:0 0;position:absolute;left:0;top:0}#s svg{display:block}#h{position:fixed;bottom:10px;inset-inline-start:12px;font-size:12px;opacity:.55;color:#777}</style></head><body><div id="v"><div id="s">${u.svg}</div></div><div id="h">${esc(t("Scroll to zoom, drag to move, double-click to fit"))}</div><script>(function(){var v=document.getElementById("v"),s=document.getElementById("s"),sv=s.querySelector("svg"),w=${Math.round(u.width)},h=${Math.round(u.height)};sv.setAttribute("width",w);sv.setAttribute("height",h);var k=1,x=0,y=0;function ap(){s.style.transform="translate("+x+"px,"+y+"px) scale("+k+")"}function fit(){k=Math.min(innerWidth/w,innerHeight/h,1)*.95;x=(innerWidth-w*k)/2;y=(innerHeight-h*k)/2;ap()}fit();addEventListener("resize",fit);v.addEventListener("wheel",function(e){e.preventDefault();var f=Math.exp(-e.deltaY*.0015),n=Math.max(.05,Math.min(8,k*f));x=e.clientX-(e.clientX-x)*n/k;y=e.clientY-(e.clientY-y)*n/k;k=n;ap()},{passive:false});var d=null;v.addEventListener("pointerdown",function(e){d={x:e.clientX-x,y:e.clientY-y};v.setPointerCapture(e.pointerId)});v.addEventListener("pointermove",function(e){if(d){x=e.clientX-d.x;y=e.clientY-d.y;ap()}});v.addEventListener("pointerup",function(){d=null});v.addEventListener("dblclick",fit)})();</script></body></html>`;
+    return { blob: asBlob(html, "text/html"), text: html, ext: "html", name: o.fileName };
+  }
   const p = job.formats?.find((x) => x.id === f);
   if (!p) throw new Error(t("Unknown export format"));
   const v = await p.run(o);

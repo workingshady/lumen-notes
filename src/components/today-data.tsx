@@ -79,6 +79,7 @@ export function useTodayData(force = false): TodayData {
   const sessRaw = useLiveQuery(() => db.sessions.toArray(), []);
   const ws = useMemo(() => new Date(weekStart(today) + "T00:00:00").getTime(), [today]);
   const cardsReviewed = useLiveQuery(async () => (await db.cards.toArray()).filter((c) => !c.deleted && (c.lastReview ?? 0) >= ws).length, [ws]) ?? 0;
+  const reviewedToday = useLiveQuery(async () => (await db.reviews.where("at").aboveOrEqual(new Date(today + "T00:00:00").getTime()).filter((r) => !r.deleted).count()) > 0, [today]) ?? false;
   const logNote = v.byId.get(PLAN_LOG_ID);
   const log = useMemo(() => (logNote && !logNote.deleted ? parseLog(logNote.body) : emptyLog()), [logNote]);
   const courses = useMemo(() => planCourses(v), [v]);
@@ -100,8 +101,9 @@ export function useTodayData(force = false): TodayData {
   const active = useMemo(() => {
     const a = new Set(sess.filter((x) => x.minutes > 0).map((x) => x.at));
     for (const [d, es] of Object.entries(log.days)) if (es.some((e) => e.mark === "done")) a.add(d);
+    if (reviewedToday) a.add(today); // reviewing a card today counts for the streak
     return a;
-  }, [sess, log]);
+  }, [sess, log, reviewedToday, today]);
   return {
     ready: v.ready && !!due && !!sessRaw, input, plan, courses, log, sessions: sess, cardsReviewed, active,
     missed: missedDays(today, settings, active), streak: streak(today, active),

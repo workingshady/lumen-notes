@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Glyph } from "../Glyph";
 import { Sheet } from "../ui";
-import { busyWeek, byDay, CAL_EVENTS, CAL_REVIEWS, CAL_TASKS, durLabel, monthGrid, rebalance, shiftDay, weekDays, weekLoads, type CalItem } from "../../lib/calendar";
+import { busyWeek, byDay, CAL_DAILY, CAL_EVENTS, CAL_NOTES, CAL_STUDIED, CAL_REVIEWS, CAL_TASKS, durLabel, monthGrid, rebalance, shiftDay, weekDays, weekLoads, type CalItem } from "../../lib/calendar";
 import { addBlocks, CAL_NOTE_ID, editNote, moveLine } from "../../lib/calendar-store";
 import { suggestBlocks } from "../../lib/calendar-suggest";
 import { downloadICS, toICS } from "../../lib/calendar-ics";
@@ -119,6 +119,9 @@ export function CalendarScreen() {
     { id: CAL_TASKS, l: t("Tasks with dates"), c: "var(--text)", s: fmtNum(cal.items.filter((x) => x.kind === "task" && inMonth(x.date)).length) },
     { id: CAL_REVIEWS, l: t("Review load"), c: REVIEW_COLOR, s: t("counts") },
     { id: CAL_EVENTS, l: t("Events"), c: EVENT_COLOR, s: fmtNum(cal.items.filter((x) => x.cal === CAL_EVENTS && inMonth(x.date)).length) },
+    { id: CAL_DAILY, l: t("Daily notes"), c: "#6BCB8B", s: fmtNum(cal.items.filter((x) => x.cal === CAL_DAILY && inMonth(x.date)).length) },
+    { id: CAL_NOTES, l: t("Notes created"), c: "#7AA2F7", s: fmtNum(cal.items.filter((x) => x.cal === CAL_NOTES && inMonth(x.date)).length) },
+    { id: CAL_STUDIED, l: t("Studied time"), c: "#B48EF0", s: fmtNum(cal.items.filter((x) => x.cal === CAL_STUDIED && inMonth(x.date)).length) },
   ];
 
   return (
@@ -259,7 +262,7 @@ function DayAgenda({ day, items, reviews, today, onItem, onAdd, compact }: { day
         const c = x.color === "var(--text)" ? V.mu : x.color;
         return (
           <button key={x.id} onClick={(e) => onItem(x, e.currentTarget)} className="hover:brightness-110" style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 9, background: x.kind === "milestone" ? "transparent" : `color-mix(in srgb,${c} 8%,transparent)`, borderInlineStart: `3px solid ${c}`, textAlign: "start", opacity: x.done ? 0.55 : 1 }}>
-            <span style={{ width: 44, fontSize: 11.5, color: V.mu, fontVariantNumeric: "tabular-nums" }}>{x.start != null ? hhmm(x.start) : x.kind === "milestone" ? "◆" : t("all day")}</span>
+            <span style={{ width: 44, fontSize: 11.5, color: V.mu, fontVariantNumeric: "tabular-nums" }}>{x.start != null ? hhmm(x.start) : x.kind === "milestone" ? "◆" : x.cal === CAL_DAILY ? t("Daily") : x.cal === CAL_NOTES ? t("Created") : x.cal === CAL_STUDIED ? t("Timer") : t("all day")}</span>
             <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
               <span dir="auto" style={{ fontSize: 12.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: x.done ? "line-through" : undefined, color: x.late ? V.da : undefined }}>{x.title}</span>
               {x.sub && <span dir="auto" style={{ fontSize: 11, color: V.mu }}>{x.sub}{x.dur && x.start != null ? ` · ${durLabel(x.dur)}` : ""}</span>}

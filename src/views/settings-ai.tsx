@@ -22,6 +22,10 @@ const CLOUD: { id: Feature; glyph: string; name: string; what: string }[] = [
   { id: "quiz", glyph: "c-question", name: tk("Quiz me"), what: tk("5 questions + answers") },
   { id: "roadmap", glyph: "roadmap", name: tk("Draft a roadmap"), what: tk("Modules and topics") },
   { id: "voice", glyph: "voice", name: tk("Voice to text"), what: tk("Dictation (Whisper)") },
+  // Separate switches (the Worker refuses each one when it is off)
+  { id: "ask", glyph: "search", name: tk("Ask your notes"), what: tk("Answers with sources from your vault") },
+  { id: "chat", glyph: "assistant", name: tk("Chat"), what: tk("Open-ended conversation about a note or space") },
+  { id: "tutor", glyph: "lesson", name: tk("Tutor"), what: tk("Explain, Socratic and Feynman sessions") },
 ];
 const LOCAL = [
   { glyph: "search", name: tk("Search"), what: tk("Full-text, Arabic normalisation") },

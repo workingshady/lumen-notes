@@ -81,14 +81,14 @@ export function FillStrokePopover({ ctx }: { ctx: WbCtx }) {
   const { api, set } = useLive(ctx);
   if (!api) return null;
   const els = selectedEls(api);
-  const fillRaw = common(els, (e) => e.fillStyle as string) ?? (defaultOf(api, "fillStyle") as string | undefined) ?? "solid";
+  const fillRaw = common(els, (e) => (e.customData?.lumenFill === "dots" ? "dots" : e.fillStyle) as string) ?? (defaultOf(api, "fillStyle") as string | undefined) ?? "solid";
   const bg = common(els, (e) => e.backgroundColor as string) ?? (defaultOf(api, "backgroundColor") as string | undefined) ?? "transparent";
   const fill = bg === "transparent" ? "none" : fillRaw;
   const width = common(els, (e) => e.strokeWidth as number) ?? (defaultOf(api, "strokeWidth") as number | undefined) ?? 2;
   const dash = common(els, (e) => e.strokeStyle as string) ?? (defaultOf(api, "strokeStyle") as string | undefined) ?? "solid";
   const fills: [string, string, string][] = [["fill-none", "None", "none"], ["fill-solid", "Solid", "solid"], ["fill-hachure", "Hachure", "hachure"], ["fill-crosshatch", "Cross", "cross-hatch"], ["fill-zigzag", "Zigzag", "zigzag"], ["fill-dots", "Dots", "dots"]];
   const list: Blk[] = [
-    { key: "fill", h: t("Fill"), items: fills.map(([g, l, v]) => tile(g, t(l), { on: fill === v, tag: v === "dots" ? t("Later") : undefined, disabled: v === "dots", op: v === "dots" ? 0.6 : 1,
+    { key: "fill", h: t("Fill"), items: fills.map(([g, l, v]) => tile(g, t(l), { on: fill === v, 
       onClick: () => { if (v === "none") set({ backgroundColor: "transparent" }); else set({ fillStyle: v, ...(bg === "transparent" ? { backgroundColor: els[0]?.strokeColor && els[0].strokeColor !== "transparent" ? els[0].strokeColor : "#5CC8C2" } : {}) }); } })), cols: "repeat(3,1fr)" },
     { key: "stroke", h: t("Stroke"), items: [["stroke-thin", "Thin", 1], ["stroke-solid", "Regular", 2], ["stroke-bold", "Bold", 4]].map(([g, l, v]) => tile(g as string, t(l as string), { on: width === v, onClick: () => set({ strokeWidth: v }) }))
       .concat([["stroke-solid", "Solid", "solid"], ["stroke-dashed", "Dashed", "dashed"], ["stroke-dotted", "Dotted", "dotted"]].map(([g, l, v]) => tile(g, t(l), { on: dash === v, onClick: () => set({ strokeStyle: v }) }))), cols: "repeat(3,1fr)" },
@@ -111,9 +111,10 @@ export function LookPopover({ ctx }: { ctx: WbCtx }) {
 }
 
 // ------------------------------------------------------------------ text (36E)
+import { FONT_ARABIC, FONT_SERIF } from "../../lib/wb-fonts";
 const FONTS: [name: string, ff: string, sample: string, fs: string, family: number | null][] = [
-  ["Hand", "Caveat,cursive", "Light bends", "20px", 5], ["Sans", "Inter", "Light bends", "14px", 6], ["Serif", "'Source Serif 4',serif", "Light bends", "15px", null],
-  ["Code", "'JetBrains Mono',monospace", "light_bends()", "13px", 8], ["Arabic", "'IBM Plex Sans Arabic'", "ينكسر الضوء", "14px", null],
+  ["Hand", "Caveat,cursive", "Light bends", "20px", 5], ["Sans", "Inter", "Light bends", "14px", 6], ["Serif", "'Source Serif 4',serif", "Light bends", "15px", FONT_SERIF],
+  ["Code", "'JetBrains Mono',monospace", "light_bends()", "13px", 8], ["Arabic", "'IBM Plex Sans Arabic'", "ينكسر الضوء", "14px", FONT_ARABIC],
 ];
 const SIZES: [string, number][] = [["S", 16], ["M", 20], ["L", 28], ["XL", 36]];
 export function TextPopover({ ctx }: { ctx: WbCtx }) {
@@ -132,6 +133,32 @@ export function TextPopover({ ctx }: { ctx: WbCtx }) {
   const setLink = (v: string | null) => { void restyle(api, selectedIds(api), (e) => ({ ...e, link: v })); done(); setLinkOpen(false); };
   const s = lq.trim().toLowerCase();
   const nl = notes.filter((n) => !n.deleted && (!s || n.title.toLowerCase().includes(s))).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5);
+  // Background highlight: a pale marker rectangle grouped behind each free text (Excalidraw has no text background)
+  const free = els.filter((x) => !x.containerId);
+  const everything = api.getSceneElementsIncludingDeleted() as El[];
+  const hlOf = (id: string) => everything.find((r) => !r.isDeleted && r.customData?.lumenHighlightFor === id);
+  const hlOn = free.length > 0 && free.every((x) => hlOf(x.id));
+  const toggleHighlight = async () => {
+    if (!free.length) return;
+    const { convertToExcalidrawElements } = await import("@excalidraw/excalidraw");
+    const ids = new Set(free.map((x) => x.id));
+    let all = [...everything];
+    if (hlOn) {
+      all = all.map((r) => (r.customData?.lumenHighlightFor && ids.has(r.customData.lumenHighlightFor) ? { ...r, isDeleted: true, version: (r.version ?? 1) + 1, versionNonce: Math.floor(Math.random() * 2 ** 31) } : r));
+    } else {
+      const out: El[] = [];
+      for (const e of all) {
+        if (ids.has(e.id) && !hlOf(e.id) && !e.isDeleted) {
+          const gid = "hl" + e.id;
+          const [r] = convertToExcalidrawElements([{ type: "rectangle", x: e.x - 6, y: e.y - 3, width: e.width + 12, height: e.height + 6, backgroundColor: "#ffe066", fillStyle: "solid", strokeColor: "transparent", opacity: 55, roughness: 0, roundness: { type: 3 } } as never]) as unknown as El[];
+          out.push({ ...r, groupIds: [...(e.groupIds ?? []), gid], customData: { lumenHighlightFor: e.id } }, { ...e, groupIds: [...(e.groupIds ?? []), gid], version: (e.version ?? 1) + 1, versionNonce: Math.floor(Math.random() * 2 ** 31) });
+        } else out.push(e);
+      }
+      all = out;
+    }
+    api.updateScene({ elements: all as never, captureUpdate: "IMMEDIATELY" } as never);
+    done();
+  };
   const list: Blk[] = [
     { key: "font", h: t("Font"), items: FONTS.map(([n, ff, sample, fs, f]) => ({ key: n, l: sample, ff, lfs: fs, sub: t(n), on: f != null && fam === f, mh: "36px", tag: f == null ? t("Later") : undefined, op: f == null ? 0.6 : 1, disabled: f == null, onClick: () => f != null && set({ fontFamily: f }) } as Itm)), gap: "2px" },
     { key: "size", h: t("Size"), node: (
@@ -144,7 +171,7 @@ export function TextPopover({ ctx }: { ctx: WbCtx }) {
     { key: "align", items: [["align-left", "left"], ["align-center", "center"], ["align-right", "right"]].map(([g, v]) => tile(g, "", { mh: "32px", on: al === v, tip: t(v), onClick: () => set({ textAlign: v }) }))
       .concat([["align-top", "top"], ["align-middle", "middle"], ["align-bottom", "bottom"]].map(([g, v]) => tile(g, "", { mh: "32px", on: va === v, tip: t(v), onClick: () => set({ verticalAlign: v }) }))), cols: "repeat(6,1fr)" },
     { key: "extra", items: [
-      { g: "highlight", l: t("Background highlight"), tog: false, tag: t("Later"), op: 0.6, disabled: true, mh: "34px" },
+      { g: "highlight", l: t("Background highlight"), tog: hlOn, op: free.length ? 1 : 0.55, mh: "34px", onClick: () => void toggleHighlight() },
       { g: "link", l: t("Link"), sub: target || t("None"), mh: "34px", onClick: () => setLinkOpen(!linkOpen) },
     ] },
     ...(linkOpen ? [{ key: "lk", node: (

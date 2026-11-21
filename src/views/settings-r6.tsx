@@ -494,6 +494,7 @@ function SyncR6() {
   const v = useVault();
   const tok = getToken();
   const x = useSettings() as S & { syncMobile?: boolean; syncFiles?: "always" | "wifi" | "open" };
+  const policy = x.conflictPolicy;
   const ok = st.status !== "error" && st.status !== "offline";
   const desc = !tok && !DEMO ? t("Off · this device only")
     : st.status === "syncing" ? t("Syncing…")
@@ -509,6 +510,10 @@ function SyncR6() {
         <SRow label={t("Sync files")} control={<SSeg label={t("Sync files")} value={x.syncFiles ?? "wifi"} onChange={(v) => setSettings({ syncFiles: v } as unknown as Partial<S>)} options={[{ value: "always", label: t("Always") }, { value: "wifi", label: t("On Wi-Fi") }, { value: "open", label: t("On open") }]} />} />
       </SGroup>
       <SAdvanced summary={t("Conflict policy · reset local cache")} defaultOpen={!tok && !DEMO}>
+        <SGroup>
+          <SRow label={t("When two devices edit the same note")} desc={policy === "ask" ? t("Keep both versions and offer a merge. Nothing is lost.") : t("The newest edit wins. The other version goes to the note's History, without asking.")}
+            control={<SSeg label={t("Conflict policy")} value={policy} onChange={(v) => setSettings({ conflictPolicy: v })} options={[{ value: "ask", label: t("Ask me") }, { value: "newest", label: t("Newest wins") }]} />} />
+        </SGroup>
         <div id="r6-sync-classic"><Classic><SyncSection /></Classic></div>
         <SGroup><div className="px-3.5 py-3"><AppLockSetting /></div></SGroup>
       </SAdvanced>

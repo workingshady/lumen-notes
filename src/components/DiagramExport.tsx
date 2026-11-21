@@ -202,7 +202,7 @@ export function DiagramExport() {
       { g: "markdown", l: "Markdown", on: f === "markdown", col: true, mh: "50px", op: job.markdown ? 1 : 0.4, onClick: () => set({ format: "markdown" }) },
       { g: "mermaid", l: "Mermaid", sub: phone || !(kind === "whiteboard" || kind === "board") ? "" : t("best effort"), on: f === "mermaid", col: true, mh: "50px", op: job.mermaid ? 1 : 0.4, onClick: () => set({ format: "mermaid" }) },
       ...(job.formats ?? []).map((p): Cell => ({ g: p.glyph, l: p.label, sub: phone ? "" : p.sub, on: f === p.id, col: true, mh: "50px", onClick: () => set({ format: p.id }) })),
-      { g: "globe", l: "HTML", tag: t("Later"), col: true, mh: "50px", op: 0.55, tip: t("Interactive read-only HTML export is planned") },
+      { g: "globe", l: "HTML", sub: phone ? "" : t("read-only"), on: f === "html", col: true, mh: "50px", op: imgOk("svg") ? 1 : 0.4, onClick: () => { if (imgOk("svg")) set({ format: "html" }); } },
     ];
     const blocks: Block[] = [
       { h: t("Preset"), cols: cols4, items: PRESETS.map((p): Cell => ({ g: p.g, l: p.l(), on: (Object.keys(p.set) as (keyof ExportOptions)[]).every((k) => o[k] === p.set[k]), onClick: () => set(p.set) })) },

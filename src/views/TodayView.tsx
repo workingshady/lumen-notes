@@ -26,7 +26,8 @@ const REVIEW_AT = 8 * 60;
 export function TodayView() {
   const phone = usePhone();
   const cal = useCalendar();
-  const td = useTodayData();
+  const [force, setForce] = useState(false);
+  const td = useTodayData(force);
   const v = useVault();
   const now = useNow();
   const timerOn = useTimerActive();
@@ -98,10 +99,11 @@ export function TodayView() {
     if (nextE) { if (nextE.it) startItem(nextE.it, { byTitle: v.byTitle, plan: cal.planOf(nextE.it.planId) }); else startItem({ kind: "reviews" }, { byTitle: v.byTitle }); }
     else if (upTask) startItem({ id: upTask.key, kind: "task", title: upTask.text, date: today, start: upTask.time, dur: upTask.est ?? 0, cal: "tasks", color: "", noteId: upTask.noteId, line: upTask.line }, { byTitle: v.byTitle });
   };
-  const nowLabel = nextE ? `${nowE ? t("NOW") : t("NEXT")} · ${hhmm(nextE.start)} – ${hhmm(nextE.start + nextE.dur)}` : upTask ? t("UP NEXT") : t("NOTHING SCHEDULED");
-  const nowTitle = nextE?.title ?? (upTask ? upTask.text : t("Your day is free"));
+  const restDay = !td.plan.studyDay && !force && !nextE && !upTask;
+  const nowLabel = restDay ? t("REST DAY") : nextE ? `${nowE ? t("NOW") : t("NEXT")} · ${hhmm(nextE.start)} – ${hhmm(nextE.start + nextE.dur)}` : upTask ? t("UP NEXT") : t("NOTHING SCHEDULED");
+  const nowTitle = restDay ? t("Nothing planned. Today is a rest day.") : nextE?.title ?? (upTask ? upTask.text : t("Your day is free"));
   const lateDays = nextE?.it?.late ? Math.round((Date.parse(today) - Date.parse(nextE.it.date)) / 864e5) : 0;
-  const nowSub = nextE ? [nextE.it ? nextE.it.sub : null, nextE.it ? durLabel(nextE.dur) : nextE.sub, lateDays ? t("{n} days overdue", { n: lateDays }) : ""].filter(Boolean).join(" · ")
+  const nowSub = restDay ? t("Your study plan skips this weekday. Plan anyway to add lessons.") : nextE ? [nextE.it ? nextE.it.sub : null, nextE.it ? durLabel(nextE.dur) : nextE.sub, lateDays ? t("{n} days overdue", { n: lateDays }) : ""].filter(Boolean).join(" · ")
     : upTask ? [cal.planOf(upTask.planId)?.title ?? upTask.noteTitle, dueText(upTask, today, true)].filter(Boolean).join(" · ") : t("Plan my day fills free slots from your plans’ pace.");
   const nowDur = nextE?.dur ?? upTask?.est ?? 0;
 
@@ -128,10 +130,10 @@ export function TodayView() {
               <span dir="auto" style={{ fontSize: phone ? 16 : 19, fontWeight: 650 }}>{nowTitle}</span>
               <span dir="auto" style={{ fontSize: 12.5, color: V.mu }}>{nowSub}</span>
             </div>
-            <button onClick={nextE || upTask ? startNow : planMyDay} className="hover:brightness-110" style={{ height: 40, padding: "0 16px", borderRadius: 10, background: V.ac, color: V.af, display: "flex", alignItems: "center", gap: 8, fontWeight: 650, whiteSpace: "nowrap" }}>
+            <button onClick={nextE || upTask ? startNow : restDay ? () => setForce(true) : planMyDay} className="hover:brightness-110" style={{ height: 40, padding: "0 16px", borderRadius: 10, background: V.ac, color: V.af, display: "flex", alignItems: "center", gap: 8, fontWeight: 650, whiteSpace: "nowrap" }}>
               {nextE || upTask
                 ? <><svg width="13" height="13" viewBox="0 0 24 24" className="rtl:-scale-x-100"><path d="M8 5l11 7-11 7z" style={{ fill: "currentColor" }} /></svg>{nowDur ? t("Start · {d}", { d: durLabel(nowDur) }) : t("Start")}</>
-                : <><Glyph name="timeline" size={14} />{t("Plan my day")}</>}
+                : <><Glyph name="timeline" size={14} />{restDay ? t("Plan anyway") : t("Plan my day")}</>}
             </button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: phone ? "1fr" : "1fr 1fr", gap: 14 }}>

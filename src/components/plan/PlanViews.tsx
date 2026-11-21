@@ -8,7 +8,7 @@ import { Glyph } from "../Glyph";
 import { openNote, useVault } from "../../lib/store";
 import { criticalPath, daysLate, isoOf, planProgress, sessionMinutes, todayDay, dayOf, isDone, type ColourKey, type Day, type GroupKey, type Plan, type PlanItem, type PlanPrefs, type PlanViewKind, type ShowKey, type SortKey } from "../../lib/plan-model";
 import { planCta, planFromNote } from "../../lib/plan-sources";
-import { fmtNum, t } from "../../lib/i18n";
+import { fmtNum, isRtl, t } from "../../lib/i18n";
 import { usePhone } from "../../views/spaces-util";
 import { AC16, MenuPop, Opt, PLAN_CSS, TOKENS, fmtDay, fmtDow, statusWords, useDismiss, usePlanWrites, useWidth, type PlanWrites } from "./plan-ui";
 import { Agenda, Board, Gantt, Lanes } from "./plan-views-parts";
@@ -70,7 +70,7 @@ export function PlanViews({ plan: plan0, embedded }: { plan: Plan; embedded?: bo
     const el = scroller.current;
     if (!el) return;
     const tl = el.querySelector<HTMLElement>("[data-today]");
-    if (tl) { el.scrollLeft = Math.max(0, tl.offsetLeft - el.clientWidth / 3); return; }
+    if (tl) { if (isRtl()) { tl.scrollIntoView({ inline: "center", block: "nearest" }); return; } el.scrollLeft = Math.max(0, tl.offsetLeft - el.clientWidth / 3); return; }
     el.scrollTo({ top: 0, behavior: "smooth" });
   };
   const onItem = (item: PlanItem, e: RMouseEvent) => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setPop({ item, x: Math.min(innerWidth - 340, r.left), y: Math.min(innerHeight - 330, r.bottom + 6) }); };
@@ -106,7 +106,7 @@ export function PlanViews({ plan: plan0, embedded }: { plan: Plan; embedded?: bo
               </div>
               <button onClick={runCta} disabled={!next} style={{ display: "flex", alignItems: "center", gap: 10, height: 50, padding: "0 16px 0 12px", borderRadius: 12, background: "var(--ac)", color: "var(--af)", maxWidth: 320 }}>
                 <span style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" style={{ fill: "currentColor" }} /></svg></span>
-                <div style={{ display: "flex", flexDirection: "column", minWidth: 0, textAlign: "start" }}><span style={{ fontSize: 11, fontWeight: 600, opacity: 0.75, whiteSpace: "nowrap" }} dir="auto">{ctaK}</span><span dir="auto" style={{ fontSize: 13.5, fontWeight: 650, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{next?.name ?? ""}</span></div>
+                <div style={{ display: "flex", flexDirection: "column", minWidth: 0, textAlign: "start" }}><span style={{ fontSize: 11, fontWeight: 600, opacity: 0.75, whiteSpace: "nowrap" }} dir="auto">{ctaK}</span><span dir="auto" style={{ fontSize: 13.5, fontWeight: 650, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{next ? (cta === "today" && plan.kind === "exam" ? `${next.name} + ${t("{n} flashcards", { n: 20 })}` : next.name) : ""}</span></div>
               </button>
             </div>
           )}

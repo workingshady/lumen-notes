@@ -267,16 +267,20 @@ function inferIcon(text: string, action?: Toast["action"]): ToastIcon {
   if (/offline/i.test(text)) return "offline";
   return action ? "info" : "check";
 }
-export function dismissToast(id: number) { toasts = toasts.filter((x) => x.id !== id); tsubs.forEach((f) => f()); }
+export function dismissToast(id: number) { const tm = toastTimers.get(id); if (tm) { clearTimeout(tm.h); toastTimers.delete(id); } toasts = toasts.filter((x) => x.id !== id); tsubs.forEach((f) => f()); }
 export function toast(text: string, action?: Toast["action"], opts: ToastOpts = {}) {
   const undo = action && /undo/i.test(action.label);
   const ms = opts.ms ?? (undo ? 8000 : action ? 6000 : 3000);
   const t: Toast = { id: Date.now() + Math.random(), text, action, sub: opts.sub, icon: opts.icon ?? inferIcon(text, action), ms, at: Date.now(), actionStyle: opts.actionStyle ?? (undo ? "button" : "link"), variant: opts.variant ?? "card" };
   toasts = [...toasts.slice(-2), t];
   tsubs.forEach((f) => f());
-  setTimeout(() => dismissToast(t.id), ms);
+  toastTimers.set(t.id, { h: window.setTimeout(() => dismissToast(t.id), ms), left: ms, at: Date.now() });
   return t.id;
 }
+/** Toasts pause while hovered or focused (Components · Toast): the timer restarts with the time that was left. */
+const toastTimers = new Map<number, { h: number; left: number; at: number }>();
+export function pauseToast(id: number) { const x = toastTimers.get(id); if (!x) return; clearTimeout(x.h); x.left = Math.max(800, x.left - (Date.now() - x.at)); }
+export function resumeToast(id: number) { const x = toastTimers.get(id); if (!x) return; clearTimeout(x.h); x.at = Date.now(); x.h = window.setTimeout(() => dismissToast(id), x.left); }
 /** Ctrl/⌘ Z outside editors runs the newest Undo toast. */
 export function runLatestUndo() {
   const t = [...toasts].reverse().find((x) => x.action && /undo/i.test(x.action.label));

@@ -18,7 +18,7 @@ export function ItemPop({ it, anchor, onClose, today, tasks, plan, byTitle }: { 
   const run = (f: () => void) => () => { onClose(); f(); };
   const task = it.kind === "task" ? tasks.find((x) => `task:${x.key}` === it.id) : undefined;
   const when = `${longDay(it.date)}${it.start != null ? ` · ${hhmm(it.start)} – ${hhmm(it.start + (it.dur || 30))}` : ""}`;
-  const kind = it.kind === "milestone" ? t("Milestone") : it.kind === "block" ? t("Study block") : it.kind === "event" ? t("Event") : it.kind === "task" ? t("Task") : it.kind === "item" ? t("Plan item") : t("Suggested");
+  const kind = it.kind === "milestone" ? t("Milestone") : it.kind === "block" ? t("Study block") : it.kind === "event" ? t("Event") : it.kind === "task" ? t("Task") : it.kind === "item" ? t("Plan item") : it.kind === "note" ? (it.cal === "studied" ? t("Studied time") : it.cal === "daily" ? t("Daily note") : t("Note created")) : t("Suggested");
   return (
     <Pop anchor={anchor} onClose={onClose} width={260}>
       <div style={{ display: "flex", flexDirection: "column", gap: 3, padding: "6px 8px 8px", borderBottom: `1px solid ${V.bd}`, marginBottom: 4 }}>
@@ -27,7 +27,7 @@ export function ItemPop({ it, anchor, onClose, today, tasks, plan, byTitle }: { 
         <span style={{ fontSize: 12, color: V.mu }}>{when}{it.dur && it.start == null ? ` · ${durLabel(it.dur)}` : ""}</span>
         {it.sub && <span dir="auto" style={{ fontSize: 12, color: V.mu }}>{it.sub}</span>}
       </div>
-      {it.kind !== "milestone" && it.kind !== "item" && <MItem onClick={run(() => startItem(it, { byTitle, plan }))}><Glyph name="play" size={14} />{t("Start focus")}</MItem>}
+      {it.kind !== "milestone" && it.kind !== "item" && it.kind !== "note" && <MItem onClick={run(() => startItem(it, { byTitle, plan }))}><Glyph name="play" size={14} />{t("Start focus")}</MItem>}
       {it.noteId && it.kind !== "block" && it.kind !== "event" && <MItem onClick={run(() => { if (it.line != null) void db.notes.get(it.noteId!).then((n) => openNoteAtLine(it.noteId!, it.line!, n?.body)); else openNote(it.noteId!); })}><Glyph name="note" size={14} />{t("Open note")}</MItem>}
       {(it.kind === "block" || task) && <MItem onClick={run(() => { if (task) void toggleTask(task, today); else void setBlockDone(it, !it.done); })}><Glyph name="check" size={14} />{it.done ? t("Mark not done") : t("Mark done")}</MItem>}
       {it.kind === "item" && it.planItem && it.planItem.src !== "module" && <MItem onClick={run(() => void setPlanItemStatus(it, it.done ? "todo" : "done"))}><Glyph name="check" size={14} />{it.done ? t("Mark not done") : t("Mark done")}</MItem>}

@@ -8,7 +8,7 @@ import type { PlanItem } from "./plan-model";
 export { daysBetween, shiftDay, weekday, weekStart };
 
 /** Which kind of thing sits on the calendar. `suggested` blocks are not stored until accepted. */
-export type CalKind = "block" | "event" | "task" | "milestone" | "item" | "suggested";
+export type CalKind = "block" | "event" | "task" | "milestone" | "item" | "suggested" | "note";
 
 export interface CalItem {
   id: string;
@@ -36,6 +36,8 @@ export interface CalItem {
 
 /** Fixed calendar ids for the non-plan calendars. */
 export const CAL_TASKS = "tasks", CAL_EVENTS = "events", CAL_REVIEWS = "reviews";
+/** Note-activity layers (design 14C day panel): notes created, daily notes, minutes studied. Off by default. */
+export const CAL_NOTES = "notes", CAL_DAILY = "daily", CAL_STUDIED = "studied";
 
 // ------------------------------------------------------------------ times
 export const hm = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(Math.round(min % 60)).padStart(2, "0")}`;

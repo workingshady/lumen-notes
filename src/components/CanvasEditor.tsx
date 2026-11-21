@@ -15,12 +15,12 @@ import type { CanvasEdge, CanvasNode, JsonCanvas, Note, Side } from "../../share
 import { createNote, duplicateNote, findOrCreateByTitle, restoreNote, trashNote, updateNote } from "../lib/actions";
 import { unfurl, type Unfurl } from "../lib/api";
 import {
-  alignNodes, canvasFromText, cloneFragment, colorOf, fromOutline, isLocked, isPinned, layout, parseCanvas, pickSelection, PRESETS, reorder, runScript, setLocked, setPinned, stringify, tidyCanvas, validate,
+  alignNodes, canvasFromText, cloneFragment, colorOf, fromOutline, isLocked, isPinned, layout, parseCanvas, previewSvg, pickSelection, PRESETS, reorder, runScript, setLocked, setPinned, stringify, validate,
   type AlignMode,
 } from "../lib/canvas";
 import { CanvasHistory } from "../lib/canvas-history";
 import {
-  bgColorOf, bgPatternOf, borderOf, collapsibleOf, dashFor, edgePathOf, edgeStyleOf, fillOf, headOf, isCollapsed, labelStyleOf, lineOf, markerId, markerSvg, membersOf, nodeStyleOf, patternCss, patternOf,
+  bgColorOf, bgPatternOf, borderOf, collapsibleOf, portalsOf, dashFor, edgePathOf, edgeStyleOf, fillOf, headOf, isCollapsed, labelStyleOf, lineOf, markerId, markerSvg, membersOf, nodeStyleOf, patternCss, patternOf,
   pickMeta, setBorder, setCollapsed, setEdgePath, setFill, setHead, setLabelStyle, setLine, setPattern, setShape, setWidth, shapeOf, shapePath, shapeInsetPct, widthOf,
   type CanvasMeta, type HeadKind, type NodeShape, type BorderStyle, type FillStyle, type PathKind, type Pattern,
 } from "../lib/canvas-style";
@@ -43,6 +43,7 @@ import { canvasToSkeleton, type Skeleton } from "../lib/whiteboard";
 import { plainExcerpt } from "./nav-text";
 import { Preview } from "./Preview";
 import { useCustomPaletteMap } from "./wb/palette/palettes";
+import { tidyAsync } from "../lib/tidy-async";
 import { HL_MIME, hlDropNode, PdfFileCard, PdfHighlightCard } from "./pdf-canvas";
 import { registerZone } from "../lib/dnd";
 import { canvasZone } from "./dnd/canvas-drop";
@@ -131,7 +132,7 @@ const edgeOf = (e: Edge): CanvasEdge => {
 
 /** Top-level keys the board doesn't own: everything but nodes, edges and the options `pickMeta` manages. */
 function extraOf(c: JsonCanvas): Record<string, unknown> {
-  const { nodes: _n, edges: _e, lumenBackground: _b, lumenEdgePath: _p, lumenGroups: _g, ...rest } = c as JsonCanvas & Record<string, unknown>;
+  const { nodes: _n, edges: _e, lumenBackground: _b, lumenEdgePath: _p, lumenGroups: _g, lumenPortals: _pt, ...rest } = c as JsonCanvas & Record<string, unknown>;
   return rest;
 }
 function fromFlow(nodes: FlowNode[], edges: Edge[]): JsonCanvas {
@@ -360,16 +361,39 @@ function DiagramFileCard({ n, note, selected }: { n: CanvasNode; note: Note; sel
   );
 }
 
+/** A portal: another canvas shown live inside this one (read-only preview, open to edit). */
+function PortalCard({ n, note, selected }: { n: CanvasNode; note: Note; selected: boolean }) {
+  const svg = useMemo(() => { const p = parseCanvas(note.body); return previewSvg(p.canvas, 600, 400); }, [note.body]);
+  return (
+    <CardShell n={n} selected={selected}>
+      <div className="flex h-[30px] shrink-0 cursor-grab items-center gap-1.5 border-b border-line px-2.5 text-[11.5px] text-muted" title={t("Drag to move")}>
+        <LayoutDashboard size={12} className="shrink-0 text-accent" />
+        <button className="nodrag min-w-0 flex-1 truncate text-start text-ink hover:text-accent" title={t("Open this canvas")} onClick={() => openNote(note.id)}>{note.title}</button>
+        <span className="shrink-0 rounded-[5px] bg-surface-2 px-1 text-[10.5px]">{t("Portal")}</span>
+      </div>
+      <div className="nodrag nowheel min-h-0 flex-1 overflow-hidden p-1 text-muted" dangerouslySetInnerHTML={{ __html: svg }} />
+    </CardShell>
+  );
+}
+
 const sameNote = (a: Note | undefined, b: Note | undefined) => a === b || (!!a && !!b && a.id === b.id && a.body === b.body && a.title === b.title && a.type === b.type && a.status === b.status
   && a.folderId === b.folderId && a.spaceId === b.spaceId && a.updatedAt === b.updatedAt && a.deleted === b.deleted && JSON.stringify(a.props) === JSON.stringify(b.props));
 const FileNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
   useLang();
   const n = data.node as Extract<CanvasNode, { type: "file" }>;
   const { spaceId } = useContext(Ctx);
+  const portals = useContext(PortalCtx);
   const title = n.file.replace(/\.md$/i, "").split("/").pop()!;
   // Perf: only this card's note (not every vault rebuild, e.g. each save of the board itself) re-renders the card.
   const note = useVaultSelector((v) => v.byTitle.get(title.toLowerCase()), sameNote);
   const folderName = useVaultSelector((v) => (note ? (note.folderId ? v.folderMap.get(note.folderId)?.name : v.spaceMap.get(note.spaceId)?.name) : undefined));
+  if (portals && note?.type === "canvas" && !/"lumenArch"s*:/.test(note.body)) return (
+    <>
+      <NodeResizer isVisible={!!selected && !isLocked(n)} minWidth={220} minHeight={160} {...RESIZER} />
+      <Handles n={n} />
+      <PortalCard n={n} note={note} selected={!!selected} />
+    </>
+  );
   if (note?.type === "diagram") return (
     <>
       <NodeResizer isVisible={!!selected && !isLocked(n)} minWidth={240} minHeight={180} {...RESIZER} />
@@ -436,6 +460,8 @@ const LinkNode = memo(({ data, selected }: NodeProps<FlowNode>) => {
 }, sameCard);
 
 /** Board-level group options (collapsible, "N cards" counts, toggling) shared with every group card. */
+/** Canvas option "Portals": file cards pointing at another canvas show it live. */
+const PortalCtx = createContext(false);
 const GroupCtx = createContext<{ counts: Map<string, number>; collapsible: boolean }>({ counts: new Map(), collapsible: true });
 const GROUP_HEAD = 44;
 
@@ -775,6 +801,26 @@ function Inner({ note }: { note: Note }) {
     let node = { id, x: p.x, y: p.y, width: 260, height: 120, ...(defColor ? { color: defColor } : {}), ...n } as CanvasNode;
     if (node.type !== "group") node = setFill(setBorder(setShape(node, defNode.shape), defNode.border), defNode.fill);
     setNodes((ns) => [...ns.map((x) => ({ ...x, selected: false })), { ...toFlow({ nodes: [node] }).nodes[0], selected: true }]);
+    return id;
+  };
+  // Connection dot released on empty space: "New card here" menu (card + edge from the dragged handle).
+  const [dropMenu, setDropMenu] = useState<null | { sx: number; sy: number; x: number; y: number; from: string; handle: string | null }>(null);
+  const endConnect = (ev: MouseEvent | TouchEvent, cs: { isValid: boolean | null; fromNode: { id: string } | null; fromHandle: { id?: string | null } | null }) => {
+    setConnecting(false);
+    if (cs.isValid || !cs.fromNode) return;
+    const pt = "changedTouches" in ev ? ev.changedTouches[0] : ev;
+    if (!pt) return;
+    const el = document.elementFromPoint(pt.clientX, pt.clientY);
+    if (!el || !(el as HTMLElement).classList.contains("react-flow__pane")) return;
+    const p = rf.screenToFlowPosition({ x: pt.clientX, y: pt.clientY });
+    setDropMenu({ sx: pt.clientX, sy: pt.clientY, x: Math.round(p.x / 20) * 20, y: Math.round(p.y / 20) * 20, from: cs.fromNode.id, handle: cs.fromHandle?.id ?? null });
+  };
+  const dropCard = (type: "text" | "link") => {
+    const d = dropMenu;
+    if (!d) return;
+    setDropMenu(null);
+    const id = type === "link" ? addNode({ type: "link", url: "https://", width: 300, height: 160 }, { x: d.x, y: d.y - 40 }) : addNode({ type: "text", text: "" }, { x: d.x, y: d.y - 40 });
+    setEdges((es) => addEdge({ id: crypto.randomUUID().slice(0, 12), source: d.from, sourceHandle: d.handle, target: id, type: "straight", data: { edge: { id: "", fromNode: d.from, toNode: id, ...edgeStyleOf(defEdge) } }, labelBgPadding: [8, 3], labelBgBorderRadius: 6 } as never, es));
   };
   // Drag and drop target (lib/dnd.ts, components/dnd/canvas-drop.ts): notes, graph nodes, files, text, URLs, library items.
   const dropLatest = useRef({ undo, snap: view.snap, defNode, title: note.title });
@@ -865,8 +911,9 @@ function Inner({ note }: { note: Note }) {
     }
     return out;
   }, [edges, edgeShape, ownerKey]); // eslint-disable-line react-hooks/exhaustive-deps
-  const onGroups = (p: Partial<{ collapsible: boolean; pattern: Pattern }>) => {
+  const onGroups = (p: Partial<{ collapsible: boolean; pattern: Pattern; portals: boolean }>) => {
     if (p.collapsible !== undefined) setMeta({ lumenGroups: { collapsible: p.collapsible } });
+    if (p.portals !== undefined) setMeta({ lumenPortals: p.portals || undefined });
     if (p.pattern) { const all = !selGroups.length; setNodes((ns) => ns.map((n) => (n.data.node.type === "group" && (all || n.selected) ? { ...n, data: { node: setPattern(n.data.node, p.pattern!) } } : n))); }
   };
   const onBg = (p: { pattern?: Pattern; color?: string | null }) => setMeta({ lumenBackground: { ...meta.lumenBackground, ...(p.pattern ? { pattern: p.pattern } : {}), ...(p.color === null ? { color: undefined } : p.color ? { color: p.color } : {}) } });
@@ -882,12 +929,16 @@ function Inner({ note }: { note: Note }) {
   };
   const doLayout = (k: "grid" | "tree" | "force") => { load(layout(fromFlow(nodes, edges), k)); setTimeout(() => rf.fitView({ padding: 0.2, duration: 300 }), 50); };
   const fit = () => rf.fitView({ padding: 0.2, duration: 300 });
-  const startTidy = () => {
-    if (tidyPrev || !nodes.length) return;
+  const tidying = useRef(false);
+  const startTidy = async () => {
+    if (tidyPrev || !nodes.length || tidying.current) return;
+    tidying.current = true;
     commit();
-    tidyOn.current = true;
     const cur = fromFlow(nodes, edges);
-    const r = tidyCanvas(cur, { keepPinned: true });
+    if (nodes.length >= 120) toast(t("Tidying {n} cards…", { n: nodes.length }));
+    const r = await tidyAsync(cur, { keepPinned: true });
+    tidying.current = false;
+    tidyOn.current = true;
     load(r.canvas);
     setTidyPrev({ prev: cur, stats: { moved: r.moved, before: r.before, after: r.after, pinned: r.pinned } });
     setTimeout(() => rf.fitView({ padding: 0.2, duration: 300 }), 50);
@@ -1318,7 +1369,7 @@ function Inner({ note }: { note: Note }) {
 
   return (
     <Ctx.Provider value={ctx}>
-    <GroupCtx.Provider value={groupCtx}>
+    <PortalCtx.Provider value={portalsOf(meta)}><GroupCtx.Provider value={groupCtx}>
     <div className="flex h-full min-h-0 flex-col md:flex-row">
       <style>{CANVAS_CSS}</style>
       <DndHost />
@@ -1333,10 +1384,16 @@ function Inner({ note }: { note: Note }) {
           const p = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY });
           addNode({ type: "text", text: "" }, { x: Math.round(p.x / 20) * 20, y: Math.round(p.y / 20) * 20 });
         }}>
+        {dropMenu && <><div className="fixed inset-0 z-30" onClick={() => setDropMenu(null)} onKeyDown={() => undefined} />
+          <div role="menu" onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); setDropMenu(null); } }} className="fixed z-40 w-[190px] rounded-[12px] border border-line bg-surface p-1.5 text-[13px] shadow-pop" style={{ left: Math.min(dropMenu.sx, window.innerWidth - 200), top: Math.min(dropMenu.sy, window.innerHeight - 140) }}>
+            <span className="block px-2.5 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wide text-muted">{t("New card here")}</span>
+            <button role="menuitem" autoFocus onClick={() => dropCard("text")} className="flex h-[34px] w-full items-center gap-2.5 rounded-[8px] px-2.5 text-start hover:bg-bg">{t("Text card")}</button>
+            <button role="menuitem" onClick={() => dropCard("link")} className="flex h-[34px] w-full items-center gap-2.5 rounded-[8px] px-2.5 text-start hover:bg-bg">{t("Link card")}</button>
+          </div></>}
         {boardBox && <CanvasEdgeCtx.Provider value={edgeApi}><ReactFlow
           nodes={shownNodes} edges={shownEdges} onNodesChange={onNodesChangeH} onEdgesChange={onEdgesChange} onConnect={onConnect} nodeTypes={nodeTypes} edgeTypes={canvasEdgeTypes}
           onNodeDragStart={dragStart} onNodeDragStop={dragStop} onSelectionDragStart={dragStart} onSelectionDragStop={dragStop}
-          onConnectStart={() => setConnecting(true)} onConnectEnd={() => setConnecting(false)}
+          onConnectStart={() => setConnecting(true)} onConnectEnd={endConnect as never}
           connectionMode={ConnectionMode.Loose} fitView fitViewOptions={{ padding: fitPad, maxZoom: 1 }} defaultViewport={initialView} minZoom={0.05} maxZoom={3} snapToGrid={view.snap} snapGrid={[20, 20]} zoomOnDoubleClick={false}
           deleteKeyCode={["Delete", "Backspace"]} onDelete={({ nodes: dn, edges: de }) => { const ids = new Set(dn.map((x) => x.id)); const n = dn.length + de.filter((e) => !ids.has(e.source) && !ids.has(e.target)).length; if (n) { toast(t("Deleted {n} item|Deleted {n} items", { n }), { label: t("Undo"), run: () => undo() }); } }} multiSelectionKeyCode={["Shift", "Meta", "Control"]} proOptions={{ hideAttribution: true }}
           connectionLineStyle={{ stroke: "var(--accent)", strokeWidth: 2 }} style={bgCol ? { background: `color-mix(in srgb, ${colorOf(bgCol)} 10%, var(--bg))` } : undefined}
@@ -1374,7 +1431,7 @@ function Inner({ note }: { note: Note }) {
         {optsOpen && (
           <div className="fade-in absolute inset-0 z-30 overflow-y-auto bg-bg p-4 md:inset-auto md:bottom-3 md:end-3 md:top-[64px] md:w-[372px] md:bg-transparent md:p-0 md:pe-0.5">
             <CanvasOptions selNodes={selNodes.length} selEdges={selEdges.length} node={nodeStyle} onNode={onNodeStyle} edge={edgeStyle} onEdge={onEdgeStyle}
-              color={curColor} anySel={anySel} onColor={setColor} groups={{ collapsible: collapsibleOf(meta), pattern: groupPattern, example: exampleCount }} onGroups={onGroups}
+              color={curColor} anySel={anySel} onColor={setColor} groups={{ collapsible: collapsibleOf(meta), pattern: groupPattern, example: exampleCount, portals: portalsOf(meta) }} onGroups={onGroups}
               bg={{ pattern: bgPat, color: bgCol }} onBg={onBg} onClose={() => setOptsOpen(false)} customPalettes={customPalettes}
               routed={selEdges.some((e) => { const x = e.data?.edge as RoutedEdge | undefined; return !!(x?.lumenPoints?.length || x?.lumenLabelPos != null); })}
               onResetRoute={() => setEdges((es) => es.map((e) => (e.selected ? { ...e, data: { edge: clearRoute(edgeOf(e)) } } : e)))}
@@ -1459,7 +1516,7 @@ function Inner({ note }: { note: Note }) {
         </CodePanel>
       )}
     </div>
-    </GroupCtx.Provider>
+    </GroupCtx.Provider></PortalCtx.Provider>
     </Ctx.Provider>
   );
 }

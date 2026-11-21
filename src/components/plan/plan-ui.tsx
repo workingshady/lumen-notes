@@ -7,7 +7,7 @@ import { updateNote } from "../../lib/actions";
 import { useVault } from "../../lib/store";
 import { dateOf, type Day, type ItemStatus, type Plan, type PlanItem, type PlanPrefs } from "../../lib/plan-model";
 import { bodyWithDates, bodyWithPlanFm, bodyWithStatus, serializePrefs } from "../../lib/plan-sources";
-import { fmtDate, getLang, t } from "../../lib/i18n";
+import { fmtDate, getLang, isRtl, t } from "../../lib/i18n";
 
 export const TOKENS = {
   "--sf": "var(--surface)", "--sf2": "var(--surface-2)", "--bd": "var(--border)", "--tx": "var(--text)", "--mu": "var(--muted)",
@@ -114,3 +114,4 @@ export function MenuPop({ items, onClose, style }: { items: { l: string; on?: bo
 
 /** Status words for the item popover. */
 export const statusWords = (): [ItemStatus, string, string][] => [["todo", t("To do"), "var(--mu)"], ["doing", t("In progress"), "var(--ac)"], ["done", t("Done"), "var(--ok)"], ["skipped", t("Skipped"), "var(--bd)"]];
+export const px = (x: number | string): CSSProperties => (isRtl() ? { right: x } : { left: x });

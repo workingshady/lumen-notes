@@ -88,8 +88,10 @@ export interface CanvasMeta {
   lumenBackground?: { pattern?: Pattern; color?: string };
   lumenEdgePath?: PathKind;
   lumenGroups?: { collapsible?: boolean };
+  /** File cards that point at another canvas show that canvas live (a portal). */
+  lumenPortals?: boolean;
 }
-export const META_KEYS = ["lumenBackground", "lumenEdgePath", "lumenGroups"] as const;
+export const META_KEYS = ["lumenBackground", "lumenEdgePath", "lumenGroups", "lumenPortals"] as const;
 /** The `lumen*` fields at the top level of a canvas file (cleaned). */
 export function pickMeta(c: unknown): CanvasMeta {
   const o = (c ?? {}) as Record<string, unknown>;
@@ -99,8 +101,10 @@ export function pickMeta(c: unknown): CanvasMeta {
   if (o.lumenEdgePath === "curved" || o.lumenEdgePath === "elbow" || o.lumenEdgePath === "straight") out.lumenEdgePath = o.lumenEdgePath;
   const g = o.lumenGroups as CanvasMeta["lumenGroups"];
   if (g && typeof g === "object" && typeof g.collapsible === "boolean") out.lumenGroups = { collapsible: g.collapsible };
+  if (o.lumenPortals === true) out.lumenPortals = true;
   return out;
 }
+export const portalsOf = (m: CanvasMeta) => m.lumenPortals === true;
 export const bgPatternOf = (m: CanvasMeta): Pattern => m.lumenBackground?.pattern ?? "dots";
 export const bgColorOf = (m: CanvasMeta) => m.lumenBackground?.color;
 export const collapsibleOf = (m: CanvasMeta) => m.lumenGroups?.collapsible !== false;

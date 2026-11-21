@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { api, attUrl, getToken } from "./api";
 import { db, save, uid } from "./db";
 import { t } from "./i18n";
@@ -52,6 +53,31 @@ export async function attBlob(id: string): Promise<Blob | null> {
   } catch { return null; }
 }
 
+/** Per-file upload progress for the file cards (Lumen 11): queued, "3 of 7 parts", synced. */
+const progress = new Map<string, { done: number; parts: number }>();
+const progSubs = new Set<() => void>();
+function setProgress(id: string, p: { done: number; parts: number } | null) { if (p) progress.set(id, p); else progress.delete(id); progSubs.forEach((f) => f()); }
+export type UploadState = { kind: "queued" } | { kind: "uploading"; done: number; parts: number } | { kind: "synced" };
+export function watchUpload(id: string, cb: (s: UploadState) => void): () => void {
+  let live = true;
+  const read = async () => {
+    const p = progress.get(id);
+    if (p) return live && cb({ kind: "uploading", ...p });
+    const b = await db.blobs.get(id);
+    if (live) cb(b && !b.uploaded ? { kind: "queued" } : { kind: "synced" });
+  };
+  void read();
+  const f = () => void read();
+  progSubs.add(f);
+  const iv = setInterval(f, 4000);
+  return () => { live = false; progSubs.delete(f); clearInterval(iv); };
+}
+export function useUploadState(id: string): UploadState {
+  const [st, setSt] = useState<UploadState>({ kind: "synced" });
+  useEffect(() => watchUpload(id, setSt), [id]);
+  return st;
+}
+
 const CHUNK = 1_500_000; // must match worker CHUNK
 export const MAX_FILE = 100 * 1024 * 1024;
 
@@ -98,10 +124,18 @@ export async function uploadPending(opening = false) {
     if (usage) usage.room = room;
     const parts = Math.max(1, Math.ceil(size / CHUNK));
     const mime = b.blob.type || "application/octet-stream";
+    // Resume: ask which parts the server already holds (an interrupted upload continues, it does not restart at part 0).
+    let have = new Set<number>();
+    if (parts > 1) { try { have = new Set((await api<{ have: number[] }>(`/att/${b.id}/status?parts=${parts}&size=${size}`)).have); } catch { /* older Worker: send everything */ } }
+    setProgress(b.id, { done: have.size, parts });
+    let sent = have.size;
     for (let i = 0; i < parts; i++) {
+      if (have.has(i)) continue;
       await api(`/att/${b.id}?part=${i}&parts=${parts}&size=${size}`, { method: "PUT", body: b.blob.slice(i * CHUNK, (i + 1) * CHUNK), headers: { "Content-Type": mime } });
+      setProgress(b.id, { done: ++sent, parts });
     }
     await db.blobs.update(b.id, { uploaded: 1 });
+    setProgress(b.id, null);
   }
 }
 

@@ -8,3 +8,4 @@ android/app/build
 android/.gradle
 *.log
 .DS_Store
+design/brief-09/send/

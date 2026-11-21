@@ -25,6 +25,15 @@ export function LangExtras() {
         <span className="font-semibold">{t("Date")}</span>
         <span className="text-muted tabular-nums">{fmtDate(Date.now(), { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
       </div>
+      <div className={row} data-date-pattern>
+        <span className="font-semibold">{t("Date format")}</span>
+        <select aria-label={t("Date format")} value={s.dateFormat} onChange={(e) => setSettings({ dateFormat: e.target.value as "auto" | "dmy" | "mdy" | "ymd" })} className="h-9 rounded-[8px] border border-line bg-surface px-2.5 text-[13px]">
+          <option value="auto">{t("Follow language")}</option>
+          <option value="dmy">22/11/2026</option>
+          <option value="mdy">11/22/2026</option>
+          <option value="ymd">2026-11-22</option>
+        </select>
+      </div>
       {lang === "ar" && (
         <div className={row} data-ar-font-row>
           <span className="font-semibold">{t("Reading font")}</span>

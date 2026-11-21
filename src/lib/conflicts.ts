@@ -9,6 +9,7 @@ import { overwritesLocal, resolvedText, type ConflictRec, type Resolution, type 
 import { db, getMeta, now, save, setMeta, uid } from "./db";
 import { t } from "./i18n";
 import { toast } from "./store";
+import { getSettings } from "./settings";
 
 export * from "./conflicts-core";
 const KEY = "conflicts";
@@ -28,6 +29,11 @@ type Local = Note & { dirty?: 0 | 1 };
 export function noteConflict(local: Local, incoming: Pulled): boolean {
   if (!overwritesLocal(local, incoming as Parameters<typeof overwritesLocal>[1])) return false;
   const d = incoming.data as Note & { lumenDeviceName?: string };
+  if (getSettings().conflictPolicy === "newest") { // Settings › Sync › Advanced: newest wins, the overwritten text stays in History, no prompt
+    pending.add(local.id);
+    void save("version", { id: uid(), noteId: local.id, title: local.title, body: local.body, label: `Other version · ${thisDevice()}`, createdAt: now(), updatedAt: now(), deleted: 0 });
+    return true;
+  }
   queue.set(local.id, {
     mine: { title: local.title, body: local.body, at: local.updatedAt, device: thisDevice() },
     theirs: { title: d.title, body: d.body, at: incoming.updatedAt, device: d.lumenDeviceName || "another device" },

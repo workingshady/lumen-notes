@@ -37,7 +37,7 @@ export function toICS(items: CalItem[], tasks: CalTask[], o: IcsOpts): string {
   const L: string[] = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Lumen//Calendar 1.0//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-WR-CALNAME:${esc(o.name)}`];
   const ds = `DTSTAMP:${stamp(o.now)}`;
   for (const it of items) {
-    if (it.kind === "suggested" || it.kind === "task") continue;
+    if (it.kind === "suggested" || it.kind === "task" || it.kind === "note") continue;
     const cat = o.planTitle?.(it.planId);
     L.push("BEGIN:VEVENT", `UID:${uid(it.id)}`, ds);
     if (it.start != null) L.push(`DTSTART:${local(it.date, it.start)}`, `DTEND:${local(it.date, it.start + Math.max(it.dur, 15))}`);

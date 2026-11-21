@@ -43,4 +43,9 @@ export const ar: Catalog = {
   "Create lesson note": "إنشاء ملاحظة درس", Unlocks: "يفتح", "{n} more": "{n} أخرى", ORGANIZE: "تنظيم", "Move to module…": "نقل إلى وحدة…", Move: "نقل", Rename: "إعادة تسمية",
   "Rename topic": "إعادة تسمية الموضوع", "Change date": "تغيير التاريخ", Duplicate: "تكرار", "Delete topic “{name}”? Topics that need it stop needing it.": "حذف الموضوع «{name}»؟ المواضيع التي تتطلبه لن تتطلبه بعد الآن.",
   Delete: "حذف", "Self-study course": "مقرر دراسة ذاتية", "{n} weeks": "{n} أسابيع", "in {lang}": "بـ{lang}", "{done} of {total}": "{done} من {total}",
+  "{n} flashcards": "{n} بطاقة",
+  "Skills": "المهارات",
+  "REST DAY": "يوم راحة", "Plan anyway": "خطّط على أي حال", "Your study plan skips this weekday. Plan anyway to add lessons.": "خطتك الدراسية تتجاوز هذا اليوم. خطّط على أي حال لإضافة دروس.",
+  "Daily notes": "الملاحظات اليومية", "Notes created": "ملاحظات منشأة", "Studied time": "وقت الدراسة", Daily: "يومية", Created: "أُنشئت", Timer: "المؤقت", "Daily note": "ملاحظة يومية", "Note created": "ملاحظة منشأة", "Studied · {d}": "درست · {d}",
+  Radial: "شعاعي",
 };

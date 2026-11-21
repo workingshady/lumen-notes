@@ -39,6 +39,8 @@ import { ar as r7Consistency } from "./ar/r7-consistency"; // round 7 stage 4 co
 import { ar as versioning } from "./ar/versioning"; // round 8 · versioning (R8-58)
 import { ar as plansR8 } from "./ar/plans-r8"; // round 8: course timeline + plans (Lumen 53 / 54)
 import { ar as api } from "./ar/api"; // Settings › Developer endpoints // round 6: note list filter/multi-select, tags, history panel
+import { ar as r8WbCanvas } from "./ar/r8-wb-canvas"; // round 8 whiteboard / canvas / export wave
+import { ar as r9Misc } from "./ar/r9-misc"; // round 9: Move to, confirms, publish, uploads, settings, legal
 import { ar as todayCal } from "./ar/today-cal"; // round 8 · Today, Calendar, Tasks (R8-55)
 
 /**
@@ -46,4 +48,4 @@ import { ar as todayCal } from "./ar/today-cal"; // round 8 · Today, Calendar, 
  * Split by area so several people can add strings without conflicts; later areas override earlier ones on a clash.
  * Product names (Lumen) and technical terms Arabic users expect in English (Markdown, PDF, FSRS, JSON, URL) stay as is.
  */
-export const AR: Catalog = { ...plansR8, ...todayCal, ...versioning, ...reviewR8, ...askR8, ...convert, ...archAiShare, ...dnd, ...library, ...arch, ...archEdges, ...aiVisual, ...activity, ...scale, ...shell, ...home, ...workspace, ...editor, ...paths, ...review, ...settings, ...data, ...dialogs, ...imports, ...accounts, ...sweep, ...r6b, ...r6a, ...organize, ...api, ...canvas, ...wbFix, ...wbW3a, ...wbPens, ...whiteboard, ...canvasOptions, ...exportAr, ...r7ArchFix, ...common, ...visualChooser, ...r7Consistency };
+export const AR: Catalog = { ...r9Misc, ...plansR8, ...todayCal, ...versioning, ...reviewR8, ...askR8, ...convert, ...archAiShare, ...dnd, ...library, ...arch, ...archEdges, ...aiVisual, ...activity, ...scale, ...shell, ...home, ...workspace, ...editor, ...paths, ...review, ...settings, ...data, ...dialogs, ...imports, ...accounts, ...sweep, ...r6b, ...r6a, ...organize, ...api, ...canvas, ...wbFix, ...wbW3a, ...wbPens, ...whiteboard, ...canvasOptions, ...exportAr, ...r7ArchFix, ...common, ...visualChooser, ...r7Consistency, ...r8WbCanvas };

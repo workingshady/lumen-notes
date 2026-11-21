@@ -7,7 +7,8 @@ import { API_BASE, getToken } from "../lib/api";
 import { DEMO, patch } from "../lib/db";
 import { slugify } from "../lib/parse";
 import { getSettings } from "../lib/settings";
-import { setUI, toast } from "../lib/store";
+import { getVault, setUI, toast } from "../lib/store";
+import { render } from "../lib/markdown";
 import { syncNow } from "../lib/sync";
 import { cx } from "./ui";
 import { t, tx } from "../lib/i18n";
@@ -197,11 +198,17 @@ function BlogSection({ note, off }: { note: Note; off: boolean }) {
   useEffect(() => { setSlug(note.slug || slugify(note.title)); setExcerpt(note.props.excerpt ?? ""); }, [note.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const url = blogUrl(slug);
   const on = !!note.published && !off;
+  const [preview, setPreview] = useState(false);
+  const [tagDraft, setTagDraft] = useState("");
+  // slug collision: another published note already owns this address
+  const clash = getVault().notes.some((n) => n.id !== note.id && !n.deleted && n.published && (n.slug || n.id) === slug);
+  const addTag = async (raw: string) => { const tg = raw.trim().replace(/^#/, "").toLowerCase().replace(/\s+/g, "-"); setTagDraft(""); if (tg && !note.tags.includes(tg)) await updateNote(note.id, { tags: [...note.tags, tg] }); };
   const field = "rounded-md border border-line bg-bg px-2.5 focus:border-accent focus:outline-none";
   return (
     <div className={cx("rounded-[12px] border border-line bg-surface", off && "opacity-45")}>
       <Row icon={<Globe size={16} />} c="var(--success)" title={t("Publish to blog")} hint={t("On /blog and in RSS, with a readable URL. Markdown notes only.")} on={on} disabled={off}
         onChange={async (v) => {
+          if (v && clash) { toast(t("Another post already uses /blog/{slug}. Pick a different address.", { slug })); return; }
           await updateNote(note.id, { published: v ? 1 : 0, slug, props: { ...note.props, excerpt } });
           await syncNow();
           if (v) toast(getSettings().blogName ? t("Published to {blog}", { blog: getSettings().blogName }) : t("Published to your blog"), { label: t("View"), run: () => window.open(url, "_blank") });
@@ -212,9 +219,19 @@ function BlogSection({ note, off }: { note: Note; off: boolean }) {
           <label className="flex flex-col gap-[5px]"><span className="text-[12px] font-medium text-muted">{t("Slug")}</span>
             <div dir="ltr" className={cx(field, "flex h-[46px] items-center font-mono text-[12.5px] focus-within:border-accent md:h-[38px]")}>
               <span className="text-muted">/blog/</span>
-              <input className="min-w-0 flex-1 bg-transparent outline-none" value={slug} onChange={(e) => setSlug(slugify(e.target.value))} onBlur={() => updateNote(note.id, { slug })} />
+              <input className="min-w-0 flex-1 bg-transparent outline-none" value={slug} onChange={(e) => setSlug(slugify(e.target.value))} onBlur={() => { if (!clash && slug) void updateNote(note.id, { slug }); }} />
             </div>
           </label>
+          {clash && <span role="alert" className="text-[12px] text-bad">{t("Another post already uses /blog/{slug}. Pick a different address.", { slug })}</span>}
+          <div className="flex flex-col gap-[5px]"><span className="text-[12px] font-medium text-muted">{t("Tags")}</span>
+            <div className={cx(field, "flex min-h-[38px] flex-wrap items-center gap-1.5 py-1.5")}>
+              {note.tags.map((tg) => <span key={tg} className="flex h-6 items-center gap-1 rounded-full bg-surface-2 ps-2.5 pe-1.5 text-[12px]">#{tg}<button aria-label={t("Remove tag {tag}", { tag: tg })} className="text-muted hover:text-ink" onClick={() => void updateNote(note.id, { tags: note.tags.filter((x) => x !== tg) })}><X size={11} /></button></span>)}
+              <input dir="auto" value={tagDraft} placeholder={note.tags.length ? "" : t("Add a tag")} onChange={(e) => setTagDraft(e.target.value)} onBlur={() => void addTag(tagDraft)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); void addTag(tagDraft); } else if (e.key === "Backspace" && !tagDraft && note.tags.length) void updateNote(note.id, { tags: note.tags.slice(0, -1) }); }}
+                className="min-w-[80px] flex-1 bg-transparent text-[13px] outline-none" />
+            </div>
+            <span className="text-[11.5px] text-muted">{t("Each tag gets its own page at /blog/tag/…")}</span>
+          </div>
           <label className="flex flex-col gap-[5px]"><span className="text-[12px] font-medium text-muted">{t("Excerpt")}</span>
             <textarea dir="auto" rows={2} className={cx(field, "resize-none py-2 text-[13px] leading-[19px]")} value={excerpt} placeholder={t("One or two sentences for the blog index and RSS.")} onChange={(e) => setExcerpt(e.target.value)} onBlur={() => updateNote(note.id, { props: { ...note.props, excerpt } })} />
           </label>
@@ -222,10 +239,19 @@ function BlogSection({ note, off }: { note: Note; off: boolean }) {
             <CircleCheck size={14} className="shrink-0 text-ok" />
             <a href={url} target="_blank" rel="noreferrer" dir="ltr" className="truncate font-mono text-link">{bareUrl(url)}</a>
             <span className="flex-1" />
+            <button className="me-1 text-[12.5px] text-link hover:underline" onClick={() => setPreview(true)}>{t("Preview")}</button>
             <button aria-label={t("Copy blog link")} className={copied ? "text-ok" : "text-muted hover:text-ink"} onClick={async () => { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>{copied ? <Check size={14} /> : <Copy size={14} />}</button>
           </div>
+          <p className="flex items-start gap-1.5 text-[11.5px] leading-4 text-muted"><Info size={12} className="mt-0.5 shrink-0" />{t("Private notes linked from this post stay private; links render as plain text.")}</p>
         </div>
       )}
+      <Overlay open={preview} onClose={() => setPreview(false)}>
+        <div className="flex max-h-[80vh] flex-col overflow-y-auto p-5 text-ink">
+          <div className="mb-3 flex items-center gap-2 text-[12px] text-muted"><span className="flex-1">{t("Preview: as readers see it")}</span><button aria-label={t("Close")} onClick={() => setPreview(false)}><X size={16} /></button></div>
+          <h1 dir="auto" className="mb-3 text-[26px] font-bold" style={{ fontFamily: "'Source Serif 4', Georgia, serif" }}>{note.title}</h1>
+          <div className="prose" dangerouslySetInnerHTML={{ __html: render(note.body.replace(/^\s*#\s.*\n/, "")).replace(/<a class="wikilink[^"]*"[^>]*>([\s\S]*?)<\/a>/g, "<span>$1</span>") }} />
+        </div>
+      </Overlay>
     </div>
   );
 }

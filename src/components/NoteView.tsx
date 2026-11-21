@@ -1,4 +1,5 @@
-import { LayoutTemplate, Waypoints, Share2, Link2, Layers, ArrowLeft, BookOpen, Columns2, Copy, Download, FileCode2, Globe, ImagePlus, Info, ListTree, Map as MapIcon, Maximize2, Mic, MoreHorizontal, EllipsisVertical, Network, PanelRight, PanelLeft, PenLine, Pin, Presentation, Printer, Star, Trash2 } from "lucide-react";
+import { FolderInput, LayoutTemplate, Waypoints, Share2, Link2, Layers, ArrowLeft, BookOpen, Columns2, Copy, Download, FileCode2, Globe, ImagePlus, Info, ListTree, Map as MapIcon, Maximize2, Mic, MoreHorizontal, EllipsisVertical, Network, PanelRight, PanelLeft, PenLine, Pin, Presentation, Printer, Star, Trash2 } from "lucide-react";
+import { openMoveTo, saveAsTemplate } from "./dialogs-r9";
 import { LongRead } from "./long-read"; // Lumen 22: long notes (progress, folding, Top)
 import { FolderGroups } from "./grouped-links"; // Lumen 22: backlinks over 20 group by folder
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -90,6 +91,27 @@ export function NoteView({ note }: { note: Note }) {
 
   // New untitled note → focus title.
   useEffect(() => { if (note.title === "Untitled" && !note.body) titleRef.current?.select(); }, [note.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Lumen 02 ⌘1–6 mode switch, ⌘4 toggles Focus, ⌘⇧B / ⌘⇧O side panels. Capture phase: wins over the sidebar's ⌘1–5 (those still work with no markdown note open).
+  useEffect(() => {
+    if (isCanvas || ownBar || isRoadmap) return;
+    const k = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      if (!e.shiftKey && /^[1-6]$/.test(e.key)) {
+        const order: Mode[] = isDiagram ? ["edit", "split", "read"] : ["edit", "split", "read", "focus", "slides", "review"];
+        const m = order[Number(e.key) - 1];
+        if (!m) return;
+        e.preventDefault(); e.stopImmediatePropagation();
+        setUI({ mode: m === "focus" && getUI().mode === "focus" ? "edit" : m === "split" && !wide ? "read" : m });
+      } else if (e.shiftKey && (e.key.toLowerCase() === "b" || e.key.toLowerCase() === "o")) {
+        e.preventDefault(); e.stopImmediatePropagation();
+        const p = e.key.toLowerCase() === "b" ? "backlinks" : "outline";
+        setUI({ panel: getUI().panel === p ? null : p });
+      }
+    };
+    addEventListener("keydown", k, true);
+    return () => removeEventListener("keydown", k, true);
+  }, [isCanvas, ownBar, isRoadmap, isDiagram, wide]);
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
@@ -217,7 +239,9 @@ export function NoteView({ note }: { note: Note }) {
         {!isBoard && <button className={item} onClick={() => exportNoteMd(note)}><Download size={15} /> {t("Export {ext}", { ext: isCanvas ? ".canvas" : ".md" })}</button>}
         {!isCanvas && <button className={item} onClick={() => exportNoteHtml(note)}><FileCode2 size={15} /> {t("Export {ext}", { ext: ".html" })}</button>}
         {!isCanvas && <button className={item} onClick={() => printNote(note)}><Printer size={15} /> {t("Print / PDF")}</button>}
+        <button className={item} onClick={() => openMoveTo([note.id])}><FolderInput size={15} /> {t("Move to…")}</button>
         <button className={item} onClick={async () => { const d = await duplicateNote(note.id); if (d) openNote(d.id); }}><Copy size={15} /> {t("Duplicate")}</button>
+        {markdownNote && <button className={item} onClick={() => void saveAsTemplate(note)}><LayoutTemplate size={15} /> {t("Save as template")}</button>}
         <div className="my-1 h-px bg-line" />
         {!wide && markdownNote && <><ReadRows /><div className="my-1 h-px bg-line" /></>}
         <UiDirRow />

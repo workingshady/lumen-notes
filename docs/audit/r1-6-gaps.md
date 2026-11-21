@@ -91,7 +91,7 @@ Tasks screen, Learning board (status kanban with front-matter write), database t
 
 | ID | Feature | Status | What's missing | Where it would live |
 |---|---|---|---|---|
-| 14C | Month calendar showing note activity: layers "Daily note / Notes created / Tasks due" and a day panel (Daily note link, Tasks due, Created, "Studied · 1 h 05 min") | Missing | The Calendar (`CalendarScreen`) was rebuilt as the round-8 planner (study blocks, events, reviews, tasks). It has no notes-created layer, no per-day daily-note link and no studied-minutes line from timer logs | `src/components/calendar/CalendarScreen.tsx`, `src/lib/calendar.ts` (new CalItem kinds from `db.notes.createdAt` and the timer log) |
+| 14C | Month calendar showing note activity: layers "Daily note / Notes created / Tasks due" and a day panel (Daily note link, Tasks due, Created, "Studied · 1 h 05 min") | **Fixed (r8 pass 3: Daily notes / Notes created / Studied time layers, off by default, with day-panel rows)** | The Calendar (`CalendarScreen`) was rebuilt as the round-8 planner (study blocks, events, reviews, tasks). It has no notes-created layer, no per-day daily-note link and no studied-minutes line from timer logs | `src/components/calendar/CalendarScreen.tsx`, `src/lib/calendar.ts` (new CalItem kinds from `db.notes.createdAt` and the timer log) |
 | 14A | Tasks lenses "List / Kanban / Calendar" in one screen | Partly | Tasks has List and Board only. Calendar is a separate screen. The "D sets a date" shortcut is absent (keys n, j, k, x, Enter exist) | `src/components/calendar/TasksScreen.tsx` (key handler l.68-73) |
 
 Counts: Missing 1, Partly 1
@@ -128,7 +128,7 @@ Chooser (superset: Canvas, Whiteboard, Board, Mermaid, Architecture, Graph, temp
 
 | ID | Feature | Status | What's missing | Where it would live |
 |---|---|---|---|---|
-| R2-1C | Drag a connection dot and release on empty space gives a "New card here" menu | Missing | `onConnectEnd` only clears the connecting flag, so releasing on empty space does nothing | `src/components/CanvasEditor.tsx` l.1339 (`onConnectEnd` with `screenToFlowPosition`) |
+| R2-1C | Drag a connection dot and release on empty space gives a "New card here" menu | Missing | `onConnectEnd` only clears the connecting flag, so releasing on empty space does nothing | `src/components/CanvasEditor.tsx` l.1339 (`onConnectEnd` with `screenToFlowPosition`) | **Fixed (round 8)**: `endConnect` opens a "New card here" menu (Text card / Link card) and adds the card plus the edge |
 | R2-1C | Group captions visible >=1280 px and icon-only below | Partly | Captions are driven by an available-width level (`lvl`), not by the 1280 px breakpoint. Behaviour is close, but the spec is not literal | `src/components/CanvasEditor.tsx` l.1358 |
 | R2-1B | Phone chooser "Create canvas" button text changes to "Open graph" for Graph | Partly | Not confirmed; the chooser handles graph via a sessionStorage hand-off | `src/components/NewVisualChooser.tsx` l.62 |
 
@@ -140,7 +140,7 @@ Code panel (JSON validation, Line/Go to line, Board keeps last valid state, Ln/C
 
 | ID | Feature | Status | What's missing | Where it would live |
 |---|---|---|---|---|
-| 1H | Auto-apply toggle in ⋯ ("when valid, edits auto-apply") | Missing | Apply is manual only | `src/components/VisualCodePanel.tsx`, JSON panel state in `Whiteboard.tsx` and `CanvasEditor.tsx` |
+| 1H | Auto-apply toggle in ⋯ ("when valid, edits auto-apply") | Missing | Apply is manual only | `src/components/VisualCodePanel.tsx`, JSON panel state in `Whiteboard.tsx` and `CanvasEditor.tsx` | **Fixed (round 8)**: whiteboard JSON panel has an Auto-apply switch (700 ms pause, remembered); the canvas JSON already round-trips live. Phone code sheet: drag the grip to resize (25 to 90 %). Scripts now run in a sandboxed Worker (`lib/script-sandbox.ts`) and one run is one undo step |
 | 1I | "Scripts run sandboxed against the board API only" | Partly | Whiteboard scripts run via `new Function` in the page, with `window`, `fetch` and `db` reachable. The canvas `runScript` is the same. A Worker or iframe sandbox is not built | `src/components/Whiteboard.tsx` l.1074, `src/lib/canvas.ts` l.285 |
 | 1I | ⌘Z undoes the whole script run; picking an example keeps the previous script in history | Partly | The output says "restore from History" (Version history), not one undo step. Examples overwrite the editor, and the previous script is not kept. The last script is saved in `localStorage` only | `src/components/Whiteboard.tsx` runScript l.1062, `VisualCodePanel.tsx` ExamplesMenu |
 | 1I | Script reads notes ("read 6 items from note 'This week'", API labelled `board · sk · note`) | Partly | The whiteboard script API is `board`, `sk`, `log` only, with no note reader. The canvas script has a `notes` metadata helper (no bodies) | `src/components/Whiteboard.tsx` l.1065 (board object), `src/components/CanvasEditor.tsx` l.1130 |
@@ -244,7 +244,7 @@ Counts: Missing 0, Partly 0
 ## Lumen 14b Graph and Connections
 | ID | Feature | Status | What's missing | Where it would live |
 |---|---|---|---|---|
-| 14b-C | Display panel "Layout" segment: By stage / Top-down / Radial / Free on the learning-path Graph tab | Partly | Path graph offers only By stage, Top-down, Free (`LAYOUT_LABEL` in prereq-ui). Radial exists only in the notes Graph (`GraphView.tsx`, `lib/graph-layout.ts` "radial") and is not wired for the path/skill-tree graphs | `src/components/prereq-ui.tsx` (`PrereqLayout`, `LAYOUT_LABEL`), `src/views/path-graph.tsx` `layoutFor`, reuse `graph-layout.ts` radial |
+| 14b-C | Display panel "Layout" segment: By stage / Top-down / Radial / Free on the learning-path Graph tab | **Fixed (r8 pass 3: Radial added to the path graph)** | Path graph offers only By stage, Top-down, Free (`LAYOUT_LABEL` in prereq-ui). Radial exists only in the notes Graph (`GraphView.tsx`, `lib/graph-layout.ts` "radial") and is not wired for the path/skill-tree graphs | `src/components/prereq-ui.tsx` (`PrereqLayout`, `LAYOUT_LABEL`), `src/views/path-graph.tsx` `layoutFor`, reuse `graph-layout.ts` radial |
 
 Everything else on 14b is present: link vocabulary (`linkLook`), edge shapes curved/elbow/straight, Tidy up preview + Apply + Undo toast + Shift T (`graph-display.tsx isTidyKey`), keep pinned cards, hide implied links with hover dots, bundle links, drag-to-connect with valid/loop/implied/duplicate checks, link menu (type, reverse, remove) with phone variant, spacing Compact/Roomy.
 
@@ -313,7 +313,7 @@ Sheet without numbered frames (sections: C Empty states, Moments, Outside the ap
 
 | ID | Feature | Status | What's missing | Where it would live |
 |---|---|---|---|---|
-| C-Empty (8th tile) | Today empty state "Nothing planned. Today is a rest day." + "Plan anyway" | Partly | Arabic string exists in `src/i18n/ar/home.ts:85` but no English call site. Today shows a dashed "Nothing scheduled yet. Plan my day" button (`src/views/TodayView.tsx:141`) with no rest-day detection and no "Plan anyway" action. Logic: `plan.ts` already has a "plan lessons even on a rest day" option to hook to. | `src/views/TodayView.tsx`, `src/lib/plan.ts` |
+| C-Empty (8th tile) | Today empty state "Nothing planned. Today is a rest day." + "Plan anyway" | **Fixed (r8 pass 3: rest-day card + Plan anyway forces the plan)** | Arabic string exists in `src/i18n/ar/home.ts:85` but no English call site. Today shows a dashed "Nothing scheduled yet. Plan my day" button (`src/views/TodayView.tsx:141`) with no rest-day detection and no "Plan anyway" action. Logic: `plan.ts` already has a "plan lessons even on a rest day" option to hook to. | `src/views/TodayView.tsx`, `src/lib/plan.ts` |
 | C-Outside | Play feature graphic 1024x500 and store screenshot frame | Partly | Only design HTML templates (`design/assets/play-feature-graphic.html`, `play-screenshot-frame.html`). No exported PNGs or export script in `scripts/`; nothing wired into the Android listing. OG image (`worker/ext/og.ts`) and the favicon due badge (`src/lib/favicon.ts`) are done. | `scripts/`, `android/` store assets |
 
 Counts: Missing 0, Partly 2
@@ -402,7 +402,7 @@ Counts: Missing 0, Partly 0
 | R6-29O | Reading › Advanced "footnote style" | Missing | The design lists "Hyphenation · footnote style · code wrap". Hyphenation and code wrap exist. There is no footnote-style pref and `markdown.ts` always renders the superscript number with a back-link arrow. | `src/views/settings-r6.tsx` line ~351, `src/lib/markdown.ts` (footnote renderer), `settings.ts` |
 | R6-29I | Simulator "Upload fails at 60%" | Partly | `DevPanel` has Upload fails and File too big, but nothing that fails mid-progress. The design also shows the simulator as a bottom drawer with a top-of-app banner. Worth a visual check. | `src/lib/sim/faults.ts`, `src/lib/attachments.ts`, `src/views/DevPanel.tsx` |
 | R6-29Q | Diagrams › Hand-drawn look | Partly | `diagramHand` is read only in `diagram-view.tsx` (the Diagrams tab/viewer). Editor Mermaid blocks, Read mode and exports don't clearly follow it. | `src/components/diagram-view.tsx`, `Editor.tsx`, `lib/diagram-export.ts` |
-| R6-29P | Review algorithm SM-2 vs FSRS | Partly | `srsAlgo` is read in `Review.tsx` only. Today workload, due-card counts and the plan builder don't use it. | `src/components/Review.tsx`, `src/lib/due-cards.ts`, `src/lib/workload.ts` |
+| R6-29P | Review algorithm SM-2 vs FSRS | **Fixed (r8 pass 3: Review.tsx is the only scheduler; the workload forecast now follows srsAlgo too)** | `srsAlgo` is read in `Review.tsx` only. Today workload, due-card counts and the plan builder don't use it. | `src/components/Review.tsx`, `src/lib/due-cards.ts`, `src/lib/workload.ts` |
 | R6-29A..E | AI limit enforcement on streaming routes | Partly | The gate covers `/api/ai`, `/api/ai/*` and `/api/transcribe`, and chat/ask/tutor/practice/hub live under `/ai/*`, so all are gated. Billing for streamed replies is estimated from body size, not real usage, so the meter is approximate. | `worker/ext/ai-usage.ts` |
 
 Counts: Missing 2, Partly 4
@@ -476,3 +476,51 @@ Counts: Missing 1, Partly 2
 13. Settings gaps (29/25): Sync > Advanced "Conflict policy" has no control; no "footnote style" option; no separate Ask/Chat/Tutor switches (worker enforces them); no date-format setting; `srsAlgo` (SM-2/FSRS) honoured only in `Review.tsx`; hand-drawn look only in `diagram-view.tsx`.
 14. Today (20/21): no "Nothing planned. Today is a rest day" state or "Plan anyway" button; Calendar lacks notes-created, daily-note and studied-minutes layers (14C day panel); empty search has no "Did you mean" suggestion.
 15. Whiteboard scripts (07b) run via unsandboxed `new Function` (`Whiteboard.tsx` ~l.1074), one Cmd+Z does not undo a run; code panel has no auto-apply toggle and the phone sheet is fixed 60%. Also: paste-link chip (16I) does not remember the choice per domain, Radial layout missing in path graph, legacy `/api/login` has only an in-memory brute-force brake, Arabic Gantt/course timeline not mirrored.
+
+
+# Round 9 status (agent: notes/spaces/publish/settings/mobile, 2026-11-22)
+
+Checked in browser (demo): Ctrl+3 read mode, Ctrl+Shift+B panel, wiki-link hover card. tsc, worker tsc and vite build pass.
+
+| Item | Status |
+|---|---|
+| 02 Cmd+1-6 modes, Cmd+4 Focus toggle, Cmd+Shift+B/O panels | Done (capture-phase in `NoteView.tsx`; sidebar Cmd+1-5 still works when no markdown note is open) |
+| 02 Cmd+Shift+\ hides the note list | Done (`App.tsx`); the "both collapsed = 96% width" state not added |
+| 02 J / K / P in the list | Done (`NoteList.tsx`) |
+| 02 wiki-link hover card 400 ms, Ctrl/Cmd-click opens split view | Done (`wiki-hover.ts`, `Preview.tsx`) |
+| 10 links to unshared notes are plain text on shared pages | Done (`Shared.tsx`) |
+| 03 Move to... fuzzy dialog (list menu, bulk bar, note menu) | Done (`dialogs-r9.tsx`) |
+| 02 Save as template | Done: copies the note into a top-level "Templates" folder of its space; "My templates" in the New-from-template sheet |
+| Folder delete confirm, space delete in-app confirm | Done (`ConfirmHost`); other native `confirm()` calls elsewhere untouched |
+| 06b tags editor, Preview, private-notes note, slug collision, /blog/tag/:tag (app + worker) | Done |
+| 06b Shared / Published badge | Rows already had it; added a "Visibility" base column. Sidebar has no per-note rows to badge |
+| 10 visitors default to Paper; X-Robots-Tag noindex on /s/* | Done |
+| 10 unfurl for visitors | Partly: `GET /api/public/unfurl` is cache-only (edge cache filled by signed-in `/api/unfurl`); not stored in the note, so previews can lapse after the cache expires |
+| 10 course graph hover card | Not done |
+| 11 upload state on file cards (queued / "3 of 7 parts") | Done (`attachments.ts` progress + chip in `markdown.ts`) |
+| 11 resumable upload from last part | Done (`GET /api/att/:id/status`; older Worker falls back to full send) |
+| 11 storage meter | Already shows the real server cap (`limitBytes`, 500 MB D1 default) in the design layout; the design's "5 GB" kept out on purpose |
+| 29 conflict policy (Ask / Newest wins) | Done (`settings.conflictPolicy`, `conflicts.ts`) |
+| 29 footnote style, date format | Done (Settings > Reading, Settings > Language; applied in markdown render and `fmtDate`) |
+| 29 separate Ask / Chat / Tutor switches | Done (settings-ai list; Worker already enforces) |
+| 29 hand-drawn look on all diagrams | Done (inline note diagrams now follow it too) |
+| 01 long-press "+" speed dial | Done: new phone FAB on the note list (`PhoneFab.tsx`); there was no phone "+" before |
+| 02 swipe-down exits Focus; tablet left-edge swipe opens sidebar | Done |
+| 03 hover-expand folders while dragging | Done (600 ms, sidebar) |
+| 12 Android adjustResize | Done in `AndroidManifest.xml`; the keyboard toolbar is a flex footer so it rides above the keyboard (not tested on a device) |
+| 12 toasts pause on hover | Done |
+| 04 empty-search "Did you mean" | Done (palette) |
+| paste-link chip remembers per domain | Already existed |
+| /api/login brake in D1 | Done; uses `auth_attempts` from migration 0010 (falls back to memory if the table is missing) |
+| 27 /terms and /privacy | Done (`views/Legal.tsx`); accountsEnabled untouched |
+
+
+## Round 8 wave (whiteboard / canvas / architecture / export)
+
+- Whiteboard scripts (07b) run in a Worker (`src/lib/script-sandbox.ts`): no DOM, storage or network, 15 s timeout, changes applied as one history step (Ctrl+Z undoes a run; the Ctrl+Z step itself could not be driven in the headless harness, where even a plain undo did not fire). Canvas scripts (`lib/canvas.ts` `runScript`) still use `new Function`: its helpers are synchronous and return ids, so they cannot cross a Worker boundary without an API change.
+- Dotted fill: Excalidraw has no dotted fill. Dots is stored as `customData.lumenFill = "dots"` and drawn as cross-hatch (the sparsest hatch).
+- Text highlight: a pale marker rectangle grouped behind each free text (toggle in the Text popover).
+- Serif and Arabic board fonts: two extra Excalidraw font ids (20 Source Serif 4, 21 IBM Plex Sans Arabic) registered in the exported `FONT_FAMILY` table (`lib/wb-fonts.ts`); they draw natively. Other Excalidraw apps show their default font for those two ids.
+- HTML export: self-contained read-only page (inline SVG, wheel zoom, drag, double-click to fit) for every workspace that can export SVG.
+- Canvas portals: Canvas options > Portals; file cards that point at another canvas show it live (`lumenPortals` meta key).
+- Tidy up on big canvases (120+ cards) runs in a Worker (`lib/tidy-worker.ts`, inline fallback).

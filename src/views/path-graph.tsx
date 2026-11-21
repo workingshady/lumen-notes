@@ -21,6 +21,7 @@ import { setTopicLink } from "../lib/parse";
 import { addConceptNeed, conceptCourses, focusChain, graphLayout, pathLinkKind, setConceptLink, type BuiltConcept, type BuiltPath } from "../lib/path";
 import { arrow, checkLink, crossings, LINK_LABEL, impliedLinks, linkMessage, needPath, type LinkCheck, type LinkKind } from "../lib/prereq-graph";
 import { toast } from "../lib/store";
+import { tidy } from "../lib/graph-layout";
 import { announce } from "./dnd-parts";
 import { shortStage, StatusIcon, useStored } from "./path-ui";
 import { usePhone } from "./spaces-util";
@@ -116,6 +117,7 @@ export function Graph({ path, note, save, onOpen, sel, keep, focus, setFocus }: 
   const chain = useMemo(() => focusChain(path, focusKey), [path, focusKey]);
   const vertical = disp.layout === "top";
   const free = disp.layout === "free";
+  const radial = disp.layout === "radial";
   const pinSet = useMemo(() => new Set(pins), [pins]);
   const needsOf = useMemo(() => (k: string) => path.byKey.get(k)?.needs ?? [], [path]);
   const implied = useMemo(() => impliedLinks(path.concepts.map((c) => c.key), needsOf), [path, needsOf]);
@@ -128,7 +130,7 @@ export function Graph({ path, note, save, onOpen, sel, keep, focus, setFocus }: 
   const HEADW = 150, VSTEP = disp.roomy ? 124 : 96, HSTEP = NW + (disp.roomy ? 40 : 20);
   const turn = (p: P): P => (vertical ? { x: 24 + HEADW + ((p.y - 72) / rowH) * HSTEP, y: 72 + ((p.x - 24) / colW) * VSTEP } : p);
   const basePos = useMemo(() => new Map(L.nodes.map((n) => [n.key, turn({ x: n.x, y: n.y })])), [L, vertical]); // eslint-disable-line react-hooks/exhaustive-deps
-  const posOf = (k: string): P | undefined => preview?.pos.get(k) ?? (free ? manual[k] : undefined) ?? basePos.get(k);
+  const posOf = (k: string): P | undefined => preview?.pos.get(k) ?? (free ? manual[k] : undefined) ?? radialPos?.get(k) ?? basePos.get(k);
 
   // ------------------------------------------------------------ links (one connection language, 14b · 1)
   const linkList = useMemo(() => {
@@ -159,9 +161,12 @@ export function Graph({ path, note, save, onOpen, sel, keep, focus, setFocus }: 
   const showKind = (l: { kind: EKind; from: BuiltConcept; to: BuiltConcept }) =>
     l.kind === "implied" ? disp.implied || hover === l.from.key || hover === l.to.key : l.kind === "added" ? disp.added : disp[l.kind];
 
+  // Radial: rings of concepts around the focused (or best-connected) one, from the notes-graph layout engine
+  const radialPos = useMemo(() => radial ? tidy(L.nodes.map((n) => ({ id: n.key, x: n.x, y: n.y, w: NW, h: NH })), linkList.filter((l) => l.kind !== "implied").map((l) => [l.src, l.dst] as [string, string]), { mode: "radial", center: focusKey ?? undefined, spacing: disp.roomy ? 1.5 : 1.1 }).pos : null, [radial, L, linkList, focusKey, disp.roomy]);
+
   const { nodes, edges } = useMemo(() => {
     const nodes: RFNode[] = [];
-    for (const col of L.cols) {
+    for (const col of radial ? [] : L.cols) {
       const at = turn({ x: col.x, y: 14 });
       if (col.collapsed) {
         nodes.push({ id: `stage:${col.name}`, type: "summary", position: vertical ? { x: 24 + HEADW, y: at.y } : { x: col.x, y: 300 }, data: { stage: col.stage, name: col.name, count: col.count, vertical, onExpand: () => setCollapsed((o) => o.filter((x) => x !== col.name)) } satisfies SData, draggable: false, selectable: false, connectable: false });
@@ -418,7 +423,7 @@ export function Graph({ path, note, save, onOpen, sel, keep, focus, setFocus }: 
 
       {panel && !phone && (
         <PrereqDisplayPanel d={disp} set={setDisp} onClose={() => setPanel(false)} counts={counts}
-          o={{ layouts: ["stage", "top", "free"] as PrereqLayout[], tidy: startTidy, busy: !!preview, pinned: free }} />
+          o={{ layouts: ["stage", "top", "radial", "free"] as PrereqLayout[], tidy: startTidy, busy: !!preview, pinned: free }} />
       )}
       {sheet && phone && <PrereqDisplaySheet d={disp} set={setDisp} onClose={() => setSheet(false)} tidy={startTidy} />}
     </div>

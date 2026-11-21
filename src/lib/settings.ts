@@ -76,16 +76,25 @@ export interface Settings {
   fsrsWeights: number[] | null; fsrsFit: { at: number; reviews: number; before: number; after: number } | null;
   /** Today study plan (lib/plan.ts): daily minutes, study weekdays (0 = Sun), max new lessons a day, course titles by priority. */
   planDailyMinutes: number; planStudyDays: number[]; planMaxNew: number; planCourseOrder: string[];
+  /** Sync conflict policy (Settings › Sync › Advanced): "ask" keeps both and offers the merge screen; "newest" lets the newest edit win and files the other in History without asking. */
+  conflictPolicy: "ask" | "newest";
+  /** How footnotes read in notes: numbers (1) or symbols (* † ‡). */
+  footnoteStyle: "number" | "symbol";
+  /** Date rendering: "auto" follows the language, else a fixed pattern. */
+  dateFormat: "auto" | "dmy" | "mdy" | "ymd";
 }
 const DEFAULTS: Settings = {
   theme: "auto", accentHue: null, readingFont: "serif", fontSize: 16, measure: 68, density: "comfortable", sidebarMode: "open", sidebarOpenHover: "overlay", sidebarOpenClick: "push",
   blogName: "Lumen", tagline: "Notes from what I'm learning", author: "", avatar: "glyph:owl", johnnyDecimal: false, spellcheck: true, dailyTemplate: "journal", diagramFolder: "sub", diagramAutoSave: false, diagramAiNames: false, diagramExport: DIAGRAM_EXPORT_DEFAULTS, focusMode: "read", focusDim: true, highlightOnExit: "ask", ttsRate: 1, retention: 0.9,
   fsrsMaxInterval: 36500, fsrsNewPerDay: 0, fsrsLearningSteps: [1, 10], fsrsRelearningSteps: [10], fsrsWeights: null, fsrsFit: null,
   planDailyMinutes: 60, planStudyDays: [1, 2, 3, 4, 5, 6], planMaxNew: 2, planCourseOrder: [],
+  conflictPolicy: "ask", footnoteStyle: "number", dateFormat: "auto",
 };
 
 const KEY = "lumen.settings";
-let cur: Settings = (() => { try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? "{}") }; } catch { return DEFAULTS; } })();
+// Lumen 10: visitors on public pages (/s/*, /blog*) get Paper until they pick a theme themselves
+const PUBLIC_PAGE = typeof location !== "undefined" && /^\/(s\/|blog(\/|$))/.test(location.pathname);
+let cur: Settings = (() => { try { const st = JSON.parse(localStorage.getItem(KEY) ?? "{}"); return { ...DEFAULTS, ...(PUBLIC_PAGE && !st.theme ? { theme: "paper" as const } : {}), ...st }; } catch { return PUBLIC_PAGE ? { ...DEFAULTS, theme: "paper" } : DEFAULTS; } })();
 const subs = new Set<() => void>();
 export const useSettings = () => useSyncExternalStore((f) => (subs.add(f), () => subs.delete(f)), () => cur);
 export const getSettings = () => cur;

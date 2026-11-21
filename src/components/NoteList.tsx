@@ -6,10 +6,12 @@ import { FileText, Globe, LayoutTemplate, Link2, Pin, Plus, X } from "lucide-rea
 import { PdfLibrary } from "./pdf-library";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Note } from "../../shared/types";
-import { createNote } from "../lib/actions";
+import { createNote, updateNote } from "../lib/actions";
 import { importFiles } from "../lib/io";
 import { excerpt } from "../lib/parse";
-import { noteDerived, openNote, scoped, setUI, toast, useUI, useVault } from "../lib/store";
+import { PhoneFab } from "./PhoneFab";
+import { userTemplates } from "./dialogs-r9";
+import { getUI, noteDerived, openNote, scoped, setUI, toast, useUI, useVault } from "../lib/store";
 import { TEMPLATES } from "../lib/templates";
 import { dragNote } from "./Sidebar";
 import { setDrag } from "../lib/dnd";
@@ -143,6 +145,24 @@ export function NoteList() {
     addEventListener("keydown", k);
     return () => removeEventListener("keydown", k);
   }, [selecting, order]);
+  // Lumen 02: J / K step through the list, P pins the open note (desktop, outside text fields)
+  useEffect(() => {
+    if (!wide || selecting) return;
+    const k = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      const key = e.key.toLowerCase();
+      if (key !== "j" && key !== "k" && key !== "p") return;
+      if ((e.target as HTMLElement)?.closest?.("input,textarea,select,.cm-editor,[contenteditable=true],[role=dialog]")) return;
+      const cur = getUI().noteId;
+      if (key === "p") { const n = cur ? v.byId.get(cur) : null; if (n) { e.preventDefault(); void updateNote(n.id, { pinned: n.pinned ? 0 : 1 }); } return; }
+      if (!order.length) return;
+      const i = order.findIndex((n) => n.id === cur);
+      const next = order[key === "j" ? Math.min(order.length - 1, i + 1) : Math.max(0, i < 0 ? 0 : i - 1)];
+      if (next) { e.preventDefault(); openNote(next.id); }
+    };
+    addEventListener("keydown", k);
+    return () => removeEventListener("keydown", k);
+  }, [wide, selecting, order, v]);
   const onRow = (e: React.MouseEvent, n: Note) => {
     const multi = e.shiftKey || e.ctrlKey || e.metaKey;
     if (!selecting && !multi) return openNote(n.id);
@@ -247,8 +267,9 @@ export function NoteList() {
 
   if (!wide) {
     return (
-      <div className="flex h-full min-h-0 flex-col" onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={onDrop}>
+      <div className="relative flex h-full min-h-0 flex-col" onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={onDrop}>
         <PhoneListHeader />
+        {!selecting && <PhoneFab />}
         <PhoneChips filter={filter} setFilter={setFilter} onSort={cycleSort} sortLabel={sort} />
         {pdfs && <PdfLibrary spaceId={spaceId} folderId={ui.folderId} onClose={() => setPdfs(false)} />}
         <div className={cx("flex min-h-0 flex-1 flex-col overflow-y-auto", over && "bg-accent/5", pdfs && "hidden")}>
@@ -350,6 +371,8 @@ const PhoneRow = memo(function PhoneRow({ n, time, selecting, selected, toggle }
 }, (a, b) => a.n.id === b.n.id && a.n.updatedAt === b.n.updatedAt && a.time === b.time && a.selecting === b.selecting && a.selected === b.selected);
 
 export function TemplatePicker({ open, onClose, spaceId, folderId }: { open: boolean; onClose: () => void; spaceId: string; folderId: string | null }) {
+  useVault(); // re-read user templates when the vault changes
+  const mine = open ? userTemplates() : [];
   return (
     <Sheet open={open} onClose={onClose} title={t("New from template")}>
       <div className="grid grid-cols-2 gap-2">
@@ -361,6 +384,18 @@ export function TemplatePicker({ open, onClose, spaceId, folderId }: { open: boo
           </button>
         ))}
       </div>
+      {mine.length > 0 && (
+        <>
+          <div className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-[.06em] text-muted">{t("My templates")}</div>
+          <div className="grid grid-cols-2 gap-2">
+            {mine.map((n) => (
+              <button key={n.id} onClick={async () => { onClose(); openNote((await createNote({ type: n.type, title: n.title, body: n.body, spaceId, folderId })).id); }} className="rounded-[10px] border border-line p-3 text-start hover:border-accent">
+                <div className="flex items-center gap-2 text-[13.5px] font-semibold"><span className="text-muted">{TYPE_ICON(n.type)}</span><span dir="auto" className="truncate">{n.title}</span></div>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </Sheet>
   );
 }

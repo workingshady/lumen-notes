@@ -69,7 +69,7 @@ No page errors or console errors in any run unless listed below.
 | Item | Where |
 |---|---|
 | Shared whiteboard / Board page (`/s/<token>`) shows "Saved · Synced" and undo / redo buttons on a read-only view | `Shared.tsx` / `wb/BoardHeader` |
-| Element **without** `index` arriving by sync / REST while the board is open is placed at the bottom (z-order), e.g. REST `PUT /whiteboard` with index-less elements or pre-0.17 Excalidraw files merged live. Initial open keeps file order; elements the app writes always carry `index` | `Whiteboard.tsx` external-change effect (`restore(...)` before `updateScene`): assign missing indices in array order |
+| Element **without** `index` arriving by sync / REST while the board is open is placed at the bottom (z-order), e.g. REST `PUT /whiteboard` with index-less elements or pre-0.17 Excalidraw files merged live. Initial open keeps file order; elements the app writes always carry `index` | **Fixed** earlier (`ensureIndices` in the external-change effect keeps array order) |
 | An old `.excalidraw` whose `appState.viewBackgroundColor` is white opens on the Lumen board background (dark in dark themes); the value is kept in the file | by design? (`lumenBoard`) |
 | Single-note `.excalidraw` export via `exportNoteMd` writes the stored body (attachment refs, no `lumenType`); the vault zip and the round-7 export dialog inline images | `io.ts exportNoteMd` callers vs `DiagramExport` |
 | IO dialog hint still reads ".md · .zip vault · .canvas · JSON backup" (now also .excalidraw / .mermaid); left unchanged to keep the Arabic string table in sync | `Dialogs.tsx` + `src/i18n/ar` |

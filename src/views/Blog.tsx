@@ -46,7 +46,9 @@ const Link = ({ to, className, children }: { to: string; className?: string; chi
 );
 
 export function Blog({ path }: { path: string }) {
-  const slug = decodeURIComponent(path.replace(/^\/blog\/?/, "").replace(/\/$/, ""));
+  const rest = decodeURIComponent(path.replace(/^\/blog\/?/, "").replace(/\/$/, ""));
+  const tagPage = rest.startsWith("tag/") ? rest.slice(4) : null; // /blog/tag/:tag (Lumen 06b)
+  const slug = tagPage !== null ? "" : rest;
   const [dark, setDark] = useState(activeTheme().dark);
   const [brand, setBrand] = useState<Brand | null>(null);
   const [tocOpen, setTocOpen] = useState(false);
@@ -64,16 +66,17 @@ export function Blog({ path }: { path: string }) {
           {slug && <button aria-label={t("Contents")} onClick={() => setTocOpen(true)} className="flex size-11 items-center justify-center md:hidden"><List size={20} /></button>}
         </div>
       </header>
-      {slug ? <PostPage slug={slug} onBrand={setBrand} tocOpen={tocOpen} setTocOpen={setTocOpen} /> : <Index onBrand={setBrand} />}
+      {slug ? <PostPage slug={slug} onBrand={setBrand} tocOpen={tocOpen} setTocOpen={setTocOpen} /> : <Index onBrand={setBrand} tagParam={tagPage} />}
     </div>
   );
 }
 
-function Index({ onBrand }: { onBrand: (b: Brand) => void }) {
+function Index({ onBrand, tagParam }: { onBrand: (b: Brand) => void; tagParam: string | null }) {
   const [data, setData] = useState<{ blog: Brand; posts: Post[] } | null>(null);
   const [err, setErr] = useState("");
-  const [tag, setTag] = useState<string | null>(null);
-  useEffect(() => { publicApi<{ blog: Brand; posts: Post[] }>("/public/posts").then((d) => { setData(d); onBrand(d.blog); document.title = d.blog.name; }).catch((e) => setErr(e.message)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const tag = tagParam;
+  const setTag = (x: string | null) => nav(x ? `/blog/tag/${encodeURIComponent(x)}` : "/blog");
+  useEffect(() => { publicApi<{ blog: Brand; posts: Post[] }>("/public/posts").then((d) => { setData(d); onBrand(d.blog); document.title = tagParam ? `#${tagParam} · ${d.blog.name}` : d.blog.name; }).catch((e) => setErr(e.message)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const tags = useMemo(() => { const m = new Map<string, number>(); data?.posts.forEach((p) => p.tags.forEach((t) => m.set(t, (m.get(t) ?? 0) + 1))); return [...m].sort((a, b) => b[1] - a[1]); }, [data]);
   const wrap = "mx-auto w-full max-w-[720px] px-5 pt-6 md:px-0 md:pt-14";
   if (err) return <p className={cx(wrap, "text-muted")}>{t("Couldn't load posts: {error}", { error: err })}</p>;
@@ -160,7 +163,7 @@ function PostPage({ slug, onBrand, tocOpen, setTocOpen }: { slug: string; onBran
         <div className="flex flex-wrap gap-x-2.5 font-sans text-[12.5px] text-muted md:text-[13px]">
           <span>{date(p)}</span><span>·</span><span>{t("{n} min read", { n: readingMinutes(p.body ?? "") })}</span>
           {p.tags.length > 0 && <span className="hidden md:inline">·</span>}
-          {p.tags.map((t) => <span key={t} className="hidden text-link md:inline">#{t}</span>)}
+          {p.tags.map((tg) => <Link key={tg} to={`/blog/tag/${encodeURIComponent(tg)}`} className="hidden text-link md:inline">#{tg}</Link>)}
         </div>
         <h1 dir="auto" className="text-[30px] font-bold leading-9 tracking-[-.01em] md:text-[44px] md:leading-[50px] md:tracking-[-.02em]">{p.title}</h1>
         {data.blog.author && (

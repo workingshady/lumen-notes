@@ -10,6 +10,7 @@ import { matcher, parseQuery } from "../lib/search";
 import { go, openNote, toast, useVault, type Vault } from "../lib/store";
 
 import { fmtDate, fmtRelative, t } from "../lib/i18n";
+import { hideWikiCard, wikiHover } from "./wiki-hover";
 import { isWbType } from "../../shared/types";
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
@@ -166,8 +167,9 @@ export function Preview({ note, className, onLine }: { note: Pick<Note, "id" | "
     const wl = t.closest<HTMLAnchorElement>("a.wikilink");
     if (wl) {
       e.preventDefault();
+      hideWikiCard();
       const n = await findOrCreateByTitle(wl.dataset.note ?? "Untitled", note.spaceId);
-      openNote(n.id);
+      openNote(n.id, e.ctrlKey || e.metaKey ? "split" : undefined); // Ctrl/Cmd-click opens it in split view
       return;
     }
     const tag = t.closest<HTMLAnchorElement>("a.tag");
@@ -185,5 +187,5 @@ export function Preview({ note, className, onLine }: { note: Pick<Note, "id" | "
     }
   }
 
-  return <div ref={ref} onClick={onClick} className={"prose " + (className ?? "")} />;
+  return <div ref={ref} onClick={onClick} onMouseOver={(e) => wikiHover(e, (title) => { const n = vault.byTitle.get(title.toLowerCase()); return n && !n.deleted ? n : undefined; })} onMouseLeave={hideWikiCard} className={"prose " + (className ?? "")} />;
 }

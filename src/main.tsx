@@ -52,7 +52,7 @@ addEventListener("vite:preloadError", (e) => {
   e.preventDefault();
   location.reload();
 });
-const isBlog = location.pathname === "/blog" || location.pathname.startsWith("/blog/") || location.pathname.startsWith("/s/") || location.pathname.startsWith("/remote/");
+const isBlog = location.pathname === "/blog" || location.pathname.startsWith("/blog/") || location.pathname.startsWith("/s/") || location.pathname.startsWith("/remote/") || location.pathname === "/terms" || location.pathname === "/privacy";
 if (!isBlog) {
   void seedIfDemo().then(ensureDefaults).then(startSync);
   if ("serviceWorker" in navigator && location.protocol === "https:" && !import.meta.env.DEV) void navigator.serviceWorker.register("/sw.js").catch(() => {});

@@ -8,7 +8,7 @@ import { createNote } from "./lib/actions";
 import { DEMO, setDemo, setMeta } from "./lib/db";
 import { trashWithUndo } from "./lib/trash-ui";
 import { IS_MAC } from "./lib/mod-label";
-import { dismissToast, getUI, openNote, runLatestUndo, setRailAuto, setUI, sidebarRail, toast, toggleSidebar, useToasts, useUI, useVaultSelector, sameNote, type Toast } from "./lib/store";
+import { dismissToast, getUI, pauseToast, resumeToast, openNote, runLatestUndo, setRailAuto, setUI, sidebarRail, toast, toggleSidebar, useToasts, useUI, useVaultSelector, sameNote, type Toast } from "./lib/store";
 import { currentIdx, installNavHistory, keepPlace, restoreFrom } from "./lib/nav-history";
 import { useDeviceHeartbeat } from "./lib/devices";
 import { useFaviconBadge } from "./lib/favicon";
@@ -21,6 +21,7 @@ import { TagMenuHost, TagPage } from "./components/TagPage";
 import { Palette } from "./components/Palette";
 import { NewMenuHost } from "./components/NewMenu";
 import { ImportExportDialog, NewSpaceDialog } from "./components/Dialogs";
+import { ConfirmHost, MoveToHost } from "./components/dialogs-r9";
 import { DiagramExport } from "./components/DiagramExport";
 import { useDueCount } from "./lib/due-cards";
 import { cx, IconButton } from "./components/ui";
@@ -49,6 +50,7 @@ const SpaceView = lazy(() => import("./views/SpaceView").then((m) => ({ default:
 const SettingsView = lazy(() => import("./views/Settings").then((m) => ({ default: m.SettingsView })));
 const Blog = lazy(() => import("./views/Blog").then((m) => ({ default: m.Blog })));
 const Shared = lazy(() => import("./views/Shared").then((m) => ({ default: m.Shared })));
+const Legal = lazy(() => import("./views/Legal").then((m) => ({ default: m.Legal })));
 const Remote = lazy(() => import("./views/Remote").then((m) => ({ default: m.Remote })));
 // The note screen (CodeMirror, KaTeX, highlight.js) loads on first open, behind the note skeleton.
 const loadNoteView = () => import("./components/NoteView");
@@ -67,6 +69,7 @@ export default function App() {
     return () => removeEventListener("popstate", f);
   }, []);
   if (path === "/blog" || path.startsWith("/blog/")) return <Suspense fallback={<Loading />}><Blog path={path} /></Suspense>;
+  if (path === "/terms" || path === "/privacy") return <Suspense fallback={<Loading />}><Legal kind={path.slice(1) as "terms" | "privacy"} /></Suspense>;
   if (path.startsWith("/s/")) return <Suspense fallback={<Loading />}><Shared path={path} /></Suspense>;
   if (path.startsWith("/remote/")) return <Suspense fallback={<Loading />}><Remote path={path} /></Suspense>;
   return <Gate />;
@@ -187,6 +190,7 @@ function Workspace() {
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "\\") { e.preventDefault(); toggleSidebar(); }
+      else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === "Backslash") { e.preventDefault(); setUI({ list: !getUI().list }); } // Lumen 02: hide / show the note list
       // ⌘Z / Ctrl Z outside text fields runs the newest Undo toast
       const el = e.target as HTMLElement;
       // Shift+Delete (⌘Backspace on Mac) moves the open note to Trash, but never inside text fields, the editor, canvases or whiteboards
@@ -200,6 +204,21 @@ function Workspace() {
     };
     addEventListener("keydown", f);
     return () => removeEventListener("keydown", f);
+  }, []);
+
+  // Lumen 01 3B: on a tablet, a swipe from the left edge opens the sidebar as an overlay
+  useEffect(() => {
+    let sx = -1, sy = 0;
+    const st = (e: TouchEvent) => { const t0 = e.touches[0]; sx = e.touches.length === 1 && t0.clientX < 22 && innerWidth >= 600 ? t0.clientX : -1; sy = t0.clientY; };
+    const en = (e: TouchEvent) => {
+      if (sx < 0) return;
+      const c = e.changedTouches[0];
+      if (c.clientX - sx > 70 && Math.abs(c.clientY - sy) < 60 && !getUI().sidebar) toggleSidebar();
+      sx = -1;
+    };
+    addEventListener("touchstart", st, { passive: true });
+    addEventListener("touchend", en, { passive: true });
+    return () => { removeEventListener("touchstart", st); removeEventListener("touchend", en); };
   }, []);
 
   const notesView = ui.view === "notes";
@@ -261,6 +280,8 @@ function Workspace() {
       </div>
 
       <Palette />
+      <ConfirmHost />
+      <MoveToHost />
       <FirstSyncCard />
       <NewMenuHost />
       <TagMenuHost />
@@ -342,7 +363,7 @@ function Toasts() {
       {ts.map((x) => x.variant === "pill" ? (
         <div key={x.id} role="status" className="pointer-events-auto flex h-10 items-center rounded-[20px] bg-ink px-4 text-[14px] font-medium text-bg fade-in" dir="auto">{x.text}</div>
       ) : (
-        <div key={x.id} role="status" className="pointer-events-auto relative flex w-full max-w-[420px] items-center gap-3 overflow-hidden rounded-[10px] border border-line bg-surface-2 px-3.5 py-3 text-[13px] shadow-[0_12px_32px_rgba(0,0,0,.4)] fade-in">
+        <div key={x.id} role="status" onMouseEnter={() => pauseToast(x.id)} onMouseLeave={() => resumeToast(x.id)} onFocus={() => pauseToast(x.id)} onBlur={() => resumeToast(x.id)} className="group/toast pointer-events-auto relative flex w-full max-w-[420px] items-center gap-3 overflow-hidden rounded-[10px] border border-line bg-surface-2 px-3.5 py-3 text-[13px] shadow-[0_12px_32px_rgba(0,0,0,.4)] fade-in">
           {x.icon && TOAST_ICON[x.icon]}
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className={cx(x.sub && "font-semibold")} dir="auto">{x.text}</span>
@@ -355,7 +376,7 @@ function Toasts() {
           ) : (
             <button className="shrink-0 font-medium text-link" onClick={() => { x.action!.run(); dismissToast(x.id); }}>{x.action.label}</button>
           ))}
-          {x.action && x.actionStyle === "button" && <span className="absolute bottom-0 start-0 h-0.5 bg-muted opacity-60" style={{ animation: `toastbar ${x.ms}ms linear forwards` }} />}
+          {x.action && x.actionStyle === "button" && <span className="absolute bottom-0 start-0 h-0.5 bg-muted opacity-60" style={{ animation: `toastbar ${x.ms}ms linear forwards` }} data-toastbar />}
         </div>
       ))}
       <style>{"@keyframes toastbar { from { width: 100%; } to { width: 0%; } }"}</style>

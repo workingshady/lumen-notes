@@ -49,6 +49,8 @@ export async function restyle(api: WbAPI, ids: Set<string>, fn: (e: El) => El | 
 export function applyStyle(api: WbAPI, p: Patch) {
   const ids = selectedIds(api);
   const current: Patch = { ...p };
+  // "Dots": Excalidraw has no dotted fill, so it is drawn as the sparsest hatch (cross-hatch) and tagged in customData.lumenFill
+  if (p.fillStyle === "dots") current.fillStyle = "cross-hatch";
   if ("roundness" in p) { current.roundnessKind = p.roundness; delete current.roundness; }
   void restyle(api, ids, (e) => {
     const o: El = { ...e };
@@ -57,6 +59,8 @@ export function applyStyle(api: WbAPI, p: Patch) {
       if (k === "arrowType") { if (e.type === "arrow") { o.elbowed = v === "elbow"; o.roundness = v === "round" ? { type: 2 } : null; } continue; }
       if (k === "fontFamily" || k === "fontSize" || k === "textAlign" || k === "verticalAlign") { if (e.type === "text") o[k] = v; continue; }
       if (k === "startArrowhead" || k === "endArrowhead") { if (e.type === "arrow" || e.type === "line") o[k] = v === "none" ? null : v; continue; }
+      if (k === "fillStyle" && v === "dots") { if (e.type !== "text" && e.type !== "arrow" && !(e.type === "line" && !e.polygon)) { o.fillStyle = "cross-hatch"; o.customData = { ...(e.customData ?? {}), lumenFill: "dots" }; } continue; }
+      if (k === "fillStyle" && e.customData?.lumenFill) { const { lumenFill: _lf, ...cd } = e.customData; o.customData = Object.keys(cd).length ? cd : undefined; }
       if (k === "fillStyle" && (e.type === "text" || e.type === "arrow" || e.type === "line" && !e.polygon)) continue;
       o[k] = v;
     }

@@ -75,7 +75,10 @@ export default function register(api: Hono<Env>, h: Helpers) {
 
 /** Share / blog pages with og:/twitter: meta (needs run_worker_first for /s/* and /blog/*, see header). */
 export function ogPages(app: Hono<Env>) {
-  const page = (kind: "s" | "post") => async (c: import("hono").Context<Env>) => {
+  // Lumen 10: unlisted share links are never indexed
+  const noindex = (kind: "s" | "post", r: Response) => { if (kind !== "s") return r; const h = new Headers(r.headers); h.set("X-Robots-Tag", "noindex, nofollow"); return new Response(r.body, { status: r.status, statusText: r.statusText, headers: h }); };
+  const page = (kind: "s" | "post") => async (c: import("hono").Context<Env>) => noindex(kind, await pageRaw(kind, c));
+  const pageRaw = async (kind: "s" | "post", c: import("hono").Context<Env>) => {
     const key = c.req.param(kind === "s" ? "token" : "slug")!;
     const origin = new URL(c.req.url).origin;
     const index = await c.env.ASSETS.fetch(new Request(new URL("/", c.req.url)));
@@ -97,4 +100,5 @@ export function ogPages(app: Hono<Env>) {
   app.get("/s/:token", page("s"));
   app.get("/s/:token/:rest{.+}", page("s"));
   app.get("/blog/:slug", page("post"));
+  app.get("/blog/tag/:tag", async (c) => c.env.ASSETS.fetch(new Request(new URL("/", c.req.url)))); // tag archive: the SPA renders it (Lumen 06b)
 }

@@ -18,8 +18,8 @@ export interface OptionsProps {
   edge: { path: PathKind; line: LineStyle; width: number; from: HeadKind; to: HeadKind; label: LabelStyle };
   onEdge: (p: Partial<{ path: PathKind; line: LineStyle; width: number; from: HeadKind; to: HeadKind; label: LabelStyle }>) => void;
   color: string | null; anySel: boolean; onColor: (c: string | undefined) => void;
-  groups: { collapsible: boolean; pattern: Pattern; example: number };
-  onGroups: (p: Partial<{ collapsible: boolean; pattern: Pattern }>) => void;
+  groups: { collapsible: boolean; pattern: Pattern; example: number; portals: boolean };
+  onGroups: (p: Partial<{ collapsible: boolean; pattern: Pattern; portals: boolean }>) => void;
   bg: { pattern: Pattern; color?: string }; onBg: (p: { pattern?: Pattern; color?: string | null }) => void;
   /** Hook for W2-A: synced custom palettes (name → colours) shown after the built-in ones. */
   customPalettes?: Record<string, string[]>;
@@ -112,6 +112,23 @@ export function CanvasOptions(p: OptionsProps) {
         <button aria-label={t("Close")} onClick={p.onClose} style={{ display: "flex", width: 32, height: 32, alignItems: "center", justifyContent: "center", borderRadius: 8, border: "1px solid var(--border)" }}><Glyph name="x" size={15} /></button>
       </div>
 
+
+      {/* live previews (design 43A): node shapes on a canvas, and a collapsible group */}
+      <div className="grid grid-cols-2 gap-2 max-md:grid-cols-1" aria-hidden>
+        <div style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)", padding: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 600 }}>{t("Node shapes on a canvas")}</span>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", height: 44 }}>
+            {SHAPES.slice(0, 4).map(([k]) => <span key={k} style={{ flex: 1, height: k === p.node.shape ? 40 : 32, border: `1.5px ${p.node.border} ${k === p.node.shape ? "var(--accent)" : "var(--muted)"}`, borderRadius: k === "circle" ? 999 : k === "rounded" ? 10 : 3, background: p.node.fill === "none" ? "transparent" : "color-mix(in srgb, var(--accent) 14%, var(--surface))" }} />)}
+          </div>
+        </div>
+        <div style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)", padding: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 600 }}>{t("Collapsible group")}</span>
+          <div style={{ height: 44, borderRadius: 8, border: "1.5px dashed var(--muted)", position: "relative", backgroundImage: p.groups.pattern === "dots" ? "radial-gradient(color-mix(in srgb, var(--muted) 50%, transparent) 1px, transparent 1.2px)" : p.groups.pattern === "grid" || p.groups.pattern === "lines" ? "linear-gradient(color-mix(in srgb, var(--muted) 25%, transparent) 1px, transparent 1px)" : undefined, backgroundSize: "8px 8px" }}>
+            <span style={{ position: "absolute", top: 4, insetInlineStart: 6, fontSize: 10.5, fontWeight: 600 }}>{p.groups.collapsible ? "▾ " : ""}{t("Group")} · {t("{n} card|{n} cards", { n: p.groups.example })}</span>
+          </div>
+        </div>
+      </div>
+
       <Card icon="rect" title={t("Node shape")} sub={nSel}>
         <div className="grid grid-cols-4 gap-1">{SHAPES.map(([k, l, g]) => <Tile key={k} glyph={g as GlyphName} label={t(l)} on={p.node.shape === k} onClick={() => p.onNode({ shape: k })} />)}</div>
         <Block h={t("Border")}><Seg label={t("Border")} value={p.node.border} onChange={(v) => p.onNode({ border: v })} opts={[["solid", t("Solid")], ["dashed", t("Dashed")], ["dotted", t("Dotted")], ["none", t("None")]]} /></Block>
@@ -165,7 +182,7 @@ export function CanvasOptions(p: OptionsProps) {
           <Row label={t("Group pattern")}><Pick value={p.groups.pattern} onChange={(v) => p.onGroups({ pattern: v })} opts={patOpts} /></Row>
           <Row label={t("Canvas background")}><Pick value={p.bg.pattern === "lines" ? "none" : p.bg.pattern} onChange={(v) => p.onBg({ pattern: v })} opts={patOpts.filter((o) => o[0] !== "lines")} /></Row>
           <Row label={t("Background colour")}><Pick value={p.bg.color ?? ""} onChange={(v) => p.onBg({ color: v || null })} opts={BG_COLORS} /></Row>
-          <Row label={t("Portals")}><span className="rounded-full border border-[var(--learn)] px-[5px] text-[10px] font-semibold text-[var(--learn)]">{t("Later")}</span><Toggle on={false} disabled label={t("Portals")} /></Row>
+          <Row label={t("Portals")}><span className="text-[11px] text-muted">{t("canvas cards show their canvas")}</span><Toggle on={p.groups.portals} onChange={(v) => p.onGroups({ portals: v })} label={t("Portals")} /></Row>
           <button onClick={p.onPresent} className="flex min-h-[34px] items-center gap-2 rounded-[8px] px-2 text-start text-[12.5px] hover:bg-bg"><Glyph name="present" size={18} />{t("Present groups as slides")}</button>
           <button onClick={p.onExport} className="flex min-h-[34px] items-center gap-2 rounded-[8px] px-2 text-start text-[12.5px] hover:bg-bg"><Glyph name="export" size={18} />{t("Export…")}</button>
         </div>

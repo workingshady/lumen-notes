@@ -41,6 +41,9 @@ export function ReadingSection() {
       <PrefRow label={t("Line width")} desc={t("Characters per line")}>
         <ChipSelect value={s.measure} onChange={(v) => setSettings({ measure: v })} options={[{ value: 60, label: fmtNum(60) }, { value: 68, label: fmtNum(68) }, { value: 80, label: fmtNum(80) }, { value: 0, label: t("Full") }] as { value: Settings["measure"]; label: string }[]} />
       </PrefRow>
+      <PrefRow label={t("Footnotes")} desc={t("How footnote marks read in notes")}>
+        <ChipSelect value={s.footnoteStyle} onChange={(v) => setSettings({ footnoteStyle: v })} options={[{ value: "number", label: "1 2 3" }, { value: "symbol", label: "* † ‡" }]} />
+      </PrefRow>
       <PrefRow label={t("Highlighter colours")} desc={t("Five, used by Focus and PDF")}>
         <span className="flex items-center gap-2">
           <span className="flex gap-[3px]">{Object.values(HL_PALETTES[s.hlPalette] ?? HL_PALETTES.default).map((c) => <span key={c} className="size-3 rounded-[3px]" style={{ background: c }} />)}</span>

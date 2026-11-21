@@ -4,6 +4,7 @@
 // warning, sync, settings, avatar, collapse hint. Resizable 200–360 px (double-click resets), collapses to a 56 px
 // rail with badges + tooltips, tree keyboard model (↑↓ move, ←→ fold, ↵ open, F2 rename, Alt+↑/↓ reorder).
 // Preferences: sidebar-r6.tsx (localStorage "lumen.sidebar").
+import { askConfirm } from "./dialogs-r9";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { SPACE_KINDS, type Folder, type Note, type Space } from "../../shared/types";
 import { createFolder, createNote, dailyNote, deleteFolder, moveFolder, moveNote } from "../lib/actions";
@@ -643,6 +644,7 @@ function FolderRow({ f, folders, depth, counts, onDrop }: { f: Folder; folders: 
   const [rename, setRename] = useState(false);
   const [menu, setMenu] = useState(false);
   const [more, setMore] = useState(false);
+  const hoverT = useRef(0);
   const ref = useRef<HTMLButtonElement>(null);
   const all = open ? v.notes.filter((n) => n.folderId === f.id).sort((a, b) => natural(a.title, b.title)) : [];
   const notes = more ? all : all.slice(0, 60);
@@ -674,9 +676,9 @@ function FolderRow({ f, folders, depth, counts, onDrop }: { f: Folder; folders: 
           dragProps={{
             draggable: true,
             onDragStart: (e) => { e.stopPropagation(); e.dataTransfer.setData(DRAG, JSON.stringify({ kind: "folder", id: f.id })); },
-            onDragOver: (e) => { e.preventDefault(); e.stopPropagation(); setOver(true); },
-            onDragLeave: () => setOver(false),
-            onDrop: (e) => { e.stopPropagation(); setOver(false); onDrop(e, f.id); },
+            onDragOver: (e) => { e.preventDefault(); e.stopPropagation(); setOver(true); if (!open && !hoverT.current) hoverT.current = window.setTimeout(() => { hoverT.current = 0; setOpen(true); }, 600); }, // Lumen 03 1H: hover 600 ms expands
+            onDragLeave: () => { setOver(false); clearTimeout(hoverT.current); hoverT.current = 0; },
+            onDrop: (e) => { e.stopPropagation(); setOver(false); clearTimeout(hoverT.current); hoverT.current = 0; onDrop(e, f.id); },
           }}>
           <span role="button" tabIndex={-1} aria-label={t("Folder menu")} onClick={(e) => { e.stopPropagation(); setMenu(true); }} className="hidden text-muted hover:text-ink group-hover:inline">⋯</span>
         </Row>
@@ -695,7 +697,7 @@ function FolderRow({ f, folders, depth, counts, onDrop }: { f: Folder; folders: 
               {Object.keys(PRESETS).map((k) => <button type="button" key={k} aria-label={k} className="size-5 rounded-full" style={{ background: PRESETS[k], boxShadow: f.color === k ? "0 0 0 2px var(--surface), 0 0 0 3.5px var(--text)" : undefined }} onClick={() => void patch("folder", f.id, { color: k })} />)}
             </div>
             <div className="my-1 h-px bg-line" />
-            <MI g="trash" l={t("Delete")} k="⌫" danger run={async () => { await deleteFolder(f); toast(t("Deleted “{name}”. Its notes moved up one level.", { name: f.name })); }} />
+            <MI g="trash" l={t("Delete")} k="⌫" danger run={async () => { if (!(await askConfirm({ title: t("Delete folder “{name}”?", { name: f.name }), body: t("Its notes and subfolders move up one level. Nothing is deleted."), ok: t("Delete folder"), danger: true }))) return; await deleteFolder(f); toast(t("Deleted “{name}”. Its notes moved up one level.", { name: f.name })); }} />
           </div>
         </>
       )}

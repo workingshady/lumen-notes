@@ -23,7 +23,7 @@ export type Style = {
 };
 export type Action = "front" | "forward" | "backward" | "back" | "group" | "ungroup" | "duplicate" | "delete" | "lock" | "align-left" | "align-center" | "align-right" | "align-top" | "align-middle" | "align-bottom";
 
-const FONTS: [number, string][] = [[5, tk("Hand")], [6, tk("Sans")], [8, tk("Code")]];
+const FONTS: [number, string][] = [[5, tk("Hand")], [6, tk("Sans")], [20, tk("Serif")], [8, tk("Code")], [21, tk("Arabic")]];
 const SIZES: [number, string][] = [[16, "S"], [20, "M"], [28, "L"], [36, "XL"]];
 const HEADS: [string, string, string][] = [["none", "arrowhead-none", tk("None")], ["arrow", "arrowhead-arrow", tk("Arrow")], ["triangle", "arrowhead-triangle-filled", tk("Triangle")], ["triangle_outline", "arrowhead-triangle-outline", tk("Triangle outline")], ["bar", "arrowhead-bar", tk("Bar")], ["dot", "arrowhead-dot", tk("Dot")], ["circle_outline", "arrowhead-dot-outline", tk("Circle outline")], ["diamond", "arrowhead-diamond", tk("Diamond")]];
 const fontName = (f: number | null) => t(FONTS.find(([v]) => v === f)?.[1] ?? (f == null ? "Hand" : "Mixed"));
@@ -101,7 +101,7 @@ export function PropertyBar({ mode, style, pos, phone, dark, ctx, onSet, onActio
       case "font": case "size": return (
         <div className="flex w-[220px] flex-col gap-1 p-1">
           <Label>{t("Font")}</Label>
-          {FONTS.map(([v, l]) => <Row key={v} label={<span style={{ fontFamily: v === 8 ? "'JetBrains Mono',monospace" : v === 6 ? "Inter,sans-serif" : "Caveat,'Comic Sans MS',cursive", fontSize: v === 5 ? 16 : 12.5 }}>{t(l)}</span>} on={style.fontFamily === v} onClick={() => onSet({ fontFamily: v })} />)}
+          {FONTS.map(([v, l]) => <Row key={v} label={<span style={{ fontFamily: v === 8 ? "'JetBrains Mono',monospace" : v === 20 ? "'Source Serif 4',serif" : v === 21 ? "'IBM Plex Sans Arabic',sans-serif" : v === 6 ? "Inter,sans-serif" : "Caveat,'Comic Sans MS',cursive", fontSize: v === 5 ? 16 : 12.5 }}>{t(l)}</span>} on={style.fontFamily === v} onClick={() => onSet({ fontFamily: v })} />)}
           <Label>{t("Size")}</Label>
           <div className="flex gap-1">{SIZES.map(([v, l]) => <button key={v} type="button" onClick={() => onSet({ fontSize: v })} className={cx("h-[30px] flex-1 rounded-[7px] border text-[12px] font-semibold", style.fontSize === v ? "border-accent text-accent" : "border-line")} style={style.fontSize === v ? { background: AC_BG } : undefined}>{l}</button>)}</div>
           {mode !== "sticky" && <><Label>{t("Align")}</Label><Choices value={style.textAlign} onPick={(v) => onSet({ textAlign: v })} items={[["left", "align-left", t("Left")], ["center", "align-center", t("Centre")], ["right", "align-right", t("Right")]]} /></>}

@@ -6,8 +6,8 @@ import {
   bucketItems, daysLate, groupItems, isDone, itemColor, monthStart, mondayOf, planSpan, weeklyLoad, dateOf,
   type Bucket, type Day, type Plan, type PlanItem,
 } from "../../lib/plan-model";
-import { fmtNum, t } from "../../lib/i18n";
-import { AC16, fmtDay, monthShort, type PlanWrites } from "./plan-ui";
+import { fmtNum, isRtl, t } from "../../lib/i18n";
+import { AC16, fmtDay, monthShort, px, type PlanWrites } from "./plan-ui";
 
 export interface ViewProps {
   plan: Plan; today: Day; phone: boolean; width: number; height: number; items: PlanItem[];
@@ -44,22 +44,22 @@ export function axis(plan: Plan, zoom: "week" | "month" | "quarter", viewW: numb
       if (m === 0 || D.getUTCMonth() === 0) years.push({ x: X(a), l: fmtNum(D.getUTCFullYear(), { useGrouping: false }) });
     }
   }
-  return { lo, hi, pxD, X, ticks, labels, years, gridW: Math.max(viewW, total * pxD + 40) };
+  return { lo, hi, pxD, X, ticks, labels, years, gridW: Math.max(viewW, total * pxD + (zoom === "week" ? 40 : zoom === "quarter" ? 40 : 30)) };
 }
 
 function AxisHeader({ ax, h = 48 }: { ax: ReturnType<typeof axis>; h?: number }) {
   return (
     <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: h, borderBottom: "1px solid var(--bd)", background: "var(--bg)", zIndex: 1 }}>
-      {ax.years.map((y, k) => <span key={k} style={{ position: "absolute", left: y.x, top: 7, fontSize: 11, fontWeight: 650, paddingLeft: 6, whiteSpace: "nowrap" }}>{y.l}</span>)}
-      {ax.labels.map((l, k) => <span key={k} style={{ position: "absolute", left: l.x, width: l.w, top: 26, fontSize: 11.5, color: l.c, fontWeight: l.fw, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden" }}>{l.l}</span>)}
+      {ax.years.map((y, k) => <span key={k} style={{ position: "absolute", ...px(y.x), top: 7, fontSize: 11, fontWeight: 650, paddingLeft: 6, whiteSpace: "nowrap" }}>{y.l}</span>)}
+      {ax.labels.map((l, k) => <span key={k} style={{ position: "absolute", ...px(l.x), width: l.w, top: 26, fontSize: 11.5, color: l.c, fontWeight: l.fw, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden" }}>{l.l}</span>)}
     </div>
   );
 }
 function TodayLine({ x, top = 38, pill = true }: { x: number; top?: number; pill?: boolean }) {
   return (
     <>
-      <div data-today style={{ position: "absolute", left: x, top, bottom: 0, width: 2, background: "var(--ac)", zIndex: 2 }} />
-      {pill && <span style={{ position: "absolute", left: x, top: top - 4, transform: "translateX(-50%)", height: 16, padding: "0 6px", borderRadius: 999, background: "var(--ac)", color: "var(--af)", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", zIndex: 2 }}>{t("Today")}</span>}
+      <div data-today style={{ position: "absolute", insetInlineStart: x, top, bottom: 0, width: 2, background: "var(--ac)", zIndex: 2 }} />
+      {pill && <span style={{ position: "absolute", ...px(x), top: top - 4, transform: `translateX(${isRtl() ? 50 : -50}%)`, height: 16, padding: "0 6px", borderRadius: 999, background: "var(--ac)", color: "var(--af)", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", zIndex: 2 }}>{t("Today")}</span>}
     </>
   );
 }
@@ -115,7 +115,7 @@ export function Gantt({ plan, today, phone, width, items, onItem, scrollRef, fol
   return (
     <div ref={scrollRef} style={{ flex: 1, minWidth: 0, overflow: "auto", position: "relative", scrollbarWidth: "thin" }}>
       <div style={{ display: "flex", width: colW + ax.gridW, minHeight: "100%", height: H, position: "relative" }}>
-        <div style={{ width: colW, flexShrink: 0, borderInlineEnd: "1px solid var(--bd)", display: "flex", flexDirection: "column", zIndex: 3, background: "var(--bg)", position: "sticky", left: 0 }}>
+        <div style={{ width: colW, flexShrink: 0, borderInlineEnd: "1px solid var(--bd)", display: "flex", flexDirection: "column", zIndex: 3, background: "var(--bg)", position: "sticky", ...px(0) }}>
           <div style={{ height: 48, flexShrink: 0, display: "flex", alignItems: "flex-end", padding: "0 14px 8px 20px", fontSize: 11, fontWeight: 600, letterSpacing: ".06em", color: "var(--mu)", borderBottom: "1px solid var(--bd)", boxSizing: "border-box", position: "sticky", top: 0, background: "var(--bg)", zIndex: 1 }}>{t(plan.prefs.group === "group" ? plan.groupBy : GROUP_HEAD[plan.prefs.group]).toUpperCase()}</div>
           {rows.map((r) => (
             <div key={r.key} className="pl-row" role={r.item || r.group ? "button" : undefined} tabIndex={r.item || r.group ? 0 : undefined}
@@ -131,23 +131,23 @@ export function Gantt({ plan, today, phone, width, items, onItem, scrollRef, fol
           ))}
         </div>
         <div style={{ position: "relative", width: ax.gridW, flexShrink: 0 }}>
-          {ax.ticks.map((tk, k) => <div key={k} style={{ position: "absolute", left: tk.x, top: tk.top, bottom: 0, width: 1, background: tk.c }} />)}
+          {ax.ticks.map((tk, k) => <div key={k} style={{ position: "absolute", ...px(tk.x), top: tk.top, bottom: 0, width: 1, background: tk.c }} />)}
           <div style={{ position: "sticky", top: 0, height: 48, zIndex: 2 }}><AxisHeader ax={ax} /></div>
-          <svg width={ax.gridW} height={H} style={{ position: "absolute", inset: 0, overflow: "visible", pointerEvents: "none" }}>{deps.map((d, k) => <path key={k} d={d} style={{ fill: "none", stroke: "var(--mu)", strokeWidth: 1.3, strokeDasharray: "3 3" }} />)}</svg>
+          <svg width={ax.gridW} height={H} style={{ position: "absolute", inset: 0, overflow: "visible", pointerEvents: "none", transform: isRtl() ? "scaleX(-1)" : undefined }}>{deps.map((d, k) => <path key={k} d={d} style={{ fill: "none", stroke: "var(--mu)", strokeWidth: 1.3, strokeDasharray: "3 3" }} />)}</svg>
           {bars.map((b, k) => (
             <div key={k}>
               <div title={b.tip} className={b.item ? "pl-bar" : undefined} onClick={b.item ? (e) => onItem(b.item!, e) : undefined}
-                style={{ position: "absolute", left: b.x, top: b.y, width: b.w, height: b.h, borderRadius: b.r, background: b.bg, border: `1px solid ${b.bd}`, boxSizing: "border-box", overflow: "hidden", display: "flex", alignItems: "center", boxShadow: b.ring }}>
-                <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: b.prog, background: b.pc }} />
+                style={{ position: "absolute", ...px(b.x), top: b.y, width: b.w, height: b.h, borderRadius: b.r, background: b.bg, border: `1px solid ${b.bd}`, boxSizing: "border-box", overflow: "hidden", display: "flex", alignItems: "center", boxShadow: b.ring }}>
+                <div style={{ position: "absolute", ...px(0), top: 0, bottom: 0, width: b.prog, background: b.pc }} />
                 <span dir="auto" style={{ position: "relative", padding: "0 8px", fontSize: 11.5, fontWeight: 600, whiteSpace: "nowrap", color: "var(--tx)" }}>{b.l}</span>
               </div>
-              {b.o && b.ol && <span dir="auto" style={{ position: "absolute", left: b.ox, top: b.oy, fontSize: 11.5, color: b.oc, whiteSpace: "nowrap", fontWeight: b.ofw }}>{b.ol}</span>}
+              {b.o && b.ol && <span dir="auto" style={{ position: "absolute", ...px(b.ox), top: b.oy, fontSize: 11.5, color: b.oc, whiteSpace: "nowrap", fontWeight: b.ofw }}>{b.ol}</span>}
             </div>
           ))}
           {showMs && plan.milestones.map((m, k) => (
             <div key={k} title={`${m.name} · ${fmtDay(m.day)}`}>
-              <div style={{ position: "absolute", left: ax.X(m.day), top: msY + 14, width: 12, height: 12, marginLeft: -6, transform: "rotate(45deg)", background: m.done ? "var(--ac)" : "var(--bg)", border: "2px solid var(--ac)", boxSizing: "border-box" }} />
-              <span dir="auto" style={{ position: "absolute", left: ax.X(m.day) + 10, top: msY + 12, fontSize: 11.5, color: "var(--tx)", fontWeight: 600, whiteSpace: "nowrap" }}>{m.name}</span>
+              <div style={{ position: "absolute", ...px(ax.X(m.day)), top: msY + 14, width: 12, height: 12, marginInlineStart: -6, transform: "rotate(45deg)", background: m.done ? "var(--ac)" : "var(--bg)", border: "2px solid var(--ac)", boxSizing: "border-box" }} />
+              <span dir="auto" style={{ position: "absolute", ...px(ax.X(m.day) + 10), top: msY + 12, fontSize: 11.5, color: "var(--tx)", fontWeight: 600, whiteSpace: "nowrap" }}>{m.name}</span>
             </div>
           ))}
           <TodayLine x={ax.X(today)} />
@@ -194,9 +194,9 @@ export function Lanes({ plan, today, phone, width, height, items, onItem, scroll
     <div ref={scrollRef} style={{ flex: 1, minWidth: 0, position: "relative", overflow: "auto" }}>
       <div style={{ position: "relative", width: ax.gridW, height: Math.max(y0, height - 2) }}>
         <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: head, borderBottom: "1px solid var(--bd)" }}>
-          {phases.map((p, k) => <div key={k} style={{ position: "absolute", left: p.x, width: p.w, top: p.y, height: 18, fontSize: 11, padding: "0 10px", boxSizing: "border-box", display: "flex", alignItems: "center", gap: 8, borderRadius: 8, background: `color-mix(in srgb,${p.c} 14%,transparent)`, borderLeft: `3px solid ${p.c}`, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden" }} dir="auto">{p.l}</div>)}
+          {phases.map((p, k) => <div key={k} style={{ position: "absolute", ...px(p.x), width: p.w, top: p.y, height: 18, fontSize: 11, padding: "0 10px", boxSizing: "border-box", display: "flex", alignItems: "center", gap: 8, borderRadius: 8, background: `color-mix(in srgb,${p.c} 14%,transparent)`, borderLeft: `3px solid ${p.c}`, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden" }} dir="auto">{p.l}</div>)}
         </div>
-        {ax.ticks.map((tk, k) => <div key={k} style={{ position: "absolute", left: tk.x, top: head, bottom: 0, width: 1, background: "color-mix(in srgb,var(--bd) 60%,transparent)" }} />)}
+        {ax.ticks.map((tk, k) => <div key={k} style={{ position: "absolute", ...px(tk.x), top: head, bottom: 0, width: 1, background: "color-mix(in srgb,var(--bd) 60%,transparent)" }} />)}
         {lanes.map((ln, k) => (
           <div key={k} style={{ position: "absolute", left: 0, right: 0, top: ln.y, height: ln.h, borderBottom: "1px solid var(--bd)" }}>
             <span style={{ position: "sticky", left: 12, marginLeft: 12, top: 8, display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 650, color: "var(--mu)", zIndex: 1, background: "var(--bg)", paddingRight: 8, marginTop: 8 }}>
@@ -207,7 +207,7 @@ export function Lanes({ plan, today, phone, width, height, items, onItem, scroll
         ))}
         {lbars.map((b) => (
           <div key={b.item.key} className="pl-bar" onClick={(e) => onItem(b.item, e)} title={b.l}
-            style={{ position: "absolute", left: b.x, top: b.y, width: b.w, height: 34, borderRadius: 8, background: b.bg, border: `1px solid ${b.bd}`, boxSizing: "border-box", padding: "0 10px", display: "flex", flexDirection: "column", justifyContent: "center", overflow: "hidden", boxShadow: b.ring }}>
+            style={{ position: "absolute", ...px(b.x), top: b.y, width: b.w, height: 34, borderRadius: 8, background: b.bg, border: `1px solid ${b.bd}`, boxSizing: "border-box", padding: "0 10px", display: "flex", flexDirection: "column", justifyContent: "center", overflow: "hidden", boxShadow: b.ring }}>
             <span dir="auto" style={{ fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.l}</span>
             <span style={{ fontSize: 10.5, color: "var(--mu)", whiteSpace: "nowrap" }}>{b.s}</span>
           </div>
@@ -290,7 +290,7 @@ export function Agenda({ plan, today, phone, items, writes, onItem }: ViewProps)
     const h = load[k]?.hours ?? 0;
     return { a, b, k, its: its.slice(0, 4), extra: its.length - 4, carried, ms, h };
   });
-  const maxH = Math.max(plan.pace || 4, ...load.map((l) => l.hours));
+  const maxH = Math.max((plan.pace || 4) * 1.5, ...load.map((l) => l.hours));
   const anyOver = load.some((l) => l.over);
   return (
     <div style={{ flex: 1, minWidth: 0, display: "flex", gap: 28, padding: phone ? "0 16px" : "8px 28px", overflow: "auto", justifyContent: "center" }}>

@@ -11,9 +11,9 @@ import { addTopic, addTopicNeed, flashcards, moveTopic, setFrontMatter, setTopic
 import { courseModel, type CourseLevel, type CourseModule, type CourseTopic } from "../../lib/plan-sources";
 import { dateOf, dayOf, isoOf, monthStart, mondayOf, projectFromToday, todayDay, type Day } from "../../lib/plan-model";
 import { useVault } from "../../lib/store";
-import { fmtNum, t, tx } from "../../lib/i18n";
+import { fmtNum, isRtl, t, tx } from "../../lib/i18n";
 import { usePhone } from "../../views/spaces-util";
-import { MenuPop, PLAN_CSS, TOKENS, fmtDay, fmtDow, fmtMonthYear, monthShort, useDismiss, useWidth } from "./plan-ui";
+import { MenuPop, PLAN_CSS, TOKENS, fmtDay, fmtDow, fmtMonthYear, monthShort, px, useDismiss, useWidth } from "./plan-ui";
 import type { TopicOps } from "../../views/roadmap-outline";
 
 // ------------------------------------------------------------------ view state shared by the tools row and the timeline
@@ -115,7 +115,7 @@ function DeskTimeline({ note, cm, s, set, cur, today, proj, sel, onTopic, ops }:
   const fmtM = (d: Day) => fmtMonthYear(d);
   const todayX = X(today);
   useEffect(() => {
-    scrollers.set(note.id, () => { const el = scroll.current; if (el) el.scrollTo({ left: Math.max(0, todayX - 80), behavior: "smooth" }); });
+    scrollers.set(note.id, () => { const el = scroll.current; if (el) el.scrollTo({ left: (isRtl() ? -1 : 1) * Math.max(0, todayX - 80), behavior: "smooth" }); });
     return () => { scrollers.delete(note.id); };
   }, [note.id, todayX]);
   // header ticks: two tiers, labels never narrower than their text
@@ -202,9 +202,9 @@ function DeskTimeline({ note, cm, s, set, cur, today, proj, sel, onTopic, ops }:
       }
     }
   });
-  const gridW = Math.max(viewW, totalDays * pxDay + 40);
+  const gridW = Math.max(viewW, totalDays * pxDay + (zoom === "week" ? 40 : 30));
   const H = Math.max(y + 24, 200);
-  const visA = start + Math.floor(scrollX / pxDay), visB = start + Math.floor((scrollX + viewW) / pxDay);
+  const sx0 = Math.abs(scrollX), visA = start + Math.floor(sx0 / pxDay), visB = start + Math.floor((sx0 + viewW) / pxDay);
   return (
     <div style={{ flex: 1, minHeight: 0, display: "flex", position: "relative", overflow: "hidden" }}>
       <div style={{ flex: 1, minWidth: 0, overflowY: "auto", overflowX: "hidden", display: "flex" }}>
@@ -225,33 +225,33 @@ function DeskTimeline({ note, cm, s, set, cur, today, proj, sel, onTopic, ops }:
           <div ref={scroll} onScroll={(e) => setScrollX(e.currentTarget.scrollLeft)} onWheel={(e) => { if (e.shiftKey && scroll.current) { scroll.current.scrollLeft += e.deltaY; } }}
             style={{ position: "absolute", inset: 0, overflowX: zoom === "week" ? "auto" : "hidden", overflowY: "hidden", scrollbarWidth: "none" }}>
             <div style={{ position: "relative", width: gridW, height: "100%" }}>
-              {bands.map((b, k) => <div key={k} style={{ position: "absolute", left: b.x, width: b.w, top: 52, bottom: 0, background: b.bg }} />)}
-              {ticks.map((tk, k) => <div key={k} style={{ position: "absolute", left: tk.x, top: tk.top, bottom: 0, width: 1, background: tk.c }} />)}
-              <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 52, borderBottom: "1px solid var(--bd)", background: "var(--bg)" }}>
-                {years.map((yy, k) => <span key={k} style={{ position: "absolute", left: yy.x, top: 8, fontSize: 11, fontWeight: 650, color: "var(--tx)", paddingLeft: 6, borderLeft: "1px solid var(--bd)", whiteSpace: "nowrap" }}>{yy.l}</span>)}
-                {labels.map((l, k) => <span key={k} style={{ position: "absolute", left: l.x, width: l.w, top: 28, fontSize: 11.5, color: l.c, fontWeight: l.fw, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden" }}>{l.l}</span>)}
+              {bands.map((b, k) => <div key={k} style={{ position: "absolute", ...px(b.x), width: b.w, top: 52, bottom: 0, background: b.bg }} />)}
+              {ticks.map((tk, k) => <div key={k} style={{ position: "absolute", ...px(tk.x), top: tk.top, bottom: 0, width: 1, background: tk.c }} />)}
+              <div style={{ position: "absolute", ...px(0), right: 0, top: 0, height: 52, borderBottom: "1px solid var(--bd)", background: "var(--bg)" }}>
+                {years.map((yy, k) => <span key={k} style={{ position: "absolute", ...px(yy.x), top: 8, fontSize: 11, fontWeight: 650, color: "var(--tx)", paddingInlineStart: 6, borderInlineStart: "1px solid var(--bd)", whiteSpace: "nowrap" }}>{yy.l}</span>)}
+                {labels.map((l, k) => <span key={k} style={{ position: "absolute", ...px(l.x), width: l.w, top: 28, fontSize: 11.5, color: l.c, fontWeight: l.fw, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden" }}>{l.l}</span>)}
               </div>
               {bars.map((b) => (
                 <div key={b.key}>
-                  <div title={b.tip} className="pl-bar" onClick={b.run} style={{ position: "absolute", left: b.x, top: b.y, width: b.w, height: b.h, borderRadius: b.r, background: b.bg, border: `1px solid ${b.bd}`, boxSizing: "border-box", overflow: "hidden", display: "flex", alignItems: "center", boxShadow: b.ring }}>
-                    <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${b.prog * 100}%`, background: b.pc }} />
-                    {b.segs.map((sx, k) => <div key={k} style={{ position: "absolute", left: `${sx}%`, top: 4, bottom: 4, width: 1, background: b.sc }} />)}
+                  <div title={b.tip} className="pl-bar" onClick={b.run} style={{ position: "absolute", ...px(b.x), top: b.y, width: b.w, height: b.h, borderRadius: b.r, background: b.bg, border: `1px solid ${b.bd}`, boxSizing: "border-box", overflow: "hidden", display: "flex", alignItems: "center", boxShadow: b.ring }}>
+                    <div style={{ position: "absolute", ...px(0), top: 0, bottom: 0, width: `${b.prog * 100}%`, background: b.pc }} />
+                    {b.segs.map((sx, k) => <div key={k} style={{ position: "absolute", insetInlineStart: `${sx}%`, top: 4, bottom: 4, width: 1, background: b.sc }} />)}
                     {b.l && <span style={{ position: "relative", display: "flex", alignItems: "center", gap: 6, padding: "0 8px", fontSize: b.fs, fontWeight: 600, color: "var(--tx)", whiteSpace: "nowrap" }}>{b.l}</span>}
                   </div>
-                  {b.o && <span dir="auto" style={{ position: "absolute", left: b.o.x, top: b.o.y, display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: b.o.c, whiteSpace: "nowrap", fontWeight: b.o.fw }}>{b.o.l}{b.o.chip && <span style={{ display: "flex", height: 18, padding: "0 7px", borderRadius: 999, fontSize: 10.5, fontWeight: 650, alignItems: "center", background: "var(--ac)", color: "var(--af)" }}>{t("Up next")}</span>}</span>}
+                  {b.o && <span dir="auto" style={{ position: "absolute", ...px(b.o.x), top: b.o.y, display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: b.o.c, whiteSpace: "nowrap", fontWeight: b.o.fw }}>{b.o.l}{b.o.chip && <span style={{ display: "flex", height: 18, padding: "0 7px", borderRadius: 999, fontSize: 10.5, fontWeight: 650, alignItems: "center", background: "var(--ac)", color: "var(--af)" }}>{t("Up next")}</span>}</span>}
                 </div>
               ))}
               {diamonds.map((d, k) => (
                 <div key={k}>
-                  <div title={d.tip} style={{ position: "absolute", left: d.x, top: d.y, width: 12, height: 12, marginLeft: -6, transform: "rotate(45deg)", background: "var(--bg)", border: `2px solid ${d.c}`, boxSizing: "border-box" }} />
-                  <span dir="auto" style={{ position: "absolute", left: d.x + 12, top: d.y - 2, fontSize: 11.5, color: "var(--mu)", whiteSpace: "nowrap" }}>{d.l}</span>
+                  <div title={d.tip} style={{ position: "absolute", ...px(d.x), top: d.y, width: 12, height: 12, marginInlineStart: -6, transform: "rotate(45deg)", background: "var(--bg)", border: `2px solid ${d.c}`, boxSizing: "border-box" }} />
+                  <span dir="auto" style={{ position: "absolute", ...px(d.x + 12), top: d.y - 2, fontSize: 11.5, color: "var(--mu)", whiteSpace: "nowrap" }}>{d.l}</span>
                 </div>
               ))}
-              <div style={{ position: "absolute", left: todayX, top: 40, bottom: 0, width: 2, background: "var(--ac)" }} />
-              <span style={{ position: "absolute", left: todayX, top: 36, transform: "translateX(-50%)", height: 16, padding: "0 6px", borderRadius: 999, background: "var(--ac)", color: "var(--af)", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center" }}>{t("Today")}</span>
+              <div style={{ position: "absolute", ...px(todayX), top: 40, bottom: 0, width: 2, background: "var(--ac)" }} />
+              <span style={{ position: "absolute", ...px(todayX), top: 36, transform: `translateX(${isRtl() ? 50 : -50}%)`, height: 16, padding: "0 6px", borderRadius: 999, background: "var(--ac)", color: "var(--af)", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center" }}>{t("Today")}</span>
             </div>
           </div>
-          {zoom === "week" && <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 40, background: "linear-gradient(90deg,transparent,var(--bg))", pointerEvents: "none" }} />}
+          {zoom === "week" && <div style={{ position: "absolute", insetInlineEnd: 0, top: 0, bottom: 0, width: 40, background: `linear-gradient(${isRtl() ? 270 : 90}deg,transparent,var(--bg))`, pointerEvents: "none" }} />}
         </div>
       </div>
       {zoom === "week" && <div style={{ position: "absolute", right: 16, bottom: 14, display: "flex", alignItems: "center", gap: 8, height: 30, padding: "0 12px", borderRadius: 999, background: "var(--sf2)", border: "1px solid var(--bd)", fontSize: 11.5, color: "var(--mu)", zIndex: 3 }}>{t("Showing {a} – {b} · scroll or Shift + wheel for more", { a: fmtM(visA), b: fmtM(visB) })}</div>}
@@ -350,9 +350,9 @@ function TopicPanel({ note, cm, tp, ops, phone, today, onClose, onTopic }: { not
   const moduleItems = ops.mods.map((m, mi) => ({ l: m.name, on: mi === topic.module, run: () => ops.write(moveTopic(ops.body, topic.line, mi, null)) }));
   return (
     <>
-      <div style={{ position: "absolute", inset: 0, background: phone ? "rgba(0,0,0,.5)" : "rgba(0,0,0,.25)", zIndex: 20, ...(phone ? { position: "fixed" } : {}) }} />
+      <div style={{ position: "fixed", inset: 0, background: phone ? "rgba(0,0,0,.5)" : "rgba(0,0,0,.25)", zIndex: 20 }} />
       <div ref={ref} role="dialog" aria-label={tp.item.name} className={phone ? "pl-sheet" : "pl-pop"}
-        style={{ position: phone ? "fixed" : "absolute", right: phone ? 0 : 16, left: phone ? 0 : "auto", top: phone ? 56 : 16, bottom: phone ? 0 : 16, width: phone ? "auto" : 420, background: "var(--sf)", border: "1px solid var(--bd)", borderRadius: phone ? "20px 20px 0 0" : 16, boxShadow: "0 24px 60px rgba(0,0,0,.4)", display: "flex", flexDirection: "column", overflow: "hidden", zIndex: 21 }}>
+        style={{ position: "fixed", insetInlineEnd: phone ? 0 : 16, ...px(phone ? 0 : "auto"), top: phone ? 56 : 16, bottom: phone ? 0 : 16, width: phone ? "auto" : 420, background: "var(--sf)", border: "1px solid var(--bd)", borderRadius: phone ? "20px 20px 0 0" : 16, boxShadow: "0 24px 60px rgba(0,0,0,.4)", display: "flex", flexDirection: "column", overflow: "hidden", zIndex: 21 }}>
         {phone && <div style={{ display: "flex", justifyContent: "center", paddingTop: 8 }}><span style={{ width: 36, height: 4, borderRadius: 2, background: "var(--bd)" }} /></div>}
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "16px 18px 12px" }}>
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>

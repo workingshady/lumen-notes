@@ -1,5 +1,5 @@
 import { createElement, Fragment, useSyncExternalStore, type ReactNode } from "react";
-import { setSettings } from "./settings";
+import { getSettings, setSettings } from "./settings";
 
 /**
  * Interface language (docs/I18N.md).
@@ -112,6 +112,12 @@ export function digits(s: string | number) { const x = String(s); return state.d
 export function fmtDate(d: Date | number | string, opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric" }) {
   const date = d instanceof Date ? d : new Date(d);
   if (Number.isNaN(date.getTime())) return "";
+  // Settings › Language › Date format: full dates (day + month + year) follow the chosen pattern
+  const df = getSettings().dateFormat;
+  if (df !== "auto" && opts.day && opts.month && opts.year && !opts.weekday) {
+    const loc = df === "dmy" ? "en-GB" : df === "mdy" ? "en-US" : "sv-SE";
+    return cached(`D|${df}`, () => new Intl.DateTimeFormat(loc, { day: "2-digit", month: "2-digit", year: "numeric" })).format(date);
+  }
   return cached(`d|${lang}|${state.digits}|${JSON.stringify(opts)}`, () => new Intl.DateTimeFormat(locale(), opts)).format(date);
 }
 export const fmtTime = (d: Date | number | string) => fmtDate(d, { hour: "numeric", minute: "2-digit" });

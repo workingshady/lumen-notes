@@ -131,7 +131,7 @@ export function TasksScreen() {
             <Board tasks={tasks.filter((x) => inList(x, list === "completed" ? "completed" : list, today) || (x.done && (list !== "completed") && (!list.startsWith("plan:") || x.planId === list.slice(5)) && (x.doneOn ?? "") >= shiftDay(today, -7)))} today={today} plans={plans} onPick={pick} />
           )}
         </div>
-        {!phone && view === "list" && selTask && <div style={{ width: 330, flexShrink: 0, alignSelf: "flex-start", maxHeight: "100%", overflowY: "auto" }}><Detail task={selTask} today={today} plans={plans} /></div>}
+        {!phone && view === "list" && selTask && <div style={{ width: 364, flexShrink: 0, alignSelf: "flex-start", maxHeight: "100%", overflowY: "auto" }}><Detail task={selTask} today={today} plans={plans} /></div>}
       </div>
       {menu && (
         <Pop anchor={menu.el} onClose={() => setMenu(null)} width={200}>
@@ -225,7 +225,7 @@ function Detail({ task, today, plans, bare }: { task: CalTask; today: string; pl
         </div>
       ))}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <span style={{ fontSize: 11, fontWeight: 650, letterSpacing: ".06em", color: V.mu }}>{t("CHECKLIST · {a} / {b}", { a: done, b: task.subtasks.length })}</span>
+        {task.subtasks.length > 0 && <span style={{ fontSize: 11, fontWeight: 650, letterSpacing: ".06em", color: V.mu }}>{t("CHECKLIST · {a} / {b}", { a: done, b: task.subtasks.length })}</span>}
         {task.subtasks.map((c) => (
           <button key={c.line} onClick={() => void toggleCheck(task, c.line, !c.done, today)} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: c.done ? V.mu : V.tx, textDecoration: c.done ? "line-through" : "none", textAlign: "start" }}>
             <span style={{ width: 15, height: 15, borderRadius: 4, border: `1.5px solid ${c.done ? V.ok : V.bd}`, background: c.done ? V.ok : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: V.af }}>{c.done && <Glyph name="check" size={9} stroke={3} />}</span><span dir="auto">{c.text}</span>

@@ -41,7 +41,7 @@ const SCN = (iso: Iso): Record<string, Scn> => ({
   ai: {
     title: "Deep learning: zero to LLMs", startOff: -39, hoursPerWeek: 8, late: ["Train a CNN on CIFAR-10"],
     fm: { plan: "course", sub: "Online course + labs + capstone · fast.ai, Karpathy, papers", icon: "neural", color: "#B48EF0", unit: "lessons", groupby: "Module", tracks: "[Lectures, Labs, Papers, Project]", schedule: "fixed", pace: "8", deadline: iso(122), deadlinelabel: "Capstone due", chips: "course=Course + project | due={deadline} | clock={pace}", cta: "continue" },
-    groups: [["1 · Foundations", "#7AA2F7", [["Python & NumPy refresher", 0, 2, 0, "done", 6], ["Linear algebra lab", 1, 2, 1, "done", 4]]], ["2 · Neural networks", "#5CC8C2", [["Backprop from scratch", 3, 2, 0, "done", 5], ["micrograd lab", 3, 3, 1, "done", 3], ["Read: Rumelhart 1986", 4, 1, 2, "done", 1]]], ["3 · CNNs", "#6BCB8B", [["Convolutions & pooling", 5, 2, 0, "active", 5], ["Train a CNN on CIFAR-10", 4.4, 1.5, 1, "late", 1], ["Read: ResNet", 7, 1, 2, "next", 1]]], ["4 · Transformers", "#E3B341", [["Attention is all you need", 9, 3, 0, "todo", 6], ["nanoGPT lab", 10, 3, 1, "todo", 2], ["Read: GPT-2 paper", 11, 1, 2, "todo", 1]]], ["5 · LLM fine-tuning", "#E8893A", [["LoRA, RLHF, evals", 13, 3, 0, "todo", 6], ["Fine-tune a 1B model", 14, 4, 1, "todo", 1]]], ["6 · Capstone", "#F25C9A", [["Proposal", 17, 1, 3, "todo", 1], ["Build + experiments", 18, 5, 3, "todo", 1], ["Write-up + demo", 23, 2, 3, "todo", 1]]]],
+    groups: [["1 · Foundations", "#7AA2F7", [["Python & NumPy refresher", 0, 2, 0, "done", 6], ["Linear algebra lab", 1, 2, 1, "done", 4]]], ["2 · Neural networks", "#5CC8C2", [["Backprop from scratch", 3, 2, 0, "done", 5], ["micrograd lab", 3, 3, 1, "done", 3], ["Read: Rumelhart 1986", 4, 1, 2, "done", 1]]], ["3 · CNNs", "#6BCB8B", [["Convolutions & pooling", 5, 2, 0, "active", 5], ["Train a CNN on CIFAR-10", 5, 1.5, 1, "late", 1], ["Read: ResNet", 7, 1, 2, "next", 1]]], ["4 · Transformers", "#E3B341", [["Attention is all you need", 9, 3, 0, "todo", 6], ["nanoGPT lab", 10, 3, 1, "todo", 2], ["Read: GPT-2 paper", 11, 1, 2, "todo", 1]]], ["5 · LLM fine-tuning", "#E8893A", [["LoRA, RLHF, evals", 13, 3, 0, "todo", 6], ["Fine-tune a 1B model", 14, 4, 1, "todo", 1]]], ["6 · Capstone", "#F25C9A", [["Proposal", 17, 1, 3, "todo", 1], ["Build + experiments", 18, 5, 3, "todo", 1], ["Write-up + demo", 23, 2, 3, "todo", 1]]]],
     ms: [["Midterm quiz", 8], ["Proposal due", 18], ["Capstone due", 25]], needs: { "Train a CNN on CIFAR-10": "Convolutions & pooling", "Build + experiments": "Proposal", "Fine-tune a 1B model": "nanoGPT lab" },
   },
   project: {
@@ -75,8 +75,8 @@ function planBody(s: Scn, iso: Iso): string {
     for (const [name, sw, len, tr, st, count, owner] of items) {
       const late = s.late?.includes(name);
       const end = late ? iso(-4) : day(sw + len - 1 / 7);
-      const start = late ? iso(-4 - Math.round(len * 7) + 1) : day(sw);
-      const hours = Math.max(1, Math.round(len * (s.hoursPerWeek ?? 6) * 10) / 10);
+      const start = day(sw);
+      const hours = s.fm.schedule === "deadline" && tr === 2 ? len : Math.max(1, Math.round(len * (s.hoursPerWeek ?? 6) * 10) / 10);
       const bits = [`- [${MARK[st]}] ${name}`];
       if (count > 1) bits.push(`×${count}`);
       if (owner) bits.push(`@${owner}`);

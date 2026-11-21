@@ -89,19 +89,36 @@ api.onError((e, c) => {
   return c.json({ error: "Internal error" }, 500);
 });
 
-const failures = new Map<string, { n: number; until: number }>(); // per-isolate brute-force brake
+// Brute-force brake for the passcode: failures live in D1 (`auth_attempts`, key `login:<ip>`), so isolates and restarts
+// share them. 5 wrong passcodes lock that address for 1 min, doubling per further lock (max ~4 h). If the table is
+// missing (older D1) it falls back to a per-isolate map.
+const failures = new Map<string, { n: number; until: number }>();
 api.post("/login", async (c) => {
   const ip = c.req.header("cf-connecting-ip") ?? "?";
-  const f = failures.get(ip);
-  if (f && f.until > Date.now()) return c.json({ error: "Too many attempts, wait a minute." }, 429);
+  const key = `login:${ip}`;
+  const now = Date.now();
+  let row: { fails: number; strikes: number; locked_until: number } | null = null;
+  let db = true;
+  try { row = await c.env.DB.prepare("SELECT fails, strikes, locked_until FROM auth_attempts WHERE key = ?1").bind(key).first(); } catch { db = false; }
+  const mem = failures.get(ip);
+  const lockedUntil = db ? (row?.locked_until ?? 0) : (mem?.until ?? 0);
+  if (lockedUntil > now) return c.json({ error: "Too many attempts, wait a minute.", retryAfterSec: Math.ceil((lockedUntil - now) / 1000) }, 429);
   const { passcode } = await c.req.json<{ passcode?: string }>().catch(() => ({ passcode: "" }));
   if (!c.env.APP_PASSCODE) return c.json({ error: "Server passcode not configured." }, 500);
   if (!passcode || !safeEqual(await hmac("cmp", passcode), await hmac("cmp", c.env.APP_PASSCODE))) {
-    const n = (f?.n ?? 0) + 1;
-    failures.set(ip, { n, until: n >= 5 ? Date.now() + 60_000 * 2 ** Math.min(n - 5, 8) : 0 });
+    if (db) {
+      let fails = (row?.fails ?? 0) + 1, strikes = row?.strikes ?? 0, until = 0;
+      if (fails >= 5) { strikes += 1; until = now + Math.min(14_400, 60 * 2 ** (strikes - 1)) * 1000; fails = 0; }
+      await c.env.DB.prepare(`INSERT INTO auth_attempts (key, fails, strikes, locked_until, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)
+        ON CONFLICT(key) DO UPDATE SET fails = excluded.fails, strikes = excluded.strikes, locked_until = excluded.locked_until, updated_at = excluded.updated_at`).bind(key, fails, strikes, until, now).run().catch(() => {});
+    } else {
+      const n = (mem?.n ?? 0) + 1;
+      failures.set(ip, { n, until: n >= 5 ? now + 60_000 * 2 ** Math.min(n - 5, 8) : 0 });
+    }
     return c.json({ error: "Wrong passcode." }, 401);
   }
   failures.delete(ip);
+  if (db && row) await c.env.DB.prepare("DELETE FROM auth_attempts WHERE key = ?1").bind(key).run().catch(() => {});
   return c.json({ token: await ownerToken(c.env), account: c.env.ACCOUNT ?? "main" });
 });
 
@@ -456,6 +473,16 @@ api.put("/att/:id", auth, async (c) => {
   return c.json({ ok: true, store: "d1", part, parts });
 });
 
+/** GET /att/:id/status?parts=n&size=total: which parts are already stored, so an interrupted upload resumes there (Lumen 11). */
+api.get("/att/:id/status", auth, async (c) => {
+  const id = c.req.param("id")!;
+  if (!/^[\w-]{8,64}$/.test(id)) return c.json({ error: "Bad id" }, 400);
+  const meta = await c.env.DB.prepare("SELECT size, parts FROM file_meta WHERE id = ?").bind(id).first<{ size: number; parts: number }>();
+  if (!meta || meta.parts !== Number(c.req.query("parts")) || meta.size !== Number(c.req.query("size"))) return c.json({ have: [] });
+  const { results } = await c.env.DB.prepare("SELECT part FROM file_parts WHERE id = ? ORDER BY part").bind(id).all<{ part: number }>();
+  return c.json({ have: results.map((r) => r.part), parts: meta.parts });
+});
+
 const toBytes = (d: ArrayBuffer | number[]) => (d instanceof ArrayBuffer ? new Uint8Array(d) : new Uint8Array(d));
 
 /** MIME types safe to render inline from the app origin (no script can run in them). */
@@ -702,6 +729,16 @@ api.get("/unfurl", auth, async (c) => { // signed-in devices only: otherwise an 
   const res = new Response(JSON.stringify(meta), { headers: { "content-type": "application/json", "cache-control": "public, max-age=86400", "access-control-allow-origin": "*" } });
   c.executionCtx.waitUntil(cache.put(key, res.clone()));
   return res;
+});
+
+// Lumen 10: visitors of shared / published pages see link previews. Read-only and cache-only: this never fetches a
+// URL (so it is no fetch proxy); it returns what a signed-in /api/unfurl call already cached at the edge.
+api.get("/public/unfurl", async (c) => {
+  let u: URL;
+  try { u = new URL(c.req.query("url") ?? ""); } catch { return c.json({ error: "bad url" }, 400); }
+  if (!/^https?:$/.test(u.protocol)) return c.json({ error: "bad url" }, 400);
+  const hit = await caches.default.match(new Request(`https://unfurl.lumen/${encodeURIComponent(u.href)}`));
+  return hit ?? c.json({}, 404);
 });
 
 // ------------------------------------------------------------------ unlisted share links

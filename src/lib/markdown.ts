@@ -1,4 +1,4 @@
-import { edgeCurve } from "./reading-prefs"; // Settings › Diagrams › Edge style (round 6)
+import { edgeCurve, getExtraPrefs, withLook } from "./reading-prefs"; // Settings › Diagrams › Edge style + hand-drawn look
 import { pageTable, TABLE_PAGE_ABOVE } from "./table-pager";
 import MarkdownIt, { type StateInline, type Token } from "markdown-it";
 import footnote from "markdown-it-footnote";
@@ -8,7 +8,7 @@ import sup from "markdown-it-sup";
 import taskLists from "markdown-it-task-lists";
 import katexPlugin from "@vscode/markdown-it-katex";
 import hljs from "highlight.js/lib/common";
-import { attMime, resolveAtt } from "./attachments";
+import { attMime, resolveAtt, watchUpload } from "./attachments";
 import { blockSource, pendingBlock, setPendingBlock } from "./blocks";
 import { audioFileHtml, hydrateEmbeds, linkCardHtml, pdfHtml, videoFileHtml, videoThumbHtml, type EmbedCtx } from "../components/ws-embeds";
 import { timestampChip } from "../components/video-players";
@@ -19,6 +19,7 @@ import { hasGlyph } from "./glyphs";
 import { clozeEnabled } from "./cloze";
 import { clozePlugin, occlusionHtml } from "./cloze-md";
 import { t as tr } from "./i18n";
+import { getSettings } from "./settings";
 
 type MD = ReturnType<typeof MarkdownIt>;
 
@@ -286,7 +287,12 @@ function build() {
     }
   });
   // Footnote refs as a bare superscript number (design 5A), back-links as ↩
-  md.renderer.rules.footnote_caption = (tokens, idx) => { const m = tokens[idx].meta as { id: number; subId: number }; return String(m.id + 1) + (m.subId > 0 ? `:${m.subId}` : ""); };
+  md.renderer.rules.footnote_caption = (tokens, idx) => {
+    const m = tokens[idx].meta as { id: number; subId: number };
+    const sub = m.subId > 0 ? `:${m.subId}` : "";
+    if (getSettings().footnoteStyle === "symbol") { const S = ["*", "†", "‡", "§", "‖", "¶"]; return S[m.id % S.length].repeat(Math.floor(m.id / S.length) + 1) + sub; } // Settings › Notes › footnote style
+    return String(m.id + 1) + sub;
+  };
   md.renderer.rules.footnote_anchor = (tokens, idx, opts, env, slf) => ` <a href="#fnref${slf.rules.footnote_anchor_name!(tokens, idx, opts, env, slf)}${(tokens[idx].meta as { subId: number }).subId > 0 ? `:${(tokens[idx].meta as { subId: number }).subId}` : ""}" class="footnote-backref">↩</a>`;
   md.use((katexPlugin as { default?: unknown }).default ?? katexPlugin, { throwOnError: false, enableMathBlockInHtml: true });
   md.use(clozePlugin); // {{c1::cloze}}, ==cloze== in flashcard notes (env.cloze), review gaps (lib/cloze-md.ts)
@@ -556,8 +562,9 @@ async function renderMermaid(el: HTMLElement) {
   const css = getComputedStyle(document.documentElement);
   const tok = (k: string) => css.getPropertyValue(k).trim();
   const theme = [tok("--surface-2"), tok("--border"), tok("--text"), tok("--muted"), tok("--surface"), edgeCurve()].join("|");
-  const source = decodeURIComponent(el.dataset.src ?? "");
-  const key = `${theme}|${document.documentElement.dataset.dark ?? ""}|${source}`;
+  const hand = getExtraPrefs().diagramHand; // Settings › Diagrams › Hand-drawn look applies to every diagram, in notes too
+  const source = withLook(decodeURIComponent(el.dataset.src ?? ""), hand);
+  const key = `${theme}|${document.documentElement.dataset.dark ?? ""}|${hand ? "h" : ""}|${source}`;
   const show = (svg: string) => {
     el.innerHTML = svg;
     const card = el.closest<HTMLElement>(".mermaid-card");
@@ -1031,7 +1038,21 @@ export function hydrate(root: HTMLElement, ctx: HydrateCtx = {}) {
     } else img.src = url;
   });
   hydrateEmbeds(root, ctx);
-  root.querySelectorAll<HTMLAnchorElement>("a[data-att]").forEach(async (a) => { a.href = await resolveAtt(a.dataset.att!); a.target = "_blank"; });
+  root.querySelectorAll<HTMLAnchorElement>("a[data-att]").forEach(async (a) => {
+    a.href = await resolveAtt(a.dataset.att!); a.target = "_blank";
+    // Lumen 11: upload state on the file card (queued / "3 of 7 parts" / synced)
+    if (a.dataset.upl) return;
+    a.dataset.upl = "1";
+    const chip = document.createElement("span");
+    chip.className = "att-state";
+    a.append(chip);
+    const stop = watchUpload(a.dataset.att!, (st) => {
+      if (!a.isConnected) { stop(); return; }
+      chip.textContent = st.kind === "queued" ? tr("Queued") : st.kind === "uploading" ? tr("{done} of {parts} parts", { done: st.done, parts: st.parts }) : "";
+      chip.dataset.s = st.kind;
+      chip.hidden = st.kind === "synced";
+    });
+  });
   if (ctx.query) root.querySelectorAll<HTMLElement>(".query-block").forEach((el) => ctx.query!(el, decodeURIComponent(el.dataset.q ?? "")));
   if (ctx.canvas) root.querySelectorAll<HTMLElement>(".canvas-embed").forEach((el) => ctx.canvas!(el, decodeURIComponent(el.dataset.canvas ?? "")));
 }

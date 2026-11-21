@@ -105,7 +105,10 @@ export function unfurl(url: string): Promise<Unfurl | null> {
       try {
         if (await simApi("/unfurl")) return null; // Dev simulator: offline / signed out
         const tok = getToken();
-        if (!tok) return null; // /api/unfurl needs a signed-in device (it fetches arbitrary URLs)
+        if (!tok) { // visitors: only what the owner's device already cached (Lumen 10); /api/unfurl itself needs a sign-in
+          const pr = await fetch(`${API_BASE}/api/public/unfurl?url=${encodeURIComponent(url)}`);
+          return pr.ok ? ((await pr.json()) as Unfurl) : null;
+        }
         const r = await fetch(`${API_BASE}/api/unfurl?url=${encodeURIComponent(url)}`, { headers: { Authorization: `Bearer ${tok}` } });
         if (!r.ok) return null;
         const d = (await r.json()) as Unfurl;

@@ -21,9 +21,22 @@ export function CodePanel({ tab, onTab, onClose, children, phoneRight }: { tab: 
       {icon}{label}
     </button>
   );
+  // phone: drag the grip to resize the sheet (25 to 90 % of the board area)
+  const [pct, setPct] = useState(60);
+  const box = useRef<HTMLDivElement>(null);
+  const phoneNow = typeof matchMedia !== "undefined" && matchMedia("(max-width: 767px)").matches;
+  const drag = (e: React.PointerEvent) => {
+    const el = box.current?.parentElement;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const move = (ev: PointerEvent) => setPct(Math.round(Math.max(25, Math.min(90, ((r.bottom - ev.clientY) / r.height) * 100))));
+    const up = () => { removeEventListener("pointermove", move); removeEventListener("pointerup", up); };
+    addEventListener("pointermove", move); addEventListener("pointerup", up);
+    e.preventDefault();
+  };
   return (
-    <div className="relative z-10 -mt-3.5 flex h-[60%] min-h-0 shrink-0 flex-col rounded-t-[14px] border-t border-line bg-surface text-[13px] md:mt-0 md:h-auto md:w-[480px] md:rounded-none md:border-s md:border-t-0">
-      <div className="flex justify-center pb-1 pt-2.5 md:hidden"><button aria-label={t("Close panel")} onClick={onClose} className="h-1 w-9 rounded-full bg-line" /></div>
+    <div ref={box} style={phoneNow ? { height: `${pct}%` } : undefined} className="relative z-10 -mt-3.5 flex h-[60%] min-h-0 shrink-0 flex-col rounded-t-[14px] border-t border-line bg-surface text-[13px] md:mt-0 md:h-auto md:w-[480px] md:rounded-none md:border-s md:border-t-0">
+      <div className="flex touch-none justify-center pb-1 pt-2.5 md:hidden" onPointerDown={drag}><button aria-label={t("Close panel")} onClick={onClose} onPointerDown={(e) => e.stopPropagation()} className="h-1 w-9 rounded-full bg-line" /></div>
       <div className="flex h-12 shrink-0 items-center gap-1 border-line px-4 md:h-11 md:border-b md:px-2">
         <div className="flex rounded-[10px] border border-line bg-bg p-[3px] md:gap-1 md:border-0 md:bg-transparent md:p-0">
           {tabBtn("json", <Code2 size={14} />, "JSON")}

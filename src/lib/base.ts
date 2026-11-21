@@ -289,20 +289,20 @@ const ALIAS: Record<string, string> = {
   "file.name": "title", "file.basename": "title", name: "title", title: "title",
   "file.ctime": "created", ctime: "created", created: "created", "file.mtime": "updated", mtime: "updated", updated: "updated", modified: "updated",
   "file.tags": "tags", tags: "tags", "file.folder": "folder", folder: "folder", "file.path": "folder",
-  type: "type", status: "status", space: "space", course: "course",
+  type: "type", status: "status", space: "space", course: "course", visibility: "visibility", sharing: "visibility",
 };
 /** Canonical key: built-in field name, or the front-matter key (note.x → x). */
 export const canon = (p: string) => { const k = p.trim().replace(/^(note|formula)\./, ""); return ALIAS[k] ?? ALIAS[k.toLowerCase()] ?? k; };
-export const BUILTIN = ["title", "type", "status", "tags", "space", "folder", "created", "updated"] as const;
+export const BUILTIN = ["title", "type", "status", "tags", "space", "folder", "created", "updated", "visibility"] as const;
 /** Name written to YAML for a built-in (Obsidian names where they exist). */
 export const yamlName = (k: string) => ({ title: "file.name", created: "file.ctime", updated: "file.mtime", tags: "file.tags", folder: "file.folder" } as Record<string, string>)[k] ?? k;
 export function label(p: string) {
   const k = canon(p);
-  const L: Record<string, string> = { title: tk("Title"), type: tk("Type"), status: tk("Status"), tags: tk("Tags"), space: tk("Space"), folder: tk("Folder"), created: tk("Created"), updated: tk("Updated"), cards: tk("Cards") };
+  const L: Record<string, string> = { title: tk("Title"), type: tk("Type"), status: tk("Status"), tags: tk("Tags"), space: tk("Space"), folder: tk("Folder"), created: tk("Created"), updated: tk("Updated"), visibility: tk("Visibility"), cards: tk("Cards") };
   return L[k] ? t(L[k]) : k.charAt(0).toUpperCase() + k.slice(1);
 }
 /** Which cells can be edited inline (and dragged to on a board / calendar). */
-export const editable = (p: string) => !["title", "folder", "created", "updated", "cards"].includes(canon(p));
+export const editable = (p: string) => !["title", "folder", "created", "updated", "cards", "visibility"].includes(canon(p));
 export const isDateProp = (p: string, sample?: Val) => ["created", "updated"].includes(canon(p)) || /date|due|deadline|day|when|start|end|review/i.test(canon(p)) || (typeof sample === "string" && /^\d{4}-\d{2}-\d{2}/.test(sample));
 
 const fmOf = (n: Note): Record<string, string> => (["canvas", "whiteboard", "board", "diagram"].includes(n.type) ? {} : splitFrontMatter(n.body).data);
@@ -322,6 +322,7 @@ export function getValue(n: Note, p: string, ctx: Ctx, props: Record<string, str
     case "folder": return ctx.folderPath(n.folderId) || null;
     case "created": return n.createdAt;
     case "updated": return n.updatedAt;
+    case "visibility": return n.published ? "Published" : n.shareId ? "Shared" : "Private"; // Lumen 06b badges
   }
   if (k === "cards" && props.cards === undefined && ctx.cardCount) return ctx.cardCount(n.id);
   const raw = props[k] ?? (k === "course" ? ctx.spaceName(n.spaceId) : undefined);

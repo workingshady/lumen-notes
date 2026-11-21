@@ -99,7 +99,7 @@ const VIEWS: { v: RoadmapViewKind; l: string; g: GlyphName }[] = [{ v: "outline"
 export function ViewSwitch({ view, onView, phone }: { view: RoadmapViewKind; onView: (v: RoadmapViewKind) => void; phone?: boolean }) {
   if (phone) return (
     <div role="tablist" className="grid grid-cols-3 rounded-[10px] border border-line bg-surface p-[3px] text-[14px]">
-      {VIEWS.map(({ v: k, l }) => <button key={k} role="tab" aria-selected={view === k} onClick={() => onView(k)} className={cx("h-9 rounded-[7px]", view === k ? "bg-surface-2 font-semibold" : "text-muted")}>{t(l)}</button>)}
+      {VIEWS.map(({ v: k, l }) => <button key={k} role="tab" aria-selected={view === k} onClick={() => onView(k)} className={cx("h-9 rounded-[7px]", view === k ? "bg-surface-2 font-semibold" : "text-muted")}>{k === "tree" ? t("Skills") : t(l)}</button>)}
     </div>
   );
   return (

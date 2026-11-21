@@ -39,7 +39,7 @@ body {
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 ::selection { background: color-mix(in oklab, var(--accent) 35%, transparent); }
 /* focus ring (design: Components · Buttons "Focus ring"): 2 px gap in the page color, then 2 px accent */
-:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); border-radius: 8px; }
+:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
 input:focus-visible, textarea:focus-visible, .cm-content:focus-visible, [contenteditable]:focus-visible { box-shadow: none; }
 button { cursor: pointer; }
 
@@ -460,3 +460,15 @@ mark.hl-live { color: inherit; border-radius: 3px; padding: 0 .08em; box-shadow:
 /* R8-56 Ask: step spinner */
 @keyframes ask-spin { to { transform: rotate(360deg); } }
 .ask-spin { animation: ask-spin .8s linear infinite; }
+
+/* Lumen 02: wiki-link hover preview card */
+.wiki-card { position: fixed; z-index: 70; width: 280px; max-width: calc(100vw - 16px); padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 12px 32px rgba(0,0,0,.22); font-size: 13px; pointer-events: none; display: flex; flex-direction: column; gap: 6px; }
+.wiki-card .wc-title { font-weight: 600; }
+.wiki-card .wc-body { color: var(--muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.wiki-card .wc-meta { font-size: 11.5px; color: var(--muted); }
+@media (pointer: coarse) { .wiki-card { display: none; } }
+
+/* Lumen 11: upload state chip on attachment file cards */
+.prose a[data-att] .att-state { margin-inline-start: 8px; padding: 1px 7px; border-radius: 999px; font-size: 11px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+.prose a[data-att] .att-state[data-s="uploading"] { color: var(--info); }
+.group\/toast:hover [data-toastbar], .group\/toast:focus-within [data-toastbar] { animation-play-state: paused !important; }

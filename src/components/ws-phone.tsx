@@ -1,3 +1,4 @@
+import { askConfirm } from "./dialogs-r9";
 import { Archive, ArrowDownWideNarrow, Check, ChevronDown, ChevronRight, FolderPlus, Hash, Inbox, Pin, Search, Trash2, X, Globe, Plus } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import type { Folder, Note, Space } from "../../shared/types";
@@ -261,7 +262,7 @@ export function FolderSheet({ open, onClose }: { open: boolean; onClose: () => v
               {Object.keys(PRESETS).map((k) => <button key={k} className="size-8 rounded-full" style={{ background: PRESETS[k], boxShadow: menuF.color === k ? "0 0 0 2px var(--surface), 0 0 0 4px var(--accent)" : undefined }} onClick={() => { void patch("folder", menuF.id, { color: k }); setMenuF({ ...menuF, color: k }); }} />)}
             </div>
             <button className="flex h-12 items-center gap-3 rounded-[10px] px-1 text-[15px]" onClick={async () => { await createFolder(menuF.spaceId, menuF.id); setOpenF((s) => new Set(s).add(menuF.id)); setMenuF(null); }}><FolderPlus size={17} />{t("New subfolder")}</button>
-            <button className="flex h-12 items-center gap-3 rounded-[10px] px-1 text-[15px] text-bad" onClick={async () => { const f = menuF; setMenuF(null); await deleteFolder(f); toast(t("Deleted “{name}”. Its notes moved up one level.", { name: f.name })); }}><Trash2 size={17} />{t("Delete folder")}</button>
+            <button className="flex h-12 items-center gap-3 rounded-[10px] px-1 text-[15px] text-bad" onClick={async () => { const f = menuF; setMenuF(null); if (!(await askConfirm({ title: t("Delete folder “{name}”?", { name: f.name }), body: t("Its notes and subfolders move up one level. Nothing is deleted."), ok: t("Delete folder"), danger: true }))) return; await deleteFolder(f); toast(t("Deleted “{name}”. Its notes moved up one level.", { name: f.name })); }}><Trash2 size={17} />{t("Delete folder")}</button>
           </div>
         )}
       </Sheet>

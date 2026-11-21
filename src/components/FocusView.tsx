@@ -323,10 +323,24 @@ export function FocusView({ note, wide, onExit }: { note: Note; wide: boolean; o
   const tb = "flex h-8 min-w-8 items-center justify-center gap-1.5 rounded-[8px] px-2 text-[12.5px] text-muted hover:bg-surface-2 hover:text-ink";
   const on = "!bg-surface-2 !text-ink";
   // the outline lists headings below the note title (the H1)
+  // Lumen 02 7B: swipe down from the top of the page leaves Focus on a phone
+  const swipe = useRef<{ x: number; y: number; top: boolean } | null>(null);
+  const swipeStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1 || asking) { swipe.current = null; return; }
+    let top = true;
+    for (let el = e.target as HTMLElement | null; el && el !== e.currentTarget; el = el.parentElement) if (el.scrollTop > 0) { top = false; break; }
+    swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, top };
+  };
+  const swipeEnd = (e: React.TouchEvent) => {
+    const st = swipe.current; swipe.current = null;
+    if (!st || !st.top || wide) return;
+    const c = e.changedTouches[0];
+    if (c.clientY - st.y > 120 && Math.abs(c.clientX - st.x) < 60 && !getSelection()?.toString()) leave();
+  };
   const outlineHeads = heads.filter((h, i) => !(i === 0 && h.level === 1));
 
   return (
-    <div className={cx("fixed inset-0 z-[45] flex flex-col bg-bg fade-in", mode === "read" ? "focus-r4" : "focus-write", mode === "write" && !s.focusDim && "focus-nodim")} style={hlVars(s.hlPalette) as React.CSSProperties} onMouseMove={poke}>
+    <div className={cx("fixed inset-0 z-[45] flex flex-col bg-bg fade-in", mode === "read" ? "focus-r4" : "focus-write", mode === "write" && !s.focusDim && "focus-nodim")} style={hlVars(s.hlPalette) as React.CSSProperties} onMouseMove={poke} onTouchStart={swipeStart} onTouchEnd={swipeEnd}>
       <style>{FOCUS_CSS}</style>
       {/* toolbar */}
       <div className={cx("safe-t absolute inset-x-0 top-0 z-20 flex justify-center px-3 pt-3 transition-opacity duration-300", bar || panel || touch ? "opacity-100" : "pointer-events-none opacity-0")}>

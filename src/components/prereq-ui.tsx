@@ -15,7 +15,7 @@ import { cx } from "./ui";
 import { fmtNum, t, tk } from "../lib/i18n";
 
 // ------------------------------------------------------------------ display state
-export type PrereqLayout = "stage" | "top" | "free";
+export type PrereqLayout = "stage" | "top" | "radial" | "free";
 export interface PrereqDisplay {
   layout: PrereqLayout; edges: EdgeShape;
   needs: boolean; after: boolean; related: boolean; added: boolean; implied: boolean;
@@ -129,7 +129,7 @@ export function LinkMenu({ from, to, kind, note, onKind, onReverse, onRemove, on
 // ------------------------------------------------------------------ Display panel
 export interface LinkCounts { needs: number; after: number; related: number; added?: number; implied: number }
 type Opts = { layouts?: PrereqLayout[]; groupLabel?: string; bundleLabel?: string; dimLabel?: string; tidy?: () => void; busy?: boolean; pinned?: boolean };
-const LAYOUT_LABEL: Record<PrereqLayout, string> = { stage: tk("By stage"), top: tk("Top-down"), free: tk("Free") };
+const LAYOUT_LABEL: Record<PrereqLayout, string> = { stage: tk("By stage"), top: tk("Top-down"), radial: tk("Radial"), free: tk("Free") };
 const LBL = "text-[11px] font-medium text-muted";
 
 /** 14b-C right panel (300px). */

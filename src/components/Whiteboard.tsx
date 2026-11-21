@@ -19,6 +19,8 @@ import { t, tk } from "../lib/i18n";
 import { back, openNote, setUI, toast, useUI, useVaultSelector } from "../lib/store";
 import { canGoBack } from "../lib/nav-history";
 import { openExportJob, type BuildRequest } from "../lib/export-job";
+import "../lib/wb-fonts";
+import { runBoardScript } from "../lib/script-sandbox";
 import { parseScene, placeBoundArrows, sk, type Scene, type Skeleton } from "../lib/whiteboard";
 import { Button, cx } from "./ui";
 import { useRtl } from "./ws-dir";
@@ -739,7 +741,7 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     lastSaved.current = s;
     void updateNote(note.id, { body: s }, { keepTime });
   };
-  const add = async (skel: Skeleton[], auto = false) => {
+  const add = async (skel: Skeleton[], auto = false, capture?: "EVENTUALLY") => {
     const a = api.current;
     if (!a || !skel.length) return;
     // Sticky ink is pure black so it stays dark on paper in both themes (see INK_TABLE).
@@ -747,7 +749,8 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     const conv = sanitizeElements<El>(convertToExcalidrawElements(placeBoundArrows(fixed as Skeleton[], a.getSceneElements() as never) as never, { regenerateIds: false }) as unknown[]);
     const stickyIds = new Set(conv.filter(isSticky).map((e) => e.id));
     const els = conv.map((e) => (e.type === "text" && e.containerId && stickyIds.has(e.containerId) ? { ...e, strokeColor: "#000000" } : e));
-    a.updateScene({ elements: [...a.getSceneElementsIncludingDeleted(), ...els] });
+    a.updateScene({ elements: [...a.getSceneElementsIncludingDeleted(), ...els], ...(capture ? { captureUpdate: capture } : {}) } as never);
+    if (capture) return;
     setTimeout(() => { a.scrollToContent(els as never, { fitToContent: true, animate: true }); save(auto); }, 50);
   };
 
@@ -1062,22 +1065,22 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
   async function runScript() {
     try { localStorage.setItem("lumen.wbScript", src); } catch { /* ignore */ }
     const out: string[] = [];
-    const log = (...a: unknown[]) => out.push(a.map((x) => (typeof x === "string" ? x : JSON.stringify(x))).join(" "));
-    const board = {
-      get elements() { return api.current?.getSceneElements() ?? []; },
-      add: (s: Skeleton | Skeleton[]) => add(Array.isArray(s) ? s : [s]),
-      clear: () => api.current?.updateScene({ elements: [] }),
-      fromMermaid: (c: string) => fromMermaid(c),
-    };
     const t0 = performance.now();
     try {
-      await new Function("board", "sk", "log", `"use strict"; return (async () => { ${src}\n })();`)(board, sk, log);
-      setLogs([...out, `${LOG_OK} ${t("done · {ms} ms · restore from History", { ms: Math.round(performance.now() - t0) })}`]);
+      // Runs in a sandboxed Worker; every change is applied as EVENTUALLY and committed once, so one Ctrl+Z undoes the whole run.
+      await runBoardScript(src, (api.current?.getSceneElements() ?? []) as unknown[], {
+        add: (s) => add(Array.isArray(s) ? s as Skeleton[] : [s as Skeleton], false, "EVENTUALLY"),
+        clear: () => { api.current?.updateScene({ elements: [], captureUpdate: "EVENTUALLY" } as never); },
+        fromMermaid: (c) => fromMermaid(c, { capture: "EVENTUALLY" }),
+      }, (l) => out.push(l));
+      const a = api.current;
+      if (a) { a.updateScene({ elements: a.getSceneElementsIncludingDeleted(), captureUpdate: "IMMEDIATELY" } as never); const mine = (a.getSceneElements() as El[]); if (mine.length) a.scrollToContent(mine as never, { fitToContent: true, animate: true }); }
+      setLogs([...out, `${LOG_OK} ${t("done · {ms} ms · Ctrl+Z undoes the run", { ms: Math.round(performance.now() - t0) })}`]);
       setTimeout(save, 200);
     } catch (e) { setLogs([...out, `${LOG_ERR} ${(e as Error).message}`]); }
   }
 
-  async function fromMermaid(c: string, opts: { sketchy?: boolean; frame?: boolean } = {}) {
+  async function fromMermaid(c: string, opts: { sketchy?: boolean; frame?: boolean; capture?: "EVENTUALLY" } = {}) {
     const { parseMermaidToExcalidraw } = await import("@excalidraw/mermaid-to-excalidraw");
     const { elements, files } = await parseMermaidToExcalidraw(c);
     if (files) api.current?.addFiles(Object.values(files));
@@ -1087,11 +1090,11 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
       skel = skel.map((e, i) => ({ ...e, id: (e.id as string | undefined) ?? `mmd-${Date.now().toString(36)}-${i}` }));
       skel.push(sk.frame(skel.map((e) => e.id as string), "Mermaid"));
     }
-    await add(skel);
+    await add(skel, false, opts.capture);
   }
 
   /** Export (W2-A): the shared export dialog with whole / selection / visible / frames, PDF per frame, media placeholders. */
-  function doExport(prefer?: "frames") {
+  async function doExport(prefer?: "frames") {
     const a = api.current;
     if (!a) return;
     const bset = boardStore.get();
@@ -1107,10 +1110,18 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     if (frames.length) scopes.push("frames");
     if (layerStore.meta.list.length > 1) scopes.push("layers");
     const ordered = orderedFrames(a);
+    // small preview tiles for the frame picker (white paper, stored ink colours)
+    const thumbs = new Map<string, string>();
+    for (const f of ordered.slice(0, 12)) {
+      try {
+        const blob = await exportToBlob({ elements: els0.filter((e) => e.id === f.id || e.frameId === f.id) as never, files: a.getFiles() as never, mimeType: "image/png", exportPadding: 8, exportingFrame: f as never, appState: { exportBackground: true, viewBackgroundColor: "#ffffff", exportWithDarkMode: false } as never, getDimensions: (w: number, h: number) => { const k = Math.min(1, 220 / Math.max(w, h, 1)); return { width: Math.max(1, Math.round(w * k)), height: Math.max(1, Math.round(h * k)), scale: k }; } } as never);
+        thumbs.set(f.id, URL.createObjectURL(blob));
+      } catch { /* no thumbnail: hatch tile */ }
+    }
     openExportJob({
       kind: kind === "board" ? "board" : "whiteboard", title: note.title, name: note.title, sourceExt: ".excalidraw", themable: true, hasPattern: bset.pattern !== "none" && bset.bg !== "transparent", boardBackground: bg,
       defaults: prefer === "frames" && frames.length ? { scope: "frames", ids: ordered.map((f) => f.id) } : undefined,
-      scopes, pickers: { frames: ordered.map((f, i) => ({ id: f.id, name: String(f.name ?? t("Frame {n}", { n: i + 1 })) })), layers: layerStore.meta.list.map((l) => ({ id: l.id, name: l.name })) },
+      scopes, pickers: { frames: ordered.map((f, i) => ({ id: f.id, name: String(f.name ?? t("Frame {n}", { n: i + 1 })), thumb: thumbs.get(f.id) })), layers: layerStore.meta.list.map((l) => ({ id: l.id, name: l.name })) },
       content: ["frameNames", ...(hiddenEls.length ? ["hiddenLayers" as const] : []), "media", "embedScene"], media: { videos: media.length - gifs, gifs },
       build: async ({ scope, ids, opts, format, scale, maxPx }: BuildRequest) => {
         const st = a.getAppState() as Record<string, unknown> & { zoom: { value: number }; scrollX: number; scrollY: number; width: number; height: number };
@@ -1303,15 +1314,19 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
     if (tb === "json") { setCode(JSON.stringify(JSON.parse(serialize()), null, 2)); setCodeErr(null); }
     setPanel(tb);
   };
-  const applyCode = () => {
-    const { scene, error } = parseScene(code);
+  const applyCode = (text = code, silent = false) => {
+    const { scene, error } = parseScene(text);
     if (error) return setCodeErr(error);
     const r = restore({ elements: scene.elements as never }, null, null);
     api.current?.updateScene({ elements: r.elements });
     setTimeout(save, 50);
     setCodeErr(null);
-    toast(t("Applied to the board"));
+    if (!silent) toast(t("Applied to the board"));
   };
+  // "Auto-apply when valid": edits in the JSON panel reach the board after a short pause
+  const [autoApply, setAutoApplyS] = useState(() => { try { return localStorage.getItem("lumen.wbAutoApply") === "1"; } catch { return false; } });
+  const setAutoApply = (v: boolean) => { setAutoApplyS(v); try { localStorage.setItem("lumen.wbAutoApply", v ? "1" : "0"); } catch { /* ignore */ } if (v && !codeErr) applyCode(code, true); };
+  const autoT = useRef<ReturnType<typeof setTimeout>>(undefined);
   const jsonSpans = useMemo(() => (panel === "json" ? jsonItemSpans(code) : new Map<string, { from: number; to: number }>()), [panel, code]);
 
   // Stable Excalidraw props: the board must not re-render on every save or parent update (that made the pen stutter).
@@ -1577,11 +1592,14 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
                   <span className="truncate font-mono text-[11.5px] text-muted">.excalidraw · v2</span>
                   <span className="flex-1" />
                   <ValidChip error={codeErr} />
-                  <button onClick={applyCode} disabled={!!codeErr} className="flex h-7 items-center rounded-[8px] border border-line px-2.5 text-[13px] hover:bg-surface-2 disabled:opacity-50 disabled:hover:bg-transparent">{t("Apply")}</button>
+                  <button role="switch" aria-checked={autoApply} title={t("When valid, edits apply to the board by themselves")} onClick={() => setAutoApply(!autoApply)} className="flex h-7 items-center gap-1.5 rounded-[8px] px-1.5 text-[12px] text-muted hover:bg-surface-2">
+                    <span className={`relative h-[16px] w-[28px] rounded-full ${autoApply ? "bg-accent" : "bg-line"}`}><span className="absolute top-[2px] size-3 rounded-full bg-bg transition-all" style={{ insetInlineStart: autoApply ? 14 : 2 }} /></span>{t("Auto-apply")}
+                  </button>
+                  <button onClick={() => applyCode()} disabled={!!codeErr} className="flex h-7 items-center rounded-[8px] border border-line px-2.5 text-[13px] hover:bg-surface-2 disabled:opacity-50 disabled:hover:bg-transparent">{t("Apply")}</button>
                   <button title={t("Download .excalidraw")} aria-label={t("Download .excalidraw")} onClick={() => void downloadExcalidraw()} className="flex size-7 items-center justify-center rounded-[8px] border border-line hover:bg-surface-2"><Glyph name="download" size={14} /></button>
                 </PanelBar>
                 {codeErr && <ErrorBanner error={codeErr} line={errorLine(codeErr, code)} onGoto={() => { const l = errorLine(codeErr, code); if (l) ed.current?.goto(l); }} />}
-                <CodeEditor value={code} handle={ed} onChange={(x) => { setCode(x); setCodeErr(parseScene(x).error); }}
+                <CodeEditor value={code} handle={ed} onChange={(x) => { setCode(x); const er = parseScene(x).error; setCodeErr(er); clearTimeout(autoT.current); if (autoApply && !er) autoT.current = setTimeout(() => applyCode(x, true), 700); }}
                   band={(() => { const id = bar?.ids[0]; return id ? jsonSpans.get(id) ?? null : null; })()}
                   onCursor={(c) => { setCursor({ line: c.line, col: c.col }); if (c.user) { const id = itemAt(jsonSpans, c.pos); if (id && !bar?.ids.includes(id)) api.current?.updateScene({ appState: { selectedElementIds: { [id]: true } } }); } }} />
                 <StatusFooter><span className="truncate">{codeErr ? t("Board keeps last valid state") : t("Edit, then Apply")}</span><span className="flex-1" />{cursor && <span className="shrink-0 tabular-nums">{t("Ln {line}, Col {col}", { line: cursor.line, col: cursor.col })}</span>}</StatusFooter>

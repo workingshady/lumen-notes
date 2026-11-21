@@ -116,19 +116,18 @@ export const CATS: LibCat[] = [
   { id: "containers", name: tk("Containers"), glyph: "frame", tab: "drawing", ids: draw("frame", "section", "sticky") },
   { id: "study", name: tk("Math & study templates"), glyph: "axes", tab: "drawing", ids: draw("axes", "venn", "number-line", "timeline", "cornell", "table") },
   // architecture (generic glyph-style icons, 47C)
-  { id: "generic", name: tk("Generic"), glyph: "shape-square", tab: "architecture", ids: ["service", "text", "c-note", "image", "note-card", "diagram", "owner", "external-system", "browser", "mobile", "junction", "process"].map((x) => "arch:" + x) },
   { id: "compute", name: tk("Compute"), glyph: "service", tab: "architecture", ids: ["service", "server", "function", "container", "pod", "worker", "scheduler", "desktop"].map((x) => "arch:" + x) },
-  { id: "data", name: tk("Data"), glyph: "database", tab: "architecture", ids: ["database", "cache", "bucket", "warehouse", "lake", "vector-db", "redis", "read-replica", "search", "file", "logs", "metrics"].map((x) => "arch:" + x) },
-  { id: "network", name: tk("Network"), glyph: "cdn", tab: "architecture", ids: ["gateway", "load-balancer", "cdn", "dns", "api", "firewall", "internet", "on-prem", "webhook"].map((x) => "arch:" + x) },
-  { id: "messaging", name: tk("Messaging"), glyph: "queue", tab: "architecture", ids: ["queue", "topic", "stream", "email", "sms"].map((x) => "arch:" + x) },
-  { id: "aiml", name: tk("AI / ML"), glyph: "model", tab: "architecture", ids: ["model", "gpu", "llm", "embedding", "notebook", "registry", "feature-store", "etl", "monitoring"].map((x) => "arch:" + x) },
+  { id: "data", name: tk("Data"), glyph: "database", tab: "architecture", ids: ["database", "cache", "bucket", "warehouse", "lake", "vector-db", "redis", "read-replica", "search", "file"].map((x) => "arch:" + x) },
+  { id: "network", name: tk("Network · Messaging"), glyph: "cdn", tab: "architecture", ids: ["gateway", "load-balancer", "cdn", "dns", "api", "firewall", "internet", "on-prem", "webhook", "queue", "topic", "stream", "email", "sms"].map((x) => "arch:" + x) },
+  { id: "aiml", name: tk("AI / ML"), glyph: "model", tab: "architecture", ids: ["model", "gpu", "llm", "embedding", "notebook", "registry", "feature-store", "etl", "monitoring", "logs", "metrics"].map((x) => "arch:" + x) },
   { id: "security", name: tk("Security"), glyph: "lock-shield", tab: "architecture", ids: ["key", "lock-shield", "vault", "identity", "alert", "firewall", "trust-boundary"].map((x) => "arch:" + x) },
   { id: "clients", name: tk("Clients"), glyph: "browser", tab: "architecture", ids: ["browser", "mobile", "desktop", "user", "team"].map((x) => "arch:" + x) },
   { id: "k8s", name: tk("Kubernetes"), glyph: "pod", tab: "architecture", ids: ["pod", "container", "cluster", "namespace", "registry", "ci"].map((x) => "arch:" + x) },
   { id: "saas", name: tk("SaaS"), glyph: "payment", tab: "architecture", ids: ["payment", "email", "sms", "search", "repo", "ci", "webhook", "external-system", "redis"].map((x) => "arch:" + x) },
   { id: "boundaries", name: tk("Boundaries"), glyph: "region", tab: "architecture", ids: ["region", "vpc", "subnet", "zone", "cluster", "namespace", "account", "team", "trust-boundary"].map((x) => "grp:" + x) },
+  { id: "generic", name: tk("Generic"), glyph: "shape-square", tab: "architecture", ids: ["service", "text", "c-note", "image", "note-card", "diagram", "owner", "external-system", "browser", "mobile", "junction", "process"].map((x) => "arch:" + x) },
 ];
-export const CAT_NAMES = new Set(["Basic", "Flowchart", "UML", "Mind map", "Containers", "Math & study templates", "Generic", "Compute", "Data", "Network", "Messaging", "AI / ML", "Security", "Clients", "Kubernetes", "SaaS", "Boundaries"]);
+export const CAT_NAMES = new Set(["Basic", "Flowchart", "UML", "Mind map", "Containers", "Math & study templates", "Generic", "Compute", "Data", "Network · Messaging", "AI / ML", "Security", "Clients", "Kubernetes", "SaaS", "Boundaries"]);
 
 const ARCH_LABEL: Record<string, string> = { "c-note": "Note", "note-card": "Note card", diagram: "Diagram card", owner: "User / actor", "external-system": "External", browser: "Web client", mobile: "Mobile client", "load-balancer": "Load balancer", "vector-db": "Vector DB", "lock-shield": "Shield", "feature-store": "Feature store", "on-prem": "On-prem", "trust-boundary": "Trust", ci: "CI", llm: "LLM", cdn: "CDN", dns: "DNS", sms: "SMS", api: "API", gpu: "GPU" };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).replace(/-/g, " ");
@@ -180,10 +179,19 @@ export const drawingItems = () => DRAW;
 export const itemsOf = (cat: LibCat): LibItem[] => cat.ids.map((i) => BY_ID.get(i)).filter(Boolean) as LibItem[];
 
 /** Search across every tab: shapes, stamps, icons (whole glyph set) and vendor icons. */
+/** Extra search words for products that share a generic glyph ("cach" finds Redis and the read replica). */
+const SEARCH_KEYS: Record<string, string> = { "arch:redis": "cache redis", "arch:read-replica": "cache replica" };
+const TAG_OVERRIDE: Record<string, string> = { "arch:redis": "SaaS" };
+/** Category name an architecture item is tagged with in search results. */
+export function categoryOf(id: string): string | null {
+  if (TAG_OVERRIDE[id]) return TAG_OVERRIDE[id];
+  const c = CATS.find((x) => x.ids.includes(id) && x.id !== "generic") ?? CATS.find((x) => x.ids.includes(id));
+  return c ? c.name : null;
+}
 export function searchLibrary(q: string, limit = 60): LibItem[] {
   const s = q.trim().toLowerCase();
   if (!s) return [];
-  const hit = (i: LibItem) => i.name.toLowerCase().includes(s) || i.glyph.includes(s);
+  const hit = (i: LibItem) => i.name.toLowerCase().includes(s) || i.glyph.includes(s) || (SEARCH_KEYS[i.id] ?? "").includes(s);
   const out: LibItem[] = ALL.filter(hit);
   const seenIds = new Set(out.map((i) => i.id));
   for (const g of ALL_GLYPHS) if (g.includes(s) && out.length < limit && !seenIds.has("icon:" + g) && !ARCH.some((a) => a.glyph === g) && !STAMP_ITEMS.some((a) => a.glyph === g)) out.push(getLibraryItem("icon:" + g)!);

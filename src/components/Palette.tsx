@@ -222,6 +222,23 @@ export function Palette() {
   ];
   const cur = rows[Math.min(sel, rows.length - 1)];
   useEffect(() => { if (cur?.kind === "note") setSelKey(cur.key); }, [cur?.key, cur?.kind]);
+  // "Did you mean": when nothing matches, the closest title words to the typed terms (edit distance ≤ 2)
+  const didYouMean = useMemo(() => {
+    if (rows.length || isCmd || isTag || !terms.length) return "";
+    const words = new Set<string>();
+    for (const n of v.notes) { if (n.deleted) continue; for (const w of n.title.toLowerCase().split(/[^\p{L}\p{N}]+/u)) if (w.length >= 3) words.add(w); if (words.size > 8000) break; }
+    const lev = (x: string, y: string) => { const d = Array.from({ length: x.length + 1 }, (_, i) => [i, ...Array(y.length).fill(0)] as number[]); for (let j = 1; j <= y.length; j++) d[0][j] = j; for (let i = 1; i <= x.length; i++) for (let j = 1; j <= y.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (x[i - 1] === y[j - 1] ? 0 : 1)); return d[x.length][y.length]; };
+    let changed = false;
+    const fixed = terms.map((tm) => {
+      const l = tm.toLowerCase();
+      if (l.length < 4 || words.has(l)) return tm;
+      let best = "", bd = l.length > 5 ? 3 : 2;
+      for (const w of words) { if (Math.abs(w.length - l.length) >= bd) continue; const dd = lev(l, w); if (dd < bd) { bd = dd; best = w; } }
+      if (best) changed = true;
+      return best || tm;
+    });
+    return changed ? fixed.join(" ") : "";
+  }, [rows.length, terms.join(" "), v.notes]); // eslint-disable-line react-hooks/exhaustive-deps
   const choose = (r?: Row, split = false) => {
     if (!r) return;
     setUI({ palette: false });
@@ -329,7 +346,12 @@ export function Palette() {
                   </Fragment>
                 );
               })}
-              {!rows.length && <div className="p-6 text-center text-[13px] text-muted">{t("Nothing found")}</div>}
+              {!rows.length && (
+                <div className="flex flex-col items-center gap-2 p-6 text-center text-[13px] text-muted">
+                  <span>{t("Nothing found")}</span>
+                  {didYouMean && <button type="button" onClick={() => setQ(didYouMean)} className="rounded-md px-2 py-1 text-ink hover:bg-surface-2">{tx("Did you mean {q}?", { q: <b dir="auto" className="text-link">{didYouMean}</b> })}</button>}
+                </div>
+              )}
             </div>
             <div className="hidden items-center gap-1.5 border-t border-line px-4 py-2.5 text-[12px] text-muted md:flex">
               {OPERATORS.map((op) => <button key={op} dir="ltr" onClick={() => addOp(op)} className="rounded-[4px] bg-bg px-1.5 py-px font-mono text-[11.5px] hover:text-ink">{op}</button>)}

@@ -2,6 +2,7 @@
  * filter box (typed `tag:#x status:y` and words become removable chips), Sort / Group menus with the Select / Done
  * toggle, rows (amber inset edge on the open note, max 3 tag chips then +N with a hover list), date groups with
  * Pinned on top, the "filter matches nothing" state, and the multi-select bulk bar (Tag, Move, Delete + Undo). */
+import { openMoveTo } from "./dialogs-r9";
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Globe, Link2, Star } from "lucide-react";
 import type { Note, Space } from "../../shared/types";
@@ -267,7 +268,7 @@ export function BulkBar({ ids, onDone, onCancel }: { ids: string[]; onDone: () =
       <b className="flex-1 font-semibold">{t("{n} selected", { n })}</b>
       {onCancel && <button className={btn} onClick={onCancel}>{t("Done")}</button>}
       <button className={btn} disabled={!n} aria-expanded={pop === "tag"} onClick={() => setPop(pop === "tag" ? null : "tag")}><Glyph name="tag" size={13} />{t("Tag")}</button>
-      <button className={btn} disabled={!n} aria-expanded={pop === "move"} onClick={() => setPop(pop === "move" ? null : "move")}><Glyph name="folder" size={13} />{t("Move")}</button>
+      <button className={btn} disabled={!n} aria-expanded={pop === "move"} onClick={() => openMoveTo(ids)}><Glyph name="folder" size={13} />{t("Move")}</button>
       <button className="flex h-7 items-center rounded-[6px] border border-[color-mix(in_srgb,var(--danger)_40%,transparent)] px-2 text-bad hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] disabled:opacity-50" disabled={!n} aria-label={t("Delete selected notes")} title={t("Delete")} onClick={() => void del()}><Glyph name="trash" size={13} /></button>
       {pop === "tag" && (
         <div className="absolute bottom-[calc(100%+6px)] end-2.5 z-30 flex w-[300px] flex-col gap-2 rounded-[12px] border border-line bg-surface-2 p-3 shadow-[0_16px_40px_rgba(0,0,0,.4)]">
@@ -330,7 +331,7 @@ export function NoteRowMenu({ m, onClose, onOpen, onSelect }: { m: RowMenuState;
     ...(one ? [{ g: "note", l: t("Open"), k: "↵", on: run(() => onOpen(one.id)) }] : []),
     ...(one ? [{ g: "check", l: t("Select"), k: `${modLabel}+${t("click")}`, on: run(() => onSelect(one.id)) }] : []),
     { g: "pin", l: pinned ? t("Unpin") : t("Pin"), on: run(async () => { for (const n of notes) await updateNote(n.id, { pinned: pinned ? 0 : 1 }); toast(pinned ? t("Unpinned") : t("Pinned"), undefined, { icon: "check" }); }) },
-    { g: "folder", l: t("Move to…"), on: () => setSub("move") },
+    { g: "folder", l: t("Move to…"), on: () => { onClose(); openMoveTo(ids); } },
     { g: "tag", l: t("Tag…"), on: () => setSub("tag") },
     ...(one ? [{ g: "copy", l: t("Duplicate"), on: run(async () => { await duplicateNote(one.id); toast(t("Duplicated"), undefined, { icon: "check" }); }) }] : []),
     "sep",

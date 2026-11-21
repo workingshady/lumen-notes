@@ -11,7 +11,7 @@ import { ShareSheet, shareUrl } from "../ShareSheet";
 import { useSaving, useSyncLook } from "../ws-sync";
 import { createNote, restoreNote, restoreVersion, snapshot, trashNote, updateNote } from "../../lib/actions";
 import { fmtDate, fmtTime, t, useLang } from "../../lib/i18n";
-import { back, openNote, setUI, toast, useVault } from "../../lib/store";
+import { back, getUI, openNote, setUI, toast, useVault } from "../../lib/store";
 import { openExportJob } from "../../lib/export-job";
 import { archJob } from "../../lib/export-arch";
 import { uid } from "../../lib/db";
@@ -113,6 +113,12 @@ function Studio({ note }: { note: Note }) {
   const longAt = useRef(0);
   const split: Split = c.lumenArch.split ?? "50";
   const rootEl = useRef<HTMLDivElement>(null);
+  // Design 46C: the studio is full-bleed: the note list steps aside while it is open (back on leave), so the library docks.
+  useEffect(() => {
+    if (!matchMedia("(min-width: 768px)").matches || !getUI().list) return;
+    setUI({ list: false });
+    return () => setUI({ list: true });
+  }, []);
   const [studioW, setStudioW] = useState(1440);
   useEffect(() => { const el = rootEl.current; if (!el) return; const ro = new ResizeObserver(() => setStudioW(el.clientWidth)); ro.observe(el); setStudioW(el.clientWidth); return () => ro.disconnect(); }, []);
   /** The library docks on the left when the studio is wide enough (260 library + ≥380 code + ≥560 canvas); otherwise it opens over the canvas from a button. */
@@ -769,8 +775,9 @@ function Studio({ note }: { note: Note }) {
   const space = v.spaceMap.get(note.spaceId), folder = note.folderId ? v.folderMap.get(note.folderId) : undefined;
   const flowCtx: FlowCtx = { hl, sel: sel?.id ?? null, editing, setHover: setHoverNode, rename, stopEdit: () => setEditing(null), toggleCollapse, inside: insideCount, ro: frozen || present !== null, masked, editEdge: editEdgeS, setEditEdge: (x) => { setEditEdgeS(x); if (x) setLblPop(null); }, saveLabel, patchEdge, labelClick, selectEdge: (id) => { setSel({ kind: "edge", id }); setLblPop(null); }, reconnect: reconnectEnd, nodeAt: nodeAtScreen };
 
+  const tight = studioW < 1400; // 1280 px: the header buttons drop their captions so the title keeps its room
   const H = ({ g, l, pri, onClick, title, children }: { g?: string; l?: string; pri?: boolean; onClick?: () => void; title?: string; children?: ReactNode }) => (
-    <button type="button" title={title ?? l} onClick={onClick} className={pri ? "hover:brightness-110" : "hover:bg-surface-2"}
+    <button type="button" title={title ?? l} aria-label={title ?? l} onClick={onClick} className={pri ? "hover:brightness-110" : "hover:bg-surface-2"}
       style={{ height: 32, padding: `0 ${l || children ? "10px" : "8px"}`, borderRadius: 8, display: "flex", alignItems: "center", gap: 6, border: `1px solid ${pri ? "transparent" : l ? "var(--border)" : "transparent"}`, background: pri ? "var(--accent)" : "transparent", color: pri ? "var(--accent-fg)" : "var(--text)", fontSize: 12.5, fontWeight: pri ? 600 : 500, whiteSpace: "nowrap" }}>
       {g && <Glyph name={g} size={16} />}{l}{children}
     </button>
@@ -899,8 +906,8 @@ function Studio({ note }: { note: Note }) {
       {present === null && (
         <div style={{ height: phone ? 56 : 48, flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "0 12px", borderBottom: "1px solid var(--border)", boxSizing: "border-box" }}>
           {phone && <button aria-label={t("Back")} onClick={back} style={{ width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>‹</button>}
-          {!phone && <span style={{ color: "var(--muted)", fontSize: 12.5, whiteSpace: "nowrap" }}>{space?.name ?? ""}{folder ? ` / ${folder.name}` : ""} /</span>}
-          <div style={{ display: "flex", flexDirection: phone ? "column" : "row", gap: phone ? 0 : 10, minWidth: phone ? 0 : 110, flex: phone ? 1 : "0 1 auto", alignItems: phone ? "flex-start" : "center" }}>
+          {!phone && !tight && <span style={{ color: "var(--muted)", fontSize: 12.5, whiteSpace: "nowrap" }}>{space?.name ?? ""}{folder ? ` / ${folder.name}` : ""} /</span>}
+          <div style={{ display: "flex", flexDirection: phone ? "column" : "row", gap: phone ? 0 : 10, minWidth: phone ? 0 : 150, flex: phone ? 1 : "0 1 auto", alignItems: phone ? "flex-start" : "center" }}>
             <TitleEdit note={note} />
             {savedLine}
           </div>
@@ -921,7 +928,7 @@ function Studio({ note }: { note: Note }) {
           ) : (
             <>
               {interview && <H g="c-question" l={t("Reveal labels ⌥R")} onClick={revealAll}><span style={{ fontSize: 11, color: "var(--muted)" }}>{`${[...revealed].filter((id) => c.nodes.some((n) => n.id === id)).length} / ${maskable}`}</span></H>}
-              <H g="layout-auto" l={t("Layout ▾")} onClick={() => setPop(pop === "layout" ? null : "layout")} />
+              <H g="layout-auto" {...(tight ? { title: t("Layout ▾") } : { l: t("Layout ▾") })} onClick={() => setPop(pop === "layout" ? null : "layout")} />
               <span style={{ height: 32, padding: "0 10px", borderRadius: 8, display: "flex", alignItems: "center", border: "1px solid transparent" }}>
                 <span style={{ display: "flex", gap: 2, padding: 2, borderRadius: 7, background: "var(--surface-2)" }}>
                   {([["canvas", "canvas", t("Canvas only")], ["50", "split-view", t("Canvas and code")], ["code", "code", t("Code only")]] as const).map(([s, g, l]) => (
@@ -929,9 +936,9 @@ function Studio({ note }: { note: Note }) {
                   ))}
                 </span>
               </span>
-              <H g="c-question" l={t("Review")} onClick={review} />
-              <H g="present" l={t("Present")} onClick={() => { setSel(null); setPresenting(true); }} />
-              <H g="export" l={t("Export")} onClick={doExport} />
+              <H g="c-question" {...(tight ? { title: t("Review") } : { l: t("Review") })} onClick={review} />
+              <H g="present" {...(tight ? { title: t("Present") } : { l: t("Present") })} onClick={() => { setSel(null); setPresenting(true); }} />
+              <H g="export" {...(tight ? { title: t("Export") } : { l: t("Export") })} onClick={doExport} />
               <H g="link" l={t("Share")} pri onClick={() => setShare(true)} />
               <H g="more" onClick={() => setPop(pop === "more" ? null : "more")} title={t("More")} />
             </>
