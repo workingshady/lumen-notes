@@ -648,6 +648,20 @@ app.get("/rss.xml", async (c) => {
   // Feed readers poll often; each hit parses every published note, so let clients/proxies reuse it for 5 minutes.
   return c.body(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>${title}</title><link>${origin}/blog</link><description>${xml(b.tagline || b.name)}</description>${items.join("")}</channel></rss>`, 200, { "content-type": "application/rss+xml; charset=utf-8", "cache-control": "public, max-age=300" });
 });
+// Sitemap of the public pages only (the blog index + every published post); the app itself is private.
+app.get("/sitemap.xml", async (c) => {
+  const origin = new URL(c.req.url).origin;
+  const all = await posts(c.env.DB);
+  const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+  const latest = all.reduce((m, n) => Math.max(m, (n as { updatedAt?: number }).updatedAt ?? n.createdAt), 0);
+  const urls = [`<url><loc>${origin}/blog</loc>${latest ? `<lastmod>${day(latest)}</lastmod>` : ""}</url>`,
+    ...all.map((n) => `<url><loc>${origin}/blog/${xml(toPost(n).slug)}</loc><lastmod>${day((n as { updatedAt?: number }).updatedAt ?? n.createdAt)}</lastmod></url>`)];
+  return c.body(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join("")}</urlset>`, 200, { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=300" });
+});
+app.get("/robots.txt", (c) => {
+  const origin = new URL(c.req.url).origin;
+  return c.text(`User-agent: *\nAllow: /blog\nDisallow: /api/\nDisallow: /s/\nSitemap: ${origin}/sitemap.xml\n`, 200, { "cache-control": "public, max-age=3600" });
+});
 
 // ------------------------------------------------------------------ link previews (Open Graph)
 const ent = (s: string) =>
