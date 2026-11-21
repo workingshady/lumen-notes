@@ -103,14 +103,14 @@ export function snappedElement(r: Recognised, src: Record<string, unknown>): Rec
   }
 }
 
-/** Scratch-out: a back-and-forth scribble (≥ 4 reversals along its main axis, dense path). Returns its bounds. */
+/** Scratch-out: a dense back-and-forth scribble (≥ 6 reversals along its main axis, path ≥ 5× its span). Returns its bounds. */
 export function isScratch(pts: Pt[]): { x: number; y: number; w: number; h: number } | null {
-  if (pts.length < 12) return null;
+  if (pts.length < 16) return null;
   const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
   const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
   const w = maxX - minX, h = maxY - minY;
   const axis = w >= h ? 0 : 1, span = Math.max(w, h);
-  if (span < 20 || pathLen(pts) < span * 3.2) return null;
+  if (span < 20 || pathLen(pts) < span * 5) return null;
   let rev = 0, dir = 0, acc = 0;
   for (let i = 1; i < pts.length; i++) {
     const d = pts[i][axis] - pts[i - 1][axis];
@@ -120,5 +120,5 @@ export function isScratch(pts: Pt[]): { x: number; y: number; w: number; h: numb
     if (dir && s !== dir && acc > span * 0.3) { rev++; acc = 0; }
     if (s !== dir) dir = s;
   }
-  return rev >= 4 ? { x: minX, y: minY, w, h } : null;
+  return rev >= 6 ? { x: minX, y: minY, w, h } : null;
 }

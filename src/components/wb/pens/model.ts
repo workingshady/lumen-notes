@@ -67,6 +67,8 @@ export interface InkPrefs {
   byType: Record<PenType, PenSettings>;
   autoShape: AutoShape;
   eraser: EraserMode; eraserSize: EraserSize; scratchOut: boolean; stylusErases: boolean;
+  /** Set once the user turns scratch-out on/off themselves; until then it is off (it used to default on and ate zigzag drawings). */
+  scratchOutSet?: boolean;
   /** Palm rejection off: a finger draws even after a stylus was seen (no automatic pen mode). */
   fingerDraws: boolean;
   ruler: boolean; rulerAngle: number; rulerSnap: boolean; rulerCm: boolean;
@@ -74,11 +76,11 @@ export interface InkPrefs {
   savedId: string | null;
 }
 const KEY = "lumen.wbPens";
-const DEFAULT_PREFS: InkPrefs = { current: "fountain", byType: PEN_DEFAULTS, autoShape: "hold", eraser: "stroke", eraserSize: "M", scratchOut: true, stylusErases: true, fingerDraws: false, ruler: false, rulerAngle: 0, rulerSnap: true, rulerCm: false, savedId: null };
+const DEFAULT_PREFS: InkPrefs = { current: "fountain", byType: PEN_DEFAULTS, autoShape: "hold", eraser: "stroke", eraserSize: "M", scratchOut: false, stylusErases: true, fingerDraws: false, ruler: false, rulerAngle: 0, rulerSnap: true, rulerCm: false, savedId: null };
 let prefs: InkPrefs = (() => {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? "null") as Partial<InkPrefs> | null;
-    if (v) return { ...DEFAULT_PREFS, ...v, byType: { ...PEN_DEFAULTS, ...Object.fromEntries(Object.entries(v.byType ?? {}).map(([k, s]) => [k, { ...PEN_DEFAULTS[k as PenType], ...s }])) } as Record<PenType, PenSettings> };
+    if (v) return { ...DEFAULT_PREFS, ...v, scratchOut: v.scratchOutSet ? !!v.scratchOut : false, byType: { ...PEN_DEFAULTS, ...Object.fromEntries(Object.entries(v.byType ?? {}).map(([k, s]) => [k, { ...PEN_DEFAULTS[k as PenType], ...s }])) } as Record<PenType, PenSettings> };
     // first run: carry over the shell's pen / highlighter ink
     const old = JSON.parse(localStorage.getItem("lumen.wbInk.pen") ?? "null") as { color: string; opacity: number } | null;
     return old ? { ...DEFAULT_PREFS, byType: { ...PEN_DEFAULTS, fountain: { ...PEN_DEFAULTS.fountain, color: old.color, opacity: old.opacity ?? 100 } } } : DEFAULT_PREFS;

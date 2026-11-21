@@ -77,7 +77,7 @@ export function EraserBody() {
           ))}
         </div>
         <div className="grid gap-1">
-          <div className="flex min-h-[34px] items-center gap-2 px-2 text-[12.5px]"><Glyph name="eraser-partial" size={18} /><span className="flex-1">{t("Scratch-out to delete")}</span><Tog on={ink.scratchOut} onChange={(v) => setInk({ scratchOut: v })} label={t("Scratch-out to delete")} /></div>
+          <div className="flex min-h-[34px] items-center gap-2 px-2 text-[12.5px]"><Glyph name="eraser-partial" size={18} /><span className="flex-1">{t("Scratch-out to delete")}</span><Tog on={ink.scratchOut} onChange={(v) => setInk({ scratchOut: v, scratchOutSet: true })} label={t("Scratch-out to delete")} /></div>
           <div className="flex min-h-[34px] items-center gap-2 px-2 text-[12.5px]"><Glyph name="pen-mode" size={18} /><span className="flex-1">{t("Stylus button erases")}</span><Tog on={ink.stylusErases} onChange={(v) => setInk({ stylusErases: v })} label={t("Stylus button erases")} /></div>
         </div>
         <div className="text-[11.5px] leading-[17px] text-muted">{t("Stroke removes whole strokes. Lasso erases everything inside the loop in one undo step.")}</div>
@@ -133,7 +133,7 @@ export function EraserBar({ phone }: { phone: boolean }) {
       <span className="relative"><PBtn glyph={ink.eraser === "partial" ? "eraser-partial" : ink.eraser === "lasso" ? "lasso" : "eraser-stroke"} label={mode} tip={t("Eraser")} on={open === "eraser"} onClick={() => setOpen(open === "eraser" ? null : "eraser")} />{open === "eraser" && <PopPanel open="eraser" onClose={() => setOpen(null)} phone={phone} />}</span>
       {(["S", "M", "L"] as EraserSize[]).map((s) => <PBtn key={s} label={s} tip={t("Size {s}", { s })} on={ink.eraserSize === s} onClick={() => setInk({ eraserSize: s })} anchor={false} />)}
       <Sep />
-      <PBtn glyph="eraser-partial" label={t("Scratch-out")} tip={t("Scratch-out to delete")} on={ink.scratchOut} onClick={() => setInk({ scratchOut: !getInk().scratchOut })} anchor={false} />
+      <PBtn glyph="eraser-partial" label={t("Scratch-out")} tip={t("Scratch-out to delete")} on={ink.scratchOut} onClick={() => setInk({ scratchOut: !getInk().scratchOut, scratchOutSet: true })} anchor={false} />
       <span className="relative"><PBtn glyph="ruler" tip={t("Ruler")} on={ink.ruler} onClick={() => setOpen(open === "ruler" ? null : "ruler")} />{open === "ruler" && <PopPanel open="ruler" onClose={() => setOpen(null)} phone={phone} />}</span>
     </div>
   );

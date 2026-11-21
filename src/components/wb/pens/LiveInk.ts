@@ -41,12 +41,12 @@ export function freedrawOutline(el: El, last = false): Path2D {
 }
 
 /**
- * 2D context with the low-latency hint (`desynchronized: true`, Chrome / Edge: the canvas skips the compositor's frame
- * queue). Feature-detected with getContextAttributes(); without it the overlay paints on the next animation frame.
+ * Plain 2D context. NOT `desynchronized: true`: on Windows Chromium (Brave / Chrome / Edge) the low-latency canvas is
+ * promoted to a front-buffer overlay that loses alpha on many GPUs, so the whole board turned black while the pen was
+ * active and strokes tore into clipped rectangles (owner's recording 2026-11-21). The overlay paints on the next frame.
  */
 function inkContext(c: HTMLCanvasElement): { ctx: CanvasRenderingContext2D | null; low: boolean } {
-  const ctx = c.getContext("2d", { desynchronized: true });
-  return { ctx, low: !!(ctx?.getContextAttributes?.() as { desynchronized?: boolean } | undefined)?.desynchronized };
+  return { ctx: c.getContext("2d"), low: false };
 }
 
 /** The overlay for one board. `draw` is rAF-throttled (immediate on a low-latency canvas when `now` is set); `clear` hides it (call right after the final element is committed). */
