@@ -90,7 +90,12 @@ export function openNote(id: string, mode?: Mode) {
     returnTo: u.view !== "notes" ? { view: u.view, spaceId: u.spaceId, folderId: u.folderId, filter: u.filter, tag: u.tag } : u.noteId ? u.returnTo : null,
   }));
 }
-export const go = (view: View, extra: Partial<UI> = {}) => setUI((u) => ({ view, sidebar: docked() ? u.sidebar : false, returnTo: null, ...extra }));
+export const go = (view: View, extra: Partial<UI> = {}) => setUI((u) => {
+  // A list destination (Canvases, Paths, a folder, a tag…) while a full-width page hides the list (whiteboard / Board
+  // set list:false): close that page so the list actually appears; otherwise the click looks like it did nothing.
+  const listNav = view === "notes" && !u.list && !("noteId" in extra) && ("filter" in extra || "spaceId" in extra || "folderId" in extra || "tag" in extra);
+  return { view, sidebar: docked() ? u.sidebar : false, returnTo: null, ...(listNav ? { noteId: null, list: true } : {}), ...extra };
+});
 export function back() {
   setUI((u) => {
     const prev = u.history[u.history.length - 1];
