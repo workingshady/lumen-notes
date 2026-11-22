@@ -193,6 +193,18 @@ const RM_DUE_G = /\s*(?:\u{1F4C5}\s*|(?<![\w/])due:\s*|@due\()\d{4}-\d{2}-\d{2}\
  *   - [ ] Topic (after: Better first) (related: See also)   ← recommended order · related (no order)
  *   - [x] done · [-] skipped
  */
+/** Re-join comma-split list pieces whose joined form is a known name (longest match first); unknown pieces stay as they are. */
+export function rejoinNames(parts: string[], known: (name: string) => boolean): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < parts.length; ) {
+    let j = parts.length;
+    for (; j > i + 1; j--) if (known(parts.slice(i, j).join(", "))) break;
+    out.push(parts.slice(i, j).join(", "));
+    i = j;
+  }
+  return out;
+}
+
 export function roadmap(md: string): Module[] {
   const mods: Module[] = [];
   md.split("\n").forEach((l, line) => {
@@ -218,6 +230,10 @@ export function roadmap(md: string): Module[] {
   });
   const byName = new Map(mods.flatMap((m) => m.topics).map((t) => [t.name.toLowerCase(), t]));
   for (const t of mods.flatMap((m) => m.topics)) {
+    // lists are split on commas, but a topic name may contain one ("Calculus, chain rule & gradients"): re-join pieces
+    t.needs = rejoinNames(t.needs, (n) => byName.has(n.toLowerCase()));
+    if (t.after) t.after = rejoinNames(t.after, (n) => byName.has(n.toLowerCase()));
+    if (t.related) t.related = rejoinNames(t.related, (n) => byName.has(n.toLowerCase()));
     t.locked = t.status === "todo" && t.needs.some((n) => { const d = byName.get(n.toLowerCase()); return d && d.status !== "done" && d.status !== "skipped"; });
   }
   // a "# Title" line with no topics under it is the document title, not an (empty) module

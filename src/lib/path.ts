@@ -22,7 +22,7 @@
 // Course topics not listed under any concept still appear (merged by name across courses) in "Not placed yet",
 // so the path never hides anything a course teaches. Courses stay independent: their own roadmaps are untouched.
 import type { Note } from "../../shared/types";
-import { roadmap, splitFrontMatter, type Topic, type TopicStatus } from "./parse";
+import { rejoinNames, roadmap, splitFrontMatter, type Topic, type TopicStatus } from "./parse";
 import { depths, untangle } from "./prereq-graph";
 import { t } from "./i18n";
 
@@ -219,6 +219,13 @@ export function buildPath(body: string, courses: CourseRef[]): BuiltPath {
   // map course topic → concept, to merge prerequisites across courses
   const topicConcept = new Map<string, BuiltConcept>();
   for (const c of concepts) for (const cov of c.coverage) topicConcept.set(`${cov.course.key}::${norm(cov.topic.name)}`, c);
+  // path-level lists are split on commas too: re-join pieces that only make sense together (concept names with a comma)
+  const knownConcept = (n: string) => !!resolveConcept(concepts, byKey, n);
+  for (const c of concepts) {
+    c.def.needs = rejoinNames(c.def.needs, knownConcept);
+    if (c.def.after) c.def.after = rejoinNames(c.def.after, knownConcept);
+    if (c.def.related) c.def.related = rejoinNames(c.def.related, knownConcept);
+  }
   for (const c of concepts) {
     const needs = new Set<string>();
     for (const cov of c.coverage) for (const n of cov.topic.needs) {
