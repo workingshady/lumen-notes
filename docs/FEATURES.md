@@ -197,7 +197,11 @@ Chosen over tldraw because Excalidraw is MIT-licensed with no production license
 |---|---|
 | Import `.md` files (front-matter aware) or a `.zip` vault (folders preserved) | Done |
 | Import `.canvas` | Done |
-| Export note as `.md` (with YAML front-matter), `.html` (styled, standalone), print → PDF | Done |
+| Export note as `.md` (with YAML front-matter) | Done |
+| **Note export dialog** (note ⋯ › Export…, Ctrl+K, Import / export › This note, note-list bulk bar, folder ⋯, space row): PDF · HTML · Markdown · Print; scope = note / selected notes / folder / space (one TOC, each note on a new page); paper A4 / Letter / A5, orientation, margins, font size; theme Paper / as on screen / black and white; title page, TOC with page numbers, page numbers, header and footer, front matter, link style (footnotes / inline / none), media style (poster / QR / title and URL), flashcard answers (shown / hidden / answer key); live preview; remembered per device (`src/lib/print-doc.ts`, `print-css.ts`, `print-env.ts`, `print-run.ts`, `src/components/NoteExport.tsx`) | Done |
+| Note export engines: **Paged.js** in a hidden iframe (default; TOC page numbers, running header / footer, repeated table headers; plain print CSS in Safari / Firefox or if it fails) · **Download PDF** through `POST /api/export/pdf` (Cloudflare Browser Rendering, optional `browser` binding `BROWSER`; falls back to the print dialog on 501 / 429 / offline / error) | Done |
+| HTML export is **self-contained** (KaTeX css + fonts, Mermaid and canvas as inline SVG, images as data URIs, embedded fonts, sidebar TOC, light / dark toggle, same print css); multi-note scopes can also export an HTML folder `.zip` (index + one page per note + assets) | Done |
+| Visual export dialog: print theme toggle for PDFs; GIF / video cards as poster boxes with their link | Done |
 | Export whole vault as `.zip` (folders → directories, canvases as `.canvas`) | Done |
 | Full JSON backup + restore | Done |
 | Obsidian vault compatible (Markdown + `[[links]]` + `.canvas`) | Done |
