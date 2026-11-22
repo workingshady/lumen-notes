@@ -231,7 +231,7 @@ async function inlineMedia(root: Element, c: Ctx) {
     const src = img.getAttribute("src") ?? "";
     const m = /\/api\/att\/([\w-]+)/.exec(src);
     const attId = id ?? (m ? m[1] : null);
-    if (img.classList.contains("poster") || img.classList.contains("qr")) continue;
+    if (img.classList.contains("poster") || img.classList.contains("qr") || img.closest("figure.vthumb, a.link-card, .pdfcard, .vfile, .afile")) continue; // replaced whole below
     if (attId) {
       let a: Attachment | null = null;
       try { a = (await c.env.attachment?.(attId)) ?? null; } catch { a = null; }

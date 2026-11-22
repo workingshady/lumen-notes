@@ -59,6 +59,9 @@ export async function collectScope(scope: Scope): Promise<{ title: string; notes
 export const pagedSupported = () => typeof navigator !== "undefined" && /\b(Chrome|Chromium|Edg)\//.test(navigator.userAgent);
 const BOOT = `(async function(){var post=function(s,e){try{parent.postMessage({lumenPaged:s,error:e?String(e):"",pages:window.__pagedPages||0},"*")}catch(_){}};
 try{await document.fonts.ready;await Promise.all(Array.prototype.map.call(document.images,function(i){return i.complete?0:new Promise(function(r){i.onload=i.onerror=r})}));
+/* Paged.js splits long tables into separate tables without repeating the header: put a copy of thead on every continued part */
+class RepeatHead extends window.Paged.Handler{renderNode(clone,node){try{if(clone.nodeName==="TR"&&clone.parentNode&&clone.parentNode.nodeName==="TBODY"){var t=clone.closest("table");if(t&&t.hasAttribute("data-split-from")&&!t.querySelector("thead")){var src=node.closest("table"),th=src&&src.querySelector("thead");if(th){var c=th.cloneNode(true);c.removeAttribute("data-ref");c.querySelectorAll("[data-ref]").forEach(function(e){e.removeAttribute("data-ref")});t.insertBefore(c,t.firstChild)}}}}catch(e){}}}
+window.Paged.registerHandlers(RepeatHead);
 var flow=await window.PagedPolyfill.preview();await document.fonts.ready;window.__pagedPages=flow&&flow.total||document.querySelectorAll(".pagedjs_page").length;window.__pagedDone=true;post("done")}
 catch(e){window.__pagedFailed=String(e);window.__pagedDone=true;post("failed",e)}})();`;
 let polyfill: Promise<string> | null = null;
@@ -69,7 +72,8 @@ export async function pagedDocument(html: string, opts: { preview?: boolean } = 
   const lib = await loadPolyfill();
   const inject = `<script>window.PagedConfig={auto:false};</script><script>${safeScript(lib)}</script><script>${safeScript(BOOT)}</script>`;
   const preview = opts.preview ? `<style>html{background:#e9e7e2}.pagedjs_pages{margin:0 auto}.pagedjs_page{box-shadow:0 1px 6px rgba(0,0,0,.25);margin:14px auto!important}</style>` : "";
-  return html.replace("</head>", `${preview}</head>`).replace("</body>", `${inject}</body>`);
+  // function replacers: the polyfill source holds dollar-ampersand style sequences that a replacement string would expand
+  return html.replace("</head>", () => `${preview}</head>`).replace("</body>", () => `${inject}</body>`);
 }
 
 // ------------------------------------------------------------------ building

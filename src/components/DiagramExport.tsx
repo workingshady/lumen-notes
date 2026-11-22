@@ -217,9 +217,10 @@ export function DiagramExport() {
     ];
     const lim = pv?.limited && isImg && f !== "svg";
     const warn: string | null = lim ? t("Limited to {n}× by the browser for a board this size ({w} px wide).", { n: fmtNum(Math.floor(pv!.limited! * 10) / 10), w: fmtNum(Math.round(pv!.width / Math.max(pv!.scale, 0.01))) })
-      : job.media && (job.media.videos || job.media.gifs) && isImg ? t(o.media === "still" ? "{what} can't animate in images. They'll export as a still frame." : "{what} can't animate in images. They'll export as a placeholder.", { what: mediaWhat(job.media) }) : null;
+      : job.media && (job.media.videos || job.media.gifs) && isImg ? t(o.media === "still" ? "{what} can't animate in images. They'll export as a still frame." : o.media === "poster" ? "{what} can't play in a PDF or image. Each becomes a poster box with its title and link." : "{what} can't animate in images. They'll export as a placeholder.", { what: mediaWhat(job.media) }) : null;
     if (warn) blocks.splice(3, 0, { note: warn, noteC: "var(--warning)", noteBg: "color-mix(in srgb,var(--warning) 12%,transparent)" });
     if (f === "pdf") blocks.push(
+      { cols: "1fr", items: [{ l: t("Print theme (paper colours, dark ink)"), tog: o.theme === "default" && o.background === "theme", op: job.themable === false ? 0.45 : 1, tip: t("Keeps dark app themes from printing a dark page"), onClick: () => { if (job.themable === false) return; set(o.theme === "default" && o.background === "theme" ? { theme: "app", background: "board" } : { theme: "default", background: "theme" }); } }] },
       { seg: [t("One page per frame"), t("Single page")], segOn: o.pdfMode === "per-frame" ? 0 : 1, segPick: (i) => set({ pdfMode: i === 0 ? "per-frame" : "single" }) },
       { cols: "1fr 1fr 1fr", items: [
         { l: t("Page"), sub: `${({ fit: t("Fit"), a4: "A4", letter: "Letter", "16:9": "16:9" })[o.pdfPage]} ▾`, pick: { value: o.pdfPage, options: [["fit", t("Fit")], ["a4", "A4"], ["letter", "Letter"], ["16:9", "16:9"]], onChange: (v) => set({ pdfPage: v as ExportOptions["pdfPage"] }) } },
@@ -250,7 +251,7 @@ export function DiagramExport() {
           ...(ct.includes("edgeLabels") ? [tg("edgeLabels", t("Edge labels"))] : []),
           ...(ct.includes("frameNames") ? [tg("frameNames", t("Frame names"))] : []),
           ...(ct.includes("hiddenLayers") ? [tg("hiddenLayers", t("Hidden layers"))] : []),
-          ...(ct.includes("media") ? [{ l: t("Media"), sub: `${o.media === "still" ? t("Still frame") : t("Placeholder")} ▾`, pick: { value: o.media, options: [["still", t("Still frame")], ["placeholder", t("Placeholder")]], onChange: (v: string) => set({ media: v as ExportOptions["media"] }) } } as Cell] : []),
+          ...(ct.includes("media") ? [{ l: t("Media"), sub: `${o.media === "still" ? t("Still frame") : o.media === "poster" ? t("Poster and link") : t("Placeholder")} ▾`, pick: { value: o.media, options: [["still", t("Still frame")], ["poster", t("Poster and link")], ["placeholder", t("Placeholder")]], onChange: (v: string) => set({ media: v as ExportOptions["media"] }) } } as Cell] : []),
           ...(ct.includes("embedScene") ? [{ l: t("Embed scene data"), tog: o.embedScene, op: f === "svg" || f === "png" ? 1 : 0.45, onClick: () => set({ embedScene: !o.embedScene }) } as Cell] : []),
           nameCell,
         ] },

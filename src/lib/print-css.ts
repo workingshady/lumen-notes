@@ -73,14 +73,18 @@ function pageRules(o: CssOptions): string {
   const box = (pos: string, content: string, extra = "") => `@${pos}{content:${content};font:8.5pt ${FONT_STACKS.sans};color:#666;${extra}}`;
   let furniture = "";
   if (o.engine === "paged") {
-    const foot = o.headerFooter ? `string(doctitle) " · " ${cssStr(o.dateLabel)} " · " ${cssStr(o.pageWord)} counter(page) ${cssStr(o.ofWord)} counter(pages)` : o.pageNumbers ? `counter(page)` : "";
+    // Paged.js writes string(...) as an unterminated quoted string, so it only works as the sole value of a margin box:
+    // the title and date run in the header, "page X of Y" in the footer.
+    const foot = o.headerFooter ? `${cssStr(o.pageWord)} counter(page) ${cssStr(o.ofWord)} counter(pages)` : o.pageNumbers ? `counter(page)` : "";
     furniture = (o.headerFooter ? box("top-left", `string(doctitle)`, "text-align:left;") + box("top-right", cssStr(o.dateLabel), "text-align:right;") : "") + (foot ? box("bottom-center", foot) : "");
   } else if (o.engine === "native" && o.pageNumbers) {
     // Chromium 131+ draws margin boxes natively; older engines ignore them (the Worker adds its own footer template).
     furniture = "";
   }
+  // Paged.js lays pages out at one size (named page sizes aren't supported by its print output): wide tables shrink and wrap there;
+  // the native engines (plain print, Worker, HTML file) switch to the named landscape page.
   return `@page{size:${size};margin:${m};${furniture}}`
-    + `@page wide{size:${wide};margin:${m};${furniture}}`
+    + (o.engine === "paged" ? "" : `@page wide{size:${wide};margin:${m};${furniture}}`)
     + (o.engine === "paged" ? `@page titlepage{margin:${m};@top-left{content:none}@top-right{content:none}@bottom-center{content:none}}@page toc{${furniture}}` : "");
 }
 
@@ -108,7 +112,7 @@ a.tag,.tag{font:.82em ${FONT_STACKS.sans};color:var(--link);background:var(--t-a
 .wikilink-text{color:var(--link);text-decoration:underline dotted;text-underline-offset:3px}
 a.wikilink{text-decoration:underline dotted}
 .md-glyph svg,.callout-icon svg{vertical-align:-.15em}
-.due{font:.85em ${FONT_STACKS.sans};color:var(--accent);white-space:nowrap}.due.over{color:var(--danger)}
+.due{display:inline-flex;align-items:center;gap:.3em;font:.85em ${FONT_STACKS.sans};color:var(--accent);white-space:nowrap}.due svg{flex:none}.due.over{color:var(--danger)}
 .status-pill{--c:var(--muted);font:600 .8em ${FONT_STACKS.sans};color:var(--c);background:var(--tt,var(--surface-2));border:1px solid var(--c);border-radius:99px;padding:.05em .6em;white-space:nowrap}
 .status-pill[data-c=green]{--c:var(--success);--tt:var(--t-success)}.status-pill[data-c=red]{--c:var(--danger);--tt:var(--t-danger)}.status-pill[data-c=amber],.status-pill[data-c=yellow]{--c:var(--warning);--tt:var(--t-warning)}
 .status-pill[data-c=blue]{--c:var(--info);--tt:var(--t-info)}.status-pill[data-c=violet],.status-pill[data-c=purple]{--c:var(--learn);--tt:var(--t-learn)}.status-pill[data-c=grey]{--c:var(--muted);--tt:var(--t-muted)}
@@ -140,7 +144,7 @@ p.pill-row{display:flex;flex-wrap:wrap;gap:6px}
 pre{font:8.6pt/1.5 ${FONT_STACKS.mono};background:var(--code-bg);color:var(--code-fg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;tab-size:2}
 pre code{font:inherit;background:none;padding:0;white-space:inherit;overflow-wrap:inherit}
 code{font-family:${FONT_STACKS.mono};font-size:.88em}:not(pre)>code{background:var(--code-bg);border-radius:4px;padding:.05em .3em}
-.code-head,button,.copy,.mm-head,.mm-tools,.mm-code,.tbl-tools,.lc-more,.lc-skel,.lc-fail,.vt-play{display:none!important}
+.code-head,main button,.copy,.mm-head,.mm-tools,.mm-code,.tbl-tools,.lc-more,.lc-skel,.lc-fail,.vt-play{display:none!important}
 .hljs-keyword,.hljs-selector-tag,.hljs-built_in,.hljs-literal{color:#7a2fb5}.hljs-title,.hljs-section,.hljs-title.function_{color:#1f58b8}.hljs-string,.hljs-attr,.hljs-template-string{color:#8a5a00}.hljs-number,.hljs-symbol{color:#b0470a}.hljs-comment,.hljs-quote{color:#6a737d;font-style:italic}.hljs-type,.hljs-variable,.hljs-params,.hljs-property{color:inherit}.hljs-meta{color:#555}.hljs-deletion{color:#b31d28}.hljs-addition{color:#22863a}
 .tbl{overflow:visible}.tbl-scroll{overflow:visible}
 table{border-collapse:collapse;width:100%;font:.92em/1.4 ${FONT_STACKS.sans};table-layout:auto}
@@ -190,7 +194,7 @@ figure,img,.callout:not(.tall),.fc-row,.occl-card,.media-fallback,.transclusion.
 tr,thead,td,th{break-inside:avoid;page-break-inside:avoid}
 thead{display:table-header-group}tfoot{display:table-footer-group}
 .tall,pre:not(.short),.tbl:not(.short){break-inside:auto}
-.tbl.cols-wide{${o.landscape ? "" : "page:wide;break-before:page;break-after:page"}}
+${o.landscape || o.engine === "paged" ? "" : ".tbl.cols-wide{page:wide;break-before:page;break-after:page}"}
 ${o.breakH === "h1" ? "h1:not(.note-title){break-before:page}" : o.breakH === "h2" ? "h1:not(.note-title),h2{break-before:page}" : ""}
 ${o.newPagePerNote ? "section.note+section.note{break-before:page}" : ""}
 section.note:first-of-type h1.note-title{break-before:auto}

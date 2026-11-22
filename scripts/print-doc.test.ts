@@ -71,6 +71,7 @@ const stray = seen.filter((u) => !own.some((o) => u.startsWith(o) || o.startsWit
 eq(stray, [], "every http(s) URL in the document is one the user wrote");
 // KaTeX: math is HTML, css + fonts are embedded as data URIs
 ok(main1.querySelector(".katex .katex-html"), "math is pre-rendered KaTeX");
+ok(main1.querySelector(".katex-display .katex-html") && !main1.querySelector(".katex-error"), "display math renders without KaTeX errors");
 ok(d1.katexCss.length > 20000 && /font-family:\s*KaTeX_Main/.test(d1.katexCss) && !/url\((?!data:)/.test(d1.katexCss), "KaTeX css has its fonts as data: URIs only");
 ok(!/\.ttf|\.woff[^2]/.test(d1.katexCss), "KaTeX css keeps woff2 only");
 // images: every <img> is a data URI (the missing / remote ones turned into the labelled fallback)
@@ -78,6 +79,7 @@ const imgs = [...main1.querySelectorAll("img")];
 ok(imgs.length >= 3, "has images (attachment, inline data, media posters)");
 ok(imgs.every((i) => /^data:image\//.test(i.getAttribute("src") ?? "")), "every image is a data: URI");
 eq(main1.querySelectorAll(".img-missing").length, 2, "missing attachment and unreachable remote image use the fallback");
+eq(d1.warnings.imagesMissing, 2, "the warning counts exactly the missing images");
 ok([...main1.querySelectorAll(".img-missing")].every((n) => /image not available offline/.test(text(n))), "fallback says: image not available offline");
 ok(/Missing attachment/.test(text(main1.querySelector(".img-missing"))), "fallback keeps the alt text");
 // tables
@@ -90,7 +92,9 @@ ok(longTable, "the 100-row table is complete");
 ok(!longTable!.closest(".tbl")!.classList.contains("short"), "a long table may split across pages");
 const wide = tables.find((t) => (t.querySelector("tr")?.children.length ?? 0) === 15);
 ok(wide?.closest(".tbl")?.classList.contains("cols-wide"), "15-column table is marked wide (landscape page)");
-ok(/\.tbl\.cols-wide\{page:wide;break-before:page;break-after:page\}/.test(d1.css) && /@page wide\{size:297mm 210mm/.test(d1.css), "wide tables go on a named landscape page");
+ok(/\.tbl\.cols-wide table\{font-size:\.72em\}/.test(d1.css) && !/@page wide/.test(d1.css), "paged engine: wide tables shrink and wrap (Paged.js has one page size)");
+const nativeDoc = await build([ks], {}, baseEnv(), "x").then(() => pd.buildPrintDoc({ title: "x", notes: [ks] }, { engine: "native" }, baseEnv()));
+ok(/\.tbl\.cols-wide\{page:wide;break-before:page;break-after:page\}/.test(nativeDoc.css) && /@page wide\{size:297mm 210mm/.test(nativeDoc.css), "native engine: wide tables go on a named landscape page");
 // a table without a header row gets one
 const headless = await build([{ id: "h", title: "Headless", body: "<table><tr><td>a</td></tr></table>", type: "note" }]);
 ok(headless.html.length > 0, "builds when markup has no table");
@@ -101,9 +105,9 @@ ok(/pre\{[^}]*white-space:pre-wrap;overflow-wrap:anywhere/.test(d1.css), "long c
 ok(codes.filter((p) => p.classList.contains("short")).length >= 2 && codes.some((p) => !p.classList.contains("short")), "short code stays together, the 60-line block may split");
 // print css rules
 for (const [rule, re] of [
-  ["@page size", /@page\{size:210mm 297mm;margin:18mm/], ["named wide page", /@page wide\{/], ["break-after avoid on headings", /h1,h2,h3,h4,h5,h6\{break-after:avoid/], ["break-inside avoid", /break-inside:avoid/],
+  ["@page size", /@page\{size:210mm 297mm;margin:18mm/], ["page break before titlepage", /\.titlepage\{break-after:page\}/], ["break-after avoid on headings", /h1,h2,h3,h4,h5,h6\{break-after:avoid/], ["break-inside avoid", /break-inside:avoid/],
   ["orphans", /orphans:3/], ["widows", /widows:3/], ["thead group", /thead\{display:table-header-group\}/], ["print-color-adjust", /print-color-adjust:exact/], ["-webkit-print-color-adjust", /-webkit-print-color-adjust:exact/],
-  ["diagram max-width", /figure\.diagram svg\{max-width:100%/], ["images max-width", /img,svg,video,canvas\{max-width:100%\}/], ["app UI hidden", /\.code-head,button/], ["margin boxes (paged)", /@bottom-center\{content:counter\(page\)/],
+  ["diagram max-width", /figure\.diagram svg\{max-width:100%/], ["images max-width", /img,svg,video,canvas\{max-width:100%\}/], ["app UI hidden", /\.code-head,main button/], ["margin boxes (paged)", /@bottom-center\{content:counter\(page\)/],
   ["TOC page numbers", /target-counter\(attr\(href\),page\)/],
 ] as [string, RegExp][]) ok(re.test(d1.css), `print css has: ${rule}`);
 // diagrams: SVG inline, fitted to the page
@@ -281,6 +285,9 @@ const hf = pd.headerFooterTemplates("Title <x>", "22 November 2026", { headerFoo
 ok(/pageNumber/.test(hf.footerTemplate) && /totalPages/.test(hf.footerTemplate) && /Title &lt;x&gt;/.test(hf.headerTemplate), "header / footer templates: title, date, page X of Y, escaped");
 const pdoc = await run.pagedDocument("<!doctype html><html><head></head><body><main>x</main></body></html>");
 ok(/PagedConfig=\{auto:false\}/.test(pdoc) && /PagedPolyfill\.preview\(\)/.test(pdoc) && /lumenPaged/.test(pdoc) && pdoc.length > 300000, "Paged.js wrapper: polyfill inline, runs after fonts and images");
+ok(/class RepeatHead extends window\.Paged\.Handler/.test(pdoc) && /registerHandlers\(RepeatHead\)/.test(pdoc), "Paged.js wrapper repeats the table header on continued pages");
+const polySrc = readFileSync(join(root, "node_modules/pagedjs/dist/paged.polyfill.min.js"), "utf8");
+ok(pdoc.includes(polySrc.replace(/<\/(script)/gi, () => "<\\/script")),"Paged.js source is injected byte for byte (no replacement-pattern damage)");
 eq((pdoc.match(/<\/script>/g) ?? []).length, 3, "Paged.js source can't close the script tag early");
 
 // ================================================================== 12. HTML folder zip (index + one page per note + assets)

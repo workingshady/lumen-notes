@@ -78,7 +78,7 @@ export interface ExportOptions {
   quality: number;
   frameNames: boolean;
   hiddenLayers: boolean;
-  media: "still" | "placeholder";
+  media: "still" | "placeholder" | "poster";
   embedScene: boolean;
   cardStyle: "screen" | "flat" | "print";
   groupLabels: boolean;

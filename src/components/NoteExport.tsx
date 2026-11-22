@@ -136,7 +136,7 @@ export default function NoteExport({ job, onClose }: { job: NoteExportJob; onClo
       { h: t("Scope"), cols: keys.length > 2 && !phone ? `repeat(${keys.length},1fr)` : "1fr 1fr", items: keys.map((k): Cell => ({ g: SCOPE_G[k], l: SCOPE_L[k](), sub: counts[k] !== undefined ? fmtNum(counts[k]!) : "", on: scopeKey === k, onClick: () => setScopeKey(k) })) },
     ];
     if (f === "html" && multi) blocks.push({ cols: "1fr", items: [tog(t("One page per note, as a folder (.zip)"), "htmlFolder")] });
-    if (paged) blocks.push({ h: t("Paper"), cols: phone ? "1fr 1fr" : "1fr 1fr 1fr 1fr", items: [
+    if (paged) blocks.push({ h: t("Paper"), cols: "1fr 1fr", items: [
       pick(t("Paper"), o.paper, [["a4", "A4"], ["letter", "Letter"], ["a5", "A5"]], (v) => set({ paper: v as NoteExportPrefs["paper"] })),
       pick(t("Orientation"), o.landscape ? "l" : "p", [["p", t("Portrait")], ["l", t("Landscape")]], (v) => set({ landscape: v === "l" })),
       pick(t("Margins"), String(o.marginMm), [10, 15, 18, 25].map((n) => [String(n), `${n} mm`] as [string, string]), (v) => set({ marginMm: +v })),
@@ -189,7 +189,7 @@ export default function NoteExport({ job, onClose }: { job: NoteExportJob; onClo
         </div>
         <div style={{ display: "flex", flexDirection: phone ? "column" : "row", flex: 1, minHeight: 0, overflowY: phone ? "auto" : "visible" }}>
           <div style={{ flex: phone ? "0 0 auto" : "1.1", display: "flex", flexDirection: "column", gap: 10, padding: 16, minWidth: 0, borderInlineEnd: phone ? "none" : "1px solid var(--border)", borderBottom: phone ? "1px solid var(--border)" : "none" }}>
-            <div ref={pane} style={{ flex: 1, minHeight: phone ? 260 : 0, height: phone ? 300 : undefined, borderRadius: 10, border: "1px solid var(--border)", position: "relative", overflow: "hidden", background: "var(--surface-2)" }}>
+            <div ref={pane} style={{ flex: 1, minHeight: phone ? 260 : 0, height: phone ? 300 : undefined, borderRadius: 10, border: "1px solid var(--border)", position: "relative", overflow: "hidden", background: "var(--surface-2)", direction: "ltr" }}>
               {f === "md" ? (
                 <div style={{ padding: 20, color: "var(--muted)", fontSize: 13, lineHeight: "20px" }}>{multi ? t("A .zip with one Markdown file per note, plus the attachments they use.") : t("The note as a Markdown file, with its front matter.")}</div>
               ) : pv ? (

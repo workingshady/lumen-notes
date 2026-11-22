@@ -39,7 +39,7 @@ export function noteExportJob(n: Pick<Note, "id" | "title" | "folderId" | "space
     },
   };
 }
-export const selectionExportJob = (ids: string[]): NoteExportJob => ({ start: "selection", scopes: { selection: { scope: { kind: "selection", ids }, title: t("{n} notes", { n: ids.length }) } } });
+export const selectionExportJob = (ids: string[]): NoteExportJob => ({ start: "selection", scopes: { selection: { scope: { kind: "selection", ids }, title: t("Selected notes") } } });
 export const folderExportJob = (f: { id: string; name: string; spaceId: string }, spaceName: string): NoteExportJob => ({
   start: "folder", scopes: { folder: { scope: { kind: "folder", folderId: f.id }, title: f.name }, space: { scope: { kind: "space", spaceId: f.spaceId }, title: spaceName } },
 });

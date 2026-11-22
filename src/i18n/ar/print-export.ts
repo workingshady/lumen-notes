@@ -37,4 +37,6 @@ export const ar: Catalog = {
   "The PDF service can't be reached.": "تعذّر الوصول إلى خدمة PDF.", "The daily PDF allowance is used up.": "استُنفدت حصة PDF اليومية.",
   "The PDF service isn't set up on this server.": "خدمة PDF غير مفعّلة على هذا الخادم.", "The PDF service failed.": "فشلت خدمة PDF.", Index: "الفهرس",
   "Using the print dialog instead: choose “Save as PDF”.": "سنستخدم نافذة الطباعة بدلًا من ذلك: اختر «حفظ بصيغة PDF».", "Used the print dialog instead.": "استُخدمت نافذة الطباعة بدلًا من ذلك.",
+  "Poster and link": "غلاف مع الرابط", "{what} can't play in a PDF or image. Each becomes a poster box with its title and link.": "لا يمكن تشغيل {what} داخل PDF أو صورة. يصبح كل منها مربع غلاف بعنوانه ورابطه.",
+  "Print theme (paper colours, dark ink)": "سمة الطباعة (ألوان الورق وحبر داكن)", "Keeps dark app themes from printing a dark page": "يمنع السمات الداكنة من طباعة صفحة داكنة",
 };

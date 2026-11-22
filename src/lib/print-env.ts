@@ -24,12 +24,20 @@ export async function shrinkImage(blob: Blob): Promise<Blob> {
   const cv = document.createElement("canvas");
   cv.width = Math.max(1, Math.round(bmp.width * k)); cv.height = Math.max(1, Math.round(bmp.height * k));
   const g = cv.getContext("2d")!;
-  if (blob.type !== "image/png" || blob.size > MAX_IMG_BYTES * 2) { g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height); } // jpeg has no alpha
   g.drawImage(bmp, 0, 0, cv.width, cv.height);
   bmp.close?.();
-  const png = blob.type === "image/png" && blob.size <= MAX_IMG_BYTES * 2;
-  const out = await new Promise<Blob | null>((r) => cv.toBlob(r, png ? "image/png" : "image/jpeg", 0.84));
-  return out && out.size < blob.size ? out : blob;
+  const enc = (type: string, q?: number) => new Promise<Blob | null>((r) => cv.toBlob(r, type, q));
+  // PNG keeps transparency; a photo-like PNG that grew is better as JPEG (on white). Keep whichever is smallest.
+  const candidates: Blob[] = [];
+  if (blob.type === "image/png") { const png = await enc("image/png"); if (png) candidates.push(png); }
+  const flat = document.createElement("canvas");
+  flat.width = cv.width; flat.height = cv.height;
+  const fg = flat.getContext("2d")!;
+  fg.fillStyle = "#fff"; fg.fillRect(0, 0, flat.width, flat.height); fg.drawImage(cv, 0, 0);
+  const jpeg = await new Promise<Blob | null>((r) => flat.toBlob(r, "image/jpeg", 0.84));
+  if (jpeg && (blob.type !== "image/png" || !candidates.length || candidates[0].size >= blob.size || jpeg.size < candidates[0].size * 0.6)) candidates.push(jpeg);
+  const best = candidates.sort((a, b) => a.size - b.size)[0];
+  return best && best.size < blob.size ? best : blob;
 }
 
 // ------------------------------------------------------------------ fonts

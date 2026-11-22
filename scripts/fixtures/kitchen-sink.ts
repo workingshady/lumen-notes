@@ -102,7 +102,7 @@ ${Array.from({ length: 6 }, (_, r) => `| ${wideRow(r + 1)} |`).join("\n")}
 Inline $E = mc^2$ and a display equation:
 
 $$
-\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}
+\\int_0^\\infty e^{-x^2}\\,dx = \\frac{\\sqrt{\\pi}}{2}
 $$
 
 ## Diagrams

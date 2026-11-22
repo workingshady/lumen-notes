@@ -1135,12 +1135,12 @@ function Whiteboard({ note }: { note: Note; /** Routing hook (round 7): NoteView
           const z = st.zoom.value, x0 = -st.scrollX, y0 = -st.scrollY, x1 = x0 + (host.current?.clientWidth ?? st.width) / z, y1 = y0 + (host.current?.clientHeight ?? st.height) / z;
           els = all.filter((e) => e.x < x1 && e.x + e.width > x0 && e.y < y1 && e.y + e.height > y0);
         }
-        if (opts.media === "placeholder") {
+        if (opts.media === "placeholder" || opts.media === "poster") {
           // GIF / video / audio cards become labelled boxes (images can't play them)
           const ph = els.filter((e) => e.type === "embeddable" && (e.customData as Record<string, unknown> | undefined)?.lumenMedia);
           if (ph.length) {
             const kinds: Record<string, string> = { gif: t("GIF"), video: t("Video"), audio: t("Audio") };
-            const boxes = convertToExcalidrawElements(ph.map((e) => ({ type: "rectangle", x: e.x, y: e.y, width: e.width, height: e.height, backgroundColor: "#e9ecef", fillStyle: "solid", strokeColor: "#868e96", roughness: 0, label: { text: kinds[String((e.customData as Record<string, unknown>).lumenMedia)] ?? t("Media"), fontSize: 18 } })) as never) as unknown as El[];
+            const boxes = convertToExcalidrawElements(ph.map((e) => ({ type: "rectangle", x: e.x, y: e.y, width: e.width, height: e.height, backgroundColor: "#e9ecef", fillStyle: "solid", strokeColor: "#868e96", roughness: 0, label: { text: (kinds[String((e.customData as Record<string, unknown>).lumenMedia)] ?? t("Media")) + (opts.media === "poster" && e.link ? "\n" + String(e.link).replace(/^https?:\/\/(www\.)?/, "").slice(0, 60) : ""), fontSize: opts.media === "poster" ? 16 : 18 } })) as never) as unknown as El[];
             const drop = new Set(ph.map((e) => e.id));
             els = [...els.filter((e) => !drop.has(e.id)), ...boxes];
           }
