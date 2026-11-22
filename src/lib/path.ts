@@ -44,7 +44,7 @@ export interface PathConcept {
   related?: string[];
   extra: string[];
 }
-export interface PathStage { name: string; concepts: PathConcept[] }
+export interface PathStage { name: string; concepts: PathConcept[]; /** Loose lines under the stage heading, before its first concept (kept verbatim). */ lines?: string[] }
 export interface PathDoc { courses: string[]; title: string; intro: string; stages: PathStage[]; fm: Record<string, string> }
 
 export const norm = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/\s*\(.*?\)\s*/g, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
@@ -85,6 +85,9 @@ export function parsePath(body: string): PathDoc {
       continue;
     }
     if (concept && /^\s{2,}\S/.test(l)) { concept.extra.push(l); continue; }
+    // A loose line inside a stage (a bare link, a note, a paragraph) belongs to the concept above it, or to the stage
+    // when no concept came yet. Kept verbatim so a save from the app never drops the owner's text.
+    if (stage && l.trim()) { if (concept) concept.extra.push(l); else (stage.lines ??= []).push(l); continue; }
     if (!stage) intro.push(l);
   }
   doc.intro = intro.join("\n").trim();
@@ -98,12 +101,14 @@ export function serializePath(doc: PathDoc): string {
   for (const s of doc.stages) {
     if (s.name === UNPLACED) continue;
     out.push(`## ${s.name}`);
+    if (s.lines?.length) out.push(...s.lines);
     for (const c of s.concepts) {
       out.push(`- ${c.name}${c.aliases.length ? ` = ${c.aliases.join(" | ")}` : ""}`);
       if (c.needs.length) out.push(`  - needs: ${c.needs.join(", ")}`);
       if (c.after?.length) out.push(`  - after: ${c.after.join(", ")}`);
       if (c.related?.length) out.push(`  - related: ${c.related.join(", ")}`);
-      for (const r of c.resources) out.push(`  - resource: [${r.label}](${r.url})`);
+      // a bare link stays bare (its label is only the shortened URL the parser made up)
+      for (const r of c.resources) out.push(r.label === r.url.replace(/^https?:\/\/(www\.)?/, "").slice(0, 60) ? `  - resource: ${r.url}` : `  - resource: [${r.label}](${r.url})`);
       if (c.notes.length) out.push(`  - note: ${c.notes.map((n) => `[[${n}]]`).join(", ")}`);
       if (c.review) out.push(`  - review: ${c.review} ${c.interval}`);
       if (c.done) out.push(`  - done: ${c.done}`);
