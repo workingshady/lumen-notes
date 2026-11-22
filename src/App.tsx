@@ -23,6 +23,7 @@ import { NewMenuHost } from "./components/NewMenu";
 import { ImportExportDialog, NewSpaceDialog } from "./components/Dialogs";
 import { ConfirmHost, MoveToHost } from "./components/dialogs-r9";
 import { DiagramExport } from "./components/DiagramExport";
+import { NoteExportHost } from "./components/NoteExportHost";
 import { useDueCount } from "./lib/due-cards";
 import { cx, IconButton } from "./components/ui";
 import { LumenMark } from "./components/LumenMark";
@@ -288,6 +289,7 @@ function Workspace() {
       <NewSpaceDialog />
       <ImportExportDialog />
       <DiagramExport />
+      <NoteExportHost />
       <ConflictSheet />
       <ShareSheet />
       <Toasts />

@@ -8,6 +8,7 @@ import { parseCanvas } from "../lib/canvas";
 import type { Note } from "../../shared/types";
 import { createNote, duplicateNote, restoreNote, snapshot, trashNote, updateNote } from "../lib/actions";
 import { exportNoteHtml, exportNoteMd, printNote } from "../lib/io";
+import { noteExportJob, openNoteExport } from "../lib/note-export";
 import { back, getUI, openNote, setUI, toast, useUI, useVault, type Mode } from "../lib/store";
 import { canGoBack } from "../lib/nav-history";
 import { NavButtons } from "./nav-buttons";
@@ -238,7 +239,8 @@ export function NoteView({ note }: { note: Note }) {
         <div className="my-1 h-px bg-line" />
         {!isBoard && <button className={item} onClick={() => exportNoteMd(note)}><Download size={15} /> {t("Export {ext}", { ext: isCanvas ? ".canvas" : ".md" })}</button>}
         {!isCanvas && <button className={item} onClick={() => exportNoteHtml(note)}><FileCode2 size={15} /> {t("Export {ext}", { ext: ".html" })}</button>}
-        {!isCanvas && <button className={item} onClick={() => printNote(note)}><Printer size={15} /> {t("Print / PDF")}</button>}
+        {!isCanvas && <button className={item} onClick={() => openNoteExport(noteExportJob(note, { folder: note.folderId ? v.folderMap.get(note.folderId)?.name : undefined, space: v.spaceMap.get(note.spaceId)?.name }))}><Download size={15} /> {t("Export…")}</button>}
+        {!isCanvas && <button className={item} onClick={() => void printNote(note)}><Printer size={15} /> {t("Print")}</button>}
         <button className={item} onClick={() => openMoveTo([note.id])}><FolderInput size={15} /> {t("Move to…")}</button>
         <button className={item} onClick={async () => { const d = await duplicateNote(note.id); if (d) openNote(d.id); }}><Copy size={15} /> {t("Duplicate")}</button>
         {markdownNote && <button className={item} onClick={() => void saveAsTemplate(note)}><LayoutTemplate size={15} /> {t("Save as template")}</button>}

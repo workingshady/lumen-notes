@@ -15,6 +15,7 @@ import { expandSidebar, go, noteDerived, openNote, setUI, toast, toggleSidebar, 
 import { useSync } from "../lib/sync";
 import { num } from "./ws-dir";
 import { t } from "../lib/i18n";
+import { folderExportJob, openNoteExport, spaceExportJob } from "../lib/note-export";
 import { PRESETS } from "../lib/canvas";
 import { useDueCards } from "../lib/due-cards";
 import { cx } from "./ui";
@@ -539,6 +540,7 @@ function SpaceSwitcher({ onClose, rail }: { onClose: () => void; rail?: boolean 
           <SpaceIcon space={s} size={15} tile tileScale={1.75} />
           <span className="flex min-w-0 flex-1 flex-col leading-4"><span className="truncate" dir="auto">{s.name}</span><span className="truncate text-[11.5px] font-normal text-muted">{sub(s)}</span></span>
         </button>
+        <button type="button" onClick={() => { onClose(); openNoteExport(spaceExportJob(s)); }} aria-label={t("Export…")} title={t("Export space as PDF or HTML")} className="hidden text-muted hover:text-ink group-hover:block"><Glyph name="export" size={13} /></button>
         <button type="button" onClick={() => togglePin(s.id)} aria-label={isPinned ? t("Unpin") : t("Pin")} title={isPinned ? t("Unpin") : t("Pin")} className={cx("text-muted hover:text-ink", isPinned ? "hidden group-hover:block" : "hidden group-hover:block")}><Glyph name="pin" size={13} /></button>
         {sc && <span dir="ltr" className="font-mono text-[11px] text-muted group-hover:hidden">{sc}</span>}
         {on && <Glyph name="check" size={14} color="var(--accent)" />}
@@ -691,6 +693,7 @@ function FolderRow({ f, folders, depth, counts, onDrop }: { f: Folder; folders: 
             <MI g="folder" l={t("New subfolder")} k="⇧N" run={async () => { await createFolder(f.spaceId, f.id); if (!open) toggle(); }} />
             <MI g="d-draft" l={t("Rename")} k="F2" run={() => setRename(true)} />
             <MI g="folder" l={t("Move to top level")} run={() => void moveFolder(f, f.spaceId, null)} />
+            <MI g="export" l={t("Export…")} run={() => openNoteExport(folderExportJob(f, v.spaceMap.get(f.spaceId)?.name ?? ""))} />
             <MI g="pin" l={t("Pin")} run={() => void patch("folder", f.id, { sort: -1 - Date.now() / 1e13 })} />
             <div className="flex items-center gap-1.5 px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
               <button type="button" title={t("No color")} aria-label={t("No color")} className="size-5 rounded-full border border-line" onClick={() => void patch("folder", f.id, { color: null })} />

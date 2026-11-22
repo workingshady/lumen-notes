@@ -11,6 +11,7 @@ import { trashWithUndo } from "../lib/trash-ui";
 import { modLabel } from "../lib/mod-label";
 import { fmtDate, fmtNum, t, useLang } from "../lib/i18n";
 import { smartTokens } from "../lib/smart";
+import { selectionExportJob, openNoteExport } from "../lib/note-export";
 import { toast, useVault } from "../lib/store";
 import { addTagToNotes } from "../lib/tag-ops";
 import { readTagMeta, TAG_PROP, TAG_SPACE, tagColor } from "../lib/tag-tree";
@@ -269,6 +270,7 @@ export function BulkBar({ ids, onDone, onCancel }: { ids: string[]; onDone: () =
       {onCancel && <button className={btn} onClick={onCancel}>{t("Done")}</button>}
       <button className={btn} disabled={!n} aria-expanded={pop === "tag"} onClick={() => setPop(pop === "tag" ? null : "tag")}><Glyph name="tag" size={13} />{t("Tag")}</button>
       <button className={btn} disabled={!n} aria-expanded={pop === "move"} onClick={() => openMoveTo(ids)}><Glyph name="folder" size={13} />{t("Move")}</button>
+      <button className={btn} disabled={!n} title={t("Export the selected notes as one PDF or HTML document")} onClick={() => openNoteExport(selectionExportJob(ids))}><Glyph name="export" size={13} />{t("Export")}</button>
       <button className="flex h-7 items-center rounded-[6px] border border-[color-mix(in_srgb,var(--danger)_40%,transparent)] px-2 text-bad hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] disabled:opacity-50" disabled={!n} aria-label={t("Delete selected notes")} title={t("Delete")} onClick={() => void del()}><Glyph name="trash" size={13} /></button>
       {pop === "tag" && (
         <div className="absolute bottom-[calc(100%+6px)] end-2.5 z-30 flex w-[300px] flex-col gap-2 rounded-[12px] border border-line bg-surface-2 p-3 shadow-[0_16px_40px_rgba(0,0,0,.4)]">

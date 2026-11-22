@@ -221,6 +221,8 @@ Object.assign(G, {
 // App-only glyphs (not in the design file; keep until the design adds them)
 G["footnote"] = ["M3 9h11 M3 14h11 M3 19h7","M17 6l2-1.5V10 M17 10h4"];
 G["columns-4"] =["M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2z","M7.5 4v16 M12 4v16 M16.5 4v16"];
+G["print"] = ["M7 8V3h10v5","M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2","M7 14h10v7H7z"];
+G["zip"] = ["M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z","M12 9v1 M12 12v1 M12 15v1"];
 export const GLYPHS: Record<string, GlyphPart[]> = G;
 export type GlyphName = string;
 export const hasGlyph = (n: string) => Object.prototype.hasOwnProperty.call(G, n);

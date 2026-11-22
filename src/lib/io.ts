@@ -4,7 +4,6 @@ import { createNote, snapshot, updateNote } from "./actions";
 import { attUrl } from "./api";
 import { db, newFolder, save } from "./db";
 import { splitFrontMatter, toFrontMatter } from "./parse";
-import { activeTheme } from "./settings";
 import { isWbType } from "../../shared/types";
 
 const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "-").trim().slice(0, 120) || "Untitled";
@@ -36,27 +35,18 @@ export const exportNoteMd = (n: Note) => download(fileName(n), noteToMarkdown(n)
 // JSZip and the Markdown renderer load on first use (they are only needed for import / export).
 const loadZip = async () => (await import("jszip")).default;
 
-/** Standalone styled HTML (KaTeX CSS from CDN; Mermaid blocks rendered client-side by its CDN script). */
-export async function noteHtml(n: Note) {
-  const { render } = await import("./markdown");
-  const t = activeTheme();
-  const vars = Object.entries(t.vars).map(([k, v]) => `--${k}:${v}`).join(";");
-  const body = render(n.body).replace(/<div class="mermaid-block"[^>]*data-src="([^"]*)"><div class="muted">Rendering diagram…<\/div><\/div>/g,
-    (_m, src: string) => `<pre class="mermaid">${decodeURIComponent(src).replace(/</g, "&lt;")}</pre>`);
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${n.title.replace(/</g, "&lt;")}</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
-<style>:root{${vars}}body{background:var(--bg);color:var(--text);font:17px/1.75 Inter,system-ui,sans-serif;max-width:72ch;margin:40px auto;padding:0 20px}a{color:var(--link)}pre{background:var(--surface-2);padding:12px;border-radius:10px;overflow:auto}code{font-family:'JetBrains Mono',monospace;font-size:.9em}.code-head{display:none}table{border-collapse:collapse}td,th{border:1px solid var(--border);padding:6px 10px}.callout{border-left:3px solid var(--accent);background:var(--surface);padding:8px 14px;border-radius:8px;margin:1em 0}.callout-title{font-weight:600}img{max-width:100%}</style></head>
-<body><h1>${n.title.replace(/</g, "&lt;")}</h1>${body}
-<script type="module">import m from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";m.initialize({startOnLoad:true,theme:${t.dark ? '"dark"' : '"neutral"'}});</script></body></html>`;
+/** Self-contained HTML of one note (lib/print-doc.ts: math, diagrams, images and fonts inline; no CDN). Uses the dialog's remembered settings. */
+export async function exportNoteHtml(n: Note) {
+  const [{ runExport }, { loadNoteExportPrefs }] = await Promise.all([import("./print-run"), import("./note-export")]);
+  const p = loadNoteExportPrefs();
+  await runExport({ format: "html", scope: { kind: "note", ids: [n.id] }, opts: p, htmlFolder: false, engine: "auto" });
 }
-export const exportNoteHtml = async (n: Note) => download(safe(n.title) + ".html", await noteHtml(n), "text/html");
 
+/** Print one note now: paper theme, Paged.js page layout in a hidden frame (no pop-up window), then the print dialog. */
 export async function printNote(n: Note) {
-  const w = window.open("", "_blank"); // opened inside the click, before any await (popup blockers)
-  if (!w) return;
-  w.document.write(await noteHtml(n));
-  w.document.close();
-  setTimeout(() => w.print(), 900);
+  const [{ runExport }, { loadNoteExportPrefs }] = await Promise.all([import("./print-run"), import("./note-export")]);
+  const p = loadNoteExportPrefs();
+  await runExport({ format: "print", scope: { kind: "note", ids: [n.id] }, opts: p, htmlFolder: false, engine: "paged" });
 }
 
 // ------------------------------------------------------------------ export

@@ -19,10 +19,10 @@ const fmtBytes = (n: number) => (n > 1e6 ? `≈ ${fmtNum(n / 1e6, { maximumFract
 const KIND_G: Record<string, string> = { whiteboard: "whiteboard", board: "board", canvas: "canvas", mermaid: "mermaid", architecture: "diagram", graph: "graph" };
 const KIND_FOOT: Record<string, () => string> = { whiteboard: () => t("whiteboards"), board: () => t("boards"), canvas: () => t("canvas"), mermaid: () => t("diagrams"), architecture: () => t("architectures"), graph: () => t("graphs") };
 
-interface Cell { l?: string; g?: string; sub?: string; on?: boolean; op?: number; col?: boolean; mh?: string; tag?: string; th?: string; thumb?: string; tog?: boolean; sli?: [number, number, number, (v: number) => void]; tip?: string; onClick?: () => void; pick?: { options: [string, string][]; value: string; onChange: (v: string) => void }; input?: ReactNode }
+export interface Cell { l?: string; g?: string; sub?: string; on?: boolean; op?: number; col?: boolean; mh?: string; tag?: string; th?: string; thumb?: string; tog?: boolean; sli?: [number, number, number, (v: number) => void]; tip?: string; onClick?: () => void; pick?: { options: [string, string][]; value: string; onChange: (v: string) => void }; input?: ReactNode }
 
 /** One grid cell: the design's `it()` item (glyph, label, sub, toggle, slider, tag). */
-function Item({ c }: { c: Cell }) {
+export function Item({ c }: { c: Cell }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -63,8 +63,8 @@ function Item({ c }: { c: Cell }) {
   );
 }
 
-interface Block { h?: string; seg?: string[]; segOn?: number; segPick?: (i: number) => void; items?: Cell[]; cols?: string; gap?: string; note?: string; noteC?: string; noteBg?: string }
-function BlockView({ b }: { b: Block }) {
+export interface Block { h?: string; seg?: string[]; segOn?: number; segPick?: (i: number) => void; items?: Cell[]; cols?: string; gap?: string; note?: string; noteC?: string; noteBg?: string }
+export function BlockView({ b }: { b: Block }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
       {b.h && <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--muted)" }}><span>{b.h}</span></div>}

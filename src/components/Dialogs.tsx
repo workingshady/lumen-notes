@@ -6,10 +6,11 @@ import { fmtNum, t, tk, tx } from "../lib/i18n";
 import { PRESETS } from "../lib/canvas";
 import { patch } from "../lib/db";
 import {
-  canPickFolder, chooseSaveTarget, estimateVaultExport, exportBackup, exportNoteHtml, exportNoteMd, exportVaultZip, fetchMissingAttachments, importFiles, printNote, showInFolder,
+  canPickFolder, chooseSaveTarget, estimateVaultExport, exportBackup, exportNoteMd, exportVaultZip, fetchMissingAttachments, importFiles, showInFolder,
   type DuplicatePolicy, type ExportEstimate, type ExportResult, type ImportResult,
 } from "../lib/io";
 import { go, setUI, toast, useUI, useVault } from "../lib/store";
+import { noteExportJob, openNoteExport } from "../lib/note-export";
 import { ROADMAP_PRESETS } from "../lib/templates";
 import { fmtBytes, Modal, usePhone } from "../views/spaces-util";
 import { KIND_LABEL } from "./Sidebar";
@@ -395,8 +396,8 @@ export function ImportExportDialog() {
         <div className="flex flex-col gap-2"><span className="truncate text-[12px] font-medium text-muted">{t("This note")} · <span dir="auto">{note.title || t("Untitled")}</span></span>
           <div className="flex flex-wrap gap-2">
             <button className={fmtBtn} onClick={() => exportNoteMd(note)}><FileText size={14} className="text-muted" />.md</button>
-            <button className={fmtBtn} onClick={() => exportNoteHtml(note)}><FileCode size={14} className="text-muted" />.html</button>
-            <button className={fmtBtn} onClick={() => printNote(note)}><Printer size={14} className="text-muted" />PDF</button>
+            <button className={fmtBtn} onClick={() => { setUI({ io: false }); openNoteExport(noteExportJob(note, { folder: note.folderId ? v.folderMap.get(note.folderId)?.name : undefined, space: v.spaceMap.get(note.spaceId)?.name }, "html")); }}><FileCode size={14} className="text-muted" />.html</button>
+            <button className={fmtBtn} onClick={() => { setUI({ io: false }); openNoteExport(noteExportJob(note, { folder: note.folderId ? v.folderMap.get(note.folderId)?.name : undefined, space: v.spaceMap.get(note.spaceId)?.name }, "pdf")); }}><Printer size={14} className="text-muted" />PDF</button>
           </div>
         </div>
       )}

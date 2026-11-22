@@ -20,6 +20,9 @@
   // Optional R2 (needs a card on the Cloudflare account): create bucket lumen-notes-files and uncomment.
   // "r2_buckets": [{ "binding": "FILES", "bucket_name": "lumen-notes-files" }],
   "ai": { "binding": "AI" },
+  // Optional: one-click "Download PDF" for note exports (worker/ext/export-pdf.ts). Needs Browser Rendering on the Cloudflare account
+  // (Workers free plan: a few browser minutes a day; over that the app falls back to its own print dialog). Remove this line to turn it off.
+  "browser": { "binding": "BROWSER" },
   // Phone-as-remote for slides: one SQLite-backed Durable Object per pairing code (free plan), WebSocket hibernation.
   "durable_objects": { "bindings": [{ "name": "REMOTE", "class_name": "SlidesRemote" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SlidesRemote"] }],

@@ -21,6 +21,7 @@ import registerAiVisual from "./ext/ai-visual"; // vision convert + architecture
 import registerAiUsage from "./ext/ai-usage"; // AI usage meter + daily limit (Settings › AI, round 6)
 import registerAccountData from "./ext/account-data"; // Settings › Account › Delete account and all data (round 6)
 import registerLinks from "./ext/links";
+import registerExportPdf from "./ext/export-pdf"; // POST /api/export/pdf (Browser Rendering, optional binding)
 import { isWbType } from "../shared/types";
 import { ensureIndices } from "../shared/board-index";
 import { carryTombstones } from "../src/lib/board-merge";
@@ -32,6 +33,8 @@ export type Env = {
     DB: D1Database;
     FILES?: R2Bucket;
     AI?: Ai;
+    /** Cloudflare Browser Rendering (optional): server-side PDF for note exports, worker/ext/export-pdf.ts. */
+    BROWSER?: Fetcher;
     ASSETS: Fetcher;
     /** Owner passphrase (wrangler secret). */
     APP_PASSCODE: string;
@@ -792,7 +795,7 @@ registerAsk(api, helpers); // "Ask your vault" (worker/ext/ask.ts)
 registerChat(api, helpers); registerTutor(api, helpers); // Ask chat + AI tutor (worker/ext/chat.ts, tutor.ts)
 registerHub(api, helpers); // project hub "Ask" (worker/ext/hub.ts)
 registerAccess(api, helpers); registerAiVisual(api, helpers); // devices that sync (worker/ext/access.ts)
-registerAccountData(api, helpers); registerLinks(api, helpers); registerRest(api, helpers); // POST /api/vault/wipe (worker/ext/account-data.ts)
+registerAccountData(api, helpers); registerLinks(api, helpers); registerExportPdf(api, helpers); registerRest(api, helpers); // POST /api/vault/wipe (worker/ext/account-data.ts)
 registerAuth(api, helpers); // /api/accounts/config + /api/auth/* (worker/ext/auth.ts; 404 while accounts are off)
 extOg(api, helpers); ogPages(app); // OG image routes + /s/:token, /blog/:slug meta (worker/ext/og.ts)
 

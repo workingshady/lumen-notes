@@ -5,6 +5,7 @@ import type { Note } from "../../shared/types";
 import { createNote, dailyNote } from "../lib/actions";
 import { around, matcher, narrowingFilters, normalize, parseQuery, search, searchCount } from "../lib/search";
 import { activeTheme, getSettings, setSettings } from "../lib/settings";
+import { noteExportJob, openNoteExport, spaceExportJob } from "../lib/note-export";
 import { go, openNote, setUI, toggleSidebar, useUI, useVault, type Mode } from "../lib/store";
 import { syncNow } from "../lib/sync";
 import { plainText } from "./nav-text";
@@ -134,6 +135,8 @@ export function Palette() {
       c("trash", t("Open trash"), () => go("trash")),
       c("settings", t("Settings"), () => go("settings")),
       c("io", t("Import / export…"), () => setUI({ io: true })),
+      ...(ui.noteId && v.byId.get(ui.noteId) && v.byId.get(ui.noteId)!.type !== "canvas" ? [c("export-note", t("Export this note (PDF, HTML, Markdown, print)…"), () => { const n = v.byId.get(ui.noteId!)!; openNoteExport(noteExportJob(n, { folder: n.folderId ? v.folderMap.get(n.folderId)?.name : undefined, space: v.spaceMap.get(n.spaceId)?.name })); }, { hint: t("page size, table of contents, page numbers"), icon: <Glyph name="print" size={16} /> })] : []),
+      ...(ui.spaceId !== "all" && v.spaceMap.get(ui.spaceId) ? [c("export-space", t("Export this space as a PDF or HTML…"), () => openNoteExport(spaceExportJob(v.spaceMap.get(ui.spaceId)!)), { icon: <Glyph name="print" size={16} /> })] : []),
       c("import", t("Import…"), () => openImport(), { hint: "Anki · Notion · Obsidian", icon: <Glyph name="export" size={16} /> }),
       c("sync", t("Sync now"), () => void syncNow()),
       c("theme", t("Toggle light / dark"), () => setSettings({ theme: activeTheme().dark ? "paper" : "lamplight" })),
